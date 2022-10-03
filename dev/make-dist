@@ -41,14 +41,14 @@ if [ "$MASTER" = "allow" ]; then
   echo "WARNING. Building from main branch, the build may be very unstable"
   BRANCH=main
 else
-  git branch|grep ^*|grep -E "${VERSION}|HEAD detached" > /dev/null 2>&1
-  if [ $? -eq 1 ]; then
-    echo -n "wrong branch detected: "
-    git branch|grep ^*|awk '{print $2 }'
-    echo "I need ${VERSION}"
-    exit 1
-  fi
-  BRANCH=${VERSION}
+  BRANCH=stable
+fi
+git branch|grep ^*|grep " ${BRANCH}" > /dev/null 2>&1
+if [ $? -eq 1 ]; then
+  echo -n "wrong branch detected: "
+  git branch|grep ^*|awk '{print $2 }'
+  echo "I need ${BRANCH}"
+  exit 1
 fi
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 

@@ -8,11 +8,11 @@ CURDIR=$(pwd)
 VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 
-git branch|grep ^*|grep ${VERSION} > /dev/null 2>&1
+git branch|grep ^*|grep \ stable > /dev/null 2>&1
 if [ $? -eq 1 ] && [ "$1" != "--test" ]; then
   echo -n "wrong branch detected: "
   git branch|grep ^*|awk '{print $2 }'
-  echo "I need ${VERSION}"
+  echo "I need stable"
   exit 1
 fi
 BRANCH=${VERSION}

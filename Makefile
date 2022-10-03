@@ -16,7 +16,7 @@ test-build-mark:
 
 test-build-create:
 	cd /opt/eva-util/eva-builder && ./update.sh lab-builder1
-	ssh -t lab-builder1 "cd /build/eva4 && make do-test-build-create"
+	ssh -t lab-builder1 "cd /build/eva4 && git checkout main && make do-test-build-create"
 
 do-test-build-create:
 	git rev-parse --abbrev-ref HEAD |grep ^main$ > /dev/null
@@ -28,17 +28,21 @@ test-release:
 	jks build pub.bma.ai
 
 stable-build-mark:
-	git rev-parse --abbrev-ref HEAD |grep ^4 > /dev/null
+	git rev-parse --abbrev-ref HEAD |grep ^stable > /dev/null
 	make build
 	git commit -a -m 'stable build'
 	git push
 
 stable-build-create:
-	git rev-parse --abbrev-ref HEAD |grep ^4 > /dev/null
-	MASTER=deny ./dev/build-and-upload
+	cd /opt/eva-util/eva-builder && ./update.sh lab-builder1
+	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && make do-stable-build-create"
+
+do-stable-build-create:
+	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
+	MASTER=allow ./dev/build-and-upload
 
 stable-release:
-	git rev-parse --abbrev-ref HEAD |grep ^4 > /dev/null
+	git rev-parse --abbrev-ref HEAD |grep ^stable > /dev/null
 	./dev/make-release
 	jks build pub.bma.ai
 
