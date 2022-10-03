@@ -42,7 +42,7 @@ do-stable-build-create:
 	MASTER=allow ./dev/build-and-upload
 
 stable-release:
-	git rev-parse --abbrev-ref HEAD |grep ^stable > /dev/null
+	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
 	./dev/make-release
 	jks build pub.bma.ai
 
