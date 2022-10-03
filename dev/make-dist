@@ -142,6 +142,7 @@ if [ -d eva4 ]; then
   git pull origin || exit 1
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
   git checkout "${BRANCH}" || exit 1
+  git pull origin "${MBRANCH}" || exit 1
 else
   git clone -b "${BRANCH}" https://github.com/eva-ics/eva4 || exit 1
   cd eva4 || exit 1
