@@ -23,7 +23,6 @@ do-test-build-create:
 	MASTER=allow ./dev/build-and-upload
 
 test-release:
-	git rev-parse --abbrev-ref HEAD |grep ^main$ > /dev/null
 	./dev/make-release --test
 	jks build pub.bma.ai
 
