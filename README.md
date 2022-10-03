@@ -1,5 +1,8 @@
 # EVA ICS v4
 
+<img src="https://img.shields.io/badge/license-Apache%202.0-green" /> <img
+src="https://img.shields.io/badge/rust-2021-pink.svg" />
+
 <img src="https://raw.githubusercontent.com/eva-ics/eva4/main/logo.png"
 width="200" />
 
