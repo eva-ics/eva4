@@ -33,7 +33,17 @@ Read <https://info.bma.ai/en/actual/eva4/install.html>
 
 ## Building from source
 
-- [Install Rust](https://www.rust-lang.org/tools/install), compile and enjoy.
+* [Install Rust](https://www.rust-lang.org/tools/install)
+
+* Set the following environment variables and run cargo:
+
+```
+# The variable ARCH_SFX must be set either to "x86_64-musl" or to
+# "aarch64-musl" If updates from the official repository and/or cloud manager
+# CLI are not required, the variable can be set to any value.
+export ARCH_SFX=x86_64-musl
+cargo build --release
+```
 
 The following libraries must be manually downloaded, installed and/or compiled:
 
