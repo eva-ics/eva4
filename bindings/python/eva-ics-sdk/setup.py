@@ -13,7 +13,7 @@ setuptools.setup(
     description='EVA ICS v4 Python SDK',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/alttch/eva4',
+    url='https://github.com/eva-ics/eva4',
     packages=setuptools.find_packages(),
     license='Apache License 2.0',
     install_requires=['busrt>=0.1.0', 'msgpack>=1.0.3'],
