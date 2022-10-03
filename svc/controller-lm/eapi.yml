@@ -1,0 +1,144 @@
+rule.list:
+  des: Lists rules
+  par:
+  ret: List of rules and their info
+  exm: |
+    [
+        {
+            "chillout_event_pending": false,
+            "chillout_remaining": null,
+            "chillout_time": null,
+            "id": "rule1",
+            "run": "lmacro:tests/temp_handler"
+        },
+        {
+            "chillout_event_pending": false,
+            "chillout_remaining": null,
+            "chillout_time": 10.0,
+            "id": "rule2",
+            "run": "lmacro:tests/on_action"
+        }
+    ]
+rule.get:
+  des: Gets a rule
+  par:
+    - nam: i
+      typ: String
+      des: Rule ID
+      req: true
+  ret: Rule info
+  exm: |
+    {
+        "chillout_event_pending": false,
+        "chillout_remaining": null,
+        "chillout_time": null,
+        "id": "rule1",
+        "run": "lmacro:tests/temp_handler"
+    }
+job.list:
+  des: Lists scheduled jobs
+  par:
+  ret: List of scheduled jobs infos
+  exm: |
+    [
+        {
+            "id": "job1",
+            "next_launch": "2022-05-22 21:38:50 +02:00",
+            "run": "lmacro:tests/job1_handler"
+        }
+        {
+            "id": "job2",
+            "next_launch": "2022-05-22 22:38:50 +02:00",
+            "run": "lmacro:tests/job2_handler"
+        }
+    ]
+job.get:
+  des: Gets a scheduled job
+  par:
+    - nam: i
+      typ: String
+      des: Job ID
+      req: true
+  ret: Scheduled job info
+  exm: |
+      {
+          "id": "job2",
+          "next_launch": "2022-05-22 22:38:50 +02:00",
+          "run": "lmacro:tests/job2_handler"
+      }
+cycle.list:
+  des: Lists cycles and their stats
+  par:
+  ret: List of cycles info and stats (u64 counters)
+  exm: |
+    [
+        {
+            "id": "cycle1",
+            "interval": 1.0,
+            "iters_err": 0,
+            "iters_ok": 71,
+            "status": "running",
+            "timed_out": 0
+        },
+        {
+            "id": "cycle2",
+            "interval": 1.0,
+            "iters_err": 0,
+            "iters_ok": 92,
+            "status": "stopped",
+            "timed_out": 0
+        }
+    ]
+cycle.get:
+  des: Gets stats for a cycle
+  par:
+    - nam: i
+      typ: String
+      des: Cycle ID
+      req: true
+  ret: Cycle info and stats (u64 counters)
+  exm: |
+      {
+          "id": "cycle1",
+          "interval": 1.0,
+          "iters_err": 0,
+          "iters_ok": 71,
+          "status": "running",
+          "timed_out": 0
+      }
+cycle.start:
+  des: Starts a cycle
+  par:
+    - nam: i
+      typ: String
+      des: Cycle ID
+      req: true
+  ret:
+cycle.stop:
+  des: Stops a cycle
+  par:
+    - nam: i
+      typ: String
+      des: Cycle ID
+      req: true
+  ret:
+cycle.reset:
+  des: Resets a cycle
+  par:
+    - nam: i
+      typ: String
+      des: Cycle ID
+      req: true
+  ret:
+action:
+  des: Executes an opener unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+terminate:
+  des: Attempts to terminate/cancel an opener unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+kill:
+  des: Attempts to terinate/cancel all actions for an opener unit
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`

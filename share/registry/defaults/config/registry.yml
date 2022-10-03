@@ -1,0 +1,13 @@
+# The registry database configuration
+# create N reserved copies when a key is modified
+auto_bak: 10
+# do not create backup version for these keys/subkeys
+skip_bak:
+  - eva/state
+  - eva/cache
+# registry cache size (items)
+cache_size: 10000
+# strict data schema (keep this)
+strict_schema: true
+# auto-flush all operations to disk (crash-free)
+auto_flush: true

@@ -1,0 +1,22 @@
+[package]
+name = "eva-controller-virtual"
+version = "4.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+eva-common = { version = "0.1.176", features = ["events", "common-payloads"] }
+eva-sdk = { version = "0.1.104", features = ["controller"] }
+tokio = { version = "1.20.1", features = ["full"] }
+async-trait = { version = "0.1.51" }
+serde = { version = "1.0.143", features = ["derive", "rc"] }
+log = "0.4.14"
+async-channel = "1.7.1"
+uuid = { version = "1.1.2", features = ["serde", "v4"] }
+jemallocator = { version = "0.5.0" }
+bmart = "0.1.14"
+wshack = { version = "0.1", path = "../../wshack" }
+
+[features]
+std-alloc = []

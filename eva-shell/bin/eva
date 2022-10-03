@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+
+import eva4_shell.shell as shell
+
+shell.launch()

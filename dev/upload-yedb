@@ -1,0 +1,36 @@
+#!/bin/sh
+
+D=$(realpath "$0")
+cd "$(dirname "${D}")/.." || exit 1
+
+. ./share/registry/info
+
+PLATFORMS="x86_64-musl aarch64-musl"
+
+if [ -z "$YEDB_VERSION" ]; then
+  echo "version not specified"
+  exit 1
+fi
+
+for platform in $PLATFORMS; do
+  echo "----- ${platform} -----"
+  FNAME="yedb-${YEDB_VERSION}-${platform}.tar.gz"
+  wget "https://github.com/alttch/yedb-rs/releases/download/v${YEDB_VERSION}/${FNAME}" \
+    -O "/tmp/${FNAME}" || exit 2
+  gsutil cp -a public-read "/tmp/${FNAME}" "gs://pub.bma.ai/yedb/${FNAME}" || exit 3
+done
+
+#./dev/generate-yedb-manifest.py "${YEDB_VERSION}" "/tmp/yedb-manifest-${YEDB_VERSION}.json" || exit 3
+#gsutil cp -a public-read "/tmp/yedb-manifest-${YEDB_VERSION}.json" \
+  #"gs://pub.bma.ai/yedb/yedb-manifest-${YEDB_VERSION}.json" || exit 3
+
+#for platform in $PLATFORMS; do
+#  rm -f "/tmp/${FNAME}" || exit 2
+#done
+
+#rm -f "/tmp/yedb-manifest-${YEDB_VERSION}.json"
+
+jks build pub.bma.ai || exit 3
+echo "================================"
+echo "v${YEDB_VERSION} UPLOADED"
+exit 0

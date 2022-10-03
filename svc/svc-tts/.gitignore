@@ -1,0 +1,5 @@
+*.pyc
+__pycache__
+eva4_svc_tts.egg-info
+dist
+build

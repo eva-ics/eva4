@@ -1,0 +1,8 @@
+flush:
+  des: Flushes the output file immediately
+  par:
+  ret:
+rotate:
+  des: Rotates the output file, by renaming it to file_path.TIME_RFC3339
+  par:
+  ret:

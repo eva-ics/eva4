@@ -1,0 +1,10 @@
+# Locker service
+command: target/debug/eva-svc-locker
+bus:
+  path: var/bus.ipc
+config:
+  locks:
+   - lock1
+   - lock2
+   - lock3
+user: nobody

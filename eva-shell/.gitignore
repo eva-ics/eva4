@@ -1,0 +1,6 @@
+__pycache__
+eva_shell.egg-info
+build
+dist
+TODO.todo
+*.pyc

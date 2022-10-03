@@ -1,0 +1,54 @@
+# EVA ICS v4-v4 replication service
+command: target/debug/eva-repl
+workers: 2
+bus:
+  path: var/bus.ipc
+config:
+  pubsub:
+    # mqtt or psrt
+    proto: psrt
+    # path to CA certificate file. Enables SSL if set
+    ca_certs: null
+    # single or multiple hosts
+    host:
+      - 127.0.0.1:2873
+    # if more than a single host is specified, shuffle the list before connecting
+    cluster_hosts_randomize: false
+    # user name / password auth
+    username: null
+    password: null
+    ping_interval: 10
+    # pub/sub queue size
+    queue_size: 1024
+    # pub/sub QoS (not required for PSRT)
+    qos: 1
+  # the local key service, required both to make and process API calls via PubSub
+  key_svc: eva.aaa.localauth
+  # set null to turn off announcements
+  announce_interval: 10
+  # respond to API calls
+  api_enabled: true
+  # enable discovery of secondary nodes
+  discovery_enabled: true
+  # key (id) to use for auto-discovered nodes
+  default_key_id: default
+  # subscription logic
+  #
+  # each: subscribe to individual topics for each item, plus bulks if defined
+  # all: accept states for all items, move filtering from the Pub/Sub server
+  #       to the local core
+  # bulk_only: subscribe to bulk topics only
+  subscribe: each
+  #bulk:
+    #send:
+      #topic: all
+      #compress: true # set to enable bulk compression
+      #encryption_key: null # set (key id) to enable bulk encryption
+      #buf_ttl_sec: 0.5
+    #receive:
+      #topics:
+        #- all
+  # subscribed OIDS
+  oids:
+    - "#"
+user: nobody

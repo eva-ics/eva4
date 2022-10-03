@@ -1,0 +1,52 @@
+lock:
+  des: Acquire a shared lock
+  par:
+    - nam: i
+      typ: String
+      des: lock ID
+      req: true
+    - nam: expires
+      typ: f64
+      des: auto-release timer (seconds)
+      req: true
+    - nam: timeout
+      typ: f64
+      des: max operation timeout (seconds)
+      req: false
+  ret:
+unlock:
+  des: Unlock previously acquired lock
+  par:
+    - nam: i
+      typ: String
+      des: lock ID
+      req: true
+  ret:
+status:
+  des: Get status of a lock
+  par:
+    - nam: i
+      typ: String
+      des: lock ID
+      req: true
+  ret: Lock status (struct)
+  exm: |
+    {
+        "id": "lock1",
+        "locked": false
+    }
+list:
+  des: List status of all locks
+  par:
+  ret: List of lock status
+  exm: |
+    [
+      {
+          "id": "lock1",
+          "locked": false
+      },
+      {
+          "id": "lock2",
+          "locked": true
+      },
+    ]

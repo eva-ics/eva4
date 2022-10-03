@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+D=$(realpath "$0")
+EVA_DIR=$(realpath "$(dirname "${D}")/..")
+export EVA_DIR
+
+"${EVA_DIR}/cli/eva-cloud-manager" "$@"

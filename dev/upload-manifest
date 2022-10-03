@@ -1,0 +1,11 @@
+#!/bin/sh
+
+[ -z "${BUILD_DIR}" ] && BUILD_DIR=/tdata/_eva4_build
+cd "${BUILD_DIR}/eva4" || exit 1
+
+BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
+VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+URI=pub.bma.ai/eva4/${VERSION}/nightly
+
+cd ..
+gsutil cp -a public-read "manifest-${BUILD}.json" "gs://${URI}/" || exit 1

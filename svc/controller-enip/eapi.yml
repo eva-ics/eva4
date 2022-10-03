@@ -1,0 +1,76 @@
+var.get:
+  des: Get En/IP tag from PLC
+  par:
+    - nam: i
+      typ: String
+      des: PLC tag
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: true
+    - nam: size
+      typ: u32
+      des: Type size helper
+      req: false
+    - nam: count
+      typ: u32
+      des: Count of data blocks (e.g. for arrays)
+      req: false
+    - nam: bit
+      typ: u32
+      des: Get an individual bit
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret: Tag value, single or list
+var.set:
+  des: Set En/IP tag on PLC
+  par:
+    - nam: i
+      typ: String
+      des: PLC tag
+      req: true
+    - nam: value
+      typ: Any
+      des: value to set
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: true
+    - nam: bit
+      typ: u32
+      des: Set an individual bit
+      req: false
+    - nam: verify
+      typ: bool
+      des: Read the tag back and verify its value
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret:
+action:
+  des: Executes a mapped unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+terminate:
+  des: Attempts to terminate/cancel a unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+kill:
+  des: Attempts to terinate/cancel all actions for a unit
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`

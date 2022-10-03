@@ -1,0 +1,243 @@
+#!/bin/bash
+
+. ~/.cargo/env
+
+RUST_VER=$(rustc --version|awk '{ print $2 }')
+
+if [ "$RUST_VER" != "$RUST_VER_REQUIRED" ]; then
+  echo "Rust compiler version differs, required: ${RUST_VER_REQUIRED}, got: ${RUST_VER}"
+  exit 2
+fi
+
+ARCH=$1
+[ -z "${BUILD_DIR}" ] && BUILD_DIR=/tdata/_eva4_build
+
+if [ -z "$ARCH" ]; then
+  echo "specify target and arch"
+  exit 5
+fi
+
+case $ARCH in
+  x86_64-musl)
+    TARGET=x86_64-unknown-linux-musl
+    STRIP=strip
+    YEDB_ARCH=x86_64
+    CARGO=cross
+    ;;
+  aarch64-musl)
+    TARGET=aarch64-unknown-linux-musl
+    STRIP=aarch64-linux-gnu-strip
+    YEDB_ARCH=aarch64
+    CARGO=cross
+    ;;
+  *)
+    echo "Unsupported architecture"
+    exit 4
+    ;;
+esac
+
+VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+if [ "$MASTER" = "allow" ]; then
+  echo "WARNING. Building from main branch, the build may be very unstable"
+  BRANCH=main
+else
+  git branch|grep ^*|grep -E "${VERSION}|HEAD detached" > /dev/null 2>&1
+  if [ $? -eq 1 ]; then
+    echo -n "wrong branch detected: "
+    git branch|grep ^*|awk '{print $2 }'
+    echo "I need ${VERSION}"
+    exit 1
+  fi
+  BRANCH=${VERSION}
+fi
+BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
+
+DISTRO="eva-${VERSION}-${BUILD}-${ARCH}.tgz"
+
+URI=pub.bma.ai/eva4/${VERSION}/nightly
+
+echo "curl -sI https://${URI}/${DISTRO}"
+
+( curl -sI "https://${URI}/${DISTRO}" 2>&1|head -1|grep " 404 " ) > /dev/null 2>&1
+
+if [ $? -ne 0 ]; then
+  echo "Version ${VERSION} build ${BUILD} arch ${ARCH} already exists"
+  if [ "${IGNORE_EXISTING}" != "1" ]; then
+    exit 2
+  fi
+  sleep 1
+fi
+
+echo "Creating EVA ICS distribution ver ${VERSION} build ${BUILD} for ${ARCH} (${TARGET})"
+mkdir -p "${BUILD_DIR}" || exit 1
+cd "${BUILD_DIR}" || exit 1
+rm -f "${DISTRO}"
+rm -rf "eva-${VERSION}"
+
+echo "Building yml2mp..."
+if [ -d yml2mp ]; then
+  cd yml2mp || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git pull || exit 1
+  cd ..
+else
+  git clone https://github.com/alttch/yml2mp || exit 1
+fi
+
+cd yml2mp || exit 1
+CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release || exit 1
+cd ..
+
+#echo "Building rsatool..."
+#if [ -d rsatool ]; then
+  #cd rsatool || exit 1
+  #find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  #git pull || exit 1
+  #cd ..
+#else
+  #git clone https://github.com/alttch/rsatool || exit 1
+#fi
+
+#cd rsatool || exit 1
+#"${CARGO}" build --target "${TARGET}" --release || exit 1
+#cd ..
+
+echo "Building bus cli..."
+if [ -d busrt ]; then
+  cd busrt || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git pull || exit 1
+  cd ..
+else
+  git clone https://github.com/alttch/busrt || exit 1
+fi
+
+cd busrt || exit 1
+"${CARGO}" build --target "${TARGET}" --release --features cli || exit 1
+cd ..
+
+echo "Building Enterprise extensions..."
+MBRANCH=$BRANCH
+[ "${MBRANCH}" = "master" ] && MBRANCH=main
+if [ -d eva4-enterprise ]; then
+  cd eva4-enterprise || exit 1
+  git pull origin || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git checkout "${MBRANCH}" || exit 1
+  if grep '^machine git.lab.altt.ch ' ~/.netrc > /dev/null; then
+    git pull origin "${MBRANCH}" || exit 1
+  fi
+  cd ..
+else
+  git clone -b "${MBRANCH}" https://git.lab.altt.ch/eva-ics/eva4-enterprise.git/ || exit 1
+fi
+
+cd eva4-enterprise/eva4-esvc || exit 1
+DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release || exit 1
+cd ../..
+
+echo "Downloading EVA ICS sources..."
+if [ -d eva4 ]; then
+  cd eva4 || exit 1
+  git pull origin || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git checkout "${BRANCH}" || exit 1
+else
+  git clone -b "${BRANCH}" https://github.com/eva-ics/eva4 || exit 1
+  cd eva4 || exit 1
+fi
+
+echo "Downloading YEDB cli..."
+rm -rf ./yedb
+ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
+
+echo "Building EVA ICS..."
+DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
+  "${CARGO}" build --target "${TARGET}" --release || exit 1
+
+echo "Preparing..."
+
+mkdir "../eva-${VERSION}"
+cd "../eva-${VERSION}" || exit 1
+for f in bin etc install share prepare ui pvt sbin; do
+  cp -rvf "../eva4/${f}" . || exit 1
+done
+
+rm -f install/install-yedb
+cd share/svc-tpl || exit 1
+for f in *.yml; do
+  sed -i 's|target/debug/|svc/|g' "${f}"
+done
+cd ../..
+
+mkdir -p svc cli
+
+for svc in eva-node eva-aaa-acl eva-aaa-localauth \
+  eva-aaa-otp \
+  eva-controller-enip \
+  eva-bridge-ads \
+  eva-controller-ads \
+  eva-controller-modbus \
+  eva-controller-w1 \
+  eva-controller-sr \
+  eva-controller-virtual \
+  eva-controller-lm \
+  eva-controller-trap \
+  eva-svc-modbus-slave \
+  eva-db-influx eva-db-sql eva-svc-filewriter \
+  eva-hmi eva-repl eva-svc-mirror \
+  eva-svc-expiration eva-filemgr \
+  eva-svc-locker eva-svc-mailer; do
+  cp -rvf "../eva4/target/${TARGET}/release/${svc}" svc/ || exit 1
+  [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
+done
+
+for svc in eva-aaa-msad \
+  eva-kioskman \
+  eva-zfrepl; do
+  cp -rvf "../eva4-enterprise/eva4-esvc/target/${TARGET}/release/${svc}" svc/ || exit 1
+  [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
+done
+
+cp -prvf ../eva4-enterprise/svc-tpl/*.yml share/svc-tpl/ || exit 1
+
+cp -rvf ../eva4/svc/watchdog.sh svc/ || exit 1
+cp -rvf ../eva4/svc/safe-run.sh svc/ || exit 1
+cp -rvf ../eva4/svc/sblock.sh svc/ || exit 1
+cp -rvf ../eva4/cli/pypi-mirror cli/ || exit 1
+
+for f in init-registry; do
+  cp -rvf "../eva4/target/${TARGET}/release/${f}" install/ || exit 1
+  [ "$STRIP" ] && ${STRIP} "install/${f}" || exit 1
+  echo $f
+done
+
+for f in gen-intl; do
+  cp -rvf "../eva4/target/${TARGET}/release/${f}" bin/ || exit 1
+  [ "$STRIP" ] && ${STRIP} "bin/${f}" || exit 1
+  echo $f
+done
+
+for f in eva-cloud-manager; do
+  cp -rvf "../eva4/target/${TARGET}/release/${f}" cli/ || exit 1
+  [ "$STRIP" ] && ${STRIP} "cli/${f}" || exit 1
+  echo $f
+done
+
+cp -rvf "../eva4/yedb/yedb-cli" cli/ || exit 1
+[ "$STRIP" ] && ${STRIP} cli/yedb-cli || exit 1
+
+cp -rvf "../yml2mp/target/${TARGET}/release/yml2mp" bin/ || exit 1
+[ "$STRIP" ] && ${STRIP} bin/yml2mp || exit 1
+
+#cp -rvf "../rsatool/target/${TARGET}/release/rsatool" sbin/ || exit 1
+#[ "$STRIP" ] && ${STRIP} sbin/rsatool || exit 1
+
+cp -rvf "../busrt/target/${TARGET}/release/busrt" sbin/bus || exit 1
+[ "$STRIP" ] && ${STRIP} sbin/bus || exit 1
+
+cd ..
+
+rm -f "${DISTRO}"
+tar --owner=root --group=root -czf "${DISTRO}" "eva-${VERSION}" || exit 1
+rm -rf "eva-${VERSION}"

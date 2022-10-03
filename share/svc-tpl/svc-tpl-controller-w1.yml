@@ -1,0 +1,52 @@
+# 1-Wire (OWFS) controller service
+command: target/debug/eva-controller-w1
+bus:
+  path: var/bus.ipc
+config:
+  # OWFS path, socket or I2C init command
+  path: localhost:4304
+  # default retry attempts for all operations (0 - no retries, give up if the
+  # first attempt fails)
+  retries: 2
+  # an optional delay betwen writing tags and verifying written value
+  #verify_delay: 0.1
+  # event queue size, pull events ARE DROPPED on overflow. consider ALWAYS
+  # having queue size > max possible tags pulled
+  queue_size: 32768
+  # ttl cache for pull events (sec, skip non-modified)
+  pull_cache_sec: 3600
+  #pull:
+    #- oid: sensor:tests/s1
+      #interval: 1 # pull interval (sec)
+      #status:
+        #path: 29.F2FBE3467CC2/power # device path + attribute
+      #value:
+        #path: 29.F2FBE3467CC2/temperature
+        #value_delta: 0.5 # report event only if the new value difference is >=
+        # perform value transformations
+        #transform:
+          #- func: multiply # multiply the value by N
+            #params: [ 1000 ]
+          #- func: divide # divide the value by N
+            #params: [ 1000 ]
+          #- func: round # round the value to N digits after comma
+            #params: [ 2 ]
+          #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+            #params: [ 1 ]
+          #- func: invert # invert the value between 0/1
+          # #params: []
+  # action queue size, per item, actions on overflow are not dropped but wait
+  # their attempt to enter the queue. The core marks an action as failed if it
+  # does not enter the queue for <action timeout> seconds
+  action_queue_size: 32
+  # verify written data for actions
+  actions_verify: true
+  # OID map for actions
+  #action_map:
+    #unit:tests/u1:
+      #value:
+        #path: 29.F2FBE3467CC2/PIO.0
+      #status:
+        #path: 29.F2FBE3467CC2/PIO.2
+user: nobody
+react_to_fail: true

@@ -1,0 +1,16 @@
+subscribe.state:
+  des: Subscribes to item state events
+  par: Vec<OID/OIDMask(String)>
+  ret:
+subscribe.log:
+  des: Subscribes to log events
+  par: u8 (20 = info, 30 = warn, 40 = error)
+  ret:
+ping:
+  des: Manually pings the server
+  par:
+  ret: '{s:"pong"}'
+bye:
+  des: Closes the session
+  par:
+  ret:

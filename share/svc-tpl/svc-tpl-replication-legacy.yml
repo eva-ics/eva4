@@ -1,0 +1,30 @@
+# Legacy (EVA ICS v3) replication service
+#
+# Requires https://pypi.org/project/eva4-repl-legacy/ Python module installed
+command: venv/bin/eva4-svc-repl-legacy
+bus:
+  path: var/bus.ipc
+config:
+  key_svc: eva.aaa.localauth
+  ## psrt configuration
+  pubsub:
+    proto: psrt
+    path: localhost:2873
+    user: null
+    password: null
+    timeout: 10
+    buf_size: 65536
+    tls: false
+    tls_ca: null
+    bulk_subscribe:
+      # bulk topics, required
+      - all
+  ## node configuration
+  #nodes:
+    #node1_legacy:
+      #key_id: default-v3
+      #key_legacy_id: default
+      #reload_interval: 30
+      #timeout: 5
+      #controllers: ['uc', 'lm']
+user: nobody

@@ -1,0 +1,6 @@
+# ACL service
+command: target/debug/eva-aaa-acl
+bus:
+  path: var/bus.ipc
+config: {}
+user: nobody

@@ -1,0 +1,9 @@
+command: target/debug/eva-svc-mirror
+bus:
+  path: var/bus.ipc
+config:
+  listen: 0.0.0.0:7780
+  mime_types: share/mime.yml
+  mirror_path: mirror
+  buf_size: 16384
+user: nobody

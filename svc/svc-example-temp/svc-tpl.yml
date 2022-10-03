@@ -1,0 +1,11 @@
+command: path/to/eva-svc-example-temp
+bus:
+  path: var/bus.ipc
+config:
+  sensors:
+    - sensor:sdktest/#
+  rcpt: me@domain
+  mailer_svc: eva.svc.mailer
+  threshold: 25
+user: nobody
+workers: 1

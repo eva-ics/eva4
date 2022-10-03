@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+
+import eva4_controller_py
+eva4_controller_py.run()

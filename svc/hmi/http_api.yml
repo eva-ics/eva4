@@ -1,0 +1,732 @@
+login:
+  des: Login and obtain session token (read-write)
+  long_des: |
+    * if no params are given, the method attempts to login user using basic
+      auth
+    
+    * if user and password are set, the method attempts to login user
+      using the provided credentials
+
+    * if token is set, the method returns token information
+
+    * if both user, password and token are set, the method switches the token
+      in read-write mode
+  par:
+    - nam: user
+      typ: String
+      des: User login
+      req: false
+    - nam: password
+      typ: String
+      des: User password (plain)
+      req: false
+    - nam: token
+      typ: String
+      des: User token
+      req: false
+    - nam: xopts
+      typ: Map<String, Any>
+      des: Extra auth ptions
+      req: false
+  ret: Token information payload
+  http_req:
+    user: admin
+    password: secret
+  http_req_omit_key: true
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "acl": "admin",
+            "mode": "normal",
+            "token": "token:1oeb5vHbLTTABBg2DfoueSHl9kT3ZPm6",
+            "user": "admin"
+        }
+    }
+logout:
+  des: Ends the user session and destroys the token
+  par:
+    - nam: token
+      typ: String
+      des: User token
+      req: true
+  ret: always no error, even if the token does not exist
+  http_req:
+    token: "token:1oeb5vHbLTTABBg2DfoueSHl9kT3ZPm6"
+  http_req_omit_key: true
+test:
+  des: Tests the node and HMI svc, returns system info
+  par:
+  ret: System info (struct)
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "aci": {
+                "acl": "admin",
+                "auth": "token",
+                "token_mode": "normal",
+                "u": "admin"
+            },
+            "acl": {
+                "admin": true,
+                "deny": {
+                    "items": [],
+                    "pvt": [],
+                    "rpvt": []
+                },
+                "from": [
+                    "admin"
+                ],
+                "id": "admin",
+                "ops": [],
+                "read": {
+                    "items": [],
+                    "pvt": [],
+                    "rpvt": []
+                },
+                "write": {
+                    "items": []
+                }
+            },
+            "build": 2022051001,
+            "ok": true,
+            "product_code": "eva4node",
+            "product_name": "EVA ICS node server",
+            "system_name": "mws1",
+            "time": 1652312576.585399,
+            "uptime": 795.01865705,
+            "version": "4.0.0"
+        }
+    }
+set_password:
+  des: Changes the current password (user must be logged in and session token used)
+  par:
+    - nam: current_password
+      typ: String
+      des: Current user's password
+      req: true
+    - nam: password
+      typ: String
+      des: New user's password
+      req: true
+item.state:
+  des: Gets state of item(s)
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s) or masks
+      req: false
+    - nam: full
+      typ: bool
+      des: Full state (enabled + meta)
+      req: false
+  ret: List of item states
+  http_req:
+    i: "sensor:#"
+    full: true
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+            {
+                "connected": true,
+                "ieid": [
+                    1796,
+                    509854682016335
+                ],
+                "node": "mws1",
+                "oid": "sensor:env/temp",
+                "status": 1,
+                "t": 1649733900.9208307,
+                "value": 5
+            },
+            {
+                "connected": true,
+                "ieid": [
+                    2185,
+                    20759006408168
+                ],
+                "node": "mws1",
+                "oid": "sensor:tests/test1",
+                "status": 1,
+                "t": 1652387199.1481013,
+                "value": 91.0
+            }
+        ]
+    }
+item.check_access:
+  des: Check read/write access for a single or multiple items
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s) or masks
+      req: true
+  ret: Map OID/access
+  http_req:
+    i: unit:tests/u1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "unit:tests/u1": {
+                "r": true,
+                "w": true
+            }
+        }
+    }
+item.state_history:
+  des: Gets state history for item(s)
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s)
+      req: true
+    - nam: t_start
+      typ: f64/String
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end
+      typ: f64/String
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: fill
+      typ: String
+      des: "Fill (nS/T/H/D/W e.g. 10T for 10-minute) + optional [:precision]"
+      req: false
+    - nam: limit
+      typ: u32
+      des: Limit records to
+      req: false
+    - nam: xopts
+      typ: Map<String, String>
+      des: Extra options, depending on database type
+      req: false
+    - nam: database
+      typ: String
+      des: 'DB svc to get history from, w/o "eva.db." pfx (def: specified in default_db)'
+      req: false
+    - nam: output_format
+      typ: String
+      des: '"list" or "dict"'
+      req: false
+  ret: State history payload
+  http_req:
+    i: sensor:env/temp
+    fill: 5T:2
+    t_start: 1652387700.0
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "status": [
+                1,
+                1,
+                1
+            ],
+            "t": [
+                1652387700.0,
+                1652388000.0,
+                1652388300.0
+            ],
+            "value": [
+                5,
+                5,
+                5
+            ]
+        }
+    }
+item.state_log:
+  des: Gets state log for item(s)
+  par:
+    - nam: i
+      typ: String
+      des: Item OID/Mask
+      req: true
+    - nam: t_start
+      typ: f64/String
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end/String
+      typ: f64
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: limit
+      typ: u32
+      des: Limit records to
+      req: false
+    - nam: xopts
+      typ: Map<String, String>
+      des: Extra options, depending on database type
+      req: false
+    - nam: database
+      typ: String
+      des: 'DB svc to get history from, w/o "eva.db." pfx (def: specified in default_db)'
+      req: false
+  ret: State log payload
+  http_req:
+    i: sensor:env/temp
+    t_start: 1652387700.0
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+            {
+                "oid": "sensor:env/temp",
+                "status": 1,
+                "t": 1652387838.5007,
+                "value": 5
+            },
+            {
+                "oid": "sensor:env/temp",
+                "status": 1,
+                "t": 1652387843.5008562,
+                "value": 5
+            },
+            {
+                "oid": "sensor:env/temp",
+                "status": 1,
+                "t": 1652387848.5038078,
+                "value": 5
+            }
+        ]
+    }
+log.get:
+  des: Gets memory logger log records, requires log allow in ACL
+  par:
+    - nam: level
+      typ: String/u8
+      des: Log level (trace, debug, info, warn, error)
+      req: false
+    - nam: time
+      typ: u32
+      des: Recent entries, N seconds before now
+      req: false
+    - nam: limit
+      typ: u32
+      des: Limit records to
+      req: false
+    - nam: module
+      typ: String
+      des: Filter by module
+      req: false
+    - nam: rx
+      typ: String
+      des: Filter by regex in message
+      req: false
+  ret: List of log records
+  http_req:
+    level: info
+    time: 60
+    module: "eva::svc"
+    rx: "starting.*"
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+            {
+                "dt": "2022-05-12T23:06:05.965+02:00",
+                "h": "mws1",
+                "l": 20,
+                "lvl": "info",
+                "mod": "eva::svc",
+                "msg": "eva.controller.eip starting puller #2, interval: 1s",
+                "t": 1652389565.965001,
+                "th": null
+            },
+            {
+                "dt": "2022-05-12T23:06:05.965+02:00",
+                "h": "mws1",
+                "l": 20,
+                "lvl": "info",
+                "mod": "eva::svc",
+                "msg": "eva.controller.eip starting puller #1, interval: 1s",
+                "t": 1652389565.96536,
+                "th": null
+            }
+        ]
+    }
+action:
+  des: Executes a unit action
+  par:
+    - nam: i
+      typ: String
+      des: Unit OID
+      req: true
+    - nam: status
+      typ: i16
+      des: Desired unit status
+      req: true
+    - nam: value
+      typ: Any
+      des: Desired unit value
+      req: false
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: Wait max seconds to finish
+      req: false
+  ret: Current result payload
+  http_req:
+    i: unit:tests/door
+    status: 1
+    wait: 1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "err": null,
+            "exitcode": 0,
+            "finished": true,
+            "node": "mws1",
+            "oid": "unit:tests/door",
+            "out": null,
+            "params": {
+                "status": 1
+            },
+            "priority": 100,
+            "status": "completed",
+            "svc": "eva.controller.virtual",
+            "time": {
+                "accepted": 1652391907.96199,
+                "completed": 1652391907.9621937,
+                "created": 1652391907.9593222
+            },
+            "uuid": "b37f15f0-410c-4ded-93d0-2ce744c68e08"
+        }
+    }
+action.toggle:
+  des: Executes a unit status-toggle action
+  par:
+    - nam: i
+      typ: String
+      des: Unit OID
+      req: true
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: Wait max seconds to finish
+      req: false
+  ret: Current result payload
+  http_req:
+    i: unit:tests/door
+    wait: 1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "err": null,
+            "exitcode": 0,
+            "finished": true,
+            "node": "mws1",
+            "oid": "unit:tests/door",
+            "out": null,
+            "params": {
+                "status": 1
+            },
+            "priority": 100,
+            "status": "completed",
+            "svc": "eva.controller.virtual",
+            "time": {
+                "accepted": 1652391907.96199,
+                "completed": 1652391907.9621937,
+                "created": 1652391907.9593222
+            },
+            "uuid": "b37f15f0-410c-4ded-93d0-2ce744c68e08"
+        }
+    }
+action.result:
+  des: Gets current action result
+  par:
+    - nam: u
+      typ: String
+      des: Action UUID
+      req: true
+  ret: Current result payload
+  http_req:
+    u: "b37f15f0-410c-4ded-93d0-2ce744c68e08"
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "err": null,
+            "exitcode": 0,
+            "finished": true,
+            "node": "mws1",
+            "oid": "unit:tests/door",
+            "out": null,
+            "params": {
+                "status": 1
+            },
+            "priority": 100,
+            "status": "completed",
+            "svc": "eva.controller.virtual",
+            "time": {
+                "accepted": 1652391907.96199,
+                "completed": 1652391907.9621937,
+                "created": 1652391907.9593222
+            },
+            "uuid": "b37f15f0-410c-4ded-93d0-2ce744c68e08"
+        }
+    }
+action.terminate:
+  des: Attempts to terminate/cancel an action
+  par:
+    - nam: u
+      typ: String
+      des: Action UUID
+      req: true
+  http_req:
+    u: "b37f15f0-410c-4ded-93d0-2ce744c68e08"
+action.kill:
+  des: Attempts to terminate/cancel all scheduled/running actions for the specified item
+  par:
+    - nam: i
+      typ: String
+      des: Item OID
+      req: true
+  http_req:
+    i: unit:tests/door
+run:
+  des: Executes a lmacro action
+  par:
+    - nam: i
+      typ: String
+      des: Lmacro OID
+      req: true
+    - nam: args
+      typ: Vec<Any>
+      des: Arguments
+      req: true
+    - nam: kwargs
+      typ: Map<String, Any>
+      des: Keyword arguments
+      req: false
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: Wait max seconds to finish
+      req: false
+  ret: Current result payload
+  http_req:
+    i: lmacro:tests/m1
+    kwargs:
+      a: 123
+    wait: 2
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "err": null,
+            "exitcode": 0,
+            "finished": true,
+            "node": "mws1",
+            "oid": "lmacro:tests/m1",
+            "out": null,
+            "params": {
+                "kwargs": {
+                    "a": 123
+                }
+            },
+            "priority": 100,
+            "status": "completed",
+            "svc": "eva.controller.py",
+            "time": {
+                "accepted": 1652392370.5245202,
+                "completed": 1652392370.524651,
+                "created": 1652392370.5234292,
+                "pending": 1652392370.524566,
+                "running": 1652392370.524599
+            },
+            "uuid": "3c0354e6-dfc6-4e3e-96a4-e4f5e4471da6"
+        }
+    }
+lvar.set:
+  des: Sets lvar status/value
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+    - nam: status
+      typ: i16
+      des: Desired status
+      req: false
+    - nam: value
+      typ: Any
+      des: Desired value
+      req: false
+  http_req:
+    i: lvar:tests/v1
+    status: 1
+    value: "TEST"
+lvar.reset:
+  des: Sets lvar status to 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  http_req:
+    i: lvar:tests/v1
+lvar.clear:
+  des: Sets lvar status to 0
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  http_req:
+    i: lvar:tests/v1
+lvar.toggle:
+  des: Toggles lvar status between 0 and 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  http_req:
+    i: lvar:tests/v1
+lvar.incr:
+  des: Increments lvar value by 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret: New lvar value
+  http_req:
+    i: lvar:tests/v1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": 1
+    }
+lvar.decr:
+  des: Decrements lvar value by 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret: New lvar value
+  http_req:
+    i: lvar:tests/v1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": 0
+    }
+session.list_neighbors:
+  des: List all logged in users (if allowed)
+  ret: List of logged in users
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+            {
+                "acl": "admin",
+                "mode": "normal",
+                "u": "admin"
+            },
+            {
+                "acl": "operator",
+                "mode": "normal",
+                "u": "operator"
+            }
+        ]
+    }
+session.set_readonly:
+  des: Set the current session token read-only
+  long_des: |
+    To switch back to normal (read/write) session, either call "login" method
+    to create a new session, or call it with user+password+a params to keep the
+    current one.
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "acl": "admin",
+            "mode": "readonly",
+            "token": "token:6SngcQsYtHSAESOzCuyJebvoAYB3ZBlp"
+        }
+    }
+"bus::<TARGET_SVC>::<METHOD>":
+  des: Calls any bus method (requires admin ACL)
+  par: Sent as-is to the target service, except "k"
+  ret: The target service reply as-is
+  http_req_method: "bus::eva.repl.1::node.get"
+  http_req:
+    i: rtest1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "build": 2022051001,
+            "compress": true,
+            "enabled": true,
+            "link_uptime": 1897.710214411,
+            "managed": true,
+            "name": "rtest1",
+            "online": true,
+            "ping_interval": 1.0,
+            "reload_interval": 60.0,
+            "static": true,
+            "timeout": 30.0,
+            "version": "4.0.0"
+        }
+    }
+"x::<TARGET_SVC>::<METHOD>":
+  des: 'Calls "x" service method'
+  long_des: |
+    Allows to extend HTTP API with custom functions.
+
+    Similar to the admin bus call, but does not check ACL/permissions. The
+    target service MUST implement "x" EAPI method and check ACL/permissions by
+    itself.
+
+    The target service gets the following parameters payload:
+
+    ======  ======  =============================
+    Name    Type    Description
+    ======  ======  =============================
+    method  String  sub-method 
+    params  Any     call params as-is, except "k"
+    aci     Struct  call ACI
+    acl     Struct  call ACL
+    ======  ======  =============================
+  par: Sent as-is to the target service, except "k"
+  http_req_method: "x::eva.svc.mysvc::hello"
+  http_req:
+    param1: value1
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": "hi there"
+    }

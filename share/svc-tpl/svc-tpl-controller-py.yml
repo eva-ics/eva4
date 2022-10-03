@@ -1,0 +1,18 @@
+# Python macros controller service
+#
+# Requires https://pypi.org/project/eva4-controller-py/ Python module installed
+command: venv/bin/eva4-svc-controller-py
+bus:
+  path: var/bus.ipc
+config:
+  # required for lock functions
+  #locker_svc: eva.svc.locker
+  # required for mail functions
+  #mailer_svc: eva.svc.mailer
+  # override macros directory (runtime-relative)
+  #macro_dir: xc/py
+  # custom global variables (available in all lmacros)
+  #cvars:
+    #name: value
+    #name2: value2
+user: nobody # if file operations are required, make sure the user has access to

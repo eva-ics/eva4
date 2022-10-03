@@ -1,0 +1,43 @@
+node.list:
+  des: List V3 nodes and their states
+  par:
+  ret: List (struct)
+  exm: |
+    [
+        {
+            "build": 2022042901,
+            "controllers": [
+                "uc",
+                "lm"
+            ],
+            "id": "plant1",
+            "key": "default-v3",
+            "key_legacy": "default",
+            "online": true,
+            "reload_interval": 10,
+            "timeout": 5,
+            "version": "3.4.2"
+        },
+        {
+            "build": null,
+            "controllers": [
+                "uc",
+                "lm"
+            ],
+            "id": "plant2",
+            "key": "default-v3",
+            "key_legacy": "default",
+            "online": false,
+            "reload_interval": 10,
+            "timeout": 5,
+            "version": null
+        }
+    ]
+node.reload:
+  des: Force reload a node
+  par:
+    - nam: i
+      typ: String
+      des: Node name
+      req: true
+  ret:

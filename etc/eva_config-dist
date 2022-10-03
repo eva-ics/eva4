@@ -1,0 +1,6 @@
+# MAX_START_WAIT=10 # max start wait (for regular mode)
+# VERBOSE_STARTUP=0 # verbose startup
+# SYSTEM_NAME=node1 # override the system name
+# PID_FILE=var/eva.pid # override the pid file location
+# MODE=regular # or spoint
+# ARGS="--connection-path server:port" # secondary point connection path

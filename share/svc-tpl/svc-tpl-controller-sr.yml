@@ -1,0 +1,26 @@
+# Scrpt-runner controller service
+command: target/debug/eva-controller-sr
+bus:
+  path: var/bus.ipc
+config:
+  update:
+    - command: xc/sr/temp_update.sh
+      oid: sensor:tests/temp # single OID or list
+      interval: 2 # update interval, required
+      timeout: 10 # override the default timeout, optional
+    - command: xc/sr/update_multiple.sh
+      oid:
+        - sensor:tests/s1
+        - sensor:tests/s2
+      interval: 5
+  action_map:
+    unit:tests/u1:
+      command: xc/sr/u1_action.sh
+      timeout: 10
+      # trigger update after actions
+      update_after: true
+  # event queue size
+  queue_size: 2048
+  # action queue size, per unit
+  action_queue_size: 32
+user: eva

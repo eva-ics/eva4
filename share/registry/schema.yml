@@ -1,0 +1,305 @@
+data/info:
+  type: object
+  additionalProperties: false
+  properties:
+    build:
+      type: integer
+    version: &str
+      type: string
+data/boot-id:
+  type: integer
+  minimum: 1
+config/python-venv:
+  type: object
+  additionalProperties: false
+  properties:
+    extra: &strarr
+      items: *str
+      type: array
+      additionalItems: false
+    mirror_extra_versions: *strarr
+    pip_extra_options: *str
+    python: *str
+    skip: *strarr
+    system_site_packages: &bool
+      type: boolean
+    use_system_pip: *bool
+  required:
+    - python
+    - use_system_pip
+    - system_site_packages
+    - pip_extra_options
+config/cloud-manager:
+  type: object
+  additionalProperties: false
+  properties:
+    repository_url: *str
+  required:
+    - repository_url
+config/bus:
+  type: object
+  additionalProperties: false
+  properties:
+    queue_size: &intzeropositive
+      type: integer
+      minumum: 0
+    buf_size: *intzeropositive
+    buf_ttl: *intzeropositive
+    sockets:
+      type: array
+      uniqueItems: true
+      additionalItems: false
+      items:
+        anyOf:
+          - type: string
+          - type: object
+            additionalProperties: false
+            properties:
+              path: *str
+              buf_size: *intzeropositive
+              buf_ttl: *intzeropositive
+              timeout: &floatpositive
+                type: number
+                minimum: 0.001
+              clients:
+                type: array
+                uniqueItems: true
+                additionalItems: false
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    name: *str
+                    hosts: *strarr
+                    p2p: *strarr
+                    broadcast: *strarr
+                    subscribe: *strarr
+                    publish: *strarr
+                  required:
+                    - name
+            required:
+              - path
+  required:
+    - queue_size
+    - buf_size
+    - buf_ttl
+    - sockets
+config/registry:
+  type: object
+  additionalProperties: false
+  properties:
+    auto_bak: *intzeropositive
+    skip_bak:
+      type: array
+      uniqueItems: true
+      additionalItems: false
+      items: *str
+    cache_size: &intpositive
+      type: integer
+      minimum: 1
+    strict_schema: *bool
+    auto_flush: *bool
+  required:
+    - auto_bak
+    - skip_bak
+    - cache_size
+    - strict_schema
+    - auto_flush
+config/core:
+  type: object
+  additionalProperties: false
+  properties:
+    inventory_db: *str
+    workers: *intpositive
+    timeout: *floatpositive
+    keep_action_history: *floatpositive
+    #dump: *bool
+    suicide_timeout: *floatpositive
+    instant_save: *bool
+  required:
+    - workers
+    - timeout
+    - keep_action_history
+    #- dump
+    - suicide_timeout
+config/logs:
+  type: array
+  uniqueItems: true
+  additionalItems: false
+  items:
+    type: object
+    additionalProperties: false
+    properties:
+      output:
+        type: string
+        enum:
+          - memory
+          - console
+          - file
+          - syslog
+          - bus
+      format:
+        type: string
+        enum:
+          - regular
+          - json
+      path: *str
+      level:
+        type: string
+        enum:
+          - trace
+          - debug
+          - info
+          - warn
+          - error
+      keep: *intzeropositive
+    required:
+      - output
+data/boot-id: *intpositive
+user_data: {}
+config/defaults:
+  type: object
+  additionalProperties: false
+  properties:
+    unit:
+      type: object
+    sensor:
+      type: object
+    lvar:
+      type: object
+inventory/unit:
+  type: object
+  additionalProperties: false
+  properties:
+    oid: *str
+    meta: &any
+      type: ["number","string","boolean","object","array", "null"]
+    enabled: *bool
+    logic: &logic
+      type: object
+      additionalProperties: false
+      properties:
+        range:
+          type: object
+          additionalProperties: false
+          properties:
+            min: &floatornull
+              type: ["number","null"]
+            max: *floatornull
+            min_eq: *bool
+            max_eq: *bool
+          required:
+            - min_eq
+            - max_eq
+    action: &action
+      type: object
+      additionalProperties: false
+      properties:
+        svc: *str
+        timeout: &floatzeropositive
+          type: number
+          minimum: 0
+        config: *any
+      required:
+        - svc
+  required:
+    - oid
+    - enabled
+inventory/sensor: &sensor
+  type: object
+  additionalProperties: false
+  properties:
+    oid: *str
+    meta: *any
+    enabled: *bool
+    logic: *logic
+  required:
+    - oid
+    - enabled
+inventory/lvar: *sensor
+inventory/lmacro:
+  type: object
+  additionalProperties: false
+  properties:
+    oid: *str
+    meta: *any
+    enabled: *bool
+    action: *action
+  required:
+    - oid
+    - enabled
+state/unit: &state
+  type: object
+  additionalProperties: false
+  properties:
+    status:
+      type: integer
+    value: *any
+    ieid:
+      type: array
+      additionalItems: false
+      items: *intpositive
+      minItems: 2
+      maxItems: 2
+    t: *floatpositive
+  required:
+    - status
+    - value
+    - ieid
+    - t
+state/sensor: *state
+state/lvar: *state
+svc:
+  type: object
+  additionalProperties: false
+  properties:
+    bus:
+      type: object
+      additionalProperties: false
+      properties:
+        buf_size: &intpositiveornull
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: "null"
+        buf_ttl: *intpositiveornull
+        path: *str
+        ping_interval: *floatornull
+        queue_size: *intpositiveornull
+        timeout: *floatornull
+        type: *str
+      required:
+        - path
+        - type
+    command: *str
+    enabled: *bool
+    workers: *intpositiveornull
+    prepare_command: &strornull
+      type: ["string", "null"]
+    user: *strornull
+    config: *any
+    timeout:
+      type: object
+      additionalProperties: false
+      properties:
+        default: *floatornull
+        shutdown: *floatornull
+        startup: *floatornull
+    react_to_fail: *bool
+    launcher: *str
+  required:
+    - bus
+    - command
+    - timeout
+cache: *any
+user_data: *any
+svc_data: *any
+config/ee/license:
+  type: object
+  additionalProperties: false
+  properties:
+    key: *str
+    expires: *intpositiveornull
+  required:
+    - key
+    - expires

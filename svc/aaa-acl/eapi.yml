@@ -1,0 +1,143 @@
+acl.list:
+  des: Get list of ACLs and their properties
+  par:
+  ret: List of ACLs (struct)
+  exm: |
+    [
+        {
+            "admin": true,
+            "id": "admin"
+        },
+        {
+            "id": "default",
+            "meta": {
+                "name": [
+                    "default ACL"
+                ]
+            },
+            "read": {
+                "items": [
+                    "#"
+                ]
+            },
+            "write": {
+                "items": [
+                    "#"
+                ]
+            }
+        }
+    ]
+acl.deploy:
+  des: Deploys ACLs
+  par:
+    - nam: acls
+      typ: Vec<struct>
+      des: ACLs (same as got in *acl.export*)
+      req: true
+  ret:
+acl.undeploy:
+  des: Undeploy ACLs
+  par:
+    - nam: acls
+      typ: Vec<struct/String>
+      des: ACLs or a list of ACL IDs
+      req: true
+  ret:
+acl.get_config:
+  des: Get configuration of a single ACL
+  par:
+    - nam: i
+      typ: String
+      des: ACL ID
+      req: true
+  ret: ACL configuration
+  exm: |
+      {
+          "id": "default",
+          "meta": {
+              "name": [
+                  "default ACL"
+              ]
+          },
+          "read": {
+              "items": [
+                  "#"
+              ]
+          },
+          "write": {
+              "items": [
+                  "#"
+              ]
+          }
+      }
+acl.export:
+  des: Export ACLs as a deployment
+  par:
+    - nam: i
+      typ: String
+      des: ACL ID (can be mask)
+      req: true
+  ret: ACL deployment struct
+  exm: |
+    {
+        "acls": [
+            {
+                "id": "default",
+                "meta": {
+                    "name": [
+                        "default ACL"
+                    ]
+                },
+                "read": {
+                    "items": [
+                        "#"
+                    ]
+                },
+                "write": {
+                    "items": [
+                        "#"
+                    ]
+                }
+            }
+        ]
+    }
+acl.destroy:
+  des: Destroy a single ACL
+  par:
+    - nam: i
+      typ: String
+      des: ACL ID
+      req: true
+  ret:
+acl.format:
+  des: Prepares/combines ACL(s)
+  par:
+    - nam: i
+      typ: String/Vec<String>
+      des: ACL ID or multiple IDs
+      req: true
+  ret: ACL, prepared for authorization
+  exm: |
+    {
+        "admin": true,
+        "from": [
+            "admin",
+            "default"
+        ],
+        "id": "admin+default",
+        "meta": {
+            "name": [
+                "default ACL"
+            ]
+        },
+        "read": {
+            "items": [
+                "#"
+            ]
+        },
+        "write": {
+            "items": [
+                "#"
+            ]
+        }
+    }

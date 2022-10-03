@@ -1,0 +1,41 @@
+# SNMP trap handler controller
+command: target/debug/eva-controller-trap
+bus:
+  path: var/bus.ipc
+config:
+  listen: 0.0.0.0:1162
+  # valid values
+  # snmp_v1 - SNMP v1
+  # snmp_v2c - SNMP v2c (default)
+  # eva_v1 - EVA ICS native UDP traps v1
+  protocol: snmp_v2c
+  # accepted communities
+  communities:
+    - public
+  # accepted hosts/networks
+  hosts_allow:
+     - 127.0.0.1
+     - 10.0.0.0/8
+  # process lmacro OID, required for SNMP traps
+  process: lmacro:tests/trap_handler
+  # key service, required for encrypted traps (native)
+  key_svc: eva.aaa.localauth
+  # allow encrypted traps only (native)
+  require_auth: false
+  # verbose info logging
+  verbose: false
+  mibs:
+    # if SNMP mibs are enabled, the process macro receives MIB-converted var
+    # names. MIB conversion uses net-snmp (built-in) library, which may be
+    # considered as unsafe. DO NOT USE MIBs FROM UNVERIFIED SOURCES.
+    #
+    # Usually requires installing base MIBs (libsnmp-base, snmp-mibs-downloader
+    # and/or related system packages)
+    enabled: false
+    #files:
+       #- /path/to/file.mib
+    dirs:
+      - /usr/share/snmp/mibs
+      - /usr/share/snmp/mibs/iana
+      - /usr/share/snmp/mibs/ietf
+user: nobody

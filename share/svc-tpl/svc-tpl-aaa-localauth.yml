@@ -1,0 +1,14 @@
+# Local users and API keys service
+command: target/debug/eva-aaa-localauth
+bus:
+  path: var/bus.ipc
+config:
+  # ACL service
+  acl_svc: eva.aaa.acl
+  # OTP service
+  #otp_svc: eva.aaa.otp
+  # allow one-time users
+  one_time:
+    # one-time user account expiration (sec)
+    expires: 10
+user: nobody

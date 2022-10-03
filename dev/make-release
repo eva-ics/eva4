@@ -1,0 +1,29 @@
+#!/bin/bash
+
+CURDIR=$(pwd)
+
+#[ -z "${BUILD_DIR}" ] && BUILD_DIR=/tdata/_eva4_build
+#cd "${BUILD_DIR}/eva4" || exit 1
+
+VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
+
+git branch|grep ^*|grep ${VERSION} > /dev/null 2>&1
+if [ $? -eq 1 ] && [ "$1" != "--test" ]; then
+  echo -n "wrong branch detected: "
+  git branch|grep ^*|awk '{print $2 }'
+  echo "I need ${VERSION}"
+  exit 1
+fi
+BRANCH=${VERSION}
+
+echo "Releasing EVA distribution ver ${VERSION} build ${BUILD}"
+
+"${CURDIR}/dev/release.py" "${VERSION}" "${BUILD}" -u $@ || exit 1
+
+if [ "$1" = "--test" ]; then
+  echo "TEST ON" | figlet
+else
+  jks build pub.bma.ai
+  echo RELEASED! | figlet
+fi

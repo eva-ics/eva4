@@ -1,0 +1,32 @@
+# Event-to-SQL database service
+command: target/debug/eva-db-sql
+workers: 2
+bus:
+  path: var/bus.ipc
+config:
+  # database URI (supported: sqlite, mysql, postgres)
+  db: sqlite:///tmp/eva_history.db
+  # db: mysql://USER:PASSWORD@HOST/DB
+  # db: postgres://USER:PASSWORD@HOST/DB
+  # TS extension (supported: timescale), required for fills
+  #ts_extension: timescale
+  # event buffer time-to-live, seconds
+  buf_ttl_sec: null
+  # periodically submit all item states
+  interval: null
+  # ignore real-time events
+  ignore_events: false
+  # false - perform smart cleaning (slower) or simple
+  simple_cleaning: false
+  # keep records (seconds)
+  keep: 604800
+  # event queue size
+  queue_size: 8192
+  # panic on critical errors in X seconds after happened (0 - panic immediately)
+  panic_in: null
+  # database pool size
+  #pool_size: 2 (default = workers)
+  # item OIDs / OID masks
+  oids:
+    - "#"
+user: nobody

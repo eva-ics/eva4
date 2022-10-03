@@ -1,0 +1,40 @@
+[workspace]
+
+members = [
+  "eva",
+  #"svc/svc-template",
+  "svc/svc-example-temp",
+  "svc/db-influx",
+  "svc/db-sql",
+  "svc/aaa-acl",
+  "svc/aaa-otp",
+  "svc/aaa-localauth",
+  "svc/svc-expiration",
+  "svc/filemgr",
+  "svc/svc-filewriter",
+  "svc/controller-enip",
+  "svc/controller-modbus",
+  "svc/controller-ads",
+  "svc/bridge-ads",
+  "svc/controller-w1",
+  "svc/controller-trap",
+  "svc/controller-sr",
+  "svc/controller-virtual",
+  "svc/controller-lm",
+  "svc/svc-modbus-slave",
+  "svc/hmi",
+  "svc/mirror",
+  "svc/repl",
+  "svc/svc-locker",
+  "svc/svc-mailer",
+  "tools/eva-cloud-manager",
+  "tools/gen-intl",
+  "psrpc",
+  "wshack",
+  "benchmarks/bm-primary"
+]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

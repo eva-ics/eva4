@@ -1,0 +1,8 @@
+MB:
+  des: "([0x4D 0x42]) Executes Modbus method via the native bus"
+  par: Modbus request frame, RTU-encoded, unit ID must be 1
+  ret: Modbus reply frame, RTU-encoded
+save:
+  des: Stores Modbus context to disk (if persistent)
+  par:
+  ret:

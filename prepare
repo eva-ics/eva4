@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+[ "${debug}" == "1" ] && set -o xtrace
+
+REQUIRED="realpath pgrep pkill jq"
+
+function on_exit {
+    local err=$?
+    if [ $err -ne 0 ]; then
+        echo
+        echo "SETUP FAILED, CODE: $err"
+    fi
+}
+
+function check_required_exec {
+    local p=$1
+    echo -n "Checking $p => "
+    if ! RESULT=$(command -v "$p" 2>&1); then
+        echo "Missing! Please install"
+        return 1
+    fi
+    echo "${RESULT}"
+    return 0
+}
+
+trap on_exit exit
+
+if [ -z $SKIP_CHECK ]; then
+    e=0
+    for r in ${REQUIRED}; do
+        check_required_exec "$r" || e=1
+    done
+    [ $e -ne 0 ] && exit 1
+fi
+
+EVA_DIR=$(dirname "$(realpath "$0")")
+cd "${EVA_DIR}" || exit 11
+export EVA_DIR
+
+FIRST_START=
+if [ ! -d runtime ]; then
+  mkdir -p runtime
+  chmod 755 runtime
+  FIRST_START=1
+fi
+
+mkdir -p runtime/xc runtime/xc/sr var log || exit 3
+if [ "$FIRST_START" ]; then
+  chmod 700 var log pvt || exit 3
+fi
+ln -sf runtime/xc || exit 3
+
+./install/init-registry || exit 4
+
+if [ "$FIRST_START" ]; then
+  chmod 700 runtime/registry || exit 4
+fi
+
+echo "The node is prepared"
+
+exit 0

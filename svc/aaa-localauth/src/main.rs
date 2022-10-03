@@ -1,0 +1,922 @@
+use bmart::tools::Sorting;
+use busrt::QoS;
+use eva_common::common_payloads::{ParamsId, ParamsIdListOwned};
+use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
+use eva_common::op::Op;
+use eva_common::prelude::*;
+use eva_sdk::prelude::*;
+use once_cell::sync::OnceCell;
+use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::{hash_map, HashMap, HashSet};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+err_logger!();
+
+#[cfg(not(feature = "std-alloc"))]
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+const AUTHOR: &str = "Bohemia Automation";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Local auth service";
+
+const ERR_INVALID_LOGIN_PASS: &str = "invalid login/password";
+const ONE_TIME_USER_CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
+const ONE_TIME_USER_PREFIX: &str = "OT.";
+
+pub const ID_ALLOWED_SYMBOLS: &str = "_.()[]-\\";
+
+lazy_static::lazy_static! {
+    static ref KEYDB: Mutex<KeyDb> = <_>::default();
+    static ref USERS: Mutex<HashMap<String, User>> = <_>::default();
+    static ref ONE_TIME_USERS: tokio::sync::Mutex<HashMap<String, OneTimeUser>> = <_>::default();
+    static ref ONE_TIME_EXPIRES: OnceCell<Duration> = <_>::default();
+    static ref REG: OnceCell<Registry> = <_>::default();
+    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
+    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
+}
+
+struct OneTimeUser {
+    created: Instant,
+    user: Option<User>,
+}
+
+impl OneTimeUser {
+    fn new(login: &str, acls: HashSet<String>) -> Self {
+        Self {
+            created: Instant::now(),
+            user: Some(User {
+                login: login.to_owned(),
+                password: gen_random_str(16),
+                acls,
+            }),
+        }
+    }
+    fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
+        if let Some(user) = self.user.take() {
+            if password == user.password {
+                Ok(user.acls.into_iter().collect())
+            } else {
+                debug!(
+                    "one-time user {} authentication failed: invalid password",
+                    user.login
+                );
+                Err(Error::access(ERR_INVALID_LOGIN_PASS))
+            }
+        } else {
+            Err(Error::access("one-time account can not be used twice"))
+        }
+    }
+    #[inline]
+    fn is_valid(&self) -> bool {
+        self.created.elapsed() < *ONE_TIME_EXPIRES.get().unwrap() && self.user.is_some()
+    }
+}
+
+/// full user object, stored in the registry
+#[derive(Debug, Serialize, Deserialize, Sorting)]
+#[sorting(id = "login")]
+#[serde(deny_unknown_fields)]
+struct User {
+    login: String,
+    password: String,
+    #[serde(default)]
+    acls: HashSet<String>,
+}
+
+/// user info object, provided on list
+#[derive(Serialize, Sorting)]
+#[sorting(id = "login")]
+struct UserInfo<'a> {
+    login: &'a str,
+    password: &'a str,
+    acls: &'a HashSet<String>,
+}
+
+impl<'a> From<&'a User> for UserInfo<'a> {
+    fn from(user: &'a User) -> UserInfo<'a> {
+        UserInfo {
+            login: &user.login,
+            password: &user.password,
+            acls: &user.acls,
+        }
+    }
+}
+
+/// full key object, stored in the registry
+#[derive(Debug, Serialize, Deserialize, Sorting)]
+#[serde(deny_unknown_fields)]
+struct Key {
+    id: String,
+    key: String,
+    #[serde(default)]
+    acls: HashSet<String>,
+}
+
+async fn clear_one_time_users() {
+    ONE_TIME_USERS
+        .lock()
+        .await
+        .retain(|_, user| user.is_valid());
+}
+
+fn gen_random_str(len: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(len)
+        .map(char::from)
+        .collect()
+}
+
+impl Key {
+    fn regenerate(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            key: gen_random_str(32),
+            acls: self.acls.clone(),
+        }
+    }
+}
+
+/// key info object, provided on list
+#[derive(Serialize, Sorting)]
+struct KeyInfo<'a> {
+    id: &'a str,
+    key: &'a str,
+    acls: &'a HashSet<String>,
+}
+
+impl<'a> From<&'a Arc<Key>> for KeyInfo<'a> {
+    fn from(key: &'a Arc<Key>) -> KeyInfo<'a> {
+        KeyInfo {
+            id: &key.id,
+            key: &key.key,
+            acls: &key.acls,
+        }
+    }
+}
+
+/// key value object
+#[derive(Serialize, Sorting)]
+struct KeyValue<'a> {
+    id: &'a str,
+    key: &'a str,
+}
+
+impl<'a> From<&'a Arc<Key>> for KeyValue<'a> {
+    fn from(key: &'a Arc<Key>) -> KeyValue<'a> {
+        KeyValue {
+            id: &key.id,
+            key: &key.key,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ParamsIdPass<'a> {
+    #[serde(borrow)]
+    i: &'a str,
+    #[serde(borrow)]
+    password: &'a str,
+}
+
+#[derive(Default)]
+struct KeyDb {
+    keys_by_id: HashMap<String, Arc<Key>>,
+    keys_by_k: HashMap<String, Arc<Key>>,
+}
+
+impl KeyDb {
+    #[inline]
+    fn values(&self) -> std::collections::hash_map::Values<String, Arc<Key>> {
+        self.keys_by_id.values()
+    }
+    fn append(&mut self, key: Arc<Key>) -> EResult<()> {
+        if let Some(k) = self.keys_by_k.get(&key.key) {
+            if key.id != k.id {
+                return Err(Error::busy(format!(
+                    "API key {} has the same value as the existing: {}",
+                    key.id, k.id
+                )));
+            }
+        }
+        self.keys_by_id.insert(key.id.clone(), key.clone());
+        self.keys_by_k.insert(key.key.clone(), key);
+        Ok(())
+    }
+    #[inline]
+    fn get(&self, id: &str) -> Option<&Arc<Key>> {
+        self.keys_by_id.get(id)
+    }
+    #[inline]
+    fn get_by_k(&self, k: &str) -> Option<&Arc<Key>> {
+        self.keys_by_k.get(k)
+    }
+    #[inline]
+    fn remove(&mut self, id: &str) -> Option<Arc<Key>> {
+        if let Some(key) = self.keys_by_id.remove(id) {
+            self.keys_by_k.remove(&key.key);
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
+struct Handlers {
+    info: ServiceInfo,
+    acl_svc: String,
+    otp_svc: Option<String>,
+    tx: async_channel::Sender<(String, Option<Value>)>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum KeyOrId {
+    Key(Key),
+    Id(String),
+}
+impl KeyOrId {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Key(key) => key.id.as_str(),
+            Self::Id(id) => id.as_str(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum UserOrLogin {
+    User(User),
+    Login(String),
+}
+impl UserOrLogin {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::User(user) => user.login.as_str(),
+            Self::Login(login) => login.as_str(),
+        }
+    }
+}
+
+fn password_hash(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password);
+    let password_hash = hasher.finalize();
+    hex::encode(password_hash)
+}
+
+#[inline]
+fn get_timeout() -> Duration {
+    *TIMEOUT.get().unwrap()
+}
+
+#[async_trait::async_trait]
+impl RpcHandlers for Handlers {
+    #[allow(clippy::too_many_lines)]
+    async fn handle_call(&self, event: RpcEvent) -> RpcResult {
+        svc_rpc_need_ready!();
+        let method = event.parse_method()?;
+        let payload = event.payload();
+        match method {
+            "key.list" => {
+                if payload.is_empty() {
+                    let keydb = KEYDB.lock().unwrap();
+                    let mut key_info: Vec<KeyInfo> = keydb.values().map(Into::into).collect();
+                    key_info.sort();
+                    Ok(Some(pack(&key_info)?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
+            "key.deploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Keys {
+                        keys: Vec<Key>,
+                    }
+                    let new_keys: Keys = unpack(payload)?;
+                    let mut reg_keys = Vec::new();
+                    {
+                        let mut keydb = KEYDB.lock().unwrap();
+                        for key in &new_keys.keys {
+                            for c in key.id.chars() {
+                                if !c.is_alphanumeric()
+                                    && !ID_ALLOWED_SYMBOLS.contains(c)
+                                    && c != '/'
+                                {
+                                    return Err(Error::invalid_data(format!(
+                                        "invalid symbol in key id {}: {}",
+                                        key.id, c
+                                    ))
+                                    .into());
+                                }
+                            }
+                        }
+                        for key in new_keys.keys {
+                            let key_id = key.id.clone();
+                            reg_keys.push((key_id, to_value(&key)?));
+                            keydb.append(Arc::new(key))?;
+                        }
+                    }
+                    let reg = REG.get().unwrap();
+                    for (key, val) in reg_keys {
+                        warn!("API key created: {}", key);
+                        reg.key_set(&format!("key/{key}"), val.clone()).await?;
+                        self.tx
+                            .send((format!("{AAA_KEY_TOPIC}{key}"), Some(val)))
+                            .await
+                            .log_ef();
+                    }
+                    Ok(None)
+                }
+            }
+            "key.undeploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Keys {
+                        keys: Vec<KeyOrId>,
+                    }
+                    let key_ids: Keys = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    let mut ids = Vec::new();
+                    {
+                        let mut keydb = KEYDB.lock().unwrap();
+                        for key_id in key_ids.keys {
+                            if let Some(key) = keydb.remove(key_id.as_str()) {
+                                warn!("API key destroyed: {}", key.id);
+                                ids.push(key.id.clone());
+                            }
+                        }
+                    }
+                    for id in ids {
+                        reg.key_delete(&format!("key/{id}")).await?;
+                        self.tx
+                            .send((format!("{AAA_KEY_TOPIC}{id}"), None))
+                            .await
+                            .log_ef();
+                    }
+                    Ok(None)
+                }
+            }
+            "key.get_config" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    if let Some(key) = KEYDB.lock().unwrap().get(p.i) {
+                        Ok(Some(pack(key)?))
+                    } else {
+                        Err(Error::not_found(format!("API key {} not found", p.i)).into())
+                    }
+                }
+            }
+            "key.export" => {
+                #[derive(Serialize)]
+                #[serde(deny_unknown_fields)]
+                struct Keys<'a> {
+                    keys: Vec<&'a Key>,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    let mut configs = Vec::new();
+                    let keys = KEYDB.lock().unwrap();
+                    if p.i == "#" || p.i == "*" {
+                        for key in keys.values() {
+                            configs.push(key.as_ref());
+                        }
+                    } else if let Some(key) = keys.get(p.i) {
+                        configs.push(key.as_ref());
+                    } else {
+                        return Err(Error::not_found(format!("API key {} not found", p.i)).into());
+                    }
+                    configs.sort();
+                    Ok(Some(pack(&Keys { keys: configs })?))
+                }
+            }
+            "key.get" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    if let Some(key) = KEYDB.lock().unwrap().get(p.i) {
+                        Ok(Some(pack(&Into::<KeyValue>::into(key))?))
+                    } else {
+                        Err(Error::not_found(format!("API key {} not found", p.i)).into())
+                    }
+                }
+            }
+            "key.destroy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    if KEYDB.lock().unwrap().remove(p.i).is_some() {
+                        reg.key_delete(&format!("key/{}", p.i)).await?;
+                        warn!("API key destroyed: {}", p.i);
+                        self.tx
+                            .send((format!("{AAA_KEY_TOPIC}{}", p.i), None))
+                            .await
+                            .log_ef();
+                        Ok(None)
+                    } else {
+                        Err(Error::not_found(format!("API key {} not found", p.i)).into())
+                    }
+                }
+            }
+            "key.regenerate" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    let val = {
+                        let mut keydb = KEYDB.lock().unwrap();
+                        if let Some(key) = keydb.remove(p.i) {
+                            let new_key = key.regenerate();
+                            let v = to_value(&new_key)?;
+                            keydb.append(Arc::new(new_key))?;
+                            v
+                        } else {
+                            return Err(
+                                Error::not_found(format!("API key {} not found", p.i)).into()
+                            );
+                        }
+                    };
+                    info!("API key regenerated: {}", p.i);
+                    reg.key_set(&format!("key/{}", p.i), val.clone()).await?;
+                    let result = pack(&val)?;
+                    self.tx
+                        .send((format!("{AAA_KEY_TOPIC}{}", p.i), Some(val)))
+                        .await
+                        .log_ef();
+                    Ok(Some(result))
+                }
+            }
+            "auth.key" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct ParamsAuthKey<'a> {
+                    #[serde(borrow)]
+                    key: &'a str,
+                    #[serde(
+                        default = "get_timeout",
+                        deserialize_with = "eva_common::tools::de_float_as_duration"
+                    )]
+                    timeout: Duration,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsAuthKey = unpack(payload)?;
+                let acls = if let Some(key) = KEYDB.lock().unwrap().get_by_k(p.key) {
+                    debug!("API key authenticated: {}", key.id);
+                    key.acls.iter().cloned().collect()
+                } else {
+                    debug!("API key authentication failed");
+                    return Err(Error::access("invalid API key").into());
+                };
+                let result = safe_rpc_call(
+                    RPC.get().unwrap(),
+                    &self.acl_svc,
+                    "acl.format",
+                    pack(&ParamsIdListOwned { i: acls })?.into(),
+                    QoS::Processed,
+                    p.timeout,
+                )
+                .await?;
+                Ok(Some(result.payload().to_vec()))
+            }
+            "user.list" => {
+                if payload.is_empty() {
+                    let users = USERS.lock().unwrap();
+                    let mut user_info: Vec<UserInfo> = users.values().map(Into::into).collect();
+                    user_info.sort();
+                    Ok(Some(pack(&user_info)?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
+            "user.deploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Users {
+                        users: Vec<User>,
+                    }
+                    let new_users: Users = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    let mut reg_users = Vec::new();
+                    {
+                        let mut users = USERS.lock().unwrap();
+                        for user in &new_users.users {
+                            for c in user.login.chars() {
+                                if !c.is_alphanumeric()
+                                    && !ID_ALLOWED_SYMBOLS.contains(c)
+                                    && c != '/'
+                                {
+                                    return Err(Error::invalid_data(format!(
+                                        "invalid symbol in user login {}: {}",
+                                        user.login, c
+                                    ))
+                                    .into());
+                                }
+                            }
+                        }
+                        for user in new_users.users {
+                            let login = user.login.clone();
+                            reg_users.push((login.clone(), to_value(&user)?));
+                            users.insert(login, user);
+                        }
+                    }
+                    for (login, val) in reg_users {
+                        warn!("user created: {}", login);
+                        reg.key_set(&format!("user/{login}"), val.clone()).await?;
+                        self.tx
+                            .send((format!("{AAA_USER_TOPIC}{login}"), Some(val)))
+                            .await
+                            .log_ef();
+                    }
+                    Ok(None)
+                }
+            }
+            "user.undeploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Users {
+                        users: Vec<UserOrLogin>,
+                    }
+                    let u_users: Users = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    let mut ids = Vec::new();
+                    {
+                        let mut users = USERS.lock().unwrap();
+                        for user in u_users.users {
+                            if let Some(user) = users.remove(user.as_str()) {
+                                warn!("user destroyed: {}", user.login);
+                                ids.push(user.login.clone());
+                            }
+                        }
+                    }
+                    for id in ids {
+                        reg.key_delete(&format!("user/{id}")).await?;
+                        self.tx
+                            .send((format!("{AAA_USER_TOPIC}{id}"), None))
+                            .await
+                            .log_ef();
+                    }
+                    Ok(None)
+                }
+            }
+            "user.get_config" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    if let Some(user) = USERS.lock().unwrap().get(p.i) {
+                        Ok(Some(pack(user)?))
+                    } else {
+                        Err(Error::not_found(format!("user {} not found", p.i)).into())
+                    }
+                }
+            }
+            "user.export" => {
+                #[derive(Serialize)]
+                #[serde(deny_unknown_fields)]
+                struct Users<'a> {
+                    users: Vec<&'a User>,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    let mut configs = Vec::new();
+                    let users = USERS.lock().unwrap();
+                    if p.i == "#" || p.i == "*" {
+                        for user in users.values() {
+                            configs.push(user);
+                        }
+                    } else if let Some(user) = users.get(p.i) {
+                        configs.push(user);
+                    } else {
+                        return Err(Error::not_found(format!("API user {} not found", p.i)).into());
+                    }
+                    configs.sort();
+                    Ok(Some(pack(&Users { users: configs })?))
+                }
+            }
+            "user.destroy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    if USERS.lock().unwrap().remove(p.i).is_some() {
+                        reg.key_delete(&format!("user/{}", p.i)).await?;
+                        warn!("user destroyed: {}", p.i);
+                        self.tx
+                            .send((format!("{AAA_USER_TOPIC}{}", p.i), None))
+                            .await
+                            .log_ef();
+                        Ok(None)
+                    } else {
+                        Err(Error::not_found(format!("user {} not found", p.i)).into())
+                    }
+                }
+            }
+            "user.set_password" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsIdPass = unpack(payload)?;
+                    if p.password.is_empty() {
+                        return Err(Error::invalid_data("the password can not be empty").into());
+                    }
+                    let reg = REG.get().unwrap();
+                    let val = {
+                        let mut users = USERS.lock().unwrap();
+                        if let Some(user) = users.get_mut(p.i) {
+                            user.password = password_hash(p.password);
+                            to_value(&user)?
+                        } else {
+                            return Err(Error::not_found(format!("user {} not found", p.i)).into());
+                        }
+                    };
+                    warn!("user password changed: {}", p.i);
+                    reg.key_set(&format!("user/{}", p.i), val.clone()).await?;
+                    let result = pack(&val)?;
+                    self.tx
+                        .send((format!("{AAA_USER_TOPIC}{}", p.i), Some(val)))
+                        .await
+                        .log_ef();
+                    Ok(Some(result))
+                }
+            }
+            "user.create_one_time" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    struct ParamsOneTimeUser {
+                        login: Option<String>,
+                        acls: HashSet<String>,
+                    }
+                    #[derive(Serialize)]
+                    struct PayloadOneTimeUser<'a> {
+                        login: String,
+                        password: &'a str,
+                    }
+                    let p: ParamsOneTimeUser = unpack(payload)?;
+                    if ONE_TIME_EXPIRES.get().is_some() {
+                        let mut ot_users = ONE_TIME_USERS.lock().await;
+                        let (entry, login) = loop {
+                            let rand_str = gen_random_str(16);
+                            let login = if let Some(ref l) = p.login {
+                                format!("{}.{}", l, rand_str)
+                            } else {
+                                rand_str
+                            };
+                            if let hash_map::Entry::Vacant(entry) = ot_users.entry(login.clone()) {
+                                break (entry, login);
+                            }
+                        };
+                        let one_time_user = OneTimeUser::new(&login, p.acls);
+                        let u = one_time_user.user.as_ref().unwrap();
+                        let ot_user_info = PayloadOneTimeUser {
+                            login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),
+                            password: &u.password,
+                        };
+                        let res = pack(&ot_user_info)?;
+                        entry.insert(one_time_user);
+                        Ok(Some(res))
+                    } else {
+                        Err(Error::unsupported("one-time users are not enabled").into())
+                    }
+                }
+            }
+            "auth.user" => {
+                #[derive(Deserialize)]
+                struct ParamsAuthUser<'a> {
+                    #[serde(borrow)]
+                    login: &'a str,
+                    #[serde(borrow)]
+                    password: &'a str,
+                    #[serde(
+                        default = "get_timeout",
+                        deserialize_with = "eva_common::tools::de_float_as_duration"
+                    )]
+                    timeout: Duration,
+                    xopts: Option<HashMap<String, Value>>,
+                }
+                #[derive(Serialize)]
+                struct ParamsOtpCheck<'a> {
+                    login: &'a str,
+                    otp: Option<&'a Value>,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsAuthUser = unpack(payload)?;
+                let acls = if let Some(login) = p.login.strip_prefix(ONE_TIME_USER_PREFIX) {
+                    if let Some(one_time_user) = ONE_TIME_USERS.lock().await.get_mut(login) {
+                        one_time_user.get_acls(p.password)?
+                    } else {
+                        debug!("one-time user {} authentication failed: not found", p.login);
+                        return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                    }
+                } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
+                    if user.password != password_hash(p.password) {
+                        debug!("user {} authentication failed: invalid password", p.login);
+                        return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                    }
+                    debug!("user authenticated: {}", p.login);
+                    user.acls.iter().cloned().collect()
+                } else {
+                    debug!("user {} authentication failed: not found", p.login);
+                    return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                };
+                let rpc = RPC.get().unwrap();
+                let op = Op::new(p.timeout);
+                if let Some(otp_svc) = self.otp_svc.as_ref() {
+                    safe_rpc_call(
+                        rpc,
+                        otp_svc,
+                        "otp.check",
+                        pack(&ParamsOtpCheck {
+                            login: p.login,
+                            otp: if let Some(xopts) = p.xopts.as_ref() {
+                                xopts.get("otp")
+                            } else {
+                                None
+                            },
+                        })?
+                        .into(),
+                        QoS::Processed,
+                        op.timeout()?,
+                    )
+                    .await?;
+                }
+                let result = safe_rpc_call(
+                    rpc,
+                    &self.acl_svc,
+                    "acl.format",
+                    pack(&ParamsIdListOwned { i: acls })?.into(),
+                    QoS::Processed,
+                    op.timeout()?,
+                )
+                .await?;
+                Ok(Some(result.payload().to_vec()))
+            }
+            m => svc_handle_default_rpc(m, &self.info),
+        }
+    }
+    async fn handle_notification(&self, _event: RpcEvent) {}
+    async fn handle_frame(&self, _frame: Frame) {}
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Config {
+    acl_svc: String,
+    otp_svc: Option<String>,
+    one_time: Option<OneTimeConfig>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OneTimeConfig {
+    #[serde(deserialize_with = "eva_common::tools::de_float_as_duration")]
+    expires: Duration,
+}
+
+#[svc_main]
+async fn main(mut initial: Initial) -> EResult<()> {
+    TIMEOUT
+        .set(initial.timeout())
+        .map_err(|_| Error::core("unable to set timeout"))?;
+    let config: Config = Config::deserialize(
+        initial
+            .take_config()
+            .ok_or_else(|| Error::invalid_data("config not specified"))?,
+    )?;
+    if let Some(one_time) = config.one_time {
+        ONE_TIME_EXPIRES
+            .set(one_time.expires)
+            .map_err(|_| Error::core("unable to set ONE_TIME_EXPIRES"))?;
+        eva_common::cleaner!(
+            "one_time_users",
+            clear_one_time_users,
+            ONE_TIME_USER_CLEANUP_INTERVAL
+        );
+    }
+    let (tx, rx) = async_channel::bounded(1024);
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(ServiceMethod::new("key.list"));
+    info.add_method(ServiceMethod::new("key.deploy").required("keys"));
+    info.add_method(ServiceMethod::new("key.undeploy").required("keys"));
+    info.add_method(ServiceMethod::new("key.get_config").required("i"));
+    info.add_method(ServiceMethod::new("key.export").required("i"));
+    info.add_method(ServiceMethod::new("key.get").required("i"));
+    info.add_method(ServiceMethod::new("key.destroy").required("i"));
+    info.add_method(ServiceMethod::new("key.regenerate").required("i"));
+    info.add_method(
+        ServiceMethod::new("auth.key")
+            .required("key")
+            .optional("timeout"),
+    );
+    info.add_method(ServiceMethod::new("user.list"));
+    info.add_method(ServiceMethod::new("user.deploy").required("users"));
+    info.add_method(ServiceMethod::new("user.undeploy").required("users"));
+    info.add_method(ServiceMethod::new("user.get_config").required("i"));
+    info.add_method(ServiceMethod::new("user.export").required("i"));
+    info.add_method(ServiceMethod::new("user.destroy").required("i"));
+    info.add_method(
+        ServiceMethod::new("user.set_password")
+            .required("i")
+            .required("password"),
+    );
+    info.add_method(ServiceMethod::new("user.create_one_time").required("acls"));
+    info.add_method(
+        ServiceMethod::new("auth.user")
+            .required("login")
+            .required("password")
+            .required("timeout"),
+    );
+    let handlers = Handlers {
+        info,
+        acl_svc: config.acl_svc,
+        otp_svc: config.otp_svc,
+        tx,
+    };
+    let rpc = initial.init_rpc(handlers).await?;
+    initial.drop_privileges()?;
+    let client = rpc.client().clone();
+    let cl = client.clone();
+    tokio::spawn(async move {
+        while let Ok((topic, val)) = rx.recv().await {
+            let payload: busrt::borrow::Cow = if let Some(v) = val {
+                if let Ok(p) = pack(&v).log_err() {
+                    p.into()
+                } else {
+                    continue;
+                }
+            } else {
+                busrt::empty_payload!()
+            };
+            cl.lock()
+                .await
+                .publish(&topic, payload, QoS::No)
+                .await
+                .log_ef();
+        }
+    });
+    svc_init_logs(&initial, client.clone())?;
+    let registry = initial.init_registry(&rpc);
+    let reg_keys = registry.key_get_recursive("key").await?;
+    {
+        let mut kdb = KEYDB.lock().unwrap();
+        for (k, v) in reg_keys {
+            debug!("API key loaded: {}", k);
+            kdb.append(Arc::new(Key::deserialize(v)?))?;
+        }
+    }
+    let reg_users = registry.key_get_recursive("user").await?;
+    {
+        let mut u = USERS.lock().unwrap();
+        for (k, v) in reg_users {
+            debug!("user loaded: {}", k);
+            let user: User = User::deserialize(v)?;
+            u.insert(user.login.clone(), user);
+        }
+    }
+    RPC.set(rpc.clone())
+        .map_err(|_| Error::core("unable to set RPC"))?;
+    REG.set(registry)
+        .map_err(|_| Error::core("unable to set registry object"))?;
+    svc_start_signal_handlers();
+    svc_mark_ready(&client).await?;
+    info!("{} started ({})", DESCRIPTION, initial.id());
+    svc_block(&rpc).await;
+    svc_mark_terminating(&client).await?;
+    Ok(())
+}

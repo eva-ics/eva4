@@ -1,0 +1,185 @@
+use eva_common::common_payloads::{ParamsOID, ParamsUuid};
+use eva_common::prelude::*;
+use eva_sdk::controller::{actt::Actt, format_action_topic, Action};
+use eva_sdk::prelude::*;
+use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Duration;
+
+mod actions;
+mod common;
+mod updates;
+
+err_logger!();
+
+const AUTHOR: &str = "Bohemia Automation";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const DESCRIPTION: &str = "Script-runner controller service";
+
+lazy_static! {
+    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
+    static ref EVA_DIR: OnceCell<String> = <_>::default();
+    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
+    static ref UPDATE_TRIGGERS: Mutex<HashMap<OID, async_channel::Sender<()>>> = <_>::default();
+    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
+        <_>::default();
+    static ref ACTT: OnceCell<Actt> = <_>::default();
+    static ref BUS_PATH: OnceCell<String> = <_>::default();
+}
+
+#[cfg(not(feature = "std-alloc"))]
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+struct Handlers {
+    info: ServiceInfo,
+    tx: async_channel::Sender<(String, Vec<u8>)>,
+}
+
+#[async_trait::async_trait]
+impl RpcHandlers for Handlers {
+    async fn handle_call(&self, event: RpcEvent) -> RpcResult {
+        svc_rpc_need_ready!();
+        let method = event.parse_method()?;
+        let payload = event.payload();
+        match method {
+            "update" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsOID = unpack(payload)?;
+                    updates::trigger_update(&p.i)?;
+                    Ok(None)
+                }
+            }
+            "action" => {
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let action: Action = unpack(payload)?;
+                let actt = crate::ACTT.get().unwrap();
+                let action_topic = format_action_topic(action.oid());
+                let payload_pending = pack(&action.event_pending())?;
+                let action_uuid = *action.uuid();
+                let action_oid = action.oid().clone();
+                if let Some(tx) = crate::ACTION_QUEUES.get().unwrap().get(action.oid()) {
+                    actt.append(action.oid(), action_uuid)?;
+                    if let Err(e) = tx.send(action).await {
+                        actt.remove(&action_oid, &action_uuid)?;
+                        Err(Error::core(format!("action queue broken: {}", e)).into())
+                    } else if let Err(e) = self
+                        .tx
+                        .send((action_topic, payload_pending))
+                        .await
+                        .map_err(Error::io)
+                    {
+                        actt.remove(&action_oid, &action_uuid)?;
+                        Err(e.into())
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    Err(Error::not_found(format!("{} has no action map", action.oid())).into())
+                }
+            }
+            "terminate" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsUuid = unpack(payload)?;
+                    crate::ACTT.get().unwrap().mark_terminated(&p.u)?;
+                    Ok(None)
+                }
+            }
+            "kill" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsOID = unpack(payload)?;
+                    crate::ACTT.get().unwrap().mark_killed(&p.i)?;
+                    Ok(None)
+                }
+            }
+            _ => svc_handle_default_rpc(method, &self.info),
+        }
+    }
+    async fn handle_notification(&self, _event: RpcEvent) {}
+    async fn handle_frame(&self, _frame: Frame) {}
+}
+
+#[svc_main]
+async fn main(mut initial: Initial) -> EResult<()> {
+    let config: common::Config = common::Config::deserialize(
+        initial
+            .take_config()
+            .ok_or_else(|| Error::invalid_data("config not specified"))?,
+    )?;
+    let timeout = initial.timeout();
+    TIMEOUT
+        .set(timeout)
+        .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
+    BUS_PATH
+        .set(initial.bus_path().to_owned())
+        .map_err(|_| Error::core("Unable to set BUS_PATH"))?;
+    let startup_timeout = initial.startup_timeout();
+    let eva_dir = initial.eva_dir();
+    EVA_DIR
+        .set(eva_dir.to_owned())
+        .map_err(|_| Error::core("Unable to set EVA_DIR"))?;
+    let action_oids = config.action_map.keys().collect::<Vec<&OID>>();
+    ACTT.set(Actt::new(&action_oids))
+        .map_err(|_| Error::core("Unable to set ACTT"))?;
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(ServiceMethod::new("update").required("i"));
+    let (tx, rx) = async_channel::bounded::<(String, Vec<u8>)>(config.queue_size);
+    let rpc = initial
+        .init_rpc(Handlers {
+            info,
+            tx: tx.clone(),
+        })
+        .await?;
+    RPC.set(rpc.clone())
+        .map_err(|_| Error::core("Unable to set RPC"))?;
+    initial.drop_privileges()?;
+    let client = rpc.client().clone();
+    let cl = client.clone();
+    tokio::spawn(async move {
+        while let Ok((topic, payload)) = rx.recv().await {
+            cl.lock()
+                .await
+                .publish(&topic, payload.into(), QoS::No)
+                .await
+                .log_ef();
+        }
+    });
+    svc_init_logs(&initial, client.clone())?;
+    svc_start_signal_handlers();
+    let rpc_c = rpc.clone();
+    tokio::spawn(async move {
+        let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
+        for update in config.update {
+            tokio::spawn(async move {
+                updates::update_handler(update).await.log_ef();
+            });
+        }
+    });
+    let mut action_queues: HashMap<OID, async_channel::Sender<Action>> = HashMap::new();
+    for (oid, map) in config.action_map {
+        let (atx, arx) = async_channel::bounded::<Action>(config.action_queue_size);
+        debug!("starting action queue for {}", oid);
+        actions::start_action_handler(&oid, map, arx, tx.clone());
+        action_queues.insert(oid, atx);
+    }
+    ACTION_QUEUES
+        .set(action_queues)
+        .map_err(|_| Error::core("Unable to set ACTION_QUEUES"))?;
+    svc_mark_ready(&client).await?;
+    info!("{} started ({})", DESCRIPTION, initial.id());
+    svc_block(&rpc).await;
+    svc_mark_terminating(&client).await?;
+    Ok(())
+}

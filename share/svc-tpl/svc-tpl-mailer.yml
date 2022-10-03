@@ -1,0 +1,17 @@
+# Mailer service (SMTP gateway)
+command: target/debug/eva-svc-mailer
+bus:
+  path: var/bus.ipc
+config:
+  #from: eva@domain
+  #default_rcp:
+  # - some@domain.com
+  # - some2@domain.com
+  smtp:
+    host: localhost
+    port: 25
+    tls: false
+    #username: user
+    #password: secret
+    pool_size: 5
+user: nobody

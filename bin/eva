@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+D=$(realpath "$0")
+EVA_DIR=$(realpath "$(dirname "${D}")/..")
+export EVA_DIR
+
+if [ ! -f "$EVA_DIR/venv/bin/eva" ]; then
+  echo "eva shell not found. Please install the Python module"
+  exit 1
+fi
+
+"${EVA_DIR}/venv/bin/eva" "$@"

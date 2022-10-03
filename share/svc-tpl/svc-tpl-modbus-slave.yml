@@ -1,0 +1,30 @@
+# Modbus slave context service
+#
+# Internal context variables
+#
+# type  reg  size   purpose
+# INPUT 9000 16 bit EVA ICS version major
+# INPUT 9001 16 bit ~ version minor
+# INPUT 9002 16 bit ~ version micro
+# INPUT 9003 64 bit ~ build
+#
+command: target/debug/eva-svc-modbus-slave
+bus:
+  path: var/bus.ipc
+config:
+  persistent: true # persistent context
+  listen:
+    - path: 127.0.0.1:5503
+      unit: 1
+      protocol: tcp
+      timeout: 5 # override the default timeout
+      keep_alive_timeout: 180 # for TCP only
+    #- path: 127.0.0.1:5503
+      #unit: 1
+      #protocol: udp
+      #timeout: 5 # OS UDP buffer timeout
+    #- path: /dev/ttyS0:9600:8:N:1 # serial (rtu/ascii)
+      #unit: 1
+      #protocol: rtu # or ascii
+      #timeout: 1
+user: eva # do not set nobody for persistent context

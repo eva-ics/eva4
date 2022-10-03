@@ -1,0 +1,88 @@
+tpl.reload:
+  des: Reloads server templates
+  par:
+  ret:
+i18n.cache_purge:
+  des: Purges i18n locale cache
+  par:
+  ret:
+api_log.get:
+  des: Gets log of recent API calls
+  par:
+  ret: List of recent API calls
+  exm: |
+    [
+        {
+            "acl": "admin",
+            "auth": "token",
+            "code": 0,
+            "dt": "2022-05-10T03:43:26+02:00",
+            "elapsed": 0.023,
+            "id": "41770402-8154-4d3f-ae49-55fa9b9840b6",
+            "method": "action.toggle",
+            "msg": null,
+            "source": "127.0.0.1",
+            "t": 1652147006,
+            "user": "admin"
+        },
+        {
+            "acl": "admin",
+            "auth": "token",
+            "code": 0,
+            "dt": "2022-05-10T03:43:32+02:00",
+            "elapsed": 0.019,
+            "id": "6d12a29e-ba5f-4757-a2d3-770641393dd3",
+            "method": "action.toggle",
+            "msg": null,
+            "source": "127.0.0.1",
+            "t": 1652147012,
+            "user": "admin"
+        }
+    ]
+ws.stats:
+  des: Gets statistic of connected web sockets
+  par:
+  ret: Web socket subscription statistic (struct)
+  exm: |
+    {
+        "clients": 1,
+        "sub_clients": 1,
+        "subscriptions": 1
+    }
+session.broadcast.reload:
+  des: Broadcasts an event to connected clients to reload interface
+  par:
+  ret:
+session.broadcast.restart:
+  des: Broadcasts an event to connected clients that the server is restarting
+  par:
+  ret:
+session.list:
+  des: Lists active sessions of logged in users
+  par:
+  ret:
+  exm: |
+    [
+        {
+            "expires_in": 57,
+            "id": "token:unFdcur2dGUcfA4XgBaEIVqVBFjEi83U",
+            "mode": "normal",
+            "source": "127.0.0.1",
+            "user": "admin"
+        },
+        {
+            "expires_in": 59,
+            "id": "token:OziFA5Pzb0IndXHmVVy13Sh24BxFW73E",
+            "mode": "normal",
+            "source": "127.0.0.1",
+            "user": "admin"
+        }
+    ]
+session.destroy:
+  des: Destroys an active user session
+  par:
+    - nam: i
+      typ: String
+      des: Session token ID
+      req: true
+  ret:

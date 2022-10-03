@@ -1,0 +1,26 @@
+#!/bin/sh
+
+LIB=eva/src/lib.rs
+
+BUILD=$(grep const\ BUILD ${LIB}|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
+BUILD_DATE=`echo $BUILD| cut -c1-8`
+BUILD_NUMBER=`echo $BUILD| cut -c9-`
+
+NEW_BUILD_DATE=$(date +"%Y%m%d")
+
+if [ $NEW_BUILD_DATE != $BUILD_DATE ]; then
+    NEW_BUILD=${NEW_BUILD_DATE}01
+else
+    NEW_BUILD_NUMBER=`expr $BUILD_NUMBER + 1`
+    NEW_BUILD_NUMBER=`printf "%02d" ${NEW_BUILD_NUMBER}`
+    if [ ${NEW_BUILD_NUMBER} -gt 99 ]; then
+        echo "Build number will be greater than 99, exiting"
+        exit 2
+    fi
+    NEW_BUILD=${NEW_BUILD_DATE}${NEW_BUILD_NUMBER}
+fi
+
+echo "$f $BUILD -> $NEW_BUILD"
+sed -i "s/pub const BUILD: .*/pub const BUILD: u64 = ${NEW_BUILD};/g" ${LIB}
+
+sed -i "s/^BUILD=.*/BUILD=${NEW_BUILD}/g" update.sh

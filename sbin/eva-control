@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+
+D=$(realpath "$0")
+cd "$(dirname "${D}")/.." || exit 1
+
+WAIT_TO_KILL=10 # sec * 2 before kill -KILL
+
+EVA_DIR=$(pwd)
+
+export EVA_DIR
+
+[ -f ./etc/eva_config ] && source ./etc/eva_config
+[ -z "${MAX_START_WAIT}" ] && MAX_START_WAIT=20
+[ -z "${MODE}" ] && MODE=regular
+[ -z "${SYSTEM_NAME}" ] && SYSTEM_NAME=$(hostname -s)
+[ -z "${PID_FILE}" ] && PID_FILE=${EVA_DIR}/var/eva.pid
+
+export MODE
+
+(( MAX_START_WAIT_P=MAX_START_WAIT*2))
+
+EVA_NODE=${EVA_DIR}/svc/eva-node
+SAFE_RUN_PID_FILE=${EVA_DIR}/var/eva_safe.pid
+SAFE_RUN=${EVA_DIR}/svc/safe-run.sh
+TEST=
+WATCHDOG_PID_FILE=${EVA_DIR}/var/watchdog.pid
+WATCHDOG=${EVA_DIR}/svc/watchdog.sh
+
+function exec_cmd {
+  $*
+  return $?
+}
+
+case $1 in
+  start)
+    echo -n "Starting EVA ICS ."
+    if pgrep -f "${EVA_NODE}" >& /dev/null; then
+      echo
+      echo "already started"
+      exit 0
+    fi
+    if [ "$VERBOSE_STARTUP" = "1" ]; then
+      exec_cmd "${SAFE_RUN}" "${SAFE_RUN_PID_FILE}" "${EVA_NODE}" --mode "${MODE}" --system-name "${SYSTEM_NAME}" --pid-file "${PID_FILE}" ${ARGS} &
+    else
+      exec_cmd "${SAFE_RUN}" "${SAFE_RUN_PID_FILE}" "${EVA_NODE}" --mode "${MODE}" --system-name "${SYSTEM_NAME}" --pid-file "${PID_FILE}" ${ARGS} >& /dev/null &
+    fi
+    case "${MODE}" in
+      regular)
+        TEST="${EVA_DIR}/sbin/bus ${EVA_DIR}/var/bus.ipc rpc call eva.core test"
+        ;;
+      spoint)
+        TEST=
+        ;;
+    esac
+    result=1
+    C=0
+    if [ "$TEST" ]; then
+      while [ "$result" != "0" ]; do
+        if [ $C -gt ${MAX_START_WAIT_P} ]; then
+          echo " Failed!"
+          exit 1
+        fi
+        exec_cmd "${TEST}" >& /dev/null
+        result=$?
+        if [ "$result" == "0" ]; then
+          break
+        fi
+        (( C++ ))
+        echo -n "."
+        sleep 0.5
+      done
+    fi
+    echo " started"
+    case "${MODE}" in
+      regular)
+        "${WATCHDOG}" >& /dev/null &
+        ;;
+    esac
+    [ "$INVOCATION_ID" ] && "$EVA_DIR/svc/sblock.sh" &
+    exit 0
+    ;;
+  launch)
+    export EVA_ENABLE_CC=1
+    "${EVA_NODE}" --mode "${MODE}" --system-name "${SYSTEM_NAME}" --pid-file "${PID_FILE}" ${ARGS}
+    ;;
+  stop)
+    PID_WATCHDOG=
+    [ -f "${WATCHDOG_PID_FILE}" ] && PID_WATCHDOG=$(cat "${WATCHDOG_PID_FILE}")
+    if [ "${PID_WATCHDOG}" ]; then
+      kill -KILL "${PID_WATCHDOG}" >& /dev/null
+      rm -f "${WATCHDOG_PID_FILE}"
+    fi
+    if pgrep -f "${EVA_NODE}" >& /dev/null; then
+      echo -n "Stopping EVA ICS ."
+      PID_SAFE_RUN=
+      PID_EVA_NODE=
+      [ -f "${SAFE_RUN_PID_FILE}" ] && PID_SAFE_RUN=$(cat "${SAFE_RUN_PID_FILE}")
+      [ -f "${PID_FILE}" ] && PID_EVA_NODE=$(cat "${PID_FILE}")
+      if [ "${PID_SAFE_RUN}" ]; then
+        kill "${PID_SAFE_RUN}" >& /dev/null
+        rm -f "${SAFE_RUN_PID_FILE}"
+      fi
+      if [ "${PID_EVA_NODE}" ]; then
+        kill "${PID_EVA_NODE}" >& /dev/null
+        I=0
+        while kill -0 "${PID_EVA_NODE}" >& /dev/null; do
+          echo -n "."
+          sleep 0.5
+          (( I++ ))
+          if [ ${I} -ge ${WAIT_TO_KILL} ]; then
+            echo -n  "killing "
+            kill -KILL -- "-${PID_EVA_NODE}"
+            break
+          fi
+        done
+        kill -KILL -- "-${PID_EVA_NODE}" >& /dev/null
+        rm -f "${PID_FILE}"
+      fi
+      if pkill -f "${EVA_NODE}" >& /dev/null; then
+        sleep 3
+        pkill -KILL -f "${EVA_NODE}" >& /dev/null
+      fi
+      echo " stopped"
+    fi
+    pkill -KILL -f "^$EVA_DIR/svc/" >& /dev/null
+    pkill -KILL -f "^$EVA_DIR/target/" >& /dev/null
+    pgrep -fa ^/opt/eva4/venv/bin/python | \
+      grep " /opt/eva4/venv/bin/python" | \
+      grep "\-svc-"|awk '{ print $1 }'|xargs kill -KILL >& /dev/null
+          rm -f ./var/eva.reload
+          [ "$INVOCATION_ID" ] && pkill -KILL -f "$EVA_DIR/svc/sblock.sh"
+          exit 0
+          ;;
+        restart)
+          ./sbin/eva-control stop "$2"
+          ./sbin/eva-control start "$2"
+          ;;
+        status)
+          if pgrep -f "${EVA_NODE}" >& /dev/null; then
+            echo "running"
+          else
+            echo "stopped"
+          fi
+          ;;
+        version)
+          exec_cmd "${EVA_NODE}" --mode info
+          ;;
+        *)
+          echo "Usage: eva-control start|stop|restart|version"
+          ;;
+      esac

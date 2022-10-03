@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+
+description="EVA ICS v4 node server"
+prefix=/opt/eva4
+
+depend() {
+  need net
+  use dns
+}
+
+start() {
+  "${prefix}/sbin/eva-control" start > /dev/null
+  eend $?
+}
+
+stop() {
+  "${prefix}/sbin/eva-control" stop > /dev/null
+  eend $?
+}

@@ -1,0 +1,12 @@
+# File manager service
+command: target/debug/eva-filemgr
+bus:
+  path: var/bus.ipc
+config:
+  protected:
+    - registry
+    - svc_data
+  mime_types: share/mime.yml
+# the file manager service usually works under root, however may be restricted
+# for higher security
+user: eva

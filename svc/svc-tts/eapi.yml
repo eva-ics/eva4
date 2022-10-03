@@ -1,0 +1,12 @@
+say:
+  des: Says a word or a phrase
+  par:
+    - nam: text
+      typ: String
+      des: Text to say
+      req: true
+    - nam: other params
+      typ: Any
+      des: Sent as-is to https://github.com/alttch/ttsbroker/ engine say fn
+      req: false
+  ret:

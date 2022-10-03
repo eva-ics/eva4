@@ -1,0 +1,80 @@
+reg.get:
+  des: Get Modbus slave register
+  par:
+    - nam: unit
+      typ: u8
+      des: Modbus unit ID
+      req: true
+    - nam: reg
+      typ: String
+      des: "Register (h/i/d/c e.g. h100 for holding #100)"
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: false
+    - nam: bit
+      typ: u8
+      des: Get an individual bit
+      req: false
+    - nam: count
+      typ: u32
+      des: Count of bits/registers
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret: Tag value, single or list
+reg.set:
+  des: Set Modbus slave register
+  par:
+    - nam: unit
+      typ: u8
+      des: Modbus unit ID
+      req: true
+    - nam: reg
+      typ: String
+      des: "Register (h/i/d/c e.g. h100 for holding #100)"
+      req: true
+    - nam: value
+      typ: Any
+      des: value to set
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: false
+    - nam: bit
+      typ: u8
+      des: Get an individual bit
+      req: false
+    - nam: verify
+      typ: bool
+      des: Read the register back and verify its value
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret:
+action:
+  des: Executes a mapped unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+terminate:
+  des: Attempts to terminate/cancel a unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+kill:
+  des: Attempts to terinate/cancel all actions for a unit
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`

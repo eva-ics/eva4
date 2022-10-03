@@ -1,0 +1,741 @@
+test:
+  des: Tests the core and gets system info
+  par:
+  ret: system and core information (struct)
+  exm: |
+    {
+        "active": true,
+        "boot_id": 2217,
+        "build": 2022050503,
+        "eapi_version": 1,
+        "instant_save": true,
+        "pid": 2305238,
+        "product_code": "eva4node",
+        "product_name": "EVA ICS node server",
+        "system_name": "mws1",
+        "time": 1651781334.3509862,
+        "uptime": 5.059754863,
+        "version": "4.0.0",
+        "workers": 4
+    }
+save:
+  des: Saves item states if instant-save is off
+  par:
+  ret:
+log.purge:
+  des: Purges memory log records
+  par:
+  ret:
+log.get:
+  des: Gets memory log records
+  par:
+    - nam: level
+      typ: u8/String
+      des: log level (0=trace, 10=debug, 20=info, 30=warn, 40=error)
+      req: false
+    - nam: time
+      typ: u32
+      des: get records only newer than CURRENT_TIMESTAMP-N
+      req: false
+    - nam: limit
+      typ: u32
+      des: limit number of records
+      req: false
+    - nam: module
+      typ: String
+      des: filter log records by a module name
+      req: false
+    - nam: rx
+      typ: String
+      des: message filter regular expression
+      req: false
+  ret: memory log records (list)
+  exm: |
+    [
+      {
+          "dt": "2022-05-05T22:08:50.425+02:00",
+          "h": "mws1",
+          "l": 20,
+          "lvl": "info",
+          "mod": "eva::svc",
+          "msg": "eva.controller.eip starting puller #2, interval: 1s",
+          "t": 1651781330.425161,
+          "th": null
+      },
+      {
+          "dt": "2022-05-05T22:08:50.425+02:00",
+          "h": "mws1",
+          "l": 20,
+          "lvl": "info",
+          "mod": "eva::svc",
+          "msg": "eva.controller.eip starting puller #1, interval: 1s",
+          "t": 1651781330.425518,
+          "th": null
+      }
+    ]
+node.get:
+  des: Gets local/remote node info
+  par:
+    - nam: i
+      typ: String
+      des: ID/name
+      req: true
+  ret: node info (struct)
+  exm: |
+      {
+          "info": {
+              "build": 2022050502,
+              "version": "4.0.0"
+          },
+          "online": true,
+          "svc": "eva.repl.default"
+      }
+node.list:
+  des: Lists local/registered remote nodes
+  par:
+  ret: node info (list)
+  exm: |
+      [
+          {
+              "info": {
+                  "build": 2022050503,
+                  "version": "4.0.0"
+              },
+              "name": "mws1",
+              "online": true,
+              "remote": false,
+              "svc": null
+          },
+          {
+              "info": {
+                  "build": 2022050502,
+                  "version": "4.0.0"
+              },
+              "name": "rtest1",
+              "online": true,
+              "remote": true,
+              "svc": "eva.repl.default"
+          }
+      ]
+spoint.list:
+  des: List connected secondary points
+  par:
+  ret: S-Point info (list)
+  exm: |
+    [
+        {
+            "build": 2022062202,
+            "name": "eva.spoint.m1",
+            "port": "192.168.22.77:7777",
+            "source": "192.168.22.71:55643",
+            "version": "4.0.0"
+        },
+        {
+            "build": 2022062202,
+            "name": "eva.spoint.m2",
+            "port": "192.168.22.77:7777",
+            "source": "192.168.22.72:55641",
+            "version": "4.0.0"
+        }
+    ]
+item.summary:
+  des: Gets local/remote item summary
+  par:
+  ret: item summary
+  exm: |
+      {
+          "items": 22,
+          "sources": {
+              ".local": 20,
+              "rtest1": 2
+          }
+      }
+item.create:
+  des: Creates a local item with empty config
+  par: &oid
+    - nam: i
+      typ: String
+      des: OID
+      req: true
+  ret:
+item.destroy:
+  des: Destroys a local item
+  par: *oid
+  ret:
+item.deploy:
+  des: Deploys local items
+  par:
+    - nam: items
+      typ: Vec<struct>
+      des: :doc:`item<items>` configuration
+      req: true
+  ret:
+item.undeploy:
+  des: Undeploys local items
+  par:
+    - nam: items
+      typ: Vec<struct/String>
+      des: item configuration or a list of OIDS
+      req: false
+  ret:
+item.get_config:
+  des: Gets config for an individual item
+  par: *oid
+  ret: item configuration (struct)
+  exm: |
+    {
+        "action": {
+            "svc": "eva.controller.virtual"
+        },
+        "enabled": true,
+        "oid": "unit:tests/door"
+    }
+item.list:
+  des: Gets filtered list of items
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s) or OID mask(s)
+      req: false
+    - nam: "node (alias: src)"
+      typ: String
+      des: filter items by node (use .local as an alias for the local one)
+      req: false
+    - nam: include
+      typ: Vec<String>
+      des: List of additional masks to include
+      req: false
+    - nam: exclude
+      typ: Vec<String>
+      des: List of additional masks to exclude
+      req: false
+  ret: list of items
+  exm: |
+    [
+        {
+            "connected": true,
+            "enabled": true,
+            "ieid": null,
+            "node": "mws1",
+            "oid": "lmacro:m1",
+            "t": null
+        },
+        {
+            "connected": true,
+            "enabled": true,
+            "ieid": null,
+            "node": "mws1",
+            "oid": "lmacro:m2",
+            "t": null
+        }
+    ]
+item.announce:
+  des: Forces bus state announcements for selected items
+  par:
+    - nam: i
+      typ: String
+      des: Item OID or OID mask
+      req: false
+    - nam: "node (alias: src)"
+      typ: String
+      des: filter items by node (use .local as an alias for the local one)
+      req: false
+  ret:
+item.enable:
+  des: Enables local item(s)
+  par:
+    - nam: i
+      typ: String
+      des: Item OID or OID mask
+      req: false
+  ret:
+item.disable:
+  des: Disables local item(s)
+  par:
+    - nam: i
+      typ: String
+      des: Item OID or OID mask
+      req: false
+  ret:
+item.state:
+  des: Gets filtered list of item states
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s) or OID mask(s)
+      req: false
+    - nam: include
+      typ: Vec<String>
+      des: List of additional masks to include
+      req: false
+    - nam: exclude
+      typ: Vec<String>
+      des: List of additional masks to exclude
+      req: false
+    - nam: full
+      typ: bool
+      des: Return full item state (include meta and enabled fields)
+      req: false
+  ret: list of item states
+  exm: |
+    [
+        {
+            "connected": true,
+            "ieid": [
+                1923,
+                728478328325649
+            ],
+            "node": "mws1",
+            "oid": "lvar:repl/rtest1/online",
+            "status": 1,
+            "t": 1650246289.5193255,
+            "value": 1
+        },
+        {
+            "connected": true,
+            "ieid": [
+                1648,
+                135594146656848
+            ],
+            "node": "mws1",
+            "oid": "lvar:x/x",
+            "status": 0,
+            "t": 1648772592.8681087,
+            "value": -4
+        }
+    ]
+action:
+  des: Executes a unit action
+  par:
+    - nam: i
+      typ: String
+      des: Unit OID
+      req: true
+    - nam: params/status
+      typ: i16
+      des: Desired unit status
+      req: true
+    - nam: params/value
+      typ: Any
+      des: Desired unit value
+      req: false
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: max seconds to wait for the final result
+      req: false
+    - nam: u
+      typ: Vec<u8; 16>
+      des: Action UUID
+      req: false
+  ret: action result payload (final or current one), the UUID field is returned as Vec<u8;16>
+  exm: |
+    {
+        "err": null,
+        "exitcode": 0,
+        "finished": true,
+        "node": "mws1",
+        "oid": "unit:modbus/relay1",
+        "out": null,
+        "params": {
+            "status": 0,
+            "value": 252
+        },
+        "priority": 100,
+        "status": "completed",
+        "svc": "eva.controller.m1",
+        "time": {
+            "accepted": 1651786320.177963,
+            "completed": 1651786320.1834776,
+            "created": 1651786320.176336,
+            "pending": 1651786320.1780024,
+            "running": 1651786320.1780891
+        },
+        "uuid": []
+    }
+action.toggle:
+  des: Executes a unit action to toggle its status (between 0/1)
+  par:
+    - nam: i
+      typ: String
+      des: Unit OID
+      req: true
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: max seconds to wait for the final result
+      req: false
+    - nam: u
+      typ: Vec<u8; 16>
+      des: Action UUID
+      req: false
+  ret: unit action result payload (final or current one), the UUID field is returned as Vec<u8;16>
+  exm: |
+    {
+        "err": null,
+        "exitcode": 0,
+        "finished": true,
+        "node": "mws1",
+        "oid": "unit:modbus/relay1",
+        "out": null,
+        "params": {
+            "status": 0,
+            "value": 252
+        },
+        "priority": 100,
+        "status": "completed",
+        "svc": "eva.controller.m1",
+        "time": {
+            "accepted": 1651786320.177963,
+            "completed": 1651786320.1834776,
+            "created": 1651786320.176336,
+            "pending": 1651786320.1780024,
+            "running": 1651786320.1780891
+        },
+        "uuid": []
+    }
+run:
+  des: Executes lmacro
+  par:
+    - nam: i
+      typ: String
+      des: Lmacro OID
+      req: true
+    - nam: params/args
+      typ: Vec<Any>
+      des: execution arguments
+      req: false
+    - nam: params/kwargs
+      typ: Map<String, Any>
+      des: execution keyword arguments
+      req: false
+    - nam: priority
+      typ: u8
+      des: Action priority
+      req: false
+    - nam: wait
+      typ: f64
+      des: max seconds to wait for the final result
+      req: false
+    - nam: u
+      typ: Vec<u8; 16>
+      des: Action UUID
+      req: false
+  ret: macro action result payload (final or current one), the UUID field is returned as Vec<u8;16>
+  exm: |
+    {
+        "err": null,
+        "exitcode": 0,
+        "finished": true,
+        "node": "mws1",
+        "oid": "lmacro:m1",
+        "out": "I am finished successfully",
+        "params": {
+            "args": [
+                1
+            ],
+            "kwargs": {
+                "a": 5
+            }
+        },
+        "priority": 100,
+        "status": "completed",
+        "svc": "eva.controller.py",
+        "time": {
+            "accepted": 1651786507.8852181,
+            "completed": 1651786507.8854232,
+            "created": 1651786507.8839648,
+            "pending": 1651786507.8853166,
+            "running": 1651786507.885348
+        },
+        "uuid": []
+    }
+action.result:
+  des: Gets the result of previously executed action
+  par:
+    - nam: u
+      typ: Vec<u8; 16>
+      des: Action UUID
+      req: true
+  ret: action result payload (final or current one), the UUID field is returned as Vec<u8;16>
+  exm: |
+    {
+        "err": null,
+        "exitcode": 0,
+        "finished": true,
+        "node": "mws1",
+        "oid": "unit:modbus/relay1",
+        "out": null,
+        "params": {
+            "status": 0,
+            "value": 252
+        },
+        "priority": 100,
+        "status": "completed",
+        "svc": "eva.controller.m1",
+        "time": {
+            "accepted": 1651786320.177963,
+            "completed": 1651786320.1834776,
+            "created": 1651786320.176336,
+            "pending": 1651786320.1780024,
+            "running": 1651786320.1780891
+        },
+        "uuid": []
+    }
+action.terminate:
+  des: Attempts to terminate/cancel a scheduled/running action
+  par:
+    - nam: u
+      typ: Vec<u8; 16>
+      des: Action UUID
+      req: true
+  ret:
+action.kill:
+  des: Attempts to terminate/cancel all scheduled/running actions for the specified item
+  par: *oid
+  ret:
+action.list:
+  des: Lists results of recently scheduled/executed actions 
+  par:
+    - nam: i
+      typ: String
+      des: Item OID or OID mask
+      req: false
+    - nam: sq
+      typ: String
+      des: Item status query filter (waiting/running/completed/failed/finished)
+      req: false
+    - nam: time
+      typ: u32
+      des: get records only newer than CURRENT_TIMESTAMP-N
+      req: false
+    - nam: limit
+      typ: u32
+      des: limit number of records
+      req: false
+  ret: list of action result payloads, the UUID fields are returned as Vec<u8;16>
+  exm: |
+    [
+      {
+          "err": null,
+          "exitcode": 0,
+          "finished": true,
+          "node": "mws1",
+          "oid": "unit:modbus/relay1",
+          "out": null,
+          "params": {
+              "status": 0,
+              "value": 252
+          },
+          "priority": 100,
+          "status": "completed",
+          "svc": "eva.controller.m1",
+          "time": {
+              "accepted": 1651786320.177963,
+              "completed": 1651786320.1834776,
+              "created": 1651786320.176336,
+              "pending": 1651786320.1780024,
+              "running": 1651786320.1780891
+          },
+          "uuid": []
+      }
+    ]
+lvar.set:
+  des: Sets Lvar status/value
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+    - nam: status
+      typ: i16
+      des: Lvar status
+      req: false
+    - nam: value
+      typ: Any
+      des: Lvar value
+      req: false
+  ret:
+lvar.reset:
+  des: Sets Lvar status to 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret:
+lvar.clear:
+  des: Sets Lvar status to 0
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret:
+lvar.toggle:
+  des: Toggles Lvar status between 0/1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret:
+lvar.incr:
+  des: Increments Lvar value by 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret: new Lvar value (i64)
+lvar.decr:
+  des: Decrements Lvar value by 1
+  par:
+    - nam: i
+      typ: String
+      des: Lvar OID
+      req: true
+  ret: new Lvar value (i64)
+svc.deploy:
+  des: Deploys local services
+  par:
+    - nam: svcs
+      typ: Vec<struct>
+      des: Service parameters
+      req: false
+  ret:
+svc.undeploy:
+  des: Undeploys local services
+  par:
+    - nam: svc
+      typ: Vec<struct/String>
+      des: Service parameters or a list of service IDs
+      req: false
+  ret:
+svc.purge:
+  des: Undeploys local services and purge their data
+  par:
+    - nam: svc
+      typ: Vec<struct/String>
+      des: Service parameters or a list of service IDs
+      req: false
+  ret:
+svc.restart:
+  des: Restarts a local service
+  par:
+    - nam: i
+      typ: String
+      des: Service ID
+      req: true
+  ret:
+svc.get_params:
+  des: Gets parameters for an individual service
+  par: &svc_id
+    - nam: i
+      typ: String
+      des: Service ID
+      req: true
+  ret: service parameters and configuration (struct)
+  exm: |
+    {
+        "bus": {
+            "buf_size": 8192,
+            "buf_ttl": 10,
+            "path": "var/bus.ipc",
+            "ping_interval": 1.0,
+            "queue_size": 8192,
+            "timeout": null,
+            "type": "native"
+        },
+        "command": "target/debug/eva-svc-modbus-slave",
+        "config": {
+            "listen": [
+                {
+                    "keep_alive_timeout": 180,
+                    "path": "127.0.0.1:5503",
+                    "protocol": "tcp",
+                    "timeout": 5,
+                    "unit": 1
+                }
+            ],
+            "persistent": true
+        },
+        "prepare_command": null,
+        "react_to_fail": false,
+        "timeout": {
+            "default": null,
+            "shutdown": null,
+            "startup": null
+        },
+        "user": null,
+        "workers": 1
+    }
+svc.get:
+  des: Gets status of an individual service
+  par: *svc_id
+  ret: service status
+  exm: |
+    {
+        "id": "eva.controller.modbus11",
+        "launcher": "eva.launcher.main",
+        "pid": 2305314,
+        "status": "online"
+    }
+svc.list:
+  des: Gets status for all local services
+  par:
+  ret: list of services and their status
+  exm: |
+    [
+      {
+          "id": "eva.aaa.acl",
+          "launcher": "eva.launcher.main",
+          "pid": 2305311,
+          "status": "online"
+      }
+      {
+          "id": "eva.aaa.localauth",
+          "launcher": "eva.launcher.main",
+          "pid": 2305312,
+          "status": "online"
+      }
+      {
+          "id": "eva.controller.modbus11",
+          "launcher": "eva.launcher.main",
+          "pid": 2305314,
+          "status": "online"
+      }
+    ]
+core.shutdown:
+  des: Shuts down the core (will be usually auto-restarted)
+  par:
+  ret:
+update:
+  des: Updates the node
+  par:
+    - nam: version
+      typ: String
+      des: Try to update to the specified version
+      req: true
+    - nam: build
+      typ: u64
+      des: Try to update to the specified build
+      req: true
+    - nam: yes
+      typ: bool
+      des: update confirmation (must be set to true)
+      req: true
+    - nam: url
+      typ: String
+      des: alternative repository URL
+      req: false
+    - nam: test
+      typ: bool
+      des: allow updating to test builds
+      req: false

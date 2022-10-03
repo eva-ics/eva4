@@ -1,0 +1,3 @@
+pvt dir is used by EVA HMI to serve private content (camera images, room plans,
+oid lists etc.) securely to avoid loading them by the UI app until a user is
+authenticated.

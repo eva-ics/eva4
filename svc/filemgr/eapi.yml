@@ -1,0 +1,56 @@
+file.get:
+  des: Gets a file from runtime directory
+  par:
+    - nam: path
+      typ: String
+      des: Relative file path
+      req: true
+    - nam: mode
+      typ: String
+      des: i/x/t/b (info, extended info, text, binary)
+      req: false
+    - nam: caller
+      typ: String
+      des: m/h (machine/human)
+      req: false
+  ret: File info or info + content
+  exm: |
+    {
+        "content_type": "application/x-yaml",
+        "modified": 1648693508.311287,
+        "path": "test.yml",
+        "permissions": 33188,
+        "size": 9
+    }
+file.put:
+  des: Puts a file into runtime directory
+  par: 
+    - nam: path
+      typ: String
+      des: Relative file path
+      req: true
+    - nam: content
+      typ: Vec<u8>/String
+      des: File content
+      req: true
+    - nam: permissions
+      typ: u32/String/bool
+      des: "'0o755' for string, true/false for executable flag"
+      req: false
+    - nam: sha256
+      typ: Vec<u8><String>
+      des: Check sha256 sum of the content before saving
+      req: false
+    - nam: extract
+      typ: String
+      des: "Extract as: no|tar|txz|tgz|tbz2|zip"
+      req: false
+  ret:
+file.unlink:
+  des: Deletes file from runtime directory
+  par:
+    - nam: path
+      typ: String
+      des: Relative file path
+      req: true
+  ret:

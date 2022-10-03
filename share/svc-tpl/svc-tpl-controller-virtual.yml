@@ -1,0 +1,20 @@
+bus:
+  path: var/bus.ipc
+command: target/debug/eva-controller-virtual
+config:
+  # auto-create virtual items on set/action
+  auto_create: false
+  # define virtual items
+  items:
+  #- sensor:tests/temp
+  #- sensor:tests/hum
+  #- sensor:tests/pressure
+  #- sensor:tests/alarm
+  #- sensor:tests/voltage
+  #- sensor:tests/power
+  #- unit:tests/lamp
+  #- unit:tests/vent
+  #- unit:tests/door
+  #- unit:tests/u1
+user: nobody
+workers: 1

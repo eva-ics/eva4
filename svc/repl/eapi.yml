@@ -1,0 +1,160 @@
+node.list:
+  des: Lists remote nodes
+  par:
+  ret: List (struct)
+  exm: |
+    [
+        {
+            "build": 2022050902,
+            "compress": true,
+            "enabled": true,
+            "link_uptime": 85.004101572,
+            "managed": true,
+            "name": "rtest1",
+            "online": true,
+            "ping_interval": 1.0,
+            "reload_interval": 60.0,
+            "static": true,
+            "timeout": 30.0,
+            "version": "4.0.0"
+        },
+        {
+            "build": 2022050902,
+            "compress": true,
+            "enabled": true,
+            "link_uptime": 122.0092,
+            "managed": true,
+            "name": "rtest2",
+            "online": true,
+            "ping_interval": 1.0,
+            "reload_interval": 60.0,
+            "static": true,
+            "timeout": 30.0,
+            "version": "4.0.0"
+        }
+    ]
+node.get:
+  des: Gets state of a single remote node
+  par:
+    - nam: i
+      typ: String
+      des: Node name
+      req: true
+  ret: Node state (struct)
+  exm: |
+    {
+        "build": 2022050902,
+        "compress": true,
+        "enabled": true,
+        "link_uptime": 183.26962651,
+        "managed": true,
+        "name": "rtest1",
+        "online": true,
+        "ping_interval": 1.0,
+        "reload_interval": 60.0,
+        "static": true,
+        "timeout": 30.0,
+        "version": "4.0.0"
+    }
+node.append:
+  des: Appends remote node with the default configuration
+  par:
+    - nam: i
+      typ: String
+      des: Node name
+      req: true
+  ret:
+node.deploy:
+  des: Deploys remote nodes and their configuration
+  par:
+    - nam: nodes
+      typ: Vec<struct>
+      des: Node configurations (same as got in *node.export*)
+      req: false
+  ret:
+node.undeploy:
+  des: Deploys remote nodes and their configuration
+  par:
+    - nam: nodes
+      typ: Vec<struct/String>
+      des: Node configurations or IDs
+      req: false
+  ret:
+node.export:
+  des: Exports node deployment configurations
+  par:
+    - nam: i
+      typ: String
+      des: Node ID (accepts wildcards)
+      req: true
+  ret: Node deploy config
+  exm: |
+    {
+        "nodes": [
+            {
+                "admin_key_id": "admin",
+                "compress": true,
+                "enabled": true,
+                "key_id": "default",
+                "name": "rtest1",
+                "ping_interval": 1.0,
+                "reload_interval": 60.0,
+                "timeout": 30.0
+            }
+        ]
+    }
+node.get_config:
+  des: Gets configuration of a single node
+  par:
+    - nam: i
+      typ: String
+      des: Node ID
+      req: true
+  ret: Node config (struct)
+  exm: |
+    {
+        "admin_key_id": "admin",
+        "compress": true,
+        "enabled": true,
+        "key_id": "default",
+        "name": "rtest1",
+        "ping_interval": 1.0,
+        "reload_interval": 60.0,
+        "timeout": 30.0
+    }
+node.remove:
+  des: Removes a single node
+  par:
+    - nam: i
+      typ: String
+      des: Node ID
+      req: true
+  ret:
+node.reload:
+  des: Forces reload of a remote node
+  par:
+    - nam: i
+      typ: String
+      des: Node ID
+      req: true
+  ret:
+node.test:
+  des: Tests connection to a remote node
+  par:
+    - nam: i
+      typ: String
+      des: Node ID
+      req: true
+  ret:
+node.mtest:
+  des: Tests management call to a remote node
+  par:
+    - nam: i
+      typ: String
+      des: Node ID
+      req: true
+  ret:
+"bus::<SVC_ID>::<METHOD>":
+  des: Calls any remote method (requires management access)
+  par: Always required (provide empty Map if the target method has no ones)
+  ret: RPC result as-is

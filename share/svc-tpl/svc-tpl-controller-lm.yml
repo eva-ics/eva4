@@ -1,0 +1,91 @@
+# Logic manager programmable controller
+command: target/debug/eva-controller-lm
+bus:
+  path: var/bus.ipc
+config:
+  rules: []
+    #- id: rule1
+      #oid: sensor:#
+      #prop: status # status, value or act (for units)
+      # full condition notation, can be shortened as x = -1
+      #condition:
+        #min: -1
+        #max: -1
+        #min_eq: true
+        #max_eq: true
+      #break: false # do not process further rules if mathces
+      #chillout_time: 10 # ignore further events, seconds
+      #run: lmacro:tests/sensor_down
+      #initial: process # process, skip, only
+      #block: false # block rule processing until the macro is finished
+    #- id: rule2
+      #oid: unit:#
+      #prop: act
+      #condition:
+        #min: 1
+      #run: lmacro:tests/action_started
+      #args:
+        #- 1
+        #- 2
+        #- "test"
+      #kwargs:
+        #from_rule: true
+    #- id: rule3
+      #oid: sensor:plc1/alarms
+      #prop: value
+      #condition: "x = 1"
+      #bit: 0 # analyze bit (value only)
+      #run: lmacro:tests/rule3_handler
+  cycles: []
+    #- id: cycle1
+      #auto_start: false
+      # (interval, seconds)
+      #interval: 0.5
+      # lmacro id to run
+      #run: lmacro:tests/cycle1_handler
+      # lmacro args, optional
+      #args:
+        #- 1
+        #- 2
+        #- "test"
+      # lmacro kwargs, optional
+      #kwargs:
+        #from_cycle: true
+       #error handler lmacro
+      #on_error: lmacro:tests/cycle1_error_handler
+  jobs: []
+    #- id: job1
+      # a cron-like schedule:
+      # second minute hour day month weekday year
+      #
+      # the year field can be omitted
+      # to run the task every N, use */N
+      #schedule: "* * * * * *"
+      #run: lmacro:tests/action_started
+      #args:
+        #- 1
+        #- 2
+        #- "test"
+      #kwargs:
+        #from_job: true
+  openers: []
+  # Openers provide generic opener robot logic for doors, windows etc
+    #- oid: unit:tests/window1 # a virtual unit, which represents a door or window
+      #break_on_status_error: true # break if the current state is unknown
+      #logic: ac # ac (AC circuit) or rdc (reversible DC circuit)
+      #port: # a single or multiple relay units, which handle power (+ for DC)
+      #- unit:relays/r1
+      #dport: # a single or multiple relay units, which handle direction (- for DC)
+      #- unit:relays/r2
+      #port_timeout: 2 # action timeout when switching assigned relay units
+      #set_state: true # set the virtual unit state after successful action
+      #steps: # delay (in seconds) between door/window positions, e.g. 2 steps
+              # for 3 possible positions
+      #- 5
+      #- 2
+      # tuning: 0.2 # delay (in seconds) for fully-open and fully-closed states
+      #warmup_close: 0.5 # motor warmup delay on close
+      #warmup_open: 1 # motor warmup delay on open
+      #ts: 1 # fully close then go to N, if N <= the field value
+      #te: 2 # fully open then go to N, if N >= the field value
+user: nobody

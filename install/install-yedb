@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+[ -z "${EVA_REPOSITORY_URL}" ] && EVA_REPOSITORY_URL=https://pub.bma.ai
+
+D=`realpath $0`
+cd `dirname ${D}`/..
+
+source ./share/registry/info
+
+m_version () {
+  oIFS="$IFS"
+  IFS=.
+  set -- $1
+  IFS="$oIFS"
+  let v="$1 * 10000 + $2 * 100 + $3"
+  echo $v
+}
+
+rm -rf ./yedb
+
+if [ ! -x ./yedb/yedb-cli ] || [ "${YEDB_FORCE_REINSTALL}" ]; then
+  mkdir -p ./yedb
+  if [ "${YEDB_TARBALL_PATH}" ] && [ -f "$YEDB_TARBALL_PATH" ]; then
+    echo "Extracting YEDB from ${YEDB_TARBALL_PATH}"
+    tar xzf ${YEDB_TARBALL_PATH} -C ./yedb || exit 2
+  else
+    if [ -z "$ARCH" ]; then
+      ARCH=$(uname -m)
+      NEED_TEST=1
+    else
+      NEED_TEST=0
+    fi
+    [[ "$ARCH" == arm* ]] && ARCH=arm
+    case $ARCH in
+      arm)
+        SFX=armv7-musleabihf
+        ;;
+      i686)
+        SFX=i686-musl
+        ;;
+      x86_64)
+        SFX=x86_64-musl
+        ;;
+      aarch64)
+        SFX=aarch64-musl
+        ;;
+      *)
+        echo "Unsupported architecture. Please install YEDB manually"
+        exit 4
+        ;;
+    esac
+    curl -L ${EVA_REPOSITORY_URL}/yedb/yedb-${YEDB_VERSION}-${SFX}.tar.gz -o yedb.tgz || exit 2
+    tar xzf yedb.tgz -C ./yedb || exit 2
+    rm -f yedb.tgz
+  fi
+fi
+
+rm -f ./yedb/yedb-server
+
+if [ "$NEED_TEST" = "1" ]; then
+  ./yedb/yedb-cli version >& /dev/null || exit 3
+
+  YEDB_VERSION_HAS=$(./yedb/yedb-cli version|grep ^yedb|awk '{ print $3 }')
+
+  YEDB_VERSION_C=$(m_version "$YEDB_VERSION")
+  YEDB_VERSION_HAS_C=$(m_version "$YEDB_VERSION_HAS")
+
+  if [ ${YEDB_VERSION_HAS_C} -lt ${YEDB_VERSION_C} ]; then
+    echo "YEDB version: ${YEDB_VERSION_HAS}, required: ${YEDB_VERSION}"
+    if [ "${YEDB_FORCE_REINSTALL}" ]; then
+      exit 3
+    else
+      YEDB_FORCE_REINSTALL=1 $0
+      exit $?
+    fi
+  fi
+fi
+
+echo "YEDB installed, version: ${YEDB_VERSION}"
+
+exit 0

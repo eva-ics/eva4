@@ -1,0 +1,271 @@
+key.list:
+  des: List API keys
+  par:
+  ret: List of defined API keys, they values and assigned ACLs
+  exm: |
+    [
+        {
+            "acls": [
+                "admin"
+            ],
+            "id": "admin",
+            "key": "mykey"
+        },
+        {
+            "acls": [
+                "default"
+            ],
+            "id": "default",
+            "key": "defaultXXX"
+        },
+        {
+            "acls": [],
+            "id": "default-v3",
+            "key": "default123"
+        },
+        {
+            "acls": [
+                "ui_all",
+                "ui_default"
+            ],
+            "id": "ui",
+            "key": "ij31i3j21345"
+        },
+        {
+            "acls": [
+                "ui_default"
+            ],
+            "id": "uid",
+            "key": "YHiT172ani2KGoTUPSurSA1Rx6n7TVnL"
+        }
+    ]
+key.deploy:
+  des: Deploys API keys
+  par:
+    - nam: keys
+      typ: Vec<struct>
+      des: "API keys (same as got in *key.export*)"
+      req: true
+  ret:
+key.undeploy:
+  des: Undeploy API keys
+  par:
+    - nam: keys
+      typ: Vec<struct/String>
+      des: API keys or a list of API key IDs
+      req: true
+  ret:
+key.get_config:
+  des: Get configuration of a single API key
+  par:
+    - nam: i
+      typ: String
+      des: API key ID
+      req: true
+  ret: API key configuration
+  exm: |
+    {
+        "acls": [
+            "default"
+        ],
+        "id": "default",
+        "key": "defaultXXX"
+    }
+key.get:
+  des: Get a single API key value
+  par:
+    - nam: i
+      typ: String
+      des: API key ID
+      req: true
+  ret: API key ID/key value
+  exm: |
+    {
+        "id": "default",
+        "key": "defaultXXX"
+    }
+key.export:
+  des: Export API keys as a deployment
+  par:
+    - nam: i
+      typ: String
+      des: API key ID (can be mask)
+      req: true
+  ret: API key deployment struct
+  exm: |
+    {
+        "keys": [
+            {
+                "acls": [
+                    "default"
+                ],
+                "id": "default",
+                "key": "defaultXXX"
+            }
+        ]
+    }
+key.destroy:
+  des: Destroy a single API key
+  par:
+    - nam: i
+      typ: String
+      des: API key ID
+      req: true
+  ret:
+key.regenerate:
+  des: Re-generates key value of API key
+  par:
+    - nam: i
+      typ: String
+      des: API key ID
+      req: true
+  ret: API key configuration with a new key value
+  exm: |
+    {
+        "acls": [
+            "default"
+        ],
+        "id": "default",
+        "key": "uULa5QSORbEJX1QM3RYeC2kVwcVlg2zC"
+    }
+auth.key:
+  des: Authenticates a client using API key
+  par:
+    - nam: key
+      typ: String
+      des: API key value
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+  ret: The method returns errors if auth is not successful
+user.list:
+  des: List local user accounts
+  par:
+  ret: List of defined local user accounts, the ACLs and password hashes
+  exm: |
+    [
+        {
+            "acls": [
+                "admin"
+            ],
+            "login": "admin",
+            "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+        },
+       {
+            "acls": [
+                "ui_default",
+                "ui_all"
+            ],
+            "login": "operator",
+            "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+        }
+    ]
+user.deploy:
+  des: Deploys local user accounts
+  par:
+    - nam: users
+      typ: Vec<struct>
+      des: "Users (same as got in *user.export*, note: passwords must be sha256-hashed)"
+      req: true
+  ret:
+user.undeploy:
+  des: Undeploy local users
+  par:
+    - nam: users
+      typ: Vec<struct/String>
+      des: User structs or a list of user logins
+      req: true
+  ret:
+user.get_config:
+  des: Get configuration of a single user account
+  par:
+    - nam: i
+      typ: String
+      des: API key ID
+      req: true
+  ret: User account configuration
+  exm: |
+    {
+        "acls": [
+            "ui_default",
+            "ui_all"
+        ],
+        "login": "operator",
+        "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+    }
+user.export:
+  des: Exports local user accounts as a deployment
+  par:
+    - nam: i
+      typ: String
+      des: Login (can be mask)
+      req: true
+  ret: User accounts deployment struct
+  exm: |
+    {
+        "users": [
+            {
+                "acls": [
+                    "ui_default",
+                    "ui_all"
+                ],
+                "login": "operator",
+                "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+            }
+        ]
+    }
+user.destroy:
+  des: Destroy a single local user account
+  par:
+    - nam: i
+      typ: String
+      des: User login
+      req: true
+  ret:
+user.set_password:
+  des: "Changes user's password. Does not require the current one, so consider calling *auth.user* before"
+  par:
+    - nam: i
+      typ: String
+      des: User login
+      req: true
+    - nam: password
+      typ: String
+      des: New password (plain text)
+      req: true
+  ret:
+user.create_one_time:
+  des: Creates an one-time temporary user account, which is auto-deleted after the first login
+  par:
+    - nam: acls
+      typ: String
+      des: ACL IDs
+      req: true
+    - nam: login
+      typ: String
+      des: included into one-time login as OT.$login.$RANDOM
+      req: false
+  ret: One-time account credentials
+  exm: |
+    {
+        "login": "OT.test.eHlrGMgPlpqKmzTr",
+        "password": "QZoz0jYRaL2BSdKc"
+    }
+auth.user:
+  des: Authenticates a client using a local user account
+  par:
+    - nam: login
+      typ: String
+      des: Account login
+      req: true
+    - nam: password
+      typ: String
+      des: Account password (plain text)
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+  ret: The method returns errors if auth is not successful

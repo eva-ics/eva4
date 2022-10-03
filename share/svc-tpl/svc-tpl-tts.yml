@@ -1,0 +1,36 @@
+# Text-to-speech service
+#
+# Requires https://pypi.org/project/eva4-svc-tts/ Python module installed
+command: venv/bin/eva4-svc-tts
+bus:
+  path: var/bus.ipc
+config:
+  provider: gcloud # gcloud, polly or watson
+  key_file: /path/to/key_file.json # provider key file
+  ##
+  ## WARNING! Before storing/caching audio files, refer to terms and conditions
+  ## of the selected provider
+  ###
+  #storage_dir: /data/tts/sounds/ # directory where audio files are permanently stored
+  #cache_dir: /data/tts/cache/ # directory where missing audio files are cached
+  #cache_format: wav # cache file format
+  options: # extra provider options, depending on the selected provider
+    voice: en-US-Wavenet-F
+  # playback device (list: /opt/eva4/venv/bin/python -m sounddevice)
+  # if no external playback command is used
+  #device: 0
+  gain: 0 # default gain
+  ## optional external playback command
+  ## params passed: $1 = file to play, $2 = gain, e.g.
+  ###!/bin/sh
+  ##
+  ##if [ -z "x$2" ]; then
+  ## GAIN=$2
+  ## else
+  ## GAIN=0
+  ##fi
+  ##killall -9 play > /dev/null 2>&1 # stop current playback
+  ##play $1 gain ${GAIN} > /dev/null 2>&1 # play a file with sox play
+  #
+  #playback_command: /data/play.sh
+user: eva # make sure the user has access to audio device and file dirs

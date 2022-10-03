@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+D=$(realpath "$0")
+EVA_DIR=$(dirname "${D}")/..
+
+SOCKET="$EVA_DIR/var/bus.ipc"
+
+[ -x "${SOCKET}" ] && \
+  YEDB_PATH="rt://${SOCKET}:eva.registry" || \
+  YEDB_PATH="${EVA_DIR}/runtime/registry"
+
+"$EVA_DIR/cli/yedb-cli" -C "$YEDB_PATH" "$@"

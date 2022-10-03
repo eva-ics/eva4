@@ -1,0 +1,13 @@
+# State expiration service
+command: target/debug/eva-svc-expiration
+bus:
+  path: var/bus.ipc
+config:
+  ## check interval, seconds
+  interval: 0.1
+  ## items to check, OID=SEC
+  #items:
+    #sensor:tests/x1: 5
+    #unit:tests/u2: 5
+    #lvar:tests/timer1: 10.0
+user: nobody

@@ -1,0 +1,135 @@
+ping:
+  des: Ping ADS device
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+read:
+  des: Call ADS read request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: index_group
+      typ: u32
+      des: Index group
+      req: true
+    - nam: index_offset
+      typ: u32
+      des: Index offset
+      req: true
+    - nam: size
+      typ: u32
+      des: Expected result size
+      req: true
+  ret: Vec<u8>
+write:
+  des: Call ADS write request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: index_group
+      typ: u32
+      des: Index group
+      req: true
+    - nam: index_offset
+      typ: u32
+      des: Index offset
+      req: true
+    - nam: data
+      typ: bytes
+      des: Write payload
+      req: true
+  ret:
+write_read:
+  des: Call ADS write-read request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: index_group
+      typ: u32
+      des: Index group
+      req: true
+    - nam: index_offset
+      typ: u32
+      des: Index offset
+      req: true
+    - nam: data
+      typ: bytes
+      des: Write payload
+      req: true
+    - nam: size
+      typ: u32
+      des: Expected result size
+      req: true
+  ret: Vec<u8>
+su_read:
+  des: Call ADS SUMUP read request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: requests
+      typ: Vec<ReadRequest>
+      des: "Struct fields: index_group, index_offset, size"
+      req: true
+  ret: "SumUp result as Vec<Res> with fields c (code), d (bytes)"
+su_write:
+  des: Call ADS SUMUP write request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: requests
+      typ: Vec<WriteRequest>
+      des: "Struct fields: index_group, index_offset, data"
+      req: true
+  ret: "SumUp result as Vec<Res> with fields c (code)"
+su_write_read:
+  des: Call ADS SUMUP write-read request
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+    - nam: requests
+      typ: Vec<WriteReadRequest>
+      des: "Struct fields: index_group, index_offset, data, size"
+      req: true
+  ret: "SumUp result as Vec<Res> with fields c (code), d (bytes)"

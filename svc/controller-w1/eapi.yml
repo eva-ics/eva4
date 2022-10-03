@@ -1,0 +1,130 @@
+w1.get:
+  des: Get 1-Wire attribute
+  par:
+    - nam: path
+      typ: String
+      des: dev.path/attr
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret: Attribute value
+w1.set:
+  des: Set 1-Wire attribute
+  par:
+    - nam: path
+      typ: String
+      des: dev.path/attr
+      req: true
+    - nam: value
+      typ: Any
+      des: value to set
+      req: true
+    - nam: verify
+      typ: bool
+      des: Read the attribute back and verify its value
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret:
+w1.scan:
+  des: Scan 1-Wire bus
+  par:
+    - nam: types
+      typ: String/Vec<String>
+      des: filter by device type(s)
+      req: false
+    - nam: attrs_any
+      typ: String/Vec<String>
+      des: filter by device attrs(s), match any
+      req: false
+    - nam: attrs_all
+      typ: String/Vec<String>
+      des: filter by device attrs(s), match all
+      req: false
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: full
+      typ: bool
+      des: return extended info (attributes)
+      req: false
+  ret: Scan result (list)
+  exm: |
+    [
+        {
+            "family": 10,
+            "path": "10.67C6697351FF",
+            "type": "DS18S20"
+        },
+        {
+            "family": 5,
+            "path": "05.4AEC29CDBAAB",
+            "type": "DS2405"
+        },
+        {
+            "family": 29,
+            "path": "29.F2FBE3467CC2",
+            "type": "DS2408"
+        }
+    ]
+w1.info:
+  des: Get 1-Wire device info
+  par:
+    - nam: path
+      typ: String
+      des: device path
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+  ret: Device info struct
+  exm: |
+    {
+        "attrs": [
+            "address",
+            "alias",
+            "crc8",
+            "family",
+            "id",
+            "latesttemp",
+            "locator",
+            "power",
+            "r_address",
+            "r_id",
+            "r_locator",
+            "scratchpad",
+            "temperature",
+            "temphigh",
+            "templow",
+            "type"
+        ],
+        "family": 10,
+        "path": "10.67C6697351FF",
+        "type": "DS18S20"
+    }
+action:
+  des: Executes a mapped unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+terminate:
+  des: Attempts to terminate/cancel a unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+kill:
+  des: Attempts to terinate/cancel all actions for a unit
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`

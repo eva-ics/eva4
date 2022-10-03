@@ -1,0 +1,18 @@
+[package]
+name = "eva-svc-locker"
+version = "4.0.0"
+edition = "2021"
+
+[dependencies]
+eva-common = { version = "0.1.176", features = ["events", "time","common-payloads"] }
+eva-sdk = { version = "0.1.104" }
+tokio = { version = "1.20.1", features = ["full"] }
+async-trait = { version = "0.1.51" }
+serde = { version = "1.0.143", features = ["derive", "rc"] }
+log = "0.4.14"
+jemallocator = { version = "0.5.0" }
+bmart = "0.1.14"
+wshack = { version = "0.1", path = "../../wshack" }
+
+[features]
+std-alloc = []

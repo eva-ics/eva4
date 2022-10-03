@@ -1,0 +1,32 @@
+# Event-to-InfluxDB database service
+command: target/debug/eva-db-influx
+workers: 2
+bus:
+  path: var/bus.ipc
+config:
+  api_version: 1 # 1 or 2
+  ## v1 basic auth
+  # username: user
+  # password: pass
+  ## v2 token auth
+  # token: sometoken
+  url: http://localhost:8086
+  db: eva
+  ## required for v2
+  # org: myorg
+  # event buffer time-to-live, seconds
+  buf_ttl_sec: null
+  # periodically submit all item states
+  interval: null
+  # ignore real-time events
+  ignore_events: false
+  # event queue size
+  queue_size: 8192
+  # panic on critical errors in X seconds after happened (0 - panic immediately)
+  panic_in: null
+  # influx client pool size (default = workers)
+  #clients: 2
+  # item OIDs / OID masks
+  oids:
+    - "#"
+user: nobody

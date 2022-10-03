@@ -1,0 +1,16 @@
+# use system PIP
+use_system_pip: false
+# path to Python executable
+python: python3
+# use system site packages
+system_site_packages: false
+# skip packages (enable system site packages to let venv use preinstalled)
+skip: []
+# - pandas
+# specify extra PIP3 options e.g., -v for verbose
+pip_extra_options: ""
+# additional module
+extra: []
+# - eva-shell
+# mirror moduls for additional Python versions
+mirror_extra_versions: []

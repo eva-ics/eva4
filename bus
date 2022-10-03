@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/opt/eva4/sbin/bus ./var/bus.ipc $*

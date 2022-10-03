@@ -1,0 +1,19 @@
+[package]
+name = "bm-primary"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.20.1", features = ["full"] }
+sysinfo = "0.24.7"
+busrt = { version = "0.3", features = ["ipc", "rpc"] }
+bma-benchmark = "0.0.18"
+eva-common = { version = "0.1.176", features = ["bus-rpc", "payload", "common-payloads"] }
+env_logger = "0.9.0"
+log = "0.4.17"
+serde = { version = "1.0.143", features = ["derive"] }
+bmart = "0.2.4"
+serde_json = "1.0.79"
+clap = { version = "3.0.7", features = ["derive"] }

@@ -1,0 +1,34 @@
+# Event-to-file writer service
+command: target/debug/eva-svc-filewriter
+bus:
+  path: var/bus.ipc
+config:
+  file_path: /tmp/1.csv
+  # flush data after each block (slow, but more reliable)
+  auto_flush: false
+  # use DOS-style CR/LF
+  dos_cr: false
+  # csv or json for NDJSON
+  format: csv
+  # periodically submit all item states
+  interval: null
+  # ignore real-time events
+  ignore_events: false
+  # event queue size
+  queue_size: 8192
+  # auto-rotation, a cron-like schedule:
+  # second minute hour day month weekday year
+  #
+  # rotates the output file by renaming it to file_path.TIME_RFC3339
+  #
+  # the year field can be omitted
+  # to run rotation every N, use */N
+  #
+  # the example below rotates the output file every hour
+  #auto_rotate: "0 0 * * * *"
+  #
+  # item OIDs / OID masks
+  oids:
+    - "#"
+# make sure the user has create/write access for the output file
+user: eva

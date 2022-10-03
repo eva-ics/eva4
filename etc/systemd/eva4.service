@@ -1,0 +1,14 @@
+[Unit]
+Description=EVA ICS v4 node server
+
+[Service]
+Type=forking
+User=root
+WorkingDirectory=/opt/eva4
+ExecStart=/opt/eva4/sbin/eva-control start
+ExecStop=/opt/eva4/sbin/eva-control stop
+Restart=no
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

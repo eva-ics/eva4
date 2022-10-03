@@ -1,0 +1,17 @@
+# Core logger configuration
+# Levels: trace, debug, info, warn, error
+# Only a single console/memory/bus logger is supported
+- output: console
+  level: info
+- output: bus
+  level: info
+- output: memory
+  level: info
+  keep: 86400
+- output: file
+  level: info
+  # regular / json
+  format: regular
+  path: log/eva.log
+- output: syslog
+  level: info

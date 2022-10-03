@@ -1,0 +1,44 @@
+[package]
+name = "eva-cloud-manager"
+version = "4.0.0"
+edition = "2021"
+authors = ["Bohemia Automation / Altertech <div@altertech.com>"]
+license = "Apache-2.0"
+description = "EVA ICS v4 cloud manager CLI"
+
+[lib]
+name = "ecm"
+path = "src/lib.rs"
+
+[[bin]]
+name = "eva-cloud-manager"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0.143", features = ["derive", "rc"] }
+serde_yaml = "0.8.26"
+eva-common = { version = "0.1.176" }
+eva-client = "0.1.6"
+clap = { version = "3.0.7", features = ["derive"] }
+tokio = { version = "1.20.1", features = ["full"] }
+tera = "1.15.0"
+log = "0.4.16"
+env_logger = "0.9.0"
+colored = "2.0.0"
+bmart = "0.1.16"
+sha2 = "0.10.1"
+atty = "0.2"
+lazy_static = "1.4.0"
+hyper = { version = "0.14.18", features = ["client", "http1", "tcp"] }
+hyper-tls = "0.5.0"
+serde_json = "1.0.79"
+ttycarousel = { version = "0.1.4", features = ["tokio1"] }
+hex = "0.4.3"
+base64 = "0.13.0"
+ring = "0.16.20"
+once_cell = "1.9.0"
+prettytable-rs = "0.8.0"
+chrono = "0.4.19"
+bzip2 = "0.4.3"
+openssl = { version = "0.10.42", features = ["vendored"] }
+wshack = { version = "0.1", path = "../../wshack" }

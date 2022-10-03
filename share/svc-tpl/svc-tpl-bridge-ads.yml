@@ -1,0 +1,15 @@
+# TwinCAT ADS bridge service
+command: target/debug/eva-bridge-ads
+bus:
+  path: var/bus.ipc
+config:
+  host: 192.168.1.100
+  port: 48898
+  #ping_ams_netid: 192.168.1.100.1.1
+  #ping_ams_port: 200
+  #set if the local address can not be detected automatically (e.g. tunnels
+  # are used)
+  #local_ams_netid: 192.168.1.2.1.1
+  #local_ams_port: 58913
+user: nobody
+workers: 2

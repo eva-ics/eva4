@@ -1,0 +1,8 @@
+# OTP auth service
+command: target/debug/eva-aaa-otp
+bus:
+  path: var/bus.ipc
+config:
+  # user accounts to exclude OTP checking
+  exclude: []
+user: nobody

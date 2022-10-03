@@ -1,0 +1,4 @@
+run:
+  des: Executes a mapped macro action
+  par: See :ref:`eva4_macro_action`
+  ret: See :ref:`eva4_macro_action`

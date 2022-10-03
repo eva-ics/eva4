@@ -1,0 +1,19 @@
+[package]
+name = "eva-svc-template"
+version = "4.0.0"
+edition = "2021"
+
+[dependencies]
+busrt = { version = "0.3", features = ["rpc", "ipc"] }
+eva-common = { version = "0.1.176", features = ["events", "time"] }
+eva-sdk = { version = "0.1.104" }
+tokio = { version = "1.15.0", features = ["full"] }
+async-trait = { version = "0.1.51" }
+serde = { version = "1.0.133", features = ["derive", "rc"] }
+log = "0.4.14"
+lazy_static = "1.4.0"
+async-channel = "1.6.1"
+jemallocator = { version = "0.3.2" }
+
+[features]
+std-alloc = []

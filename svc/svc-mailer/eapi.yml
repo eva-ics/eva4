@@ -1,0 +1,16 @@
+send:
+  des: Sends an e-mail letter
+  par:
+    - nam: rcp
+      typ: String/Vec<String>
+      des: recipients
+      req: false
+    - nam: subject
+      typ: String
+      des: e-mail subject
+      req: false
+    - nam: text
+      typ: String
+      des: e-mail text
+      req: false
+  ret:

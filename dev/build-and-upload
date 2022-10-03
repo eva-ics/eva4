@@ -1,0 +1,24 @@
+#!/bin/sh
+
+ARCHS="aarch64-musl x86_64-musl"
+RUST_VER_REQUIRED="1.62.0"
+
+export RUST_VER_REQUIRED
+
+[ -d /build/eva4 ] && export BUILD_DIR=/build
+
+if [ ! "$UPLOAD_ONLY" ]; then
+  for arch in ${ARCHS}; do
+    MASTER=$MASTER ./dev/make-dist "$arch" || exit 1
+  done
+  ./dev/create-manifest "${ARCHS}" || exit 1
+fi
+
+if [ ! "$BUILD_ONLY" ]; then
+  for arch in ${ARCHS}; do
+    ./dev/upload-dist "$arch" || exit 1
+  done
+  ./dev/upload-update || exit 1
+  ./dev/upload-manifest || exit 1
+  ./dev/upload-changelog || exit 1
+fi
