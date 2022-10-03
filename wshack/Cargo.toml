@@ -23,9 +23,9 @@ crossbeam-utils = { version = "0.8", features = ["lazy_static", "std"] }
 digest = { version = "0.10", features = ["alloc", "block-buffer", "core-api", "mac", "std", "subtle"] }
 either = { version = "1", features = ["use_std"] }
 busrt = { version = "0.3", default-features = false, features = ["async-trait", "broker", "full", "ipc", "ipnetwork", "log", "nix", "parking_lot", "rmp-serde", "rpc", "serde", "serde-value", "submap", "triggered", "unix-named-pipe"] }
-eva-common = { version = "0.1.176", default-features = false, features = ["acl", "actions", "async-channel", "async-recursion", "bmart", "bus-rpc", "cache", "common-payloads", "dataconv", "db", "busrt", "events", "extended-value", "full", "hex", "hyper", "hyper-static", "hyper-tools", "lazy_static", "logger", "logic", "nix", "once_cell", "payload", "rand", "regex", "registry", "rmp-serde", "serde_yaml", "services", "sqlx", "submap", "time", "tokio", "uuid", "workers", "yedb"] }
-eva-rjrpc = { version = "0.1", default-features = false, features = ["base64", "http"] }
-eva-sdk = { version = "0.1.104", default-features = false, features = ["controller", "http", "hyper", "hyper-tls", "pubsub", "simple-pool", "uuid"] }
+eva-common = { version = "0.1.178", default-features = false, features = ["acl", "actions", "async-channel", "async-recursion", "bmart", "bus-rpc", "cache", "common-payloads", "dataconv", "db", "busrt", "events", "extended-value", "full", "hex", "hyper", "hyper-static", "hyper-tools", "lazy_static", "logger", "logic", "nix", "once_cell", "payload", "rand", "regex", "registry", "rmp-serde", "serde_yaml", "services", "sqlx", "submap", "time", "tokio", "uuid", "workers", "yedb"] }
+eva-rjrpc = { version = "0.1.16", default-features = false, features = ["base64", "http"] }
+eva-sdk = { version = "0.1.106", default-features = false, features = ["controller", "http", "hyper", "hyper-tls", "pubsub", "simple-pool", "uuid"] }
 futures-channel = { version = "0.3", features = ["alloc", "futures-sink", "sink", "std"] }
 futures-executor = { version = "0.3", features = ["std"] }
 futures-io = { version = "0.3", features = ["std"] }

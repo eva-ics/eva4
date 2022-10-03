@@ -17,8 +17,8 @@ path = "src/main.rs"
 [dependencies]
 serde = { version = "1.0.143", features = ["derive", "rc"] }
 serde_yaml = "0.8.26"
-eva-common = { version = "0.1.176" }
-eva-client = "0.1.6"
+eva-common = { version = "0.1.178" }
+eva-client = "0.1.7"
 clap = { version = "3.0.7", features = ["derive"] }
 tokio = { version = "1.20.1", features = ["full"] }
 tera = "1.15.0"
