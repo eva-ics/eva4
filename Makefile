@@ -39,7 +39,7 @@ stable-build-create:
 
 do-stable-build-create:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
-	MASTER=allow ./dev/build-and-upload
+	MASTER=deny ./dev/build-and-upload
 
 stable-release:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
