@@ -39,7 +39,7 @@ Read <https://info.bma.ai/en/actual/eva4/install.html>
 
 ```
 # The variable ARCH_SFX must be set either to "x86_64-musl" or to
-# "aarch64-musl" If updates from the official repository and/or cloud manager
+# "aarch64-musl". If updates from the official repository and/or cloud manager
 # CLI are not required, the variable can be set to any value.
 export ARCH_SFX=x86_64-musl
 cargo build --release
