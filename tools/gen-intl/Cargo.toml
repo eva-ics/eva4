@@ -11,4 +11,3 @@ serde_yaml = "0.8.26"
 eva-common = { version = "0.1.178", features = ["full"] }
 clap = { version = "3.0.7", features = ["derive"] }
 colored = "2.0.0"
-wshack = { version = "0.1", path = "../../wshack" }

@@ -23,7 +23,6 @@ lazy_static = "1.4.0"
 bmart = "0.1.14"
 boringauth = "0.9.0"
 base32 = "0.4.0"
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

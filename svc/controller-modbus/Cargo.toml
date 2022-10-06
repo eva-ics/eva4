@@ -24,7 +24,6 @@ rmodbus = { version = "0.6.0", features = [ "std" ] }
 simple-pool = "0.0.9"
 ieee754 = "0.2.6"
 tokio-serial = "5.4.3"
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

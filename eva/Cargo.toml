@@ -57,7 +57,6 @@ ipnetwork = "0.20.0"
 async-io = "1.7.0"
 eva-robots = "0.1.6"
 parking_lot = { version = "0.12.1", features = ["serde"] }
-wshack = { version = "0.1", path = "../wshack" }
 
 [features]
 std-alloc = []

@@ -18,7 +18,6 @@ chrono = "0.4.19"
 once_cell = "1.9.0"
 jemallocator = { version = "0.5.0" }
 cron = "0.11.0"
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

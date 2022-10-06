@@ -23,7 +23,6 @@ urlencoding = "2.1.0"
 csv-async = "1.2.4"
 futures = "0.3.21"
 jemallocator = { version = "0.5.0" }
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

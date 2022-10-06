@@ -20,7 +20,6 @@ sqlx = { version = "0.5.11", features = [
   "sqlite","mysql", "postgres", "mssql" ] }
 futures = "0.3.21"
 jemallocator = { version = "0.5.0" }
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

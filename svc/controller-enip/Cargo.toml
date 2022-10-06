@@ -19,7 +19,6 @@ plctag = { path = "./plctag" }
 bmart = "0.1.15"
 uuid = { version = "1.1.2", features = ["v4"] }
 itertools = "0.10.3"
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []

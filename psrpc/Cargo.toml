@@ -22,4 +22,3 @@ bzip2 = "0.4.3"
 sha2 = "0.10.1"
 log = "0.4.16"
 triggered = "0.1.2"
-wshack = { version = "0.1", path = "../wshack" }

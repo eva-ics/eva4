@@ -30,7 +30,6 @@ members = [
   "tools/eva-cloud-manager",
   "tools/gen-intl",
   "psrpc",
-  "wshack",
   "benchmarks/bm-primary"
 ]
 

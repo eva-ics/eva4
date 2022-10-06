@@ -41,7 +41,6 @@ hyper-tungstenite = "0.6.0"
 gettext = "0.4.0"
 hyper-static = "0.1.4"
 urlencoding = "2.1.0"
-wshack = { version = "0.1", path = "../../wshack" }
 
 [features]
 std-alloc = []
