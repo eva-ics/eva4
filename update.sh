@@ -94,6 +94,7 @@ if [ ! -f /.eva_container ]; then
   rm -f "_update/eva-${VERSION}/ui/index.html"
   rm -f "_update/eva-${VERSION}/ui/favicon.ico"
   rm -f "_update/eva-${VERSION}/update.sh"
+  rm -f ./cli/eva-cloud-manager
   cp -rf "_update/eva-${VERSION}/"* . || exit 1
 fi
 
