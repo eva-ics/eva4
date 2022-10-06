@@ -22,7 +22,7 @@ path = "src/init_registry.rs"
 
 [dependencies]
 tokio = { version = "1.20.1", features = ["full"] }
-yedb = { version = "0.4.9", features = ["server-embed", "busrt-rpc"] }
+yedb = { version = "0.4.11", features = ["server-embed", "busrt-rpc"] }
 clap = { version = "3.0.7", features = ["derive"] }
 busrt = { version = "0.3", features = ["full"] }
 serde_yaml = "0.8.26"
@@ -60,3 +60,4 @@ parking_lot = { version = "0.12.1", features = ["serde"] }
 
 [features]
 std-alloc = []
+openssl-vendored = ["yedb/openssl-vendored"]
