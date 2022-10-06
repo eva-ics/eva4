@@ -8,7 +8,7 @@ name = "psrpc"
 path = "src/lib.rs"
 
 [dependencies]
-psrt = "0.1.19"
+psrt = "0.1.29"
 paho-mqtt = "0.10.0"
 async-trait = "0.1.53"
 eva-common = { version = "0.1.178", features = ["workers", "payload"] }
