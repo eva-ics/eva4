@@ -30,6 +30,7 @@ members = [
   "tools/eva-cloud-manager",
   "tools/gen-intl",
   "psrpc",
+  "genpass-native",
   "benchmarks/bm-primary"
 ]
 

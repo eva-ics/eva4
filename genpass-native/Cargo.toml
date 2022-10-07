@@ -1,0 +1,12 @@
+[package]
+name = "genpass-native"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+openssl = "0.10.42"
+base64 = "0.13.0"
+eva-common = "0.1.179"
+
+[features]
+openssl-vendored = ["openssl/vendored"]

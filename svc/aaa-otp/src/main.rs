@@ -3,7 +3,6 @@ use eva_common::common_payloads::ParamsId;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -50,14 +49,14 @@ impl StringOrInt {
 }
 
 impl Otp {
-    fn new(login: &str) -> Self {
-        let rand_otp = rand::thread_rng().gen::<[u8; 16]>();
-        #[allow(deprecated)]
-        Self {
+    fn create(login: &str) -> EResult<Self> {
+        let mut rand_otp = [0_u8; 16];
+        openssl::rand::rand_bytes(&mut rand_otp)?;
+        Ok(Self {
             login: login.to_owned(),
             secret: base32::encode(base32::Alphabet::RFC4648 { padding: false }, &rand_otp),
             active: false,
-        }
+        })
     }
     fn verify(&self, otp_password: &str, svc_id: &str) -> EResult<()> {
         #[allow(deprecated)]
@@ -149,7 +148,7 @@ impl RpcHandlers for Handlers {
                         let mut otps = OTPS.lock().unwrap();
                         macro_rules! setup_otp {
                             () => {{
-                                let otp = Otp::new(p.login);
+                                let otp = Otp::create(p.login)?;
                                 let resp_str = format!("|OTP|{}|SETUP={}", self.svc_id, otp.secret);
                                 otps.insert(p.login.to_owned(), otp);
                                 (Err(Error::access_more_data_required(resp_str).into()), None)

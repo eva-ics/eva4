@@ -24,7 +24,6 @@ lazy_static = "1.4.0"
 hyper = { version = "0.14.18", features = ["server", "http1", "http2"] }
 eva-rjrpc = { version = "0.1.16", features = ["http"] }
 ttl_cache = "0.5.1"
-rand = "0.8.5"
 bmart = { version = "0.1.14" }
 sqlx = { version = "0.5", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
 futures = "0.3.21"
@@ -41,6 +40,7 @@ gettext = "0.4.0"
 hyper-static = "0.1.5"
 urlencoding = "2.1.0"
 openssl = "0.10.42"
+genpass-native = { path = "../../genpass-native" }
 
 [features]
 std-alloc = []

@@ -5,9 +5,9 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use genpass_native::random_string;
 use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
-use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::sync::Arc;
@@ -46,15 +46,15 @@ struct OneTimeUser {
 }
 
 impl OneTimeUser {
-    fn new(login: &str, acls: HashSet<String>) -> Self {
-        Self {
+    fn create(login: &str, acls: HashSet<String>) -> EResult<Self> {
+        Ok(Self {
             created: Instant::now(),
             user: Some(User {
                 login: login.to_owned(),
-                password: gen_random_str(16),
+                password: random_string(16)?,
                 acls,
             }),
-        }
+        })
     }
     fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
         if let Some(user) = self.user.take() {
@@ -124,21 +124,13 @@ async fn clear_one_time_users() {
         .retain(|_, user| user.is_valid());
 }
 
-fn gen_random_str(len: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(len)
-        .map(char::from)
-        .collect()
-}
-
 impl Key {
-    fn regenerate(&self) -> Self {
-        Self {
+    fn regenerate(&self) -> EResult<Self> {
+        Ok(Self {
             id: self.id.clone(),
-            key: gen_random_str(32),
+            key: random_string(32)?,
             acls: self.acls.clone(),
-        }
+        })
     }
 }
 
@@ -448,7 +440,7 @@ impl RpcHandlers for Handlers {
                     let val = {
                         let mut keydb = KEYDB.lock().unwrap();
                         if let Some(key) = keydb.remove(p.i) {
-                            let new_key = key.regenerate();
+                            let new_key = key.regenerate()?;
                             let v = to_value(&new_key)?;
                             keydb.append(Arc::new(new_key))?;
                             v
@@ -690,7 +682,7 @@ impl RpcHandlers for Handlers {
                     if ONE_TIME_EXPIRES.get().is_some() {
                         let mut ot_users = ONE_TIME_USERS.lock().await;
                         let (entry, login) = loop {
-                            let rand_str = gen_random_str(16);
+                            let rand_str = random_string(16)?;
                             let login = if let Some(ref l) = p.login {
                                 format!("{}.{}", l, rand_str)
                             } else {
@@ -700,7 +692,7 @@ impl RpcHandlers for Handlers {
                                 break (entry, login);
                             }
                         };
-                        let one_time_user = OneTimeUser::new(&login, p.acls);
+                        let one_time_user = OneTimeUser::create(&login, p.acls)?;
                         let u = one_time_user.user.as_ref().unwrap();
                         let ot_user_info = PayloadOneTimeUser {
                             login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),

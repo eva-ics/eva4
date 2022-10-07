@@ -3,11 +3,11 @@ use crate::handler::WebSocket;
 use eva_common::acl::Acl;
 use eva_common::err_logger;
 use eva_common::{EResult, Error};
+use genpass_native::random_string;
 use lazy_static::lazy_static;
 use log::error;
 use log::{debug, trace};
 use once_cell::sync::OnceCell;
-use rand::{distributions::Alphanumeric, Rng};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
@@ -146,15 +146,11 @@ pub struct TokenId {
 }
 
 impl TokenId {
-    fn new() -> Self {
-        Self {
+    fn create() -> EResult<Self> {
+        Ok(Self {
             u: Uuid::new_v4(),
-            salt: rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(16)
-                .map(char::from)
-                .collect(),
-        }
+            salt: random_string(16)?,
+        })
     }
     #[inline]
     pub fn to_short_string(&self) -> String {
@@ -248,7 +244,7 @@ pub async fn create_token(
 ) -> EResult<Arc<Token>> {
     if sessions_enabled() {
         trace!("creating token for {}", user);
-        let token_id = TokenId::new();
+        let token_id = TokenId::create()?;
         let token = Arc::new(Token::new(
             token_id.clone(),
             user.to_owned(),
