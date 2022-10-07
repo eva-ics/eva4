@@ -5,7 +5,7 @@ cd "$(dirname "${D}")/.." || exit 1
 
 . ./share/registry/info
 
-PLATFORMS="x86_64-musl aarch64-musl"
+PLATFORMS="x86_64-musl aarch64-musl x86_64-ubuntu20.04"
 
 if [ -z "$YEDB_VERSION" ]; then
   echo "version not specified"
