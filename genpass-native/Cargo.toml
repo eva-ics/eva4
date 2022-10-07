@@ -7,6 +7,7 @@ edition = "2021"
 openssl = "0.10.42"
 base64 = "0.13.0"
 eva-common = "0.1.179"
+nix = { version = "0.25.0", features = ["time"] }
 
 [features]
 openssl-vendored = ["openssl/vendored"]

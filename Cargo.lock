@@ -2035,6 +2035,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "eva-common",
+ "nix 0.25.0",
  "openssl",
 ]
 

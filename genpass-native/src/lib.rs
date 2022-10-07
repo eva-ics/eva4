@@ -22,11 +22,33 @@ pub fn random_string(len: usize) -> EResult<String> {
     Ok(s)
 }
 
+/// # Panics
+///
+/// Will panic if the system clock is not accessible
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_possible_truncation)]
+pub fn aes_gcm_nonce() -> EResult<[u8; 12]> {
+    let mut result = [0_u8; 12];
+    let ns = (nix::time::clock_gettime(nix::time::ClockId::CLOCK_REALTIME)
+        .unwrap()
+        .tv_nsec() as u32)
+        .to_le_bytes();
+    let mut buf = [0; 8];
+    rand_bytes(&mut buf).map_err(Error::core)?;
+    result[..4].clone_from_slice(&ns);
+    result[4..].clone_from_slice(&buf);
+    Ok(result)
+}
+
 #[cfg(test)]
 mod test {
-    use super::random_string;
+    use super::{aes_gcm_nonce, random_string};
     #[test]
-    fn test1() {
+    fn test_random_string() {
         let _s = random_string(20).unwrap();
+    }
+    #[test]
+    fn test_aes_gcm_nonce() {
+        let _n = aes_gcm_nonce().unwrap();
     }
 }
