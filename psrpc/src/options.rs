@@ -1,25 +1,12 @@
 use crate::{COMPRESSION_BZIP2, COMPRESSION_NO};
 use crate::{ENCRYPTION_AES_128_GCM, ENCRYPTION_AES_256_GCM, ENCRYPTION_NO};
-use eva_common::{EResult, Error};
-use openssl::sha::Sha256;
-use rand::Rng;
-use std::io::Read;
-use std::sync::Arc;
-
 use aes_gcm::{aead::Aead, Aes128Gcm, Aes256Gcm, Key, NewAead, Nonce};
 use bzip2::read::{BzDecoder, BzEncoder};
-
-#[inline]
-fn generate_nonce() -> [u8; 12] {
-    let aes_nonce: [u8; 12] = rand::thread_rng()
-        .sample_iter(&rand::distributions::Uniform::new(0, 0xff))
-        .take(12)
-        .map(u8::from)
-        .collect::<Vec<u8>>()
-        .try_into()
-        .unwrap();
-    aes_nonce
-}
+use eva_common::{EResult, Error};
+use genpass_native::aes_gcm_nonce;
+use openssl::sha::Sha256;
+use std::io::Read;
+use std::sync::Arc;
 
 pub fn parse_flags(flags: u8) -> EResult<(Encryption, Compression)> {
     let encryption: Encryption = (flags & 0b1111).try_into()?;
@@ -196,7 +183,7 @@ impl Options {
             Encryption::Aes128Gcm => {
                 let cip = self.cip.as_ref().unwrap().clone();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
-                    let nonce = generate_nonce();
+                    let nonce = aes_gcm_nonce()?;
                     if let Cipher::Aes128Gcm(cip) = cip.as_ref() {
                         let mut buf = cip
                             .encrypt(Nonce::from_slice(&nonce), data.as_ref())
@@ -214,7 +201,7 @@ impl Options {
             Encryption::Aes256Gcm => {
                 let cip = self.cip.as_ref().unwrap().clone();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
-                    let nonce = generate_nonce();
+                    let nonce = aes_gcm_nonce()?;
                     if let Cipher::Aes256Gcm(cip) = cip.as_ref() {
                         let mut buf = cip
                             .encrypt(Nonce::from_slice(&nonce), data.as_ref())
