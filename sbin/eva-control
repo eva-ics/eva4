@@ -17,7 +17,7 @@ export EVA_DIR
 
 ARGS=
 
-if [ "$FIPS" = "enabled" ]; then
+if [ "$FIPS" = "true" ]; then
   ARGS="${ARGS} --fips"
 fi
 

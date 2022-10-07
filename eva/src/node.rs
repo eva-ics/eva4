@@ -133,6 +133,9 @@ pub fn launch(
             );
             info!("starting EVA ICS node {}", core.system_name());
             info!("mode: regular (primary node point)");
+            if fips {
+                info!("FIPS: enabled");
+            }
             info!("dir: {}", dir_eva);
             trace!("loading registry config");
             crate::regsvc::load(&mut db)?;
