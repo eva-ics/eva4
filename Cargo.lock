@@ -298,15 +298,6 @@ dependencies = [
 
 [[package]]
 name = "block-buffer"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
-dependencies = [
- "generic-array 0.14.5",
-]
-
-[[package]]
-name = "block-buffer"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf7fe51849ea569fd452f37822f606a5cabb684dc918707a0193fd4664ff324"
@@ -440,9 +431,9 @@ checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
 name = "busrt"
-version = "0.3.2"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "332aa46f450bed115c3055b4d855f511f17cdf22b224b1eae27a13584f802556"
+checksum = "0f1fee5f235703f8f7303e17281d8d163da32889f19dcb2584d8ad15a230c1f6"
 dependencies = [
  "async-channel",
  "async-io",
@@ -911,15 +902,6 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
-dependencies = [
- "generic-array 0.14.5",
-]
-
-[[package]]
-name = "digest"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2fb860ca6fafa5552fb6d0e816a69c8e49f0908bf524e30a90d97c85892d506"
@@ -1145,7 +1127,7 @@ dependencies = [
  "once_cell",
  "rand 0.8.5",
  "serde",
- "sha2 0.10.2",
+ "sha2",
  "tokio",
 ]
 
@@ -1168,7 +1150,7 @@ dependencies = [
  "once_cell",
  "rand 0.8.5",
  "serde",
- "sha2 0.10.2",
+ "sha2",
  "tokio",
 ]
 
@@ -1235,7 +1217,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sha2 0.10.2",
+ "sha2",
  "tera",
  "tokio",
  "ttycarousel",
@@ -1243,9 +1225,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.1.178"
+version = "0.1.179"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "639c4b9fcef8938d9918e199918c1258f2f460321b437e8ab78cce55fa44e948"
+checksum = "3c9b040fde326c3843a47a39bdce8838888c0047e1cf7e18be4503356c84bdc5"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1260,6 +1242,7 @@ dependencies = [
  "log",
  "nix 0.25.0",
  "once_cell",
+ "openssl",
  "ordered-float",
  "rand 0.8.5",
  "regex",
@@ -1503,7 +1486,7 @@ dependencies = [
  "parse_int",
  "serde",
  "serde_yaml",
- "sha2 0.10.2",
+ "sha2",
  "tempfile",
  "tokio",
 ]
@@ -1536,7 +1519,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sha2 0.10.2",
+ "sha2",
  "sqlx",
  "submap",
  "tera",
@@ -1642,9 +1625,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.1.106"
+version = "0.1.108"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06c57f21fcb3a151a2762c651fcd8c8b3d22a5c0010153cddcff2b7eabe5e73f"
+checksum = "229bd9d0b982dc2ca264de0f9351cd85c876e63285b84bffb8c6131deb19b678"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",
@@ -2308,9 +2291,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-static"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e7e473b9f543f5a77516ce3a6657cc46113cc9222aed8abe37be76f33cfaa9"
+checksum = "06a979f21eb2a7303f586e8461a40606bc2ff8eaa05954e6849bfe4a89e9d376"
 dependencies = [
  "async-stream",
  "bmart-derive",
@@ -2319,7 +2302,7 @@ dependencies = [
  "futures",
  "hex 0.4.3",
  "hyper",
- "sha2 0.10.2",
+ "openssl",
  "tokio",
 ]
 
@@ -3447,7 +3430,7 @@ dependencies = [
  "psrt",
  "rand 0.8.5",
  "serde",
- "sha2 0.10.2",
+ "sha2",
  "tokio",
  "triggered",
  "uuid 1.1.2",
@@ -3974,19 +3957,6 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
-dependencies = [
- "block-buffer 0.9.0",
- "cfg-if",
- "cpufeatures",
- "digest 0.9.0",
- "opaque-debug 0.3.0",
-]
-
-[[package]]
-name = "sha2"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55deaec60f81eefe3cce0dc50bda92d6d8e88f2a27df7c5033b42afeb1ed2676"
@@ -4169,7 +4139,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha-1 0.10.0",
- "sha2 0.10.2",
+ "sha2",
  "smallvec",
  "sqlformat",
  "sqlx-rt",
@@ -4193,7 +4163,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "sha2 0.10.2",
+ "sha2",
  "sqlx-core",
  "sqlx-rt",
  "syn",
@@ -4260,11 +4230,11 @@ dependencies = [
 
 [[package]]
 name = "submap"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e12a33e5b7d9e3e349c051614fe462f37363885d1eb5b57f2cb63857322af4d"
+checksum = "533f267daf58a43bad1c92957b7ae91e5b64adb560243adc2ee24bf460e965c9"
 dependencies = [
- "sha2 0.10.2",
+ "openssl",
 ]
 
 [[package]]
@@ -5109,9 +5079,9 @@ dependencies = [
 
 [[package]]
 name = "yedb"
-version = "0.4.9"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38442fb04b5e08350d1e365e1ac4cdd13ed5d2038a416e610bc966c187b36fbc"
+checksum = "a129d121bd08d86941118c2dc7b27ff2174afd9142932ded3701dc3050f397a4"
 dependencies = [
  "async-trait",
  "busrt",
@@ -5132,7 +5102,6 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_yaml",
- "sha2 0.9.9",
  "tokio",
 ]
 
