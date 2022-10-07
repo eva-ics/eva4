@@ -19,6 +19,9 @@ serde = { version = "1.0.143", features = ["derive"] }
 aes-gcm = { version = "0.9.4", features = ["aes"] }
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 bzip2 = "0.4.3"
-sha2 = "0.10.1"
 log = "0.4.16"
 triggered = "0.1.2"
+openssl = "0.10.42"
+
+[features]
+openssl-vendored = ["openssl/vendored"]

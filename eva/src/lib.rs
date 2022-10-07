@@ -1,6 +1,9 @@
 use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
 use serde::Serialize;
+use std::sync::atomic;
+
+static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[macro_use]
 extern crate lazy_static;

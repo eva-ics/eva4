@@ -6,9 +6,9 @@ use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
+use openssl::sha::Sha256;
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -267,8 +267,8 @@ impl UserOrLogin {
 
 fn password_hash(password: &str) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(password);
-    let password_hash = hasher.finalize();
+    hasher.update(password.as_bytes());
+    let password_hash = hasher.finish();
     hex::encode(password_hash)
 }
 

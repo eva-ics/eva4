@@ -1125,9 +1125,9 @@ dependencies = [
  "lazy_static",
  "log",
  "once_cell",
+ "openssl",
  "rand 0.8.5",
  "serde",
- "sha2",
  "tokio",
 ]
 
@@ -1150,7 +1150,6 @@ dependencies = [
  "once_cell",
  "rand 0.8.5",
  "serde",
- "sha2",
  "tokio",
 ]
 
@@ -1217,7 +1216,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sha2",
  "tera",
  "tokio",
  "ttycarousel",
@@ -1483,10 +1481,10 @@ dependencies = [
  "lazy_static",
  "log",
  "once_cell",
+ "openssl",
  "parse_int",
  "serde",
  "serde_yaml",
- "sha2",
  "tempfile",
  "tokio",
 ]
@@ -1515,11 +1513,11 @@ dependencies = [
  "log",
  "multer",
  "once_cell",
+ "openssl",
  "rand 0.8.5",
  "serde",
  "serde_json",
  "serde_yaml",
- "sha2",
  "sqlx",
  "submap",
  "tera",
@@ -1557,6 +1555,7 @@ dependencies = [
  "multi_log",
  "nix 0.25.0",
  "once_cell",
+ "openssl",
  "parking_lot 0.12.1",
  "regex",
  "serde",
@@ -3426,11 +3425,11 @@ dependencies = [
  "bzip2",
  "eva-common",
  "log",
+ "openssl",
  "paho-mqtt",
  "psrt",
  "rand 0.8.5",
  "serde",
- "sha2",
  "tokio",
  "triggered",
  "uuid 1.1.2",
@@ -4084,9 +4083,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx"
-version = "0.5.13"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "551873805652ba0d912fec5bbb0f8b4cdd96baf8e2ebf5970e5671092966019b"
+checksum = "fc15591eb44ffb5816a4a70a7efd5dd87bfd3aa84c4c200401c4396140525826"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",

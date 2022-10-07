@@ -1,8 +1,8 @@
 use crate::{COMPRESSION_BZIP2, COMPRESSION_NO};
 use crate::{ENCRYPTION_AES_128_GCM, ENCRYPTION_AES_256_GCM, ENCRYPTION_NO};
 use eva_common::{EResult, Error};
+use openssl::sha::Sha256;
 use rand::Rng;
-use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::sync::Arc;
 
@@ -131,8 +131,8 @@ impl Options {
             Encryption::No => (None, None),
             Encryption::Aes128Gcm => {
                 let mut hasher = Sha256::new();
-                hasher.update(&key.value);
-                let key_hash = &hasher.finalize()[..16];
+                hasher.update(key.value.as_bytes());
+                let key_hash = &hasher.finish()[..16];
                 let enc_key = Key::from_slice(key_hash);
                 (
                     Some(Arc::new(Cipher::Aes128Gcm(Box::new(Aes128Gcm::new(
@@ -143,8 +143,8 @@ impl Options {
             }
             Encryption::Aes256Gcm => {
                 let mut hasher = Sha256::new();
-                hasher.update(&key.value);
-                let key_hash = &hasher.finalize();
+                hasher.update(key.value.as_bytes());
+                let key_hash = &hasher.finish();
                 let enc_key = Key::from_slice(key_hash);
                 (
                     Some(Arc::new(Cipher::Aes256Gcm(Box::new(Aes256Gcm::new(

@@ -23,12 +23,14 @@ case $ARCH in
     STRIP=strip
     YEDB_ARCH=x86_64
     CARGO=cross
+    CARGO_ARGS="--features openssl-vendored"
     ;;
   aarch64-musl)
     TARGET=aarch64-unknown-linux-musl
     STRIP=aarch64-linux-gnu-strip
     YEDB_ARCH=aarch64
     CARGO=cross
+    CARGO_ARGS="--features openssl-vendored"
     ;;
   *)
     echo "Unsupported architecture"
@@ -85,7 +87,7 @@ else
 fi
 
 cd yml2mp || exit 1
-CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release || exit 1
+CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release $CARGO_ARGS || exit 1
 cd ..
 
 #echo "Building rsatool..."

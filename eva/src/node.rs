@@ -95,7 +95,11 @@ pub fn launch(
     system_name: Option<&str>,
     pid_file: Option<&str>,
     connection_path: Option<&str>,
+    fips: bool,
 ) -> EResult<()> {
+    if fips {
+        openssl::fips::enable(true)?;
+    }
     match mode {
         Mode::Info => {
             let info = Info {

@@ -2,8 +2,8 @@ use eva_common::hyper_tools::{HContent, HResult};
 use eva_common::prelude::*;
 use hyper::Body;
 use multer::Multipart;
+use openssl::sha::Sha256;
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::net::IpAddr;
 
@@ -21,7 +21,7 @@ struct UploadFile {
     content: Vec<u8>,
     content_type: Option<String>,
     file_name: Option<String>,
-    sha256: Vec<u8>,
+    sha256: [u8; 32],
 }
 
 impl UploadFile {
@@ -33,7 +33,7 @@ impl UploadFile {
             content,
             content_type,
             file_name,
-            sha256: hasher.finalize().to_vec(),
+            sha256: hasher.finish(),
         }
     }
 }

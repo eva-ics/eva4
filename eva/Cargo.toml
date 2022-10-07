@@ -57,7 +57,8 @@ ipnetwork = "0.20.0"
 async-io = "1.7.0"
 eva-robots = "0.1.6"
 parking_lot = { version = "0.12.1", features = ["serde"] }
+openssl = "0.10.42"
 
 [features]
 std-alloc = []
-openssl-vendored = ["yedb/openssl-vendored"]
+openssl-vendored = ["openssl/vendored"]

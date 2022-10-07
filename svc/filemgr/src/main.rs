@@ -2,8 +2,8 @@ use eva_common::prelude::*;
 use eva_common::time::Time;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
+use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::os::unix::fs::PermissionsExt;
@@ -120,21 +120,22 @@ impl TryFrom<Permissions> for u32 {
     }
 }
 
-fn sha256sum(data: &[u8]) -> Vec<u8> {
+#[inline]
+fn sha256sum(data: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    hasher.finalize().to_vec()
+    hasher.finish()
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum Sha256Checksum {
     Str(String),
-    Bytes(Vec<u8>),
+    Bytes([u8; 32]),
 }
 
 impl Sha256Checksum {
-    fn new(digest: Vec<u8>, caller: Caller) -> Self {
+    fn new(digest: [u8; 32], caller: Caller) -> Self {
         match caller {
             Caller::Human => Sha256Checksum::Str(hex::encode(digest)),
             Caller::Machine => Sha256Checksum::Bytes(digest),
