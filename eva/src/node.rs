@@ -12,7 +12,7 @@ use eva_common::value::Value;
 use log::{debug, info, trace};
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use tokio::sync::RwLock;
 
 err_logger!();
@@ -99,6 +99,7 @@ pub fn launch(
 ) -> EResult<()> {
     if fips {
         openssl::fips::enable(true)?;
+        crate::FIPS.store(true, atomic::Ordering::SeqCst);
     }
     match mode {
         Mode::Info => {
