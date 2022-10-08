@@ -45,15 +45,19 @@ struct OneTimeUser {
 }
 
 impl OneTimeUser {
-    fn create(login: &str, acls: HashSet<String>) -> EResult<Self> {
-        Ok(Self {
-            created: Instant::now(),
-            user: Some(User {
-                login: login.to_owned(),
-                password: Password::new_sha256(&random_string(16)?),
-                acls,
-            }),
-        })
+    fn create(login: &str, acls: HashSet<String>) -> EResult<(Self, String)> {
+        let password_plain = random_string(16)?;
+        Ok((
+            Self {
+                created: Instant::now(),
+                user: Some(User {
+                    login: login.to_owned(),
+                    password: Password::new_sha256(&password_plain),
+                    acls,
+                }),
+            },
+            password_plain,
+        ))
     }
     fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
         if let Some(user) = self.user.take() {
@@ -684,11 +688,11 @@ impl RpcHandlers for Handlers {
                                 break (entry, login);
                             }
                         };
-                        let one_time_user = OneTimeUser::create(&login, p.acls)?;
+                        let (one_time_user, password_plain) = OneTimeUser::create(&login, p.acls)?;
                         let u = one_time_user.user.as_ref().unwrap();
                         let ot_user_info = PayloadOneTimeUser {
                             login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),
-                            password: u.password.to_string(),
+                            password: password_plain,
                         };
                         let res = pack(&ot_user_info)?;
                         entry.insert(one_time_user);
