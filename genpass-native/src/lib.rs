@@ -8,7 +8,7 @@ use std::fmt::{self, Write as _};
 use std::str::FromStr;
 
 const BUF_SIZE: usize = 16;
-const PKCS5_ITERS: usize = 10_000;
+const PBKDF2_ITERS: usize = 10_000;
 
 const ERR_INVALID_PASSWORD_HASH: &str = "Invalid password hash";
 
@@ -51,7 +51,7 @@ pub fn aes_gcm_nonce() -> EResult<[u8; 12]> {
 pub enum Password {
     Sha256([u8; 32]),
     Sha512([u8; 64]),
-    Pkcs5([u8; 16], [u8; 32]),
+    Pbkdf2([u8; 16], [u8; 32]),
 }
 
 impl fmt::Display for Password {
@@ -63,7 +63,7 @@ impl fmt::Display for Password {
             Password::Sha512(hash) => {
                 write!(f, "{}", hex::encode(hash))
             }
-            Password::Pkcs5(salt, hash) => {
+            Password::Pbkdf2(salt, hash) => {
                 write!(f, "$1${}${}", base64::encode(salt), base64::encode(hash))
             }
         }
@@ -82,7 +82,7 @@ impl FromStr for Password {
                     .ok_or_else(|| Error::invalid_data(ERR_INVALID_PASSWORD_HASH))?,
             )
             .map_err(Error::invalid_data)?;
-            Ok(Self::Pkcs5(
+            Ok(Self::Pbkdf2(
                 salt.try_into()
                     .map_err(|_| Error::invalid_data(ERR_INVALID_PASSWORD_HASH))?,
                 hash.try_into()
@@ -126,12 +126,12 @@ impl Password {
         pkcs5::pbkdf2_hmac(
             password.as_bytes(),
             &salt,
-            PKCS5_ITERS,
+            PBKDF2_ITERS,
             openssl::hash::MessageDigest::sha256(),
             &mut hash,
         )
         .map_err(Error::core)?;
-        Ok(Self::Pkcs5(salt, hash))
+        Ok(Self::Pbkdf2(salt, hash))
     }
     pub fn verify(&self, password: &str) -> EResult<bool> {
         Ok(match self {
@@ -145,12 +145,12 @@ impl Password {
                 hasher.update(password.as_bytes());
                 &hasher.finish() == hash
             }
-            Password::Pkcs5(salt, hash) => {
+            Password::Pbkdf2(salt, hash) => {
                 let mut password_hash = [0; 32];
                 pkcs5::pbkdf2_hmac(
                     password.as_bytes(),
                     salt,
-                    PKCS5_ITERS,
+                    PBKDF2_ITERS,
                     openssl::hash::MessageDigest::sha256(),
                     &mut password_hash,
                 )
