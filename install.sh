@@ -410,7 +410,7 @@ if [ "$HMI" ]; then
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPPASSWD" ] || OPPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
-  OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash password=xxx algo=pbkdf2 |jq -r .hash)
+  OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash password=${OPPASSWD} algo=pbkdf2 |jq -r .hash)
   for svc in hmi:hmi.default; do
     deploy_svc $svc
   done
