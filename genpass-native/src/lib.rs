@@ -7,7 +7,7 @@ const BUF_SIZE: usize = 16;
 
 pub fn random_string(len: usize) -> EResult<String> {
     let mut s = String::with_capacity(len);
-    while s.len() < len {
+    'outer: loop {
         let mut buf = [0; BUF_SIZE];
         rand_bytes(&mut buf).map_err(Error::core)?;
         for c in encode(buf).chars() {
@@ -15,7 +15,7 @@ pub fn random_string(len: usize) -> EResult<String> {
                 'A'..='Z' | 'a'..='z' | '0'..='9' => {
                     write!(s, "{}", c)?;
                     if s.len() == len {
-                        break;
+                        break 'outer;
                     }
                 }
                 _ => {}
