@@ -8,6 +8,8 @@ openssl = "0.10.42"
 base64 = "0.13.0"
 eva-common = "0.1.179"
 nix = { version = "0.25.0", features = ["time"] }
+hex = "0.4.3"
+serde = { version = "1.0.143", features = ["derive"] }
 
 [features]
 openssl-vendored = ["openssl/vendored"]

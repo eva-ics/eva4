@@ -1983,8 +1983,10 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "eva-common",
+ "hex 0.4.3",
  "nix 0.25.0",
  "openssl",
+ "serde",
 ]
 
 [[package]]
