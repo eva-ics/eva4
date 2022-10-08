@@ -11,14 +11,11 @@ pub fn random_string(len: usize) -> EResult<String> {
         let mut buf = [0; BUF_SIZE];
         rand_bytes(&mut buf).map_err(Error::core)?;
         for c in encode(buf).chars() {
-            match c {
-                'A'..='Z' | 'a'..='z' | '0'..='9' => {
-                    write!(s, "{}", c)?;
-                    if s.len() == len {
-                        break 'outer;
-                    }
+            if c.is_alphanumeric() {
+                write!(s, "{}", c)?;
+                if s.len() == len {
+                    break 'outer;
                 }
-                _ => {}
             }
         }
     }
