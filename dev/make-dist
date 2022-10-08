@@ -87,7 +87,7 @@ else
 fi
 
 cd yml2mp || exit 1
-CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release $CARGO_ARGS || exit 1
+CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release || exit 1
 cd ..
 
 #echo "Building rsatool..."
@@ -135,7 +135,7 @@ else
 fi
 
 cd eva4-enterprise/eva4-esvc || exit 1
-DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release || exit 1
+DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../..
 
 echo "Downloading EVA ICS sources..."
@@ -156,7 +156,7 @@ ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
 
 echo "Building EVA ICS..."
 DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
-  "${CARGO}" build --target "${TARGET}" --release || exit 1
+  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 
 echo "Preparing..."
 
