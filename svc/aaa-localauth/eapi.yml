@@ -140,7 +140,7 @@ auth.key:
       des: Max operation timeout
       req: false
   ret: The method returns errors if auth is not successful
-passsword.hash:
+password.hash:
   des: Hashes the passsword with the requested algorithm
   par:
     - nam: password
