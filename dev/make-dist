@@ -121,8 +121,8 @@ cd ..
 echo "Downloading EVA ICS sources..."
 if [ -d eva4 ]; then
   cd eva4 || exit 1
-  git pull origin || exit 1
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git pull origin || exit 1
   git checkout "${BRANCH}" || exit 1
   git pull origin "${MBRANCH}" || exit 1
 else
@@ -144,8 +144,8 @@ MBRANCH=$BRANCH
 [ "${MBRANCH}" = "master" ] && MBRANCH=main
 if [ -d eva4-enterprise ]; then
   cd eva4-enterprise || exit 1
-  git pull origin || exit 1
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git pull origin || exit 1
   git checkout "${MBRANCH}" || exit 1
   if grep '^machine git.lab.altt.ch ' ~/.netrc > /dev/null; then
     git pull origin "${MBRANCH}" || exit 1
