@@ -23,12 +23,14 @@ case $ARCH in
     STRIP=strip
     YEDB_ARCH=x86_64
     CARGO=cross
+    CARGO_ARGS="--features openssl-vendored"
     ;;
   aarch64-musl)
     TARGET=aarch64-unknown-linux-musl
     STRIP=aarch64-linux-gnu-strip
     YEDB_ARCH=aarch64
     CARGO=cross
+    CARGO_ARGS="--features openssl-vendored"
     ;;
   *)
     echo "Unsupported architecture"
@@ -116,26 +118,6 @@ cd busrt || exit 1
 "${CARGO}" build --target "${TARGET}" --release --features cli || exit 1
 cd ..
 
-echo "Building Enterprise extensions..."
-MBRANCH=$BRANCH
-[ "${MBRANCH}" = "master" ] && MBRANCH=main
-if [ -d eva4-enterprise ]; then
-  cd eva4-enterprise || exit 1
-  git pull origin || exit 1
-  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
-  git checkout "${MBRANCH}" || exit 1
-  if grep '^machine git.lab.altt.ch ' ~/.netrc > /dev/null; then
-    git pull origin "${MBRANCH}" || exit 1
-  fi
-  cd ..
-else
-  git clone -b "${MBRANCH}" https://git.lab.altt.ch/eva-ics/eva4-enterprise.git/ || exit 1
-fi
-
-cd eva4-enterprise/eva4-esvc || exit 1
-DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release || exit 1
-cd ../..
-
 echo "Downloading EVA ICS sources..."
 if [ -d eva4 ]; then
   cd eva4 || exit 1
@@ -154,8 +136,31 @@ ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
 
 echo "Building EVA ICS..."
 DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
-  "${CARGO}" build --target "${TARGET}" --release || exit 1
+  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
+cd .. || exit 1
 
+echo "Building Enterprise extensions..."
+MBRANCH=$BRANCH
+[ "${MBRANCH}" = "master" ] && MBRANCH=main
+if [ -d eva4-enterprise ]; then
+  cd eva4-enterprise || exit 1
+  git pull origin || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git checkout "${MBRANCH}" || exit 1
+  if grep '^machine git.lab.altt.ch ' ~/.netrc > /dev/null; then
+    git pull origin "${MBRANCH}" || exit 1
+  fi
+  cd ..
+else
+  git clone -b "${MBRANCH}" https://git.lab.altt.ch/eva-ics/eva4-enterprise.git/ || exit 1
+fi
+
+cd eva4-enterprise/eva4-esvc || exit 1
+DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
+cd ../..
+
+
+cd eva4 || exit 1
 echo "Preparing..."
 
 mkdir "../eva-${VERSION}"

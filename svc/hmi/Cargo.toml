@@ -6,14 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eva-sdk = { version = "0.1.106", features = ["http"] }
-busrt = { version = "0.3", features = ["rpc", "ipc"] }
+eva-sdk = { version = "0.1.108", features = ["http"] }
+busrt = { version = "0.3.5", features = ["rpc", "ipc"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 async-channel = "1.7.1"
-submap = { version = "0.2.2" }
+submap = { version = "0.2.3" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.1.178", features = [
+eva-common = { version = "0.1.179", features = [
         "events", "workers", "acl", "dataconv", "time",
         "db", "hyper-tools", "common-payloads"] }
 log = "0.4.14"
@@ -24,7 +24,6 @@ lazy_static = "1.4.0"
 hyper = { version = "0.14.18", features = ["server", "http1", "http2"] }
 eva-rjrpc = { version = "0.1.16", features = ["http"] }
 ttl_cache = "0.5.1"
-rand = "0.8.5"
 bmart = { version = "0.1.14" }
 sqlx = { version = "0.5", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
 futures = "0.3.21"
@@ -34,14 +33,15 @@ serde_json = "1.0.79"
 url = "2.2.2"
 cookie = "0.16.0"
 multer = "2.0.2"
-sha2 = "0.10.1"
 hex = "0.4.3"
 tera = "1.15.0"
 hyper-tungstenite = "0.6.0"
 gettext = "0.4.0"
-hyper-static = "0.1.4"
+hyper-static = "0.1.5"
 urlencoding = "2.1.0"
-wshack = { version = "0.1", path = "../../wshack" }
+openssl = "0.10.42"
+genpass-native = { path = "../../genpass-native" }
 
 [features]
 std-alloc = []
+openssl-vendored = ["openssl/vendored"]

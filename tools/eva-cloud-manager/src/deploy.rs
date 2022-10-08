@@ -5,8 +5,8 @@ use eva_client::{EvaClient, EvaCloudClient, NodeMap, SystemInfo};
 use eva_common::common_payloads::{NodeData, ParamsId};
 use eva_common::prelude::*;
 use log::{debug, error, info, warn};
+use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -339,7 +339,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     (f.text.as_ref().unwrap().as_bytes(), None)
                 };
                 let mut hasher = Sha256::new();
-                hasher.update(&content);
+                hasher.update(content);
                 if let Some(s_permissions) = f.permissions {
                     permissions.replace(s_permissions);
                 }
@@ -347,7 +347,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     path: &f.target.to_string_lossy(),
                     content,
                     permissions,
-                    sha256: &hasher.finalize(),
+                    sha256: &hasher.finish(),
                     extract: f.extract,
                 };
                 client

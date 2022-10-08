@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 
 VERSION=4.0.0
-BUILD=2022100501
+BUILD=2022100804
 
 [ -z "${EVA_REPOSITORY_URL}" ] && EVA_REPOSITORY_URL=https://pub.bma.ai/eva4
 export EVA_REPOSITORY_URL
 
-[ -z "$ARCH" ] && ARCH=$(uname -m)
-[[ "$ARCH" == arm* ]] && ARCH=arm
-case $ARCH in
-  arm)
-    ARCH_SFX=armv7
-    ;;
-  x86_64)
-    ARCH_SFX=x86_64-musl
-    ;;
-  aarch64)
-    ARCH_SFX=aarch64-musl
-    ;;
-  *)
-    echo "Unsupported CPU architecture. Please build the distro manually"
-    exit 13
-    ;;
-esac
+if [ -z "$ARCH_SFX" ]; then
+  [ -z "$ARCH" ] && ARCH=$(uname -m)
+  [[ "$ARCH" == arm* ]] && ARCH=arm
+  case $ARCH in
+    arm)
+      ARCH_SFX=armv7
+      ;;
+    x86_64)
+      ARCH_SFX=x86_64-musl
+      ;;
+    aarch64)
+      ARCH_SFX=aarch64-musl
+      ;;
+    *)
+      echo "Unsupported CPU architecture. Please build the distro manually"
+      exit 13
+      ;;
+  esac
+fi
 
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
@@ -94,6 +96,7 @@ if [ ! -f /.eva_container ]; then
   rm -f "_update/eva-${VERSION}/ui/index.html"
   rm -f "_update/eva-${VERSION}/ui/favicon.ico"
   rm -f "_update/eva-${VERSION}/update.sh"
+  rm -f ./cli/eva-cloud-manager
   cp -rf "_update/eva-${VERSION}/"* . || exit 1
 fi
 

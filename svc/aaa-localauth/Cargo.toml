@@ -6,22 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-busrt = { version = "0.3", features = ["rpc", "ipc"] }
+busrt = { version = "0.3.5", features = ["rpc", "ipc"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.1.178", features = ["events", "common-payloads"] }
+eva-common = { version = "0.1.179", features = ["events", "common-payloads"] }
 log = "0.4.14"
 async-channel = "1.7.1"
-eva-sdk = { version = "0.1.106" }
+eva-sdk = { version = "0.1.108" }
 jemallocator = { version = "0.5.0" }
-rand = "0.8.4"
-sha2 = "0.10.1"
 hex = "0.4.3"
 once_cell = "1.9.0"
 lazy_static = "1.4.0"
 bmart = "0.1.14"
-wshack = { version = "0.1", path = "../../wshack" }
+openssl = "0.10.42"
+genpass-native = { path = "../../genpass-native" }
 
 [features]
 std-alloc = []
+openssl-vendored = ["openssl/vendored"]

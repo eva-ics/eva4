@@ -1,8 +1,8 @@
 use eva_client::VersionInfo;
 use eva_common::{EResult, Error};
+use openssl::sha::Sha256;
 use ring::signature;
 use serde::{Deserialize, Deserializer};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -65,7 +65,7 @@ impl Manifest {
         let meta = file.metadata().await?;
         let size = meta.len();
         drop(file);
-        self.verify(Path::new(fname), size, &hasher.finalize())
+        self.verify(Path::new(fname), size, &hasher.finish())
     }
     pub fn verify(&self, name: &Path, size: u64, sha256sum: &[u8]) -> EResult<()> {
         let f = Path::new(

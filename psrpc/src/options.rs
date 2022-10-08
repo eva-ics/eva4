@@ -1,25 +1,11 @@
 use crate::{COMPRESSION_BZIP2, COMPRESSION_NO};
 use crate::{ENCRYPTION_AES_128_GCM, ENCRYPTION_AES_256_GCM, ENCRYPTION_NO};
+use bzip2::read::{BzDecoder, BzEncoder};
 use eva_common::{EResult, Error};
-use rand::Rng;
-use sha2::{Digest, Sha256};
+use genpass_native::aes_gcm_nonce;
+use openssl::sha::Sha256;
 use std::io::Read;
 use std::sync::Arc;
-
-use aes_gcm::{aead::Aead, Aes128Gcm, Aes256Gcm, Key, NewAead, Nonce};
-use bzip2::read::{BzDecoder, BzEncoder};
-
-#[inline]
-fn generate_nonce() -> [u8; 12] {
-    let aes_nonce: [u8; 12] = rand::thread_rng()
-        .sample_iter(&rand::distributions::Uniform::new(0, 0xff))
-        .take(12)
-        .map(u8::from)
-        .collect::<Vec<u8>>()
-        .try_into()
-        .unwrap();
-    aes_nonce
-}
 
 pub fn parse_flags(flags: u8) -> EResult<(Encryption, Compression)> {
     let encryption: Encryption = (flags & 0b1111).try_into()?;
@@ -94,12 +80,6 @@ impl TryFrom<u8> for Compression {
     }
 }
 
-#[derive(Clone)]
-enum Cipher {
-    Aes128Gcm(Box<Aes128Gcm>),
-    Aes256Gcm(Box<Aes256Gcm>),
-}
-
 #[derive(Debug, Clone)]
 pub struct EncryptionKey<'a> {
     id: &'a str,
@@ -117,7 +97,7 @@ pub struct Options {
     encryption: Encryption,
     compression: Compression,
     key_id: Option<String>,
-    cip: Option<Arc<Cipher>>,
+    key_hash: Option<Arc<Vec<u8>>>,
 }
 
 impl Options {
@@ -127,34 +107,22 @@ impl Options {
     }
     #[inline]
     pub fn encryption(mut self, encryption: Encryption, key: &EncryptionKey) -> Self {
-        let (cip, key_id) = match encryption {
+        let (key_hash, key_id) = match encryption {
             Encryption::No => (None, None),
             Encryption::Aes128Gcm => {
                 let mut hasher = Sha256::new();
-                hasher.update(&key.value);
-                let key_hash = &hasher.finalize()[..16];
-                let enc_key = Key::from_slice(key_hash);
-                (
-                    Some(Arc::new(Cipher::Aes128Gcm(Box::new(Aes128Gcm::new(
-                        enc_key,
-                    ))))),
-                    Some(key.id),
-                )
+                hasher.update(key.value.as_bytes());
+                let key_hash = &hasher.finish()[..16];
+                (Some(Arc::new(key_hash.to_vec())), Some(key.id))
             }
             Encryption::Aes256Gcm => {
                 let mut hasher = Sha256::new();
-                hasher.update(&key.value);
-                let key_hash = &hasher.finalize();
-                let enc_key = Key::from_slice(key_hash);
-                (
-                    Some(Arc::new(Cipher::Aes256Gcm(Box::new(Aes256Gcm::new(
-                        enc_key,
-                    ))))),
-                    Some(key.id),
-                )
+                hasher.update(key.value.as_bytes());
+                let key_hash = &hasher.finish();
+                (Some(Arc::new(key_hash.to_vec())), Some(key.id))
             }
         };
-        self.cip = cip;
+        self.key_hash = key_hash;
         self.key_id = key_id.map(ToOwned::to_owned);
         self.encryption = encryption;
         self
@@ -191,39 +159,42 @@ impl Options {
                 compr?
             }
         };
+        macro_rules! encrypt {
+            ($cip: expr, $key_hash: expr) => {{
+                let iv = aes_gcm_nonce()?;
+                let mut digest = [0_u8; 16];
+                let mut buf = openssl::symm::encrypt_aead(
+                    $cip,
+                    $key_hash,
+                    Some(&iv),
+                    &[],
+                    &data,
+                    &mut digest,
+                )
+                .map_err(Error::io)?;
+                buf.reserve(28);
+                buf.extend(digest);
+                buf.extend(iv);
+                Ok(buf)
+            }};
+        }
         let result = match self.encryption {
             Encryption::No => data,
             Encryption::Aes128Gcm => {
-                let cip = self.cip.as_ref().unwrap().clone();
+                let key_hash = self.key_hash.as_ref().cloned().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
-                    let nonce = generate_nonce();
-                    if let Cipher::Aes128Gcm(cip) = cip.as_ref() {
-                        let mut buf = cip
-                            .encrypt(Nonce::from_slice(&nonce), data.as_ref())
-                            .map_err(Error::failed)?;
-                        buf.extend(nonce);
-                        Ok(buf)
-                    } else {
-                        panic!()
-                    }
+                    let cip = openssl::symm::Cipher::aes_128_gcm();
+                    encrypt!(cip, &key_hash)
                 })
                 .await
                 .map_err(Error::failed)?;
                 encr?
             }
             Encryption::Aes256Gcm => {
-                let cip = self.cip.as_ref().unwrap().clone();
+                let key_hash = self.key_hash.as_ref().cloned().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
-                    let nonce = generate_nonce();
-                    if let Cipher::Aes256Gcm(cip) = cip.as_ref() {
-                        let mut buf = cip
-                            .encrypt(Nonce::from_slice(&nonce), data.as_ref())
-                            .map_err(Error::failed)?;
-                        buf.extend(nonce);
-                        Ok(buf)
-                    } else {
-                        panic!()
-                    }
+                    let cip = openssl::symm::Cipher::aes_256_gcm();
+                    encrypt!(cip, &key_hash)
                 })
                 .await
                 .map_err(Error::failed)?;
@@ -243,42 +214,37 @@ impl Options {
         if message.data().len() < payload_pos {
             return Err(Error::invalid_data("message too short"));
         }
+        macro_rules! decrypt {
+            ($cip: expr, $key_hash: expr, $payload: expr) => {{
+                let len = $payload.len();
+                if len < 28 {
+                    return Err(Error::invalid_data("invalid payload"));
+                }
+                let iv = &$payload[len - 12..];
+                let encpl = &$payload[..len - 28];
+                let digest = &$payload[len - 28..len - 12];
+                openssl::symm::decrypt_aead($cip, $key_hash, Some(iv), &[], &encpl, &digest)
+                    .map_err(Error::io)
+            }};
+        }
         let data = match self.encryption {
             Encryption::No => message.data()[payload_pos..].to_vec(),
             Encryption::Aes128Gcm => {
-                let cip = self.cip.as_ref().unwrap().clone();
+                let key_hash = self.key_hash.as_ref().cloned().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
+                    let cip = openssl::symm::Cipher::aes_128_gcm();
                     let payload = &message.data()[payload_pos..];
-                    if payload.len() < 13 {
-                        return Err(Error::invalid_data("invalid payload"));
-                    }
-                    let nonce = &payload[payload.len() - 12..];
-                    let encpl = &payload[..payload.len() - 12];
-                    if let Cipher::Aes128Gcm(cip) = cip.as_ref() {
-                        cip.decrypt(Nonce::from_slice(nonce), encpl)
-                            .map_err(Error::failed)
-                    } else {
-                        panic!()
-                    }
+                    decrypt!(cip, &key_hash, payload)
                 })
                 .await?;
                 encr?
             }
             Encryption::Aes256Gcm => {
-                let cip = self.cip.as_ref().unwrap().clone();
+                let key_hash = self.key_hash.as_ref().cloned().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
+                    let cip = openssl::symm::Cipher::aes_256_gcm();
                     let payload = &message.data()[payload_pos..];
-                    if payload.len() < 13 {
-                        return Err(Error::invalid_data("invalid payload"));
-                    }
-                    let nonce = &payload[payload.len() - 12..];
-                    let encpl = &payload[..payload.len() - 12];
-                    if let Cipher::Aes256Gcm(cip) = cip.as_ref() {
-                        cip.decrypt(Nonce::from_slice(nonce), encpl)
-                            .map_err(Error::failed)
-                    } else {
-                        panic!()
-                    }
+                    decrypt!(cip, &key_hash, payload)
                 })
                 .await
                 .map_err(Error::failed)?;

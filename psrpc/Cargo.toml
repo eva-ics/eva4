@@ -8,18 +8,19 @@ name = "psrpc"
 path = "src/lib.rs"
 
 [dependencies]
-psrt = "0.1.19"
+psrt = "0.1.30"
 paho-mqtt = "0.10.0"
 async-trait = "0.1.53"
-eva-common = { version = "0.1.178", features = ["workers", "payload"] }
+eva-common = { version = "0.1.179", features = ["workers", "payload"] }
 async-channel = "1.7.1"
 tokio = { version = "1.20.1", features = [] }
-rand = "0.8.5"
 serde = { version = "1.0.143", features = ["derive"] }
-aes-gcm = { version = "0.9.4", features = ["aes"] }
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 bzip2 = "0.4.3"
-sha2 = "0.10.1"
 log = "0.4.16"
 triggered = "0.1.2"
-wshack = { version = "0.1", path = "../wshack" }
+openssl = "0.10.42"
+genpass-native = { path = "../genpass-native" }
+
+[features]
+openssl-vendored = ["openssl/vendored"]

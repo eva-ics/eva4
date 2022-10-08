@@ -4,7 +4,7 @@ use eva_common::{EResult, Error};
 use hyper::{body::HttpBody, client::HttpConnector, Body, Response, StatusCode, Uri};
 use hyper_tls::HttpsConnector;
 use log::info;
-use sha2::{Digest, Sha256};
+use openssl::sha::Sha256;
 use std::path::Path;
 use std::time::Duration;
 use tokio::fs;
@@ -171,7 +171,7 @@ impl Client {
                         file.write_all(&chunk).await?;
                     }
                     if let Some(m) = manifest {
-                        m.verify(dest, size, &hasher.finalize())?;
+                        m.verify(dest, size, &hasher.finish())?;
                     }
                     Ok(())
                 } else {

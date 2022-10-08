@@ -5,10 +5,9 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use genpass_native::{random_string, Password};
 use once_cell::sync::OnceCell;
-use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -46,19 +45,23 @@ struct OneTimeUser {
 }
 
 impl OneTimeUser {
-    fn new(login: &str, acls: HashSet<String>) -> Self {
-        Self {
-            created: Instant::now(),
-            user: Some(User {
-                login: login.to_owned(),
-                password: gen_random_str(16),
-                acls,
-            }),
-        }
+    fn create(login: &str, acls: HashSet<String>) -> EResult<(Self, String)> {
+        let password_plain = random_string(16)?;
+        Ok((
+            Self {
+                created: Instant::now(),
+                user: Some(User {
+                    login: login.to_owned(),
+                    password: Password::new_sha256(&password_plain),
+                    acls,
+                }),
+            },
+            password_plain,
+        ))
     }
     fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
         if let Some(user) = self.user.take() {
-            if password == user.password {
+            if user.password.verify(password)? {
                 Ok(user.acls.into_iter().collect())
             } else {
                 debug!(
@@ -83,7 +86,7 @@ impl OneTimeUser {
 #[serde(deny_unknown_fields)]
 struct User {
     login: String,
-    password: String,
+    password: Password,
     #[serde(default)]
     acls: HashSet<String>,
 }
@@ -93,7 +96,7 @@ struct User {
 #[sorting(id = "login")]
 struct UserInfo<'a> {
     login: &'a str,
-    password: &'a str,
+    password: String,
     acls: &'a HashSet<String>,
 }
 
@@ -101,7 +104,7 @@ impl<'a> From<&'a User> for UserInfo<'a> {
     fn from(user: &'a User) -> UserInfo<'a> {
         UserInfo {
             login: &user.login,
-            password: &user.password,
+            password: user.password.to_string(),
             acls: &user.acls,
         }
     }
@@ -124,21 +127,13 @@ async fn clear_one_time_users() {
         .retain(|_, user| user.is_valid());
 }
 
-fn gen_random_str(len: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(len)
-        .map(char::from)
-        .collect()
-}
-
 impl Key {
-    fn regenerate(&self) -> Self {
-        Self {
+    fn regenerate(&self) -> EResult<Self> {
+        Ok(Self {
             id: self.id.clone(),
-            key: gen_random_str(32),
+            key: random_string(32)?,
             acls: self.acls.clone(),
-        }
+        })
     }
 }
 
@@ -263,13 +258,6 @@ impl UserOrLogin {
             Self::Login(login) => login.as_str(),
         }
     }
-}
-
-fn password_hash(password: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(password);
-    let password_hash = hasher.finalize();
-    hex::encode(password_hash)
 }
 
 #[inline]
@@ -448,7 +436,7 @@ impl RpcHandlers for Handlers {
                     let val = {
                         let mut keydb = KEYDB.lock().unwrap();
                         if let Some(key) = keydb.remove(p.i) {
-                            let new_key = key.regenerate();
+                            let new_key = key.regenerate()?;
                             let v = to_value(&new_key)?;
                             keydb.append(Arc::new(new_key))?;
                             v
@@ -501,6 +489,39 @@ impl RpcHandlers for Handlers {
                 )
                 .await?;
                 Ok(Some(result.payload().to_vec()))
+            }
+            "password.hash" => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "lowercase")]
+                enum HashAlgo {
+                    Sha256,
+                    Sha512,
+                    Pbkdf2,
+                }
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct ParamsPasswordHash {
+                    password: Value,
+                    algo: HashAlgo,
+                }
+                #[derive(Serialize)]
+                struct PayloadPasswordHash {
+                    hash: String,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsPasswordHash = unpack(payload)?;
+                    let plain_password = p.password.to_string();
+                    let password = match p.algo {
+                        HashAlgo::Sha256 => Password::new_sha256(&plain_password),
+                        HashAlgo::Sha512 => Password::new_sha512(&plain_password),
+                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(&plain_password)?,
+                    };
+                    Ok(Some(pack(&PayloadPasswordHash {
+                        hash: password.to_string(),
+                    })?))
+                }
             }
             "user.list" => {
                 if payload.is_empty() {
@@ -656,7 +677,7 @@ impl RpcHandlers for Handlers {
                     let val = {
                         let mut users = USERS.lock().unwrap();
                         if let Some(user) = users.get_mut(p.i) {
-                            user.password = password_hash(p.password);
+                            user.password = Password::new_pbkdf2(p.password)?;
                             to_value(&user)?
                         } else {
                             return Err(Error::not_found(format!("user {} not found", p.i)).into());
@@ -682,15 +703,15 @@ impl RpcHandlers for Handlers {
                         acls: HashSet<String>,
                     }
                     #[derive(Serialize)]
-                    struct PayloadOneTimeUser<'a> {
+                    struct PayloadOneTimeUser {
                         login: String,
-                        password: &'a str,
+                        password: String,
                     }
                     let p: ParamsOneTimeUser = unpack(payload)?;
                     if ONE_TIME_EXPIRES.get().is_some() {
                         let mut ot_users = ONE_TIME_USERS.lock().await;
                         let (entry, login) = loop {
-                            let rand_str = gen_random_str(16);
+                            let rand_str = random_string(16)?;
                             let login = if let Some(ref l) = p.login {
                                 format!("{}.{}", l, rand_str)
                             } else {
@@ -700,11 +721,11 @@ impl RpcHandlers for Handlers {
                                 break (entry, login);
                             }
                         };
-                        let one_time_user = OneTimeUser::new(&login, p.acls);
+                        let (one_time_user, password_plain) = OneTimeUser::create(&login, p.acls)?;
                         let u = one_time_user.user.as_ref().unwrap();
                         let ot_user_info = PayloadOneTimeUser {
                             login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),
-                            password: &u.password,
+                            password: password_plain,
                         };
                         let res = pack(&ot_user_info)?;
                         entry.insert(one_time_user);
@@ -745,7 +766,7 @@ impl RpcHandlers for Handlers {
                         return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                     }
                 } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
-                    if user.password != password_hash(p.password) {
+                    if !user.password.verify(p.password)? {
                         debug!("user {} authentication failed: invalid password", p.login);
                         return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                     }
@@ -843,6 +864,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("auth.key")
             .required("key")
             .optional("timeout"),
+    );
+    info.add_method(
+        ServiceMethod::new("password.hash")
+            .required("password")
+            .required("algo"),
     );
     info.add_method(ServiceMethod::new("user.list"));
     info.add_method(ServiceMethod::new("user.deploy").required("users"));

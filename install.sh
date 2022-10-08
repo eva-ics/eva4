@@ -199,13 +199,6 @@ if [ -d "$PREFIX" ] && [ -z "${PREPARE_ONLY}" ]; then
   exit 9
 fi
 
-if [ "$HMI" ]; then
-  if ! command -v sha256sum > /dev/null; then
-    echo "sha256sum missing, please install"
-    exit 1
-  fi
-fi
-
 if [ $ID_LIKE = "debian" ]; then
   apt-get update || exit 10
   if [ ! -f /etc/localtime ]; then
@@ -417,7 +410,7 @@ if [ "$HMI" ]; then
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPPASSWD" ] || OPPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
-  OPPASSWD_HASHED=$(echo -n "${OPPASSWD}" | sha256sum |cut -d\  -f1)
+  OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash password=${OPPASSWD} algo=pbkdf2 |jq -r .hash)
   for svc in hmi:hmi.default; do
     deploy_svc $svc
   done

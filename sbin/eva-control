@@ -15,6 +15,10 @@ export EVA_DIR
 [ -z "${SYSTEM_NAME}" ] && SYSTEM_NAME=$(hostname -s)
 [ -z "${PID_FILE}" ] && PID_FILE=${EVA_DIR}/var/eva.pid
 
+if [ "$FIPS" = "true" ]; then
+  ARGS="${ARGS} --fips"
+fi
+
 export MODE
 
 (( MAX_START_WAIT_P=MAX_START_WAIT*2))

@@ -4,9 +4,9 @@ version = "4.0.0"
 edition = "2021"
 
 [dependencies]
-busrt = { version = "0.3", features = ["rpc", "ipc"] }
-eva-common = { version = "0.1.178", features = ["events", "time", "logic"] }
-eva-sdk = { version = "0.1.106", features = ["controller"] }
+busrt = { version = "0.3.5", features = ["rpc", "ipc"] }
+eva-common = { version = "0.1.179", features = ["events", "time", "logic"] }
+eva-sdk = { version = "0.1.108", features = ["controller"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
@@ -14,14 +14,14 @@ log = "0.4.14"
 lazy_static = "1.4.0"
 async-channel = "1.7.1"
 jemallocator = { version = "0.5.0" }
-wshack = { version = "0.1", path = "../../wshack" }
 bmart = "0.2.2"
 once_cell = "1.9.0"
 chrono = "0.4.19"
 cron = "0.11.0"
-submap = { version = "0.2.2", features = ["digest"] }
+submap = { version = "0.2.3", features = ["native-digest"] }
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 eva-robots = "0.1.6"
 
 [features]
 std-alloc = []
+openssl-vendored = ["submap/openssl-vendored"]

@@ -140,6 +140,22 @@ auth.key:
       des: Max operation timeout
       req: false
   ret: The method returns errors if auth is not successful
+passsword.hash:
+  des: Hashes the passsword with the requested algorithm
+  par:
+    - nam: password
+      typ: String
+      des: Plain password string string to hash
+      req: true
+    - nam: algo
+      typ: String
+      req: true
+      des: sha256, sha512, or pbkdf2
+  ret: password hash
+  exm: |
+    {
+        "hash": "$1$CaqoIL8WXkDnqnwMXLeW5g==$qXQVPbRibRSomjtzKuyOePv59lx3eAQUR3yqAUS4YoE="
+    }
 user.list:
   des: List local user accounts
   par:

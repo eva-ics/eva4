@@ -20,6 +20,8 @@ struct Args {
     system_name: Option<String>,
     #[clap(short = 'C', long = "connection-path")]
     connection_path: Option<String>,
+    #[clap(long)]
+    fips: bool,
 }
 
 #[cfg(not(feature = "std-alloc"))]
@@ -33,6 +35,7 @@ fn main() {
         args.system_name.as_deref(),
         args.pid_file.as_deref(),
         args.connection_path.as_deref(),
+        args.fips,
     )
     .log_err()
     {

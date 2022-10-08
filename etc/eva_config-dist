@@ -4,3 +4,4 @@
 # PID_FILE=var/eva.pid # override the pid file location
 # MODE=regular # or spoint
 # ARGS="--connection-path server:port" # secondary point connection path
+# FIPS=true # enable FIPS-140 mode
