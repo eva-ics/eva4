@@ -490,6 +490,39 @@ impl RpcHandlers for Handlers {
                 .await?;
                 Ok(Some(result.payload().to_vec()))
             }
+            "password.hash" => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "lowercase")]
+                enum HashAlgo {
+                    Sha256,
+                    Sha512,
+                    Pbkdf2,
+                }
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct ParamsPasswordHash<'a> {
+                    #[serde(borrow)]
+                    password: &'a str,
+                    algo: HashAlgo,
+                }
+                #[derive(Serialize)]
+                struct PayloadPasswordHash {
+                    hash: String,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsPasswordHash = unpack(payload)?;
+                    let password = match p.algo {
+                        HashAlgo::Sha256 => Password::new_sha256(p.password),
+                        HashAlgo::Sha512 => Password::new_sha512(p.password),
+                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(p.password)?,
+                    };
+                    Ok(Some(pack(&PayloadPasswordHash {
+                        hash: password.to_string(),
+                    })?))
+                }
+            }
             "user.list" => {
                 if payload.is_empty() {
                     let users = USERS.lock().unwrap();
@@ -831,6 +864,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("auth.key")
             .required("key")
             .optional("timeout"),
+    );
+    info.add_method(
+        ServiceMethod::new("password.hash")
+            .required("password")
+            .required("algo"),
     );
     info.add_method(ServiceMethod::new("user.list"));
     info.add_method(ServiceMethod::new("user.deploy").required("users"));
