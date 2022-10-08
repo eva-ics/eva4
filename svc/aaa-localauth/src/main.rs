@@ -5,9 +5,8 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use genpass_native::random_string;
+use genpass_native::{random_string, Password};
 use once_cell::sync::OnceCell;
-use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::sync::Arc;
@@ -51,14 +50,14 @@ impl OneTimeUser {
             created: Instant::now(),
             user: Some(User {
                 login: login.to_owned(),
-                password: random_string(16)?,
+                password: Password::new_sha256(&random_string(16)?),
                 acls,
             }),
         })
     }
     fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
         if let Some(user) = self.user.take() {
-            if password == user.password {
+            if user.password.verify(password)? {
                 Ok(user.acls.into_iter().collect())
             } else {
                 debug!(
@@ -83,7 +82,7 @@ impl OneTimeUser {
 #[serde(deny_unknown_fields)]
 struct User {
     login: String,
-    password: String,
+    password: Password,
     #[serde(default)]
     acls: HashSet<String>,
 }
@@ -93,7 +92,7 @@ struct User {
 #[sorting(id = "login")]
 struct UserInfo<'a> {
     login: &'a str,
-    password: &'a str,
+    password: String,
     acls: &'a HashSet<String>,
 }
 
@@ -101,7 +100,7 @@ impl<'a> From<&'a User> for UserInfo<'a> {
     fn from(user: &'a User) -> UserInfo<'a> {
         UserInfo {
             login: &user.login,
-            password: &user.password,
+            password: user.password.to_string(),
             acls: &user.acls,
         }
     }
@@ -255,13 +254,6 @@ impl UserOrLogin {
             Self::Login(login) => login.as_str(),
         }
     }
-}
-
-fn password_hash(password: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    let password_hash = hasher.finish();
-    hex::encode(password_hash)
 }
 
 #[inline]
@@ -648,7 +640,7 @@ impl RpcHandlers for Handlers {
                     let val = {
                         let mut users = USERS.lock().unwrap();
                         if let Some(user) = users.get_mut(p.i) {
-                            user.password = password_hash(p.password);
+                            user.password = Password::new_pbkdf2(p.password)?;
                             to_value(&user)?
                         } else {
                             return Err(Error::not_found(format!("user {} not found", p.i)).into());
@@ -674,9 +666,9 @@ impl RpcHandlers for Handlers {
                         acls: HashSet<String>,
                     }
                     #[derive(Serialize)]
-                    struct PayloadOneTimeUser<'a> {
+                    struct PayloadOneTimeUser {
                         login: String,
-                        password: &'a str,
+                        password: String,
                     }
                     let p: ParamsOneTimeUser = unpack(payload)?;
                     if ONE_TIME_EXPIRES.get().is_some() {
@@ -696,7 +688,7 @@ impl RpcHandlers for Handlers {
                         let u = one_time_user.user.as_ref().unwrap();
                         let ot_user_info = PayloadOneTimeUser {
                             login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),
-                            password: &u.password,
+                            password: u.password.to_string(),
                         };
                         let res = pack(&ot_user_info)?;
                         entry.insert(one_time_user);
@@ -737,7 +729,7 @@ impl RpcHandlers for Handlers {
                         return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                     }
                 } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
-                    if user.password != password_hash(p.password) {
+                    if !user.password.verify(p.password)? {
                         debug!("user {} authentication failed: invalid password", p.login);
                         return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                     }

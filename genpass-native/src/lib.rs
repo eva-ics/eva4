@@ -119,7 +119,7 @@ impl Password {
         hasher.update(password.as_bytes());
         Self::Sha512(hasher.finish())
     }
-    pub fn new_pkcs5(password: &str) -> EResult<Self> {
+    pub fn new_pbkdf2(password: &str) -> EResult<Self> {
         let mut salt = [0; 16];
         let mut hash = [0; 32];
         rand_bytes(&mut salt).map_err(Error::core)?;
@@ -204,7 +204,11 @@ mod test {
         assert!(password.verify(p).unwrap());
         let password: Password = Password::new_sha512(p).to_string().parse().unwrap();
         assert!(password.verify(p).unwrap());
-        let password: Password = Password::new_pkcs5(p).unwrap().to_string().parse().unwrap();
+        let password: Password = Password::new_pbkdf2(p)
+            .unwrap()
+            .to_string()
+            .parse()
+            .unwrap();
         assert!(password.verify(p).unwrap());
     }
 }
