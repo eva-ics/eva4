@@ -500,9 +500,8 @@ impl RpcHandlers for Handlers {
                 }
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
-                struct ParamsPasswordHash<'a> {
-                    #[serde(borrow)]
-                    password: &'a str,
+                struct ParamsPasswordHash {
+                    password: Value,
                     algo: HashAlgo,
                 }
                 #[derive(Serialize)]
@@ -513,10 +512,11 @@ impl RpcHandlers for Handlers {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsPasswordHash = unpack(payload)?;
+                    let plain_password = p.password.to_string();
                     let password = match p.algo {
-                        HashAlgo::Sha256 => Password::new_sha256(p.password),
-                        HashAlgo::Sha512 => Password::new_sha512(p.password),
-                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(p.password)?,
+                        HashAlgo::Sha256 => Password::new_sha256(&plain_password),
+                        HashAlgo::Sha512 => Password::new_sha512(&plain_password),
+                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(&plain_password)?,
                     };
                     Ok(Some(pack(&PayloadPasswordHash {
                         hash: password.to_string(),
