@@ -118,6 +118,27 @@ cd busrt || exit 1
 "${CARGO}" build --target "${TARGET}" --release --features cli || exit 1
 cd ..
 
+echo "Downloading EVA ICS sources..."
+if [ -d eva4 ]; then
+  cd eva4 || exit 1
+  git pull origin || exit 1
+  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+  git checkout "${BRANCH}" || exit 1
+  git pull origin "${MBRANCH}" || exit 1
+else
+  git clone -b "${BRANCH}" https://github.com/eva-ics/eva4 || exit 1
+  cd eva4 || exit 1
+fi
+
+echo "Downloading YEDB cli..."
+rm -rf ./yedb
+ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
+
+echo "Building EVA ICS..."
+DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
+  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
+cd .. || exit 1
+
 echo "Building Enterprise extensions..."
 MBRANCH=$BRANCH
 [ "${MBRANCH}" = "master" ] && MBRANCH=main
@@ -138,26 +159,8 @@ cd eva4-enterprise/eva4-esvc || exit 1
 DOCKER_OPTS="-v ${BUILD_DIR}/eva4-enterprise/eelibs:/eelibs -v ${BUILD_DIR}/eva4:/opt/eva4" "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../..
 
-echo "Downloading EVA ICS sources..."
-if [ -d eva4 ]; then
-  cd eva4 || exit 1
-  git pull origin || exit 1
-  find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
-  git checkout "${BRANCH}" || exit 1
-  git pull origin "${MBRANCH}" || exit 1
-else
-  git clone -b "${BRANCH}" https://github.com/eva-ics/eva4 || exit 1
-  cd eva4 || exit 1
-fi
 
-echo "Downloading YEDB cli..."
-rm -rf ./yedb
-ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
-
-echo "Building EVA ICS..."
-DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
-  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
-
+cd eva4 || exit 1
 echo "Preparing..."
 
 mkdir "../eva-${VERSION}"
