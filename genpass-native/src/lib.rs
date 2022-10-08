@@ -14,6 +14,9 @@ pub fn random_string(len: usize) -> EResult<String> {
             match c {
                 'A'..='Z' | 'a'..='z' | '0'..='9' => {
                     write!(s, "{}", c)?;
+                    if s.len() == len {
+                        break;
+                    }
                 }
                 _ => {}
             }
@@ -45,10 +48,14 @@ mod test {
     use super::{aes_gcm_nonce, random_string};
     #[test]
     fn test_random_string() {
-        let _s = random_string(20).unwrap();
+        for _ in 0..1000 {
+            let s = random_string(20).unwrap();
+            assert_eq!(s.len(), 20);
+        }
     }
     #[test]
     fn test_aes_gcm_nonce() {
-        let _n = aes_gcm_nonce().unwrap();
+        let n = aes_gcm_nonce().unwrap();
+        assert_eq!(n.len(), 12);
     }
 }
