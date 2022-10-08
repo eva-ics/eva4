@@ -141,7 +141,7 @@ auth.key:
       req: false
   ret: The method returns errors if auth is not successful
 password.hash:
-  des: Hashes the passsword with the requested algorithm
+  des: Hashes the password with the requested algorithm
   par:
     - nam: password
       typ: String
