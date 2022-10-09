@@ -76,6 +76,11 @@ while [ "$1" ]; do
       INSTALL_TEST=_test
       shift
       ;;
+    --force-arch)
+      ARCH_SFX=$2
+      shift
+      shift
+      ;;
     --force-os)
       shift
       ID=$1
@@ -132,8 +137,9 @@ Arguments:
                     2: + gcc, g++, development headers
                     3: + Rust compiler, more headers/libs
  --prepare-only     Prepare the system and quit
- --force-os         Force OS distribution (disable auto-detect): debian, ubuntu,
+ --force-os OS      Force OS distribution (disable auto-detect): debian, ubuntu,
                     fedora, raspbian, rhel, centos
+ --force-arch ARCH  Force native build/architecture
  -a                 Automatic setup, equal to autostart+logrotate+symlinks+mode 1
                     Mode can be overriden by an additional --mode arg
 EOF
@@ -176,23 +182,25 @@ case $ID in
     ;;
 esac
 
-[ -z "$ARCH" ] && ARCH=$(uname -m)
-ARCH=$(echo "${ARCH}" | sed 's/arm.*/arm/g')
-case $ARCH in
-  #arm)
-    #ARCH_SFX=armv7
-    #;;
-  x86_64)
-    ARCH_SFX=x86_64-musl
-    ;;
-  aarch64)
-    ARCH_SFX=aarch64-musl
-    ;;
-  *)
-    echo "Unsupported CPU architecture. Please build the distro manually"
-    exit 13
-    ;;
-esac
+if [ -z "${ARCH_SFX}" ]; then
+  [ -z "$ARCH" ] && ARCH=$(uname -m)
+  ARCH=$(echo "${ARCH}" | sed 's/arm.*/arm/g')
+  case $ARCH in
+    #arm)
+      #ARCH_SFX=armv7
+      #;;
+    x86_64)
+      ARCH_SFX=x86_64-musl
+      ;;
+    aarch64)
+      ARCH_SFX=aarch64-musl
+      ;;
+    *)
+      echo "Unsupported CPU architecture. Please build the distro manually"
+      exit 13
+      ;;
+  esac
+fi
 
 if [ -d "$PREFIX" ] && [ -z "${PREPARE_ONLY}" ]; then
   echo "Directory $PREFIX already exists, aborting"
@@ -410,7 +418,7 @@ if [ "$HMI" ]; then
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPPASSWD" ] || OPPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
-  OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash password=${OPPASSWD} algo=pbkdf2 |jq -r .hash)
+  OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash "password=${OPPASSWD}" algo=pbkdf2 |jq -r .hash)
   for svc in hmi:hmi.default; do
     deploy_svc $svc
   done
