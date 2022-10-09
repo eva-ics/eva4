@@ -5,6 +5,8 @@ use std::sync::atomic;
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+const ARCH_SFX: &str = env!("ARCH_SFX");
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -14,7 +16,7 @@ pub const PRODUCT_NAME: &str = "EVA ICS node server";
 pub const PRODUCT_CODE: &str = "eva4node";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[allow(clippy::unreadable_literal)]
-pub const BUILD: u64 = 2022100806;
+pub const BUILD: u64 = 2022100901;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize)]

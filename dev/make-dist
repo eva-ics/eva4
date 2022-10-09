@@ -24,6 +24,7 @@ case $ARCH in
     YEDB_ARCH=x86_64
     CARGO=cross
     CARGO_ARGS="--features openssl-vendored"
+    CARGO_TARGET_DIR=target
     ;;
   aarch64-musl)
     TARGET=aarch64-unknown-linux-musl
@@ -31,6 +32,20 @@ case $ARCH in
     YEDB_ARCH=aarch64
     CARGO=cross
     CARGO_ARGS="--features openssl-vendored"
+    CARGO_TARGET_DIR=target
+    ;;
+  x86_64-ubuntu20.04)
+    TARGET=x86_64-unknown-linux-gnu
+    STRIP=strip
+    YEDB_ARCH=x86_64-ubuntu20.04
+    CARGO=cargo
+    CARGO_ARGS=
+    CARGO_TARGET_DIR=target-native
+    export CARGO_TARGET_DIR
+    if ! lsb_release -cs|grep ^focal$ ; then
+      echo "not ubuntu20.04"
+      exit 5
+    fi
     ;;
   *)
     echo "Unsupported architecture"
@@ -52,6 +67,14 @@ if [ $? -eq 1 ]; then
   echo "I need ${BRANCH}"
   exit 1
 fi
+MBRANCH=$BRANCH
+[ "${MBRANCH}" = "master" ] && MBRANCH=main
+cd eva || exit 1
+find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+git pull origin || exit 1
+git checkout "${MBRANCH}" || exit 1
+git pull || exit 1
+cd .. || exit 1
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 
 DISTRO="eva-${VERSION}-${BUILD}-${ARCH}.tgz"
@@ -87,7 +110,7 @@ else
 fi
 
 cd yml2mp || exit 1
-CARGO_TARGET_DIR=target "${CARGO}" build --target "${TARGET}" --release || exit 1
+"${CARGO}" build --target "${TARGET}" --release || exit 1
 cd ..
 
 #echo "Building rsatool..."
@@ -135,13 +158,13 @@ rm -rf ./yedb
 ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
 
 echo "Building EVA ICS..."
+ARCH_SFX=$ARCH
+export ARCH_SFX
 DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
   "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd .. || exit 1
 
 echo "Building Enterprise extensions..."
-MBRANCH=$BRANCH
-[ "${MBRANCH}" = "master" ] && MBRANCH=main
 if [ -d eva4-enterprise ]; then
   cd eva4-enterprise || exit 1
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
@@ -194,14 +217,14 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-hmi eva-repl eva-svc-mirror \
   eva-svc-expiration eva-filemgr \
   eva-svc-locker eva-svc-mailer; do
-  cp -rvf "../eva4/target/${TARGET}/release/${svc}" svc/ || exit 1
+  cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
 for svc in eva-aaa-msad \
   eva-kioskman \
   eva-zfrepl; do
-  cp -rvf "../eva4-enterprise/eva4-esvc/target/${TARGET}/release/${svc}" svc/ || exit 1
+  cp -rvf "../eva4-enterprise/eva4-esvc/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
@@ -213,19 +236,19 @@ cp -rvf ../eva4/svc/sblock.sh svc/ || exit 1
 cp -rvf ../eva4/cli/pypi-mirror cli/ || exit 1
 
 for f in init-registry; do
-  cp -rvf "../eva4/target/${TARGET}/release/${f}" install/ || exit 1
+  cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${f}" install/ || exit 1
   [ "$STRIP" ] && ${STRIP} "install/${f}" || exit 1
   echo $f
 done
 
 for f in gen-intl; do
-  cp -rvf "../eva4/target/${TARGET}/release/${f}" bin/ || exit 1
+  cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${f}" bin/ || exit 1
   [ "$STRIP" ] && ${STRIP} "bin/${f}" || exit 1
   echo $f
 done
 
 for f in eva-cloud-manager; do
-  cp -rvf "../eva4/target/${TARGET}/release/${f}" cli/ || exit 1
+  cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${f}" cli/ || exit 1
   [ "$STRIP" ] && ${STRIP} "cli/${f}" || exit 1
   echo $f
 done
@@ -233,13 +256,13 @@ done
 cp -rvf "../eva4/yedb/yedb-cli" cli/ || exit 1
 [ "$STRIP" ] && ${STRIP} cli/yedb-cli || exit 1
 
-cp -rvf "../yml2mp/target/${TARGET}/release/yml2mp" bin/ || exit 1
+cp -rvf "../yml2mp/${CARGO_TARGET_DIR}/${TARGET}/release/yml2mp" bin/ || exit 1
 [ "$STRIP" ] && ${STRIP} bin/yml2mp || exit 1
 
 #cp -rvf "../rsatool/target/${TARGET}/release/rsatool" sbin/ || exit 1
 #[ "$STRIP" ] && ${STRIP} sbin/rsatool || exit 1
 
-cp -rvf "../busrt/target/${TARGET}/release/busrt" sbin/bus || exit 1
+cp -rvf "../busrt/${CARGO_TARGET_DIR}/${TARGET}/release/busrt" sbin/bus || exit 1
 [ "$STRIP" ] && ${STRIP} sbin/bus || exit 1
 
 cd ..

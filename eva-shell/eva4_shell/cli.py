@@ -449,14 +449,19 @@ class CLI:
 
     def user_create(self, i, auth_svc):
         import pwinput
-        from hashlib import sha256
         password = pwinput.pwinput()
-        call_rpc(
-            'user.deploy',
-            dict(users=[
-                dict(login=i, password=sha256(password.encode()).hexdigest())
-            ]),
-            target=auth_svc)
+        try:
+            pwhash = call_rpc('password.hash',
+                              dict(password=password, algo='pbkdf2'),
+                              target=auth_svc)['hash']
+        except Exception as e:
+            err(e)
+            warn('deploying sha256-hashed password')
+            from hashlib import sha256
+            pwhash = sha256(password.encode()).hexdigest()
+        call_rpc('user.deploy',
+                 dict(users=[dict(login=i, password=pwhash)]),
+                 target=auth_svc)
         ok()
 
     def user_destroy(self, i, auth_svc):
@@ -1214,6 +1219,7 @@ class CLI:
                 'cli_version': __version__,
                 'build': info['build'],
                 'version': info['version'],
+                'arch': info.get('arch', '')
             }
         else:
             d = [{
@@ -1222,6 +1228,9 @@ class CLI:
             }, {
                 'name': 'build',
                 'value': info['build']
+            }, {
+                'name': 'arch',
+                'value': info.get('arch', '')
             }, {
                 'name': 'CLI version',
                 'value': __version__

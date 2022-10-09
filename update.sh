@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 VERSION=4.0.0
-BUILD=2022100806
+BUILD=2022100901
 
 [ -z "${EVA_REPOSITORY_URL}" ] && EVA_REPOSITORY_URL=https://pub.bma.ai/eva4
 export EVA_REPOSITORY_URL
@@ -10,9 +10,6 @@ if [ -z "$ARCH_SFX" ]; then
   [ -z "$ARCH" ] && ARCH=$(uname -m)
   [[ "$ARCH" == arm* ]] && ARCH=arm
   case $ARCH in
-    arm)
-      ARCH_SFX=armv7
-      ;;
     x86_64)
       ARCH_SFX=x86_64-musl
       ;;
