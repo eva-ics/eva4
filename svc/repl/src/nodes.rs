@@ -330,7 +330,7 @@ pub struct NodeI<'a> {
 }
 
 impl Node {
-    pub fn new(name: &str, sttc: bool) -> Self {
+    pub fn new(name: &str, sttc: bool, trusted: bool) -> Self {
         Self {
             name: name.to_owned(),
             ping_interval: crate::DEFAULT_PING_INTERVAL,
@@ -338,7 +338,7 @@ impl Node {
             compress: false,
             enabled: true,
             timeout: *crate::TIMEOUT.get().unwrap(),
-            trusted: true,
+            trusted,
             sttc,
             online: Arc::new(atomic::AtomicBool::new(false)),
             link_uptime: None,
@@ -505,7 +505,7 @@ pub async fn append_discovered_node(name: &str) -> EResult<()> {
         }
     } else if crate::DISCOVERY_ENABLED.load(atomic::Ordering::SeqCst) {
         info!("appending discovered node: {}", name);
-        let node = Node::new(name, false);
+        let node = Node::new(name, false, true);
         append_node(node, &mut nodes).await?;
     }
     Ok(())

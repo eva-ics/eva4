@@ -690,6 +690,9 @@ def append_node_cli(root_sp):
         help=f'use a replication service (default: {DEFAULT_REPL_SERVICE})',
         default=DEFAULT_REPL_SERVICE,
         metavar='SVC').completer = ComplSvc('repl')
+    p.add_argument('--untrusted',
+                   help='append as an untrusted node',
+                   action='store_true')
 
     p = sp.add_parser('reload', help='reload node')
     p.add_argument('i', metavar='NAME').completer = ComplNode()

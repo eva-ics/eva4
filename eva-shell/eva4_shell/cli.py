@@ -802,8 +802,10 @@ class CLI:
                              'build'
                          ])
 
-    def node_append(self, i, repl_svc):
-        call_rpc('node.append', dict(i=i), target=repl_svc)
+    def node_append(self, i, repl_svc, untrusted):
+        call_rpc('node.append',
+                 dict(i=i, trusted=not untrusted),
+                 target=repl_svc)
         ok()
 
     def node_edit(self, i, repl_svc):
