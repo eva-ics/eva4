@@ -38,7 +38,7 @@ case $ARCH in
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
     CARGO_ARGS=
-    if lsb_release -cs|grep ^focal$ ; then
+    if ! lsb_release -cs|grep ^focal$ ; then
       echo "not ubuntu20.04"
       exit 5
     fi
