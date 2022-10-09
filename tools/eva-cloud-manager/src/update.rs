@@ -156,6 +156,7 @@ pub async fn update(opts: Options) -> EResult<()> {
     let mut p = Command::new("bash")
         .arg(&update_script)
         .env("EVA_REPOSITORY_URL", repository_url)
+        .env("ARCH_SFX", crate::ARCH_SFX)
         .spawn()?;
     let res = p.wait().await?;
     if res.code().unwrap_or(0) == 0 {

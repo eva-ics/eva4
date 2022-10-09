@@ -10,9 +10,6 @@ if [ -z "$ARCH_SFX" ]; then
   [ -z "$ARCH" ] && ARCH=$(uname -m)
   [[ "$ARCH" == arm* ]] && ARCH=arm
   case $ARCH in
-    arm)
-      ARCH_SFX=armv7
-      ;;
     x86_64)
       ARCH_SFX=x86_64-musl
       ;;
