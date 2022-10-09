@@ -64,6 +64,14 @@ if [ $? -eq 1 ]; then
   echo "I need ${BRANCH}"
   exit 1
 fi
+MBRANCH=$BRANCH
+[ "${MBRANCH}" = "master" ] && MBRANCH=main
+cd eva || exit 1
+find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
+git pull origin || exit 1
+git checkout "${MBRANCH}" || exit 1
+git pull || exit 1
+cd .. || exit 1
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 
 DISTRO="eva-${VERSION}-${BUILD}-${ARCH}.tgz"
@@ -152,8 +160,6 @@ DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp
 cd .. || exit 1
 
 echo "Building Enterprise extensions..."
-MBRANCH=$BRANCH
-[ "${MBRANCH}" = "master" ] && MBRANCH=main
 if [ -d eva4-enterprise ]; then
   cd eva4-enterprise || exit 1
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
