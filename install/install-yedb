@@ -44,6 +44,9 @@ if [ ! -x ./yedb/yedb-cli ] || [ "${YEDB_FORCE_REINSTALL}" ]; then
       aarch64)
         SFX=aarch64-musl
         ;;
+      x86_64-ubuntu20.04)
+        SFX=x86_64-ubuntu20.04
+        ;;
       *)
         echo "Unsupported architecture. Please install YEDB manually"
         exit 4

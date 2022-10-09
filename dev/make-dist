@@ -33,6 +33,18 @@ case $ARCH in
     CARGO_ARGS="--features openssl-vendored"
     ;;
   *)
+  x86_64-ubuntu20.04)
+    TARGET=x86_64-unknown-linux-gnu
+    STRIP=strip
+    YEDB_ARCH=x86_64-ubuntu20.04
+    CARGO=cargo
+    CARGO_ARGS=
+    if lsb_release -cs|grep ^focal$ ; then
+      echo "not ubuntu20.04"
+      exit 5
+    fi
+    ;;
+  *)
     echo "Unsupported architecture"
     exit 4
     ;;
