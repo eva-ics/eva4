@@ -35,6 +35,19 @@ deploy_svc() {
     sed 's/^/   /g' "${TPL}") | \
       ./bin/yml2mp | \
       ./sbin/bus -s ./var/bus.ipc rpc call eva.core svc.deploy - > /dev/null || exit 12
+  C=0
+  while true; do
+    STATUS=$(./sbin/bus ./var/bus.ipc -s rpc call eva.core svc.get "i=$NAME"|jq -r .status)
+    if [ "$STATUS" = "online" ]; then
+      break
+    fi
+    sleep 0.5
+    C=$(( C+1 ))
+    if [ $C -gt 20 ]; then
+      echo "$NAME failed to start"
+      exit 12
+    fi
+  done
 }
 
 trap on_exit EXIT
