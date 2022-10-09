@@ -4,6 +4,7 @@ use eva_common::events::{
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_sdk::pubsub::PS_ITEM_BULK_STATE_TOPIC;
 use eva_sdk::types::FullItemState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -321,58 +322,87 @@ async fn ps_process_state(msg: psrpc::tools::Publication) -> EResult<()> {
 }
 
 async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
-    let frame = msg.data();
-    if frame.len() < 4 {
-        return Err(Error::invalid_data("invalid bulk frame len"));
-    }
-    if frame[0] != 0x00 {
-        return Err(Error::invalid_data("invalid bulk frame header"));
-    }
-    if frame[1] != psrpc::PROTO_VERSION {
-        return Err(Error::invalid_data("unsupported bulk proto"));
-    }
-    let (encryption, compression) = psrpc::options::parse_flags(frame[2])?;
-    let mut sp = frame[5..].splitn(3, |v| *v == 0x00);
-    let system_name_buf = sp.next().unwrap();
-    let sname = std::str::from_utf8(system_name_buf)?;
-    trace!(
-        "pub/sub bulk state push from {}, topic {}",
-        sname,
-        msg.topic()
-    );
-    if sname == crate::SYSTEM_NAME.get().unwrap() {
-        return Ok(());
-    }
-    let system_name = sname.to_owned();
-    let key_id_buf = sp
-        .next()
-        .ok_or_else(|| Error::invalid_data("bulk frame is missing key id"))?;
-    let _payload = sp
-        .next()
-        .ok_or_else(|| Error::invalid_data("bulk frame is missing payload"))?;
-    let rpc = crate::RPC.get().unwrap();
-    let opts = if encryption == psrpc::options::Encryption::No {
-        psrpc::options::Options::new().compression(compression)
-    } else {
-        let key_id = std::str::from_utf8(key_id_buf)?;
-        aaa::get_enc_opts(rpc, key_id)
-            .await?
-            .compression(compression)
-    };
-    let len = key_id_buf.len() + system_name_buf.len() + 7;
-    let p = opts.unpack_payload(msg.message, len).await?;
-    let data: Vec<FullItemState> = unpack(&p)?;
-    for d in data {
-        let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid.as_path());
-        let rse = d.into_replication_state_event(&system_name);
-        crate::RPC
-            .get()
-            .unwrap()
-            .client()
-            .lock()
-            .await
-            .publish(&topic, pack(&rse)?.into(), QoS::No)
-            .await?;
+    if let Some(bulk_topic) = msg.topic().strip_prefix(PS_ITEM_BULK_STATE_TOPIC) {
+        let frame = msg.data();
+        if frame.len() < 4 {
+            return Err(Error::invalid_data("invalid bulk frame len"));
+        }
+        if frame[0] != 0x00 {
+            return Err(Error::invalid_data("invalid bulk frame header"));
+        }
+        if frame[1] != psrpc::PROTO_VERSION {
+            return Err(Error::invalid_data("unsupported bulk proto"));
+        }
+        let is_secure = if let Some(secure_topics) = crate::BULK_SECURE_TOPICS.get() {
+            secure_topics.contains(bulk_topic)
+        } else {
+            false
+        };
+        let (encryption, compression) = psrpc::options::parse_flags(frame[2])?;
+        if is_secure && encryption == psrpc::options::Encryption::No {
+            warn!("unencrypted frame to secure topic {}, ignoring", bulk_topic);
+            return Err(Error::access("unencrypted message ignored"));
+        }
+        let mut sp = frame[5..].splitn(3, |v| *v == 0x00);
+        let system_name_buf = sp.next().unwrap();
+        let sname = std::str::from_utf8(system_name_buf)?;
+        trace!(
+            "pub/sub bulk state push from {}, topic {}",
+            sname,
+            msg.topic()
+        );
+        if sname == crate::SYSTEM_NAME.get().unwrap() {
+            return Ok(());
+        }
+        let system_name = sname.to_owned();
+        let key_id_buf = sp
+            .next()
+            .ok_or_else(|| Error::invalid_data("bulk frame is missing key id"))?;
+        let _payload = sp
+            .next()
+            .ok_or_else(|| Error::invalid_data("bulk frame is missing payload"))?;
+        let rpc = crate::RPC.get().unwrap();
+        let (opts, acl, key_id) = if encryption == psrpc::options::Encryption::No {
+            (
+                psrpc::options::Options::new().compression(compression),
+                None,
+                None,
+            )
+        } else {
+            let key_id = std::str::from_utf8(key_id_buf)?;
+            (
+                aaa::get_enc_opts(rpc, key_id)
+                    .await?
+                    .compression(compression),
+                Some(aaa::get_acl(rpc, key_id).await?),
+                Some(key_id.to_owned()),
+            )
+        };
+        let len = key_id_buf.len() + system_name_buf.len() + 7;
+        let p = opts.unpack_payload(msg.message, len).await?;
+        let data: Vec<FullItemState> = unpack(&p)?;
+        for d in data {
+            if let Some(ref acl) = acl {
+                if !acl.check_item_write(&d.oid) {
+                    warn!(
+                        "key {} is not allowed to replicate {}",
+                        key_id.as_ref().unwrap(),
+                        d.oid
+                    );
+                    continue;
+                }
+            }
+            let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid.as_path());
+            let rse = d.into_replication_state_event(&system_name);
+            crate::RPC
+                .get()
+                .unwrap()
+                .client()
+                .lock()
+                .await
+                .publish(&topic, pack(&rse)?.into(), QoS::No)
+                .await?;
+        }
     }
     Ok(())
 }

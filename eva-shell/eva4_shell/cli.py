@@ -797,7 +797,7 @@ class CLI:
                              'name', 'timeout', 'compress|n=compr',
                              'ping_interval|n=ping int',
                              'reload_interval|n=rel.int', 'static', 'enabled',
-                             'managed', 'online',
+                             'managed', 'trusted', 'online',
                              'link_uptime|n=link upt|f=round:0', 'version',
                              'build'
                          ])

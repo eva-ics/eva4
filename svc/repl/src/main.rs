@@ -10,6 +10,7 @@ use eva_sdk::prelude::*;
 use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_ITEM_STATE_TOPIC, PS_NODE_STATE_TOPIC};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
@@ -44,6 +45,7 @@ lazy_static::lazy_static! {
     static ref REG: OnceCell<Registry> = <_>::default();
     static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
     static ref PULL_DATA: OnceCell<nodes::PullData> = <_>::default();
+    static ref BULK_SECURE_TOPICS: OnceCell<HashSet<String>> = <_>::default();
 
 }
 
@@ -107,7 +109,9 @@ struct PubSubConfig {
 #[serde(deny_unknown_fields)]
 struct BulkReceiveConfig {
     #[serde(default)]
-    topics: Vec<String>,
+    topics: HashSet<String>,
+    #[serde(default)]
+    secure_topics: HashSet<String>,
 }
 
 #[derive(Deserialize)]
@@ -302,11 +306,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
             "Remote item replication is on. Use a proper cloud structure only to avoid event loops"
         );
     }
-    let mut bulk_recv_topics: Vec<String> = Vec::new();
+    let mut bulk_recv_topics: HashSet<String> = HashSet::new();
+    let mut bulk_secure_topics: HashSet<String> = HashSet::new();
     if let Some(ref mut bulk) = config.bulk {
-        if let Some(ref mut bulk_recv) = bulk.receive {
+        if let Some(bulk_recv) = bulk.receive.take() {
             if let Some(ref bulk_send) = bulk.send {
-                if bulk_recv.topics.contains(&bulk_send.topic) {
+                if bulk_recv.topics.contains(&bulk_send.topic)
+                    || bulk_recv.secure_topics.contains(&bulk_send.topic)
+                {
                     warn!(
                         "bulk.receive.topics contain bulk.send.topic. \
                         This may slow down network operations. Consider using \
@@ -314,7 +321,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
                     );
                 }
             }
-            bulk_recv_topics.append(&mut bulk_recv.topics);
+            for topic in bulk_recv.topics {
+                bulk_recv_topics.insert(topic);
+            }
+            for topic in bulk_recv.secure_topics {
+                bulk_secure_topics.insert(topic);
+            }
         }
     }
     svc_start_signal_handlers();
@@ -435,6 +447,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut topics = vec![format!("{PS_NODE_STATE_TOPIC}+")];
     for topic in &bulk_recv_topics {
         topics.push(format!("{PS_ITEM_BULK_STATE_TOPIC}{topic}"));
+    }
+    for topic in &bulk_secure_topics {
+        topics.push(format!("{PS_ITEM_BULK_STATE_TOPIC}{topic}"));
+    }
+    if !bulk_secure_topics.is_empty() {
+        BULK_SECURE_TOPICS
+            .set(bulk_secure_topics)
+            .map_err(|_| Error::core("Unable to set BULK_SECURE_TOPICS"))?;
     }
     if config.subscribe == SubscribeKind::All {
         for kind in [ItemKind::Unit, ItemKind::Sensor, ItemKind::Lvar] {

@@ -28,7 +28,14 @@ lazy_static::lazy_static! {
         async_channel::Sender<bool>>> = <_>::default();
 }
 
-async fn reload_node(name: &str, key_id: &str, compress: bool, timeout: Duration) -> EResult<()> {
+#[allow(clippy::too_many_lines)]
+async fn reload_node(
+    name: &str,
+    key_id: &str,
+    compress: bool,
+    timeout: Duration,
+    trusted: bool,
+) -> EResult<()> {
     debug!("reloading node {}", name);
     let rpc = crate::RPC.get().unwrap();
     let ps_rpc = crate::PUBSUB_RPC.get().unwrap();
@@ -38,9 +45,23 @@ async fn reload_node(name: &str, key_id: &str, compress: bool, timeout: Duration
     } else {
         psrpc::options::Compression::No
     });
-    let res = PullData::deserialize(
+    let mut res = PullData::deserialize(
         tokio::time::timeout(timeout, ps_rpc.call(name, "pull", None, &opts)).await??,
     )?;
+    if !trusted {
+        let acl = aaa::get_acl(rpc, key_id).await?;
+        if let Some(items) = res.items.take() {
+            let mut allowed_items = Vec::with_capacity(items.len());
+            for item in items {
+                if acl.check_item_write(&item.oid) {
+                    allowed_items.push(item);
+                } else {
+                    warn!("node {} is not allowed to replicate {}", name, item.oid);
+                }
+            }
+            res.items.replace(allowed_items);
+        }
+    }
     {
         let mut nodes = NODES.write().await;
         let node = nodes
@@ -143,6 +164,7 @@ async fn reloader(
     name: &str,
     rx: async_channel::Receiver<bool>,
     ready: triggered::Listener,
+    trusted: bool,
 ) -> EResult<()> {
     ready.await;
     debug!("node reloader started for {}", name);
@@ -195,7 +217,7 @@ async fn reloader(
             }
         }
         reloader_active.store(true, atomic::Ordering::SeqCst);
-        if let Err(e) = reload_node(name, &key_id, compress, node_timeout).await {
+        if let Err(e) = reload_node(name, &key_id, compress, node_timeout, trusted).await {
             mark_node(name, false, None, false).await?;
             error!("failed to reload the node {}: {}", name, e);
         }
@@ -239,6 +261,7 @@ async fn pinger(name: &str, ready: triggered::Listener) -> EResult<()> {
 #[derive(Deserialize, Serialize, bmart::tools::Sorting)]
 #[serde(deny_unknown_fields)]
 #[sorting(id = "name")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Node {
     name: String,
     #[serde(
@@ -258,6 +281,8 @@ pub struct Node {
         serialize_with = "eva_common::tools::serialize_duration_as_f64"
     )]
     timeout: Duration,
+    #[serde(default = "eva_common::tools::default_true")]
+    trusted: bool,
     #[serde(skip)]
     sttc: bool,
     #[serde(skip)]
@@ -296,6 +321,7 @@ pub struct NodeI<'a> {
     sttc: bool,
     enabled: bool,
     managed: bool,
+    trusted: bool,
     online: bool,
     #[serde(serialize_with = "eva_common::tools::serialize_opt_duration_as_f64")]
     link_uptime: Option<Duration>,
@@ -312,6 +338,7 @@ impl Node {
             compress: false,
             enabled: true,
             timeout: *crate::TIMEOUT.get().unwrap(),
+            trusted: true,
             sttc,
             online: Arc::new(atomic::AtomicBool::new(false)),
             link_uptime: None,
@@ -340,6 +367,7 @@ impl Node {
             compress: self.compress,
             ping_interval: self.ping_interval,
             reload_interval: self.reload_interval,
+            trusted: self.trusted,
             sttc: self.sttc,
             enabled: self.enabled,
             managed: self.admin_key_id.is_some(),
@@ -396,7 +424,7 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
         let (tx, rx) = async_channel::bounded::<bool>(1024);
         let name = node.name.clone();
         let reloader_fut = tokio::spawn(async move {
-            reloader(&name, rx, ready).await.log_ef();
+            reloader(&name, rx, ready, node.trusted).await.log_ef();
         });
         let (p_trig, p_ready) = triggered::trigger();
         let name = node.name.clone();

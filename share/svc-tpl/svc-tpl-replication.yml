@@ -47,7 +47,9 @@ config:
       #buf_ttl_sec: 0.5
     #receive:
       #topics:
-        #- all
+        #- all_pub
+      #secure_topics:
+        # - all
   # subscribed OIDS
   oids:
     - "#"
