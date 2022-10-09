@@ -5,6 +5,8 @@ use std::sync::atomic;
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+const ARCH_SFX: &str = env!("ARCH_SFX");
+
 #[macro_use]
 extern crate lazy_static;
 

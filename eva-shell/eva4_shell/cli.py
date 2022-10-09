@@ -1214,6 +1214,7 @@ class CLI:
                 'cli_version': __version__,
                 'build': info['build'],
                 'version': info['version'],
+                'arch': info.get('arch', '')
             }
         else:
             d = [{
@@ -1222,6 +1223,9 @@ class CLI:
             }, {
                 'name': 'build',
                 'value': info['build']
+            }, {
+                'name': 'arch',
+                'value': info.get('arch', '')
             }, {
                 'name': 'CLI version',
                 'value': __version__

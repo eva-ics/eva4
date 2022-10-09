@@ -3,7 +3,7 @@ use crate::core::Core;
 use crate::eapi;
 use crate::Mode;
 use crate::{EResult, Error};
-use crate::{BUILD, PRODUCT_CODE, PRODUCT_NAME, VERSION};
+use crate::{ARCH_SFX, BUILD, PRODUCT_CODE, PRODUCT_NAME, VERSION};
 use busrt::rpc::{self, RpcClient};
 use eva_common::err_logger;
 use eva_common::registry;
@@ -23,6 +23,7 @@ struct Info<'a> {
     code: &'a str,
     build: u64,
     version: &'a str,
+    arch: &'a str,
 }
 
 async fn run_regular(
@@ -108,6 +109,7 @@ pub fn launch(
                 code: PRODUCT_CODE,
                 build: BUILD,
                 version: VERSION,
+                arch: ARCH_SFX,
             };
             println!("{}", serde_json::to_string(&info)?);
             Ok(())
