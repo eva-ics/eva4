@@ -150,7 +150,7 @@ password.hash:
     - nam: algo
       typ: String
       req: true
-      des: sha256, sha512, or pbkdf2
+      des: sha256, sha512 or pbkdf2
   ret: password hash
   exm: |
     {
