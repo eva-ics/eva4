@@ -32,7 +32,6 @@ case $ARCH in
     CARGO=cross
     CARGO_ARGS="--features openssl-vendored"
     ;;
-  *)
   x86_64-ubuntu20.04)
     TARGET=x86_64-unknown-linux-gnu
     STRIP=strip
