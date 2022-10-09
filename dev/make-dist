@@ -154,6 +154,8 @@ rm -rf ./yedb
 ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
 
 echo "Building EVA ICS..."
+ARCH_SFX=$ARCH
+export ARCH_SFX
 DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
   "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd .. || exit 1
