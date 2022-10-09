@@ -8,7 +8,7 @@ use std::fmt::{self, Write as _};
 use std::str::FromStr;
 
 const BUF_SIZE: usize = 16;
-const PBKDF2_ITERS: usize = 10_000;
+const PBKDF2_ITERS: usize = 100_000;
 
 const ERR_INVALID_PASSWORD_HASH: &str = "Invalid password hash";
 
