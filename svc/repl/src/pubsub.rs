@@ -362,10 +362,9 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
             .next()
             .ok_or_else(|| Error::invalid_data("bulk frame is missing payload"))?;
         let rpc = crate::RPC.get().unwrap();
-        let (opts, acl, key_id) = if encryption == psrpc::options::Encryption::No {
+        let (opts, auth) = if encryption == psrpc::options::Encryption::No {
             (
                 psrpc::options::Options::new().compression(compression),
-                None,
                 None,
             )
         } else {
@@ -374,21 +373,16 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
                 aaa::get_enc_opts(rpc, key_id)
                     .await?
                     .compression(compression),
-                Some(aaa::get_acl(rpc, key_id).await?),
-                Some(key_id.to_owned()),
+                Some((aaa::get_acl(rpc, key_id).await?, key_id.to_owned())),
             )
         };
         let len = key_id_buf.len() + system_name_buf.len() + 7;
         let p = opts.unpack_payload(msg.message, len).await?;
         let data: Vec<FullItemState> = unpack(&p)?;
         for d in data {
-            if let Some(ref acl) = acl {
+            if let Some((ref acl, ref key_id)) = auth {
                 if !acl.check_item_write(&d.oid) {
-                    warn!(
-                        "key {} is not allowed to replicate {}",
-                        key_id.as_ref().unwrap(),
-                        d.oid
-                    );
+                    warn!("key {} is not allowed to replicate {}", key_id, d.oid);
                     continue;
                 }
             }
