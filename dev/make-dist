@@ -38,6 +38,8 @@ case $ARCH in
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
     CARGO_ARGS=
+    CARGO_TARGET_DIR=target-native
+    export CARGO_TARGET_DIR
     if ! lsb_release -cs|grep ^focal$ ; then
       echo "not ubuntu20.04"
       exit 5
