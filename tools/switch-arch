@@ -1,0 +1,44 @@
+#!/bin/sh
+
+DISTRO=$1
+TMPDIR=_satmp
+
+if [ -z "$DISTRO" ]; then
+  echo "Usage: switch-arch DISTRO_URL"
+  exit 0
+fi
+
+if [ "$(id -u)" != "0" ]; then
+  echo "Please run this script as root"
+  exit 11
+fi
+
+if [ ! -f ./sbin/eva-control ]; then
+  echo "Please start the script in EVA ICS directory"
+  exit 1
+fi
+
+rm -rf $TMPDIR || exit 2
+mkdir $TMPDIR || exit 2
+cd $TMPDIR || exit 2
+echo "Downloading ${DISTRO}..."
+curl "${DISTRO}" -o eva.tgz || exit 3
+echo "Extracting..."
+tar xzf eva.tgz || exit 4
+find . -maxdepth 1 -type d -name "eva-*" -exec mv -f {} eva \; || exit 4
+if ! ./eva/svc/eva-node --mode info > /dev/null ; then
+  echo "Unable to check eva-node, arch mismatch?"
+  exit 5
+fi
+../sbin/eva-control stop || exit 5
+echo "Replacing files, DO NOT INTERRUPT..."
+rm -f ../cli/eva-cloud-manager || exit 6
+rm -f ./eva/ui/index.html || exit 6
+rm -f ./eva/ui/favicon.ico || exit 6
+rm -f ./eva/update.sh || exit 6
+cp -rf ./eva/* .. || exit 6
+cd ..
+rm -rf $TMPDIR || exit 7
+./sbin/eva-control start || exit 8
+echo
+echo "Switch completed"

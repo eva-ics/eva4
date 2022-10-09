@@ -50,6 +50,11 @@ release-installer:
 		cp -a public-read install.sh gs://pub.bma.ai/eva4/install
 	jks build pub.bma.ai
 
+release-switch-arch:
+	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
+		cp -a public-read ./tools/switch-arch gs://pub.bma.ai/eva4/tools/switch-arch
+	jks build pub.bma.ai
+
 ver: build-increase update-version
 
 update-version:
