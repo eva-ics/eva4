@@ -26,6 +26,8 @@ const ERR_NO_PARAMS: &str = "no params provided";
 const ERR_DF_TIMES: &str = "dataframe times mismatch";
 const ACL_TTL: Duration = Duration::from_secs(5);
 
+const API_VERSION: u16 = 4;
+
 lazy_static! {
     pub static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
     static ref AUTH_SVCS: OnceCell<Vec<String>> = <_>::default();
@@ -117,6 +119,12 @@ async fn login(
         timeout: f64,
         xopts: Option<&'a HashMap<String, Value>>,
     }
+    #[derive(Serialize)]
+    struct AuthResult {
+        #[serde(flatten)]
+        token: Arc<Token>,
+        api_version: u16,
+    }
     let auth_svcs = AUTH_SVCS.get().unwrap();
     let rpc = RPC.get().unwrap();
     let timeout = *TIMEOUT.get().unwrap();
@@ -150,7 +158,10 @@ async fn login(
                 }
                 let acl = unpack::<Acl>(result.payload())?;
                 let token = aaa::create_token(login, acl, svc, ip).await?;
-                return Ok(to_value(token)?);
+                return Ok(to_value(AuthResult {
+                    token,
+                    api_version: API_VERSION,
+                })?);
             }
             Err(e) => {
                 match e.kind() {
