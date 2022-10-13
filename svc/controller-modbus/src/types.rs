@@ -202,10 +202,10 @@ impl<'de> Deserialize<'de> for Register {
             let number: u16 = valstr[1..].parse().map_err(serde::de::Error::custom)?;
             Ok(Register { kind, number })
         } else {
-            return Err(serde::de::Error::custom(Error::invalid_params(format!(
+            Err(serde::de::Error::custom(Error::invalid_params(format!(
                 "invalid register {}",
                 v
-            ))));
+            ))))
         }
     }
 }
