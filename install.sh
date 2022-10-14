@@ -43,7 +43,7 @@ deploy_svc() {
     fi
     sleep 0.5
     C=$(( C+1 ))
-    if [ $C -gt 20 ]; then
+    if [ $C -gt 30 ]; then
       echo "$NAME failed to start"
       exit 12
     fi
