@@ -170,12 +170,10 @@ if [ -d eva4-enterprise ]; then
   find . -name "Cargo.lock" -exec git checkout {} \; || exit 1
   git pull origin || exit 1
   git checkout "${MBRANCH}" || exit 1
-  if grep '^machine git.lab.altt.ch ' ~/.netrc > /dev/null; then
-    git pull origin "${MBRANCH}" || exit 1
-  fi
+  git pull origin "${MBRANCH}" || exit 1
   cd ..
 else
-  git clone -b "${MBRANCH}" https://git.lab.altt.ch/eva-ics/eva4-enterprise.git/ || exit 1
+  git clone -b "${MBRANCH}" builder1@git.lab:eva-ics/eva4-enterprise || exit 1
 fi
 
 cd eva4-enterprise/eva4-esvc || exit 1
