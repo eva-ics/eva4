@@ -84,7 +84,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                         let rpc = crate::RPC.get().unwrap();
                         let acl = aaa::get_acl(rpc, key_id).await?;
                         let mut data = crate::PULL_DATA.get().unwrap().clone();
-                        let (allow, deny) = acl.get_items_allow_deny();
+                        let (allow, deny) = acl.get_items_allow_deny_reading();
                         let payload = ListPayload {
                             i: "#",
                             node: if self.replicate_remote {

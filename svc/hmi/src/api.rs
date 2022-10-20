@@ -582,7 +582,7 @@ async fn method_item_state(params: Value, aci: &mut ACI) -> EResult<Value> {
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = StateParams::deserialize(params)?;
-    let (allow, deny) = aci.acl().get_items_allow_deny();
+    let (allow, deny) = aci.acl().get_items_allow_deny_reading();
     let payload = StatePayload {
         i: p.i,
         include: allow,

@@ -8,6 +8,6 @@ description = ".po generator for UI structured data"
 
 [dependencies]
 serde_yaml = "0.8.26"
-eva-common = { version = "0.1.179", features = ["full"] }
+eva-common = { version = "0.1.180", features = ["full"] }
 clap = { version = "3.0.7", features = ["derive"] }
 colored = "2.0.0"
