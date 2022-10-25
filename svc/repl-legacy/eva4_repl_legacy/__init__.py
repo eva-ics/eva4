@@ -107,8 +107,8 @@ def finish_api_request(request_id):
 
 class LegacyNode:
 
-    def __init__(self, id, key_id, key_lid, reload_interval, timeout,
-                 controllers):
+    def __init__(self, id, key_id, key_lid, reload_interval, ping_interval,
+                 timeout, controllers):
         self.id = id
         for c in controllers:
             if c not in ['uc', 'lm']:
@@ -116,11 +116,14 @@ class LegacyNode:
         self.controllers = controllers
         self.online = False
         self.reload_interval = reload_interval
+        self.ping_interval = ping_interval
         self._last_reload = 0
         self.key_id = key_id
         self.key_lid = key_lid
         self.timeout = timeout
         self.need_reload = threading.Event()
+        self.need_ping = threading.Event()
+        self.lock = threading.RLock()
         self.build = None
         self.version = None
 
@@ -187,6 +190,9 @@ class LegacyNode:
         logger.info(f'legacy v3 replication for the node {self.id} active')
         threading.Thread(target=self._t_reloader, daemon=True).start()
         threading.Thread(target=self._t_reload_scheduler, daemon=True).start()
+        if self.ping_interval:
+            threading.Thread(target=self._t_pinger, daemon=True).start()
+            threading.Thread(target=self._t_ping_scheduler, daemon=True).start()
 
     def _t_reloader(self):
         while True:
@@ -196,12 +202,23 @@ class LegacyNode:
                     self._last_reload) > self.reload_interval / 2:
                 self._last_reload = time.perf_counter()
                 try:
-                    self.reload()
+                    with self.lock:
+                        self.reload()
                 except:
                     sdk.log_traceback()
             else:
                 logger.warning(
                     f'{self.id} reload triggered too often, skipping')
+
+    def _t_pinger(self):
+        while True:
+            self.need_ping.wait()
+            self.need_ping.clear()
+            try:
+                with self.lock:
+                    self.ping()
+            except:
+                sdk.log_traceback()
 
     def _t_reload_scheduler(self):
         next_reload = time.perf_counter() + self.reload_interval
@@ -211,6 +228,36 @@ class LegacyNode:
             next_reload += self.reload_interval
             if to_sleep > 0:
                 time.sleep(to_sleep)
+
+    def _t_ping_scheduler(self):
+        next_ping = time.perf_counter() + self.ping_interval
+        while True:
+            self.need_ping.set()
+            to_sleep = next_ping - time.perf_counter()
+            next_ping += self.ping_interval
+            if to_sleep > 0:
+                time.sleep(to_sleep)
+
+    def ping(self):
+        try:
+            if not self.controllers:
+                return
+            for i, controller in enumerate(self.controllers):
+                result = self.call(controller, 'test')
+                if i == 0:
+                    self.build = result['product_build']
+                    self.version = result['version']
+            logger.warning(f'{self.id} ping passed')
+            mark_node(self.id,
+                      'online',
+                      info={
+                          'build': self.build,
+                          'version': self.version
+                      })
+        except:
+            sdk.log_traceback()
+            self.online = False
+            mark_node(self.id, 'offline')
 
     def reload(self):
         try:
@@ -539,10 +586,11 @@ def run():
         key_id = c['key_id']
         key_lid = c['key_legacy_id']
         reload_interval = c['reload_interval']
+        ping_interval = c.get('ping_interval')
         timeout = c.get('timeout', service.timeout['default'])
         controllers = c.get('controllers', [])
-        c = LegacyNode(id, key_id, key_lid, reload_interval, timeout,
-                       controllers)
+        c = LegacyNode(id, key_id, key_lid, reload_interval, ping_interval,
+                       timeout, controllers)
         _d.lc[id] = c
         mark_node(c.id, 'offline')
     pubsub = psrt.Client(**pubsub_cfg)

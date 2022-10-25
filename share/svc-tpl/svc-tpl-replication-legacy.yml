@@ -25,6 +25,9 @@ config:
       #key_id: default-v3
       #key_legacy_id: default
       #reload_interval: 30
+      # optional lightweight pings, to determine the node status (if not used,
+      # the status is determined by reload results only)
+      #ping_interval: 10
       #timeout: 5
       #controllers: ['uc', 'lm']
 user: nobody
