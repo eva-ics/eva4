@@ -175,17 +175,27 @@ enum Event {
     Rotate,
 }
 
+fn generate_file_path(base_file_path: &str) -> String {
+    if base_file_path.contains('%') {
+        let dt = Local::now();
+        dt.format(base_file_path).to_string()
+    } else {
+        base_file_path.to_owned()
+    }
+}
+
 async fn file_handler(
     rx: &async_channel::Receiver<Event>,
-    file_path: &str,
+    base_file_path: &str,
     gen: &DataGen,
     auto_flush: bool,
 ) -> EResult<()> {
+    let mut file_path = generate_file_path(base_file_path);
     let mut fx: Option<tokio::fs::File> = None;
     while let Ok(event) = rx.recv().await {
         let mut fd_opt = None;
         if let Some(ref mut existing_fh) = fx {
-            if let Ok(path_metadata) = tokio::fs::metadata(file_path).await {
+            if let Ok(path_metadata) = tokio::fs::metadata(&file_path).await {
                 let metadata = existing_fh.metadata().await?;
                 if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
                     fd_opt = Some(existing_fh);
@@ -201,7 +211,7 @@ async fn file_handler(
                 .truncate(false)
                 .append(true)
                 .create(true)
-                .open(file_path)
+                .open(&file_path)
                 .await?;
             f.seek(SeekFrom::End(0)).await?;
             fx.replace(f);
@@ -229,13 +239,17 @@ async fn file_handler(
             Event::Rotate => {
                 fd.flush().await?;
                 fx.take();
-                let dt = Local::now();
-                let rotated_path = format!(
-                    "{}.{}",
-                    file_path,
-                    dt.to_rfc3339_opts(SecondsFormat::Secs, false)
-                );
-                tokio::fs::rename(file_path, rotated_path).await?;
+                if base_file_path.contains('%') {
+                    file_path = generate_file_path(base_file_path);
+                } else {
+                    let dt = Local::now();
+                    let rotated_path = format!(
+                        "{}.{}",
+                        &file_path,
+                        dt.to_rfc3339_opts(SecondsFormat::Secs, false)
+                    );
+                    tokio::fs::rename(&file_path, rotated_path).await?;
+                }
                 continue;
             }
         }
@@ -393,6 +407,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     });
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("flush"));
+    info.add_method(ServiceMethod::new("rotate"));
     let rpc = initial
         .init_rpc_blocking(Handlers {
             info,
