@@ -4,6 +4,8 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2021-10-27 build 2021102701: API version in all variations of HMI login
+* 2021-10-27 eva-js-framework 0.3.42: OTP fixes
 * 2021-10-25 eva4-repl-legacy 0.0.25: lightweight pings
 * 2021-10-25 build 2022102501: custom time-based file names in filewriter svc
 * 2021-10-20 build 2021102001: ACL fixes: items/deny must keep read-only access
