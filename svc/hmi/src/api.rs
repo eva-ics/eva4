@@ -105,6 +105,23 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
     }
 }
 
+#[derive(Serialize)]
+struct AuthResult {
+    #[serde(flatten)]
+    token: Arc<Token>,
+    api_version: u16,
+}
+
+impl AuthResult {
+    #[inline]
+    fn new(token: Arc<Token>) -> Self {
+        Self {
+            token,
+            api_version: API_VERSION,
+        }
+    }
+}
+
 async fn login(
     login: &str,
     password: &str,
@@ -118,12 +135,6 @@ async fn login(
         password: &'a str,
         timeout: f64,
         xopts: Option<&'a HashMap<String, Value>>,
-    }
-    #[derive(Serialize)]
-    struct AuthResult {
-        #[serde(flatten)]
-        token: Arc<Token>,
-        api_version: u16,
     }
     let auth_svcs = AUTH_SVCS.get().unwrap();
     let rpc = RPC.get().unwrap();
@@ -154,14 +165,11 @@ async fn login(
                     if token.is_readonly() {
                         token.set_normal().await?;
                     }
-                    return Ok(to_value(token)?);
+                    return Ok(to_value(AuthResult::new(token))?);
                 }
                 let acl = unpack::<Acl>(result.payload())?;
                 let token = aaa::create_token(login, acl, svc, ip).await?;
-                return Ok(to_value(AuthResult {
-                    token,
-                    api_version: API_VERSION,
-                })?);
+                return Ok(to_value(AuthResult::new(token))?);
             }
             Err(e) => {
                 match e.kind() {
@@ -290,7 +298,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                     }
                     ParamsLogin::TokenInfo(ti) => {
                         let token = aaa::get_token(ti.token.try_into()?, ip).await?;
-                        Ok(to_value(token)?)
+                        Ok(to_value(AuthResult::new(token))?)
                     }
                     ParamsLogin::TokenSetNormal(creds) => {
                         login(
