@@ -169,7 +169,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("tpl.reload"));
     info.add_method(ServiceMethod::new("i18n.cache_purge"));
-    info.add_method(ServiceMethod::new("api_log.get"));
+    info.add_method(
+        ServiceMethod::new("api_log.get")
+            .optional("t_start")
+            .optional("t_end")
+            .optional("user")
+            .optional("acl")
+            .optional("method")
+            .optional("source")
+            .optional("code")
+            .optional("success"),
+    );
     info.add_method(ServiceMethod::new("session.broadcast.reload"));
     info.add_method(ServiceMethod::new("session.broadcast.restart"));
     info.add_method(ServiceMethod::new("session.list"));

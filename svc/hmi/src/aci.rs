@@ -38,10 +38,11 @@ pub struct ApiCallInfo {
     t: i64,
 }
 
-pub async fn log_get() -> EResult<Vec<ApiCallInfo>> {
+pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
     if api_log_enabled() {
         let mut result = Vec::new();
-        let mut rows = db::api_log_get()?;
+        let q = db::api_log_query(filter)?;
+        let mut rows = sqlx::query(&q).fetch(db::DB_POOL.get().unwrap());
         while let Some(row) = rows.try_next().await? {
             let t: i64 = row.try_get("t")?;
             let code: i64 = row.try_get("code")?;
@@ -64,7 +65,7 @@ pub async fn log_get() -> EResult<Vec<ApiCallInfo>> {
         }
         Ok(result)
     } else {
-        Err(Error::not_ready("API call log not configured"))
+        Err(Error::not_ready("API call log is not configured"))
     }
 }
 
@@ -123,6 +124,13 @@ impl ACI {
             method: method.to_owned(),
             log_level: log::Level::Info,
             t: Instant::now(),
+        }
+    }
+    /// set ACL ID for Auth::Login
+    #[inline]
+    pub fn set_acl_id(&mut self, acl_id: &str) {
+        if let Auth::Login(_, ref mut a) = self.auth {
+            a.replace(acl_id.to_owned());
         }
     }
     #[inline]

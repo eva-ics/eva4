@@ -4,19 +4,20 @@ use futures::TryStreamExt;
 use lazy_static::lazy_static;
 use log::error;
 use once_cell::sync::OnceCell;
+use serde::Deserialize;
 use sqlx::{
     any::{AnyConnectOptions, AnyKind, AnyPool, AnyPoolOptions, AnyRow},
     sqlite, ConnectOptions, Row,
 };
-
-use std::pin::Pin;
+use std::fmt::Write as _;
+//use std::pin::Pin;
 use std::str::FromStr;
 use std::time::Duration;
 
-type QueryRows = Pin<Box<dyn futures::Stream<Item = Result<AnyRow, sqlx::Error>> + Send>>;
+//type QueryRows = Pin<Box<dyn futures::Stream<Item = Result<AnyRow, sqlx::Error>> + Send>>;
 
 lazy_static! {
-    static ref DB_POOL: OnceCell<AnyPool> = <_>::default();
+    pub(crate) static ref DB_POOL: OnceCell<AnyPool> = <_>::default();
     static ref DB_KIND: OnceCell<AnyKind> = <_>::default();
 }
 
@@ -29,15 +30,74 @@ macro_rules! not_impl {
     };
 }
 
-pub fn api_log_get() -> EResult<QueryRows> {
-    let pool = DB_POOL.get().unwrap();
+#[derive(Deserialize, Default)]
+pub struct ApiLogFilter {
+    t_start: Option<Value>,
+    t_end: Option<Value>,
+    user: Option<String>,
+    acl: Option<String>,
+    method: Option<String>,
+    source: Option<String>,
+    code: Option<i64>,
+    success: Option<bool>,
+}
+
+fn quoted_sql_str(s: &str) -> EResult<String> {
+    for ch in s.chars() {
+        if ch == '\'' {
+            return Err(Error::invalid_data("invalid character in request"));
+        }
+    }
+    Ok(format!("'{}'", s))
+}
+
+impl ApiLogFilter {
+    pub fn condition(&self) -> EResult<String> {
+        let mut cond = "WHERE 1".to_owned();
+        if let Some(ref t_start) = self.t_start {
+            write!(cond, " AND t>={}", t_start.as_timestamp()?)?;
+        }
+        if let Some(ref t_end) = self.t_end {
+            write!(cond, " AND t<={}", t_end.as_timestamp()?)?;
+        }
+        if let Some(ref user) = self.user {
+            write!(cond, " AND login={}", quoted_sql_str(user)?)?;
+        }
+        if let Some(ref acl) = self.acl {
+            write!(cond, " AND acl={}", quoted_sql_str(acl)?)?;
+        }
+        if let Some(ref method) = self.method {
+            write!(cond, " AND method={}", quoted_sql_str(method)?)?;
+        }
+        if let Some(ref source) = self.source {
+            write!(cond, " AND source={}", quoted_sql_str(source)?)?;
+        }
+        if let Some(code) = self.code {
+            write!(cond, " AND code={}", code)?;
+        }
+        if let Some(success) = self.success {
+            if success {
+                write!(cond, " AND code=0")?;
+            } else {
+                write!(cond, " AND code!=0")?;
+            }
+        }
+        Ok(cond)
+    }
+}
+
+pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
+    //let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
     match kind {
-        AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => Ok(sqlx::query(
-            r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed
-            FROM api_log ORDER BY t"#,
-        )
-        .fetch(pool)),
+        AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => {
+            let q = format!(
+                r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed
+            FROM api_log {} ORDER BY t"#,
+                filter.condition()?
+            );
+            Ok(dbg!(q))
+        }
         AnyKind::Mssql => not_impl!(kind),
     }
 }
@@ -78,7 +138,7 @@ pub async fn api_log_insert(id_str: &str, auth: &Auth, source: &str, method: &st
             .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
             .bind(auth.user())
             .bind(auth.as_str())
-            .bind(auth.acl().id())
+            .bind(auth.acl_id())
             .bind(source)
             .bind(method)
             .execute(pool)
@@ -93,7 +153,7 @@ pub async fn api_log_insert(id_str: &str, auth: &Auth, source: &str, method: &st
             .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
             .bind(auth.user())
             .bind(auth.as_str())
-            .bind(auth.acl().id())
+            .bind(auth.acl_id())
             .bind(source)
             .bind(method)
             .execute(pool)

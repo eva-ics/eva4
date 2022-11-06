@@ -94,7 +94,8 @@ pub async fn processor(
 
 async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Value> {
     if let Some(creds) = meta.credentials() {
-        login(&creds.0, &creds.1, None, None, ip).await
+        let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
+        login(&creds.0, &creds.1, None, None, ip, &source).await
     } else {
         if let Some(agent) = meta.agent() {
             if agent.starts_with("evaHI ") {
@@ -122,12 +123,14 @@ impl AuthResult {
     }
 }
 
+#[allow(clippy::similar_names)]
 async fn login(
     login: &str,
     password: &str,
     xopts: Option<&HashMap<String, Value>>,
     token_id: Option<String>,
     ip: Option<IpAddr>,
+    source: &str,
 ) -> EResult<Value> {
     #[derive(Serialize)]
     struct AuthPayload<'a> {
@@ -145,6 +148,11 @@ async fn login(
         timeout: timeout.as_secs_f64(),
         xopts,
     })?;
+    let mut aci = ACI::new(
+        Auth::Login(login.to_owned(), None),
+        "login",
+        source.to_owned(),
+    );
     for svc in auth_svcs {
         match safe_rpc_call(
             rpc,
@@ -168,7 +176,10 @@ async fn login(
                     return Ok(to_value(AuthResult::new(token))?);
                 }
                 let acl = unpack::<Acl>(result.payload())?;
+                aci.set_acl_id(acl.id());
                 let token = aaa::create_token(login, acl, svc, ip).await?;
+                aci.log_request(log::Level::Info).await.log_ef();
+                aci.log_success().await;
                 return Ok(to_value(AuthResult::new(token))?);
             }
             Err(e) => {
@@ -194,7 +205,10 @@ async fn login(
         login,
         ip.map_or_else(String::new, |v| v.to_string())
     );
-    Err(Error::access("access denied"))
+    let e = Error::access("access denied");
+    aci.log_request(log::Level::Info).await.log_ef();
+    aci.log_error(&e).await;
+    Err(e)
 }
 
 pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
@@ -294,7 +308,15 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                 let p = ParamsLogin::deserialize(params)?;
                 match p {
                     ParamsLogin::UserAuth(creds) => {
-                        login(&creds.user, &creds.password, creds.xopts.as_ref(), None, ip).await
+                        login(
+                            &creds.user,
+                            &creds.password,
+                            creds.xopts.as_ref(),
+                            None,
+                            ip,
+                            &source,
+                        )
+                        .await
                     }
                     ParamsLogin::TokenInfo(ti) => {
                         let token = aaa::get_token(ti.token.try_into()?, ip).await?;
@@ -307,6 +329,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                             creds.xopts.as_ref(),
                             Some(creds.token),
                             ip,
+                            &source,
                         )
                         .await
                     }

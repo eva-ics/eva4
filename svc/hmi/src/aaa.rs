@@ -90,6 +90,7 @@ pub fn set_session_config(
 pub enum Auth {
     Token(Arc<Token>),
     Key(String, Arc<Acl>),
+    Login(String, Option<String>),
 }
 
 impl std::fmt::Display for Auth {
@@ -97,6 +98,7 @@ impl std::fmt::Display for Auth {
         match self {
             Auth::Token(ref token) => write!(f, "user:{}", token.user()),
             Auth::Key(ref key_id, _) => write!(f, "key:{}", key_id),
+            Auth::Login(ref login, _) => write!(f, "login:{}", login),
         }
     }
 }
@@ -107,6 +109,15 @@ impl Auth {
         match self {
             Auth::Token(token) => token.acl(),
             Auth::Key(_, acl) => acl,
+            Auth::Login(_, _) => unimplemented!("attempt to get acl for initial login ACI"),
+        }
+    }
+    #[inline]
+    pub fn acl_id(&self) -> &str {
+        match self {
+            Auth::Token(token) => token.acl.id(),
+            Auth::Key(_, acl) => acl.id(),
+            Auth::Login(_, ref acl_id) => acl_id.as_deref().unwrap_or_default(),
         }
     }
     #[inline]
@@ -114,26 +125,28 @@ impl Auth {
         match self {
             Auth::Token(_) => "token",
             Auth::Key(_, _) => "key",
+            Auth::Login(_, _) => "login",
         }
     }
     #[inline]
     pub fn token(&self) -> Option<&Token> {
         match self {
             Auth::Token(ref token) => Some(token),
-            Auth::Key(_, _) => None,
+            Auth::Key(_, _) | Auth::Login(_, _) => None,
         }
     }
     #[inline]
     pub fn clone_token(&self) -> Option<Arc<Token>> {
         match self {
             Auth::Token(token) => Some(token.clone()),
-            Auth::Key(_, _) => None,
+            Auth::Key(_, _) | Auth::Login(_, _) => None,
         }
     }
     #[inline]
     pub fn user(&self) -> Option<&str> {
         match self {
             Auth::Token(ref token) => Some(token.user()),
+            Auth::Login(ref login, _) => Some(login),
             Auth::Key(_, _) => None,
         }
     }

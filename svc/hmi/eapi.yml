@@ -9,6 +9,38 @@ i18n.cache_purge:
 api_log.get:
   des: Gets log of recent API calls
   par:
+    - nam: t_start
+      typ: String/i64
+      des: Start time
+      req: false
+    - nam: t_end
+      typ: String/i64
+      des: End time
+      req: false
+    - nam: user
+      typ: String
+      des: Filter by user
+      req: false
+    - nam: acl
+      typ: String
+      des: Filter by ACL ID
+      req: false
+    - nam: method
+      typ: String
+      des: Filter by method
+      req: false
+    - nam: source
+      typ: String
+      des: Filter by source
+      req: false
+    - nam: code
+      typ: i64
+      des: Filter by code
+      req: false
+    - nam: success
+      typ: bool
+      des: Filter by success/failed
+      req: false
   ret: List of recent API calls
   exm: |
     [

@@ -61,11 +61,12 @@ impl RpcHandlers for Handlers {
                 }
             }
             "api_log.get" => {
-                if payload.is_empty() {
-                    Ok(Some(pack(&crate::aci::log_get().await?)?))
+                let filter = if payload.is_empty() {
+                    crate::db::ApiLogFilter::default()
                 } else {
-                    Err(RpcError::params(None))
-                }
+                    unpack(payload)?
+                };
+                Ok(Some(pack(&crate::aci::log_get(&filter).await?)?))
             }
             "ws.stats" => {
                 #[derive(Serialize)]
