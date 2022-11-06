@@ -1,6 +1,7 @@
 use crate::get_client;
 use ::ads::AmsAddr;
 use eva_common::prelude::*;
+use eva_sdk::service::poc;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -114,7 +115,7 @@ pub async fn ping_worker(addr: AmsAddr, timeout: Duration) {
     while !eva_sdk::service::svc_is_terminating() {
         if let Err(e) = ping(addr).await {
             error!("ADS ping error: {}", e);
-            eva_sdk::service::svc_terminate();
+            poc();
         }
         int.tick().await;
     }

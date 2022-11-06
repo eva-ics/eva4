@@ -1,6 +1,7 @@
 use ::ads::AmsAddr;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_sdk::service::set_poc;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
@@ -38,6 +39,7 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {
+    set_poc(Some(Duration::from_secs(0)));
     let timeout = initial.timeout();
     TIMEOUT
         .set(timeout)
