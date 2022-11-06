@@ -12,6 +12,10 @@ config:
     #bulk_allow: true
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: 0
+  # Allows the service to restart (send "stop" RPC call to) the mapped ADS
+  # bridge on panic. This can be required to fix ADS connection/AMS routes in
+  # certain cases
+  #restart_bridge_on_panic: false
   # default retry attempts for all operations (0 - no retries, give up if the
   # first attempt fails)
   retries: 2

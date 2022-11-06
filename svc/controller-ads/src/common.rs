@@ -129,6 +129,8 @@ pub struct Config {
     pub queue_size: usize,
     #[serde(default = "default_action_queue_size")]
     pub action_queue_size: usize,
+    #[serde(default)]
+    pub restart_bridge_on_panic: bool,
 }
 
 #[derive(Deserialize)]

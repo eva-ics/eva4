@@ -56,6 +56,18 @@ async fn shutdown_vars() {
 
 async fn poc() {
     shutdown_vars().await;
+    if RESTART_BRIDGE_ON_PANIC.load(atomic::Ordering::SeqCst) {
+        safe_rpc_call(
+            RPC.get().unwrap(),
+            BRIDGE_ID.get().unwrap(),
+            "stop",
+            busrt::empty_payload!(),
+            QoS::No,
+            *TIMEOUT.get().unwrap(),
+        )
+        .await
+        .log_ef();
+    }
     eva_sdk::service::poc();
 }
 
@@ -65,6 +77,7 @@ const DESCRIPTION: &str = "TwinCAT ADS controller";
 
 static ACTIONS_VERIFY: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static DEFAULT_RETRIES: atomic::AtomicU8 = atomic::AtomicU8::new(0);
+static RESTART_BRIDGE_ON_PANIC: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -155,7 +168,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
             symbols.insert(v.symbol());
         }
     }
-    let vars = adsbr::create_vars(symbols.into_iter().collect::<Vec<&str>>().as_slice()).await?;
+    set_poc(config.panic_in);
+    let vars = match adsbr::create_vars(symbols.into_iter().collect::<Vec<&str>>().as_slice()).await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            poc().await;
+            return Err(e);
+        }
+    };
     let mut oids_failed = HashSet::new();
     {
         let mut ads_vars = ADS_VARS.lock().unwrap();
@@ -191,12 +212,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
             }
         }
     }
-    set_poc(config.panic_in);
     ACTIONS_VERIFY.store(config.actions_verify, atomic::Ordering::SeqCst);
     DEFAULT_RETRIES.store(config.retries.unwrap_or(0), atomic::Ordering::SeqCst);
     VERIFY_DELAY
         .set(config.verify_delay)
         .map_err(|_| Error::core("Unable to set VERIFY_DELAY"))?;
+    RESTART_BRIDGE_ON_PANIC.store(config.restart_bridge_on_panic, atomic::Ordering::SeqCst);
     let mut action_oids = Vec::new();
     for oid in config.action_map.keys() {
         action_oids.push(oid);
