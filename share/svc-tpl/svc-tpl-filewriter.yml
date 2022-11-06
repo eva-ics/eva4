@@ -5,7 +5,15 @@ bus:
 config:
   # the file path may contain date-time formatting options
   # see https://man7.org/linux/man-pages/man3/strftime.3.html
+  #
+  # if the rotation is used, the following rules are applied:
+  #
+  # no date-time fmt: rotated as file_path.rfc3339-date
+  # date-time fmt: not rotated, new name is used
+  # rotated_path set: files are customly renamed when rotated
   file_path: /tmp/1.csv
+  # the rotaed path may also contain date-time formatting
+  #rotated_path: /tmp/%s.csv
   # flush data after each block (slow, but more reliable)
   auto_flush: false
   # use DOS-style CR/LF

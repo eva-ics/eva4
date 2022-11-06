@@ -149,6 +149,7 @@ where
 #[serde(deny_unknown_fields)]
 struct Config {
     file_path: String,
+    rotated_path: Option<String>,
     #[serde(default)]
     auto_flush: bool,
     #[serde(default)]
@@ -175,9 +176,8 @@ enum Event {
     Rotate,
 }
 
-fn generate_file_path(base_file_path: &str) -> String {
+fn generate_file_path(base_file_path: &str, dt: DateTime<Local>) -> String {
     if base_file_path.contains('%') {
-        let dt = Local::now();
         dt.format(base_file_path).to_string()
     } else {
         base_file_path.to_owned()
@@ -187,10 +187,12 @@ fn generate_file_path(base_file_path: &str) -> String {
 async fn file_handler(
     rx: &async_channel::Receiver<Event>,
     base_file_path: &str,
+    base_rotated_path: Option<&str>,
     gen: &DataGen,
     auto_flush: bool,
 ) -> EResult<()> {
-    let mut file_path = generate_file_path(base_file_path);
+    let mut dt = Local::now();
+    let mut file_path = generate_file_path(base_file_path, dt);
     let mut fx: Option<tokio::fs::File> = None;
     while let Ok(event) = rx.recv().await {
         let mut fd_opt = None;
@@ -215,6 +217,7 @@ async fn file_handler(
                 .await?;
             f.seek(SeekFrom::End(0)).await?;
             fx.replace(f);
+            dt = Local::now();
             fx.as_mut().unwrap()
         };
         let pos = fd.seek(SeekFrom::Current(0)).await?;
@@ -239,10 +242,13 @@ async fn file_handler(
             Event::Rotate => {
                 fd.flush().await?;
                 fx.take();
-                if base_file_path.contains('%') {
-                    file_path = generate_file_path(base_file_path);
+                if let Some(path) = base_rotated_path {
+                    let rotated_path = generate_file_path(path, dt);
+                    tokio::fs::rename(&file_path, rotated_path).await?;
+                    file_path = generate_file_path(base_file_path, dt);
+                } else if base_file_path.contains('%') {
+                    file_path = generate_file_path(base_file_path, dt);
                 } else {
-                    let dt = Local::now();
                     let rotated_path = format!(
                         "{}.{}",
                         &file_path,
@@ -396,11 +402,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
     )?;
     let (tx, rx) = async_channel::bounded::<Event>(config.queue_size);
     let file_path = config.file_path;
+    let rotated_path = config.rotated_path;
     let auto_flush = config.auto_flush;
     let gen = DataGen::new(config.format, config.dos_cr);
     tokio::spawn(async move {
         loop {
-            file_handler(&rx, &file_path, &gen, auto_flush)
+            file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)
                 .await
                 .log_ef();
         }
