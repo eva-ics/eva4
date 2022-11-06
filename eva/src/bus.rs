@@ -2,7 +2,7 @@
 ///
 /// Contains a wrapper for the bus broker
 use crate::EResult;
-use busrt::broker::{AaaMap, Broker, Client, ClientAaa, ServerConfig};
+use busrt::broker::{AaaMap, Broker, Client, ClientAaa, Options, ServerConfig};
 use eva_common::registry;
 use eva_common::tools::format_path;
 use ipnetwork::IpNetwork;
@@ -182,7 +182,7 @@ impl EvaBroker {
                 .collect::<Vec<&str>>()
                 .join(",")
         );
-        let mut broker = Broker::new();
+        let mut broker = Broker::create(&Options::default().force_register(true));
         broker.set_queue_size(config.queue_size);
         let queue_size = config.queue_size;
         Ok(EvaBroker {
