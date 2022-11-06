@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-11-06 eva-js-framework 0.3.43: certain OTP fixes for set_normal and others
 * 2022-11-06 build 2022110601: force register services on the broker (drops prev. instance)
 * 2022-11-06 build 2022110601: "rotated_path" in file writer svc
 * 2022-11-06 build 2022110601: Optional restart of ADS bridge on ADS controller panic
