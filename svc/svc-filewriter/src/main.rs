@@ -9,8 +9,10 @@ use eva_sdk::types::{ItemState, ShortItemState, State};
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Deserializer};
+use std::collections::HashSet;
 use std::io::SeekFrom;
 use std::os::unix::fs::MetadataExt;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
@@ -184,6 +186,20 @@ fn generate_file_path(base_file_path: &str, dt: DateTime<Local>) -> String {
     }
 }
 
+async fn sync_dirs(paths: &[&str]) -> EResult<()> {
+    let mut dirs = HashSet::new();
+    for p in paths {
+        let p = Path::new(p).to_owned();
+        if let Some(parent) = p.parent() {
+            dirs.insert(parent.to_owned());
+        }
+    }
+    for d in dirs {
+        tokio::fs::File::open(d).await?.sync_all().await?;
+    }
+    Ok(())
+}
+
 async fn file_handler(
     rx: &async_channel::Receiver<Event>,
     base_file_path: &str,
@@ -215,6 +231,7 @@ async fn file_handler(
                 .create(true)
                 .open(&file_path)
                 .await?;
+            sync_dirs(&[&file_path]).await?;
             f.seek(SeekFrom::End(0)).await?;
             fx.replace(f);
             dt = Local::now();
@@ -244,7 +261,8 @@ async fn file_handler(
                 fx.take();
                 if let Some(path) = base_rotated_path {
                     let rotated_path = generate_file_path(path, dt);
-                    tokio::fs::rename(&file_path, rotated_path).await?;
+                    tokio::fs::rename(&file_path, &rotated_path).await?;
+                    sync_dirs(&[&file_path, &rotated_path]).await?;
                     file_path = generate_file_path(base_file_path, dt);
                 } else if base_file_path.contains('%') {
                     file_path = generate_file_path(base_file_path, dt);
@@ -254,7 +272,8 @@ async fn file_handler(
                         &file_path,
                         dt.to_rfc3339_opts(SecondsFormat::Secs, false)
                     );
-                    tokio::fs::rename(&file_path, rotated_path).await?;
+                    tokio::fs::rename(&file_path, &rotated_path).await?;
+                    sync_dirs(&[&file_path, &rotated_path]).await?;
                 }
                 continue;
             }
