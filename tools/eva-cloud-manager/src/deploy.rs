@@ -174,7 +174,11 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
     info!("analyzing upload");
     for node in &mut payload.content {
         for file in &mut node.upload {
-            file.extract = file.extract.normalize(file.src.as_deref())?;
+            file.extract = file.extract.normalize(if let Some(ref url) = file.url {
+                Some(Path::new(url))
+            } else {
+                file.src.as_deref()
+            })?;
             if file.svc.is_empty() {
                 file.svc = node.params.filemgr_svc.clone();
             }
@@ -190,9 +194,9 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                         src.to_string_lossy()
                     )));
                 }
-            } else if file.text.is_none() {
+            } else if file.text.is_none() && file.url.is_none() {
                 return Err(Error::invalid_params(
-                    "either src file or text content must be defined",
+                    "either src file or text/url content must be defined",
                 ));
             }
             if file.target.to_string_lossy().ends_with('/') && file.extract.is_no() {
@@ -248,7 +252,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 }
             };
             if !data.online() {
-                return Err(Error::failed(formta!("node {} is offline", node.node)));
+                return Err(Error::failed(format!("node {} is offline", node.node)));
             }
             if let Some(svc) = data.svc() {
                 info!("node {} replication svc: {}", node.node, svc);
@@ -313,7 +317,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             }
             for f in node.upload {
                 let mut buf = Vec::new();
-                let (content, mut permissions) = if let Some(src) = f.src {
+                let (content, mut permissions, download) = if let Some(src) = f.src {
                     info!(
                         "uploading file {} => {}:{}",
                         src.to_string_lossy(),
@@ -323,23 +327,35 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     if src.is_url() {
                         let url = src.to_string_lossy();
                         buf = http_client.fetch_animated(&url).await?;
-                        (buf.as_slice(), None)
+                        (buf.as_slice(), None, false)
                     } else {
                         let mut file = fs::File::open(src).await?;
                         let permissions = file.metadata().await?.permissions().mode();
                         file.read_to_end(&mut buf).await?;
-                        (buf.as_slice(), Some(permissions))
+                        (buf.as_slice(), Some(permissions), false)
                     }
+                } else if let Some(ref text) = f.text {
+                    info!(
+                        "uploading file => {}:{}",
+                        node.node,
+                        f.target.to_string_lossy()
+                    );
+                    (text.as_bytes(), None, false)
                 } else {
                     info!(
                         "uploading file => {}:{}",
                         node.node,
                         f.target.to_string_lossy()
                     );
-                    (f.text.as_ref().unwrap().as_bytes(), None)
+                    (f.url.as_ref().unwrap().as_bytes(), None, true)
                 };
-                let mut hasher = Sha256::new();
-                hasher.update(content);
+                let hasher = if f.url.is_some() {
+                    None
+                } else {
+                    let mut h = Sha256::new();
+                    h.update(content);
+                    Some(h)
+                };
                 if let Some(s_permissions) = f.permissions {
                     permissions.replace(s_permissions);
                 }
@@ -347,8 +363,9 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     path: &f.target.to_string_lossy(),
                     content,
                     permissions,
-                    sha256: &hasher.finish(),
+                    sha256: hasher.map(Sha256::finish),
                     extract: f.extract,
+                    download,
                 };
                 client
                     .call(&node.node, &f.svc, "file.put", Some(to_value(params)?))
@@ -679,6 +696,8 @@ struct NodeUpload {
     src: Option<PathBuf>,
     #[serde(default)]
     text: Option<String>,
+    #[serde(default)]
+    url: Option<String>,
     target: PathBuf,
     #[serde(default)]
     svc: String,
@@ -700,9 +719,11 @@ struct ParamsFilePut<'a> {
     content: &'a [u8],
     #[serde(skip_serializing_if = "Option::is_none")]
     permissions: Option<u32>,
-    sha256: &'a [u8],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sha256: Option<[u8; 32]>,
     #[serde(skip_serializing_if = "ExtractBoolOrStr::is_no")]
     extract: ExtractBoolOrStr,
+    download: bool,
 }
 
 #[derive(Serialize)]

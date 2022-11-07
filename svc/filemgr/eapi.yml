@@ -45,6 +45,10 @@ file.put:
       typ: String
       des: "Extract as: no|tar|txz|tgz|tbz2|zip"
       req: false
+    - nam: download
+      typ: bool
+      des: Download content from HTTP URI, sent in the content field
+      req: false
   ret:
 file.unlink:
   des: Deletes file from runtime directory

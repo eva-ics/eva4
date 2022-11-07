@@ -1,5 +1,6 @@
 use eva_common::prelude::*;
 use eva_common::time::Time;
+use eva_sdk::http;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
@@ -169,6 +170,13 @@ impl Content {
             Content::Text(v) => v.as_bytes(),
         }
     }
+    #[inline]
+    fn as_str(&self) -> EResult<&str> {
+        match self {
+            Content::Binary(v) => std::str::from_utf8(v).map_err(Into::into),
+            Content::Text(v) => Ok(v.as_str()),
+        }
+    }
 }
 
 #[inline]
@@ -318,15 +326,30 @@ impl RpcHandlers for Handlers {
                         sha256: Option<Sha256Checksum>,
                         #[serde(default)]
                         extract: Extract,
+                        #[serde(default)]
+                        download: bool,
                     }
                     let p: PutParams = unpack(payload)?;
+                    let f = PathBuf::from(&p.path);
+                    info!("file.put {:?}", f);
                     let perm: u32 = p.permissions.try_into()?;
-                    let content = p.content.as_bytes();
+                    let http_resp = if p.download {
+                        let client =
+                            http::Client::new(1, *TIMEOUT.get().unwrap()).follow_redirects(true);
+                        let url = p.content.as_str()?;
+                        info!("downloading {}", url);
+                        Some(client.get_response(url).await?)
+                    } else {
+                        None
+                    };
+                    let content = if let Some(ref resp) = http_resp {
+                        resp.body()
+                    } else {
+                        p.content.as_bytes()
+                    };
                     if let Some(s) = p.sha256 {
                         s.compare(content)?;
                     }
-                    let f = PathBuf::from(&p.path);
-                    info!("file.put {:?}", f);
                     let fpath = self.format_path(&f).log_err()?;
                     if p.extract == Extract::No {
                         if let Some(parent) = fpath.parent() {
