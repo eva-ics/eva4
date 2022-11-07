@@ -248,7 +248,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 }
             };
             if !data.online() {
-                return Err(Error::failed("node {} is offline"));
+                return Err(Error::failed(formta!("node {} is offline", node.node)));
             }
             if let Some(svc) = data.svc() {
                 info!("node {} replication svc: {}", node.node, svc);
