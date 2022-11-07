@@ -4,6 +4,10 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-11-07 build 2022110701: filewriter svc syncs dirs on open/rename ops
+* 2022-11-07 build 2022110701: deploy files from URLs fetched by remote nodes
+* 2022-11-07 build 2022110701: file manager svc fetch files from URLs
+* 2022-11-07 build 2022110701: MSAD nested groups support
 * 2022-11-06 eva-js-framework 0.3.43: certain OTP fixes for set_normal and others
 * 2022-11-06 build 2022110601: force register services on the broker (drops prev. instance)
 * 2022-11-06 build 2022110601: "rotated_path" in file writer svc
