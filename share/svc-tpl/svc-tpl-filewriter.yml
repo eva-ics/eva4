@@ -12,7 +12,7 @@ config:
   # date-time fmt: not rotated, new name is used
   # rotated_path set: files are customly renamed when rotated
   file_path: /tmp/1.csv
-  # the rotaed path may also contain date-time formatting
+  # the rotated path may also contain date-time formatting
   #rotated_path: /tmp/%s.csv
   # flush data after each block (slow, but more reliable)
   auto_flush: false
