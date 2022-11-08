@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-11-08 eva-js-framework 0.3.44: event processing fixes, full objects in watch callbacks
 * 2022-11-07 build 2022110701: filewriter svc syncs dirs on open/rename ops
 * 2022-11-07 build 2022110701: deploy files from URLs fetched by remote nodes
 * 2022-11-07 build 2022110701: file manager svc fetch files from URLs
