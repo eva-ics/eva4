@@ -120,7 +120,12 @@ pub async fn run(
     let bus_api = eapi::BusApi::new(core.clone(), 0);
     let core_sec_client = core_client.register_secondary().await?;
     let core_rpc = RpcClient::create(core_client, bus_api, rpc::Options::new().blocking_frames());
-    eva_common::logger::init_bus(core_rpc.client(), bus_config_data.queue_size, level_filter)?;
+    eva_common::logger::init_bus(
+        core_rpc.client(),
+        bus_config_data.queue_size,
+        level_filter,
+        false,
+    )?;
     info!("starting EVA ICS node {}", core.system_name());
     info!("mode: secondary point");
     info!("dir: {}", dir_eva);

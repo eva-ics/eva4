@@ -524,6 +524,8 @@ pub struct Params {
     react_to_fail: bool,
     #[serde(default = "default_launcher")]
     launcher: Arc<String>,
+    #[serde(default)]
+    call_tracing: bool,
 }
 
 impl Params {
@@ -564,6 +566,7 @@ impl Params {
             self.user.as_deref(),
             self.react_to_fail,
             crate::FIPS.load(atomic::Ordering::SeqCst),
+            self.call_tracing,
         )
     }
     fn startup_timeout(&self) -> Option<Duration> {

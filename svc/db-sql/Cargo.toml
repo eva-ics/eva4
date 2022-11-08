@@ -8,11 +8,11 @@ busrt = { version = "0.3.5", features = ["rpc", "ipc"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.1.180", features = ["events", "time", "db", "workers", "common-payloads"] }
+eva-common = { version = "0.1.182", features = ["events", "time", "db", "workers", "common-payloads"] }
 log = "0.4.14"
 lazy_static = "1.4.0"
 async-channel = "1.7.1"
-eva-sdk = { version = "0.1.109" }
+eva-sdk = { version = "0.1.110" }
 once_cell = "1.9.0"
 bmart = "0.1.10"
 sqlx = { version = "0.5.11", features = [

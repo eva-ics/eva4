@@ -286,6 +286,7 @@ svc:
         shutdown: *floatornull
         startup: *floatornull
     react_to_fail: *bool
+    call_tracing: *bool
     launcher: *str
   required:
     - bus
