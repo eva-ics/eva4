@@ -200,15 +200,19 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 ));
             }
             if file.target.to_string_lossy().ends_with('/') && file.extract.is_no() {
-                file.target.push(
+                file.target.push(if let Some(ref url) = file.url {
+                    Path::new(url)
+                        .file_name()
+                        .ok_or_else(|| Error::invalid_params("file name missing in URL!"))?
+                } else {
                     file.src
                         .as_ref()
                         .ok_or_else(|| {
                             Error::invalid_params("source as a content but no target file name set")
                         })?
                         .file_name()
-                        .ok_or_else(|| Error::invalid_params("file name missing in source!"))?,
-                );
+                        .ok_or_else(|| Error::invalid_params("file name missing in source!"))?
+                });
             }
         }
     }
@@ -342,12 +346,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     );
                     (text.as_bytes(), None, false)
                 } else {
+                    let url = f.url.as_ref().unwrap();
                     info!(
-                        "uploading file => {}:{}",
+                        "requesting fetch {} => {}:{}",
+                        url,
                         node.node,
                         f.target.to_string_lossy()
                     );
-                    (f.url.as_ref().unwrap().as_bytes(), None, true)
+                    (url.as_bytes(), None, true)
                 };
                 let hasher = if f.url.is_some() {
                     None
