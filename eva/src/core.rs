@@ -280,6 +280,8 @@ pub struct Core {
     nodes: std::sync::Mutex<HashMap<String, NodeData>>,
     #[serde(skip)]
     node_checker_fut: std::sync::Mutex<Option<JoinHandle<()>>>,
+    #[serde(skip)]
+    state_processor_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 /// # Panics
@@ -430,6 +432,7 @@ impl Core {
             scheduled_saves: <_>::default(),
             action_manager: <_>::default(),
             service_manager: <_>::default(),
+            state_processor_lock: <_>::default(),
         };
         core.update_paths(dir_eva, pid_file);
         core
@@ -636,6 +639,7 @@ impl Core {
                 inventory_db::create_tx(oid, &mut tx).await?;
                 inventory_db::save_config_tx(oid, item.config()?, &mut tx).await?;
                 if let Some(stc) = item.state() {
+                    let _stp_lock = self.state_processor_lock.lock().await;
                     let (s_state, db_st) =
                         prepare_state_data!(item, &*stc.lock(), self.instant_save);
                     // process new state without db_st, manually save
@@ -659,6 +663,7 @@ impl Core {
                 trace!("saving config for {}", oid);
                 save_item_config(oid, item.config()?, rpc).await?;
                 if let Some(stc) = item.state() {
+                    let _stp_lock = self.state_processor_lock.lock().await;
                     let (s_state, db_st) =
                         prepare_state_data!(item, &*stc.lock(), self.instant_save);
                     self.process_new_state(item.oid(), s_state, db_st, rpc)
@@ -790,6 +795,7 @@ impl Core {
                             target: action_params.svc().to_owned(),
                             wait: None,
                         });
+                    let _stp_lock = self.state_processor_lock.lock().await;
                     let s_st = if let Some(stc) = item.state() {
                         let mut state = stc.lock();
                         state.act_incr(self.generate_ieid());
@@ -820,6 +826,7 @@ impl Core {
             let boot_id = self.boot_id;
             let default_timeout = self.timeout;
             let rpc = self.rpc.get().unwrap().clone();
+            let state_processor_lock = self.state_processor_lock.clone();
             tokio::spawn(async move {
                 let timeout = action.timeout().unwrap_or(default_timeout);
                 action_manager
@@ -833,6 +840,7 @@ impl Core {
                     let inv = inventory.read().await;
                     if let Some(unit) = inv.get_item(&oid) {
                         if unit.source().is_none() {
+                            let _stp_lock = state_processor_lock.lock().await;
                             let s_st = if let Some(stc) = unit.state() {
                                 let mut state = stc.lock();
                                 let ieid = IEID::new(boot_id, monotonic_ns());
@@ -1141,6 +1149,7 @@ impl Core {
                     "setting state from raw event for {}, status: {}, value: {:?}",
                     oid, raw.status, raw.value
                 );
+                let _stp_lock = self.state_processor_lock.lock().await;
                 let (s_state, db_st) = {
                     let mut state = state.lock();
                     if tp == ItemKind::Lvar && state.status() == 0 && !raw.force {

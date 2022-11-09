@@ -70,6 +70,7 @@ struct LogConfigs {
     level: String,
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn run(
     dir_eva: &str,
     system_name: Option<&str>,
