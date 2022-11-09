@@ -546,7 +546,7 @@ class CLI:
             payload = {}
             for p in params:
                 n, v = p.split('=', 1)
-                payload[n] = format_value(v, advanced=True)
+                payload[n] = format_value(v, advanced=True, name=n)
         result = call_rpc(method,
                           payload if payload else None,
                           target=i,

@@ -408,7 +408,10 @@ def write_file(fname, content, mode='w'):
         fh.write(content)
 
 
-def format_value(value, advanced=False):
+def format_value(value, advanced=False, name=''):
+    if value == '<<':
+        import pwinput
+        value = pwinput.pwinput(prompt=f'{name}: ')
     if value.startswith('!'):
         return value[1:]
     elif advanced and ',' in value:
