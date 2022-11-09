@@ -538,7 +538,7 @@ class CLI:
         call_rpc('svc.purge', dict(svcs=[i]))
         ok()
 
-    def svc_call(self, i, file, method, params):
+    def svc_call(self, i, file, method, params, trace=False):
         if file:
             import yaml
             payload = yaml.safe_load(read_file(file))
@@ -547,7 +547,10 @@ class CLI:
             for p in params:
                 n, v = p.split('=', 1)
                 payload[n] = format_value(v, advanced=True)
-        result = call_rpc(method, payload if payload else None, target=i)
+        result = call_rpc(method,
+                          payload if payload else None,
+                          target=i,
+                          trace=trace)
         if current_command.json or isinstance(result, list):
             print_result(result)
         elif isinstance(result, dict):

@@ -234,6 +234,10 @@ def append_svc_cli(root_sp):
                    nargs='*',
                    help='param=value',
                    metavar='PARAM=VALUE').completer = ComplSvcRpcParams()
+    p.add_argument('--trace',
+                   action='store_true',
+                   help='enable call tracing (if supported by the svc)'
+                  ).completer = ComplYamlFile()
 
     p = sp.add_parser('export', help='export service(s) to a deployment file')
     p.add_argument('i', metavar='MASK').completer = ComplSvc()
