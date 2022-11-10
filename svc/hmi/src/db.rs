@@ -96,7 +96,7 @@ pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
             FROM api_log {} ORDER BY t"#,
                 filter.condition()?
             );
-            Ok(dbg!(q))
+            Ok(q)
         }
         AnyKind::Mssql => not_impl!(kind),
     }
