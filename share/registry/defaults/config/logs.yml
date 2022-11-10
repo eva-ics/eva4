@@ -8,7 +8,7 @@
 - output: memory
   level: info
   keep: 86400
-  max_records: 1_000_000
+  max_records: 1000000
 - output: file
   level: info
   # regular / json
