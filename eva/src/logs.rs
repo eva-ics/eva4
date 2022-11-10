@@ -34,7 +34,8 @@ pub fn disable_console_log() {
 type BusReceiver = async_channel::Receiver<(&'static String, Vec<u8>)>;
 
 lazy_static! {
-    static ref KEEP_MEM: Mutex<Option<chrono::Duration>> = Mutex::new(None);
+    static ref KEEP_MEM: OnceCell<chrono::Duration> = <_>::default();
+    static ref KEEP_MEM_MAX_RECORDS: OnceCell<usize> = <_>::default();
     static ref MEMORY_LOG: Mutex<Vec<Arc<LogRecord>>> = Mutex::new(Vec::new());
     static ref CONSOLE_LOCK: Mutex<()> = Mutex::new(());
     static ref BUS_RPC: OnceCell<Arc<RpcClient>> = <_>::default();
@@ -248,11 +249,20 @@ impl Log for MemoryLogger {
 }
 
 #[allow(clippy::unused_async)]
-async fn cleanup_memory_log(keep: chrono::Duration) {
+async fn cleanup_memory_log(keep: Option<chrono::Duration>, max: Option<usize>) {
     trace!("cleaning up memory log records");
-    let t = Local::now();
-    let not_before = t - keep;
-    MEMORY_LOG.lock().unwrap().retain(|r| r.time > not_before);
+    let mut mem_log = MEMORY_LOG.lock().unwrap();
+    if let Some(k) = keep {
+        let t = Local::now();
+        let not_before = t - k;
+        mem_log.retain(|r| r.time > not_before);
+    }
+    if let Some(m) = max {
+        let len = mem_log.len();
+        if len > m {
+            mem_log.drain(0..len - m);
+        }
+    }
 }
 
 struct ConsoleLogger {
@@ -616,6 +626,7 @@ pub fn init(
     let mut loggers: Vec<Box<(dyn Log + 'static)>> = Vec::new();
     let mut max_filter = LevelFilter::Error;
     let mut keep_mem: Option<chrono::Duration> = None;
+    let mut keep_mem_max_records: Option<usize> = None;
     let verbose_mode = std::env::var("VERBOSE").unwrap_or_default() == "1";
     let mut console_ready = false;
     let mut bus_configured = false;
@@ -657,6 +668,9 @@ pub fn init(
                     v.deserialize_into()
                         .expect("logger keep option is not an integer")
                 });
+                keep_mem_max_records = logger_config
+                    .remove("max_records")
+                    .map(|v| v.deserialize_into().expect("max records is not an integer"));
                 if keep > 0 {
                     loggers.push(Box::new(MemoryLogger::new(system_name, parse_level!())));
                     keep_mem = Some(chrono::Duration::seconds(keep));
@@ -741,7 +755,12 @@ pub fn init(
             atomic::Ordering::SeqCst,
         );
         if let Some(keep) = keep_mem {
-            KEEP_MEM.lock().unwrap().replace(keep);
+            KEEP_MEM.set(keep).expect("Unable to set KEEP_MEM");
+        }
+        if let Some(max) = keep_mem_max_records {
+            KEEP_MEM_MAX_RECORDS
+                .set(max)
+                .expect("Unable to set KEEP_MEM_MAX_RECORDS");
         }
     }
 }
@@ -774,14 +793,12 @@ pub async fn start_bus_logger() {
 ///
 /// Will return Err if failed to start workers
 pub async fn start() -> EResult<()> {
-    let kc = *KEEP_MEM.lock().unwrap();
-    if let Some(keep) = kc {
-        eva_common::cleaner!(
-            "logmem",
-            cleanup_memory_log,
-            INTERVAL_CLEAN_MEMORY_LOGS,
-            keep
-        );
-    }
+    eva_common::cleaner!(
+        "logmem",
+        cleanup_memory_log,
+        INTERVAL_CLEAN_MEMORY_LOGS,
+        KEEP_MEM.get().map(Clone::clone),
+        KEEP_MEM_MAX_RECORDS.get().map(Clone::clone)
+    );
     Ok(())
 }

@@ -153,6 +153,7 @@ config/logs:
           - warn
           - error
       keep: *intzeropositive
+      max_records: *intzeropositive
     required:
       - output
 data/boot-id: *intpositive
