@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-11-10 build 2022111001: max records limit for memory log
 * 2022-11-09 build 2022110901: state processor lock to prevent data racing from actions and deploys
 * 2022-11-09 build 2022110901: EAPI call tracing (experimental)
 * 2022-11-08 eva-js-framework 0.3.44: event processing fixes, full objects in watch callbacks
