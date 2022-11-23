@@ -343,6 +343,11 @@ impl RpcHandlers for Handlers {
                         None
                     };
                     let content = if let Some(ref resp) = http_resp {
+                        if resp.status() != 200 {
+                            return Err(
+                                Error::failed(format!("HTTP response {}", resp.status())).into()
+                            );
+                        }
                         resp.body()
                     } else {
                         p.content.as_bytes()
