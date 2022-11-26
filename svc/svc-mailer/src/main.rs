@@ -56,6 +56,10 @@ impl Mailer {
             ));
         } else if !config.tls && !config.ssl {
             b = b.tls(Tls::None);
+        } else {
+            b = b.tls(Tls::Wrapper(
+                TlsParameters::new_native(config.host.clone()).map_err(Error::invalid_data)?,
+            ));
         }
         if let Some(ref username) = config.username {
             b = b.credentials(Credentials::new(
