@@ -4,6 +4,8 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-11-26 build 2022112601: mailer svc STARTTLS fix, "ssl" option
+* 2022-11-26 build 2022112601: filemgr svc url fetch fix for non-200-OK responses
 * 2022-11-10 build 2022111002: max records limit for memory log
 * 2022-11-09 build 2022110901: state processor lock to prevent data racing from actions and deploys
 * 2022-11-09 build 2022110901: EAPI call tracing (experimental)
