@@ -2,7 +2,7 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use lettre::{
     message::Mailbox,
-    transport::smtp::{authentication::Credentials, client::Tls, PoolConfig},
+    transport::smtp::{authentication::Credentials, PoolConfig},
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
@@ -37,13 +37,15 @@ impl Mailer {
             let m = s.parse().map_err(Error::invalid_data)?;
             rcps.push(m);
         }
-        let mut b = AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
-            .map_err(Error::invalid_data)?
+        let mut b = if config.tls {
+            AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.host)
+        } else {
+            AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
+        }
+        .map_err(Error::invalid_data)?;
+        b = b
             .port(config.port)
             .pool_config(PoolConfig::new().max_size(config.pool_size));
-        if !config.tls {
-            b = b.tls(Tls::None);
-        }
         if let Some(ref username) = config.username {
             b = b.credentials(Credentials::new(
                 username.clone(),
