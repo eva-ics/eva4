@@ -11,6 +11,8 @@ config:
     host: localhost
     port: 25
     tls: false
+    # set true for auto or false to forcibly turn SSL off
+    ssl: true
     #username: user
     #password: secret
     pool_size: 5

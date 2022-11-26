@@ -2,7 +2,11 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use lettre::{
     message::Mailbox,
-    transport::smtp::{authentication::Credentials, PoolConfig},
+    transport::smtp::{
+        authentication::Credentials,
+        client::{Tls, TlsParameters},
+        PoolConfig,
+    },
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use serde::Deserialize;
@@ -46,6 +50,13 @@ impl Mailer {
         b = b
             .port(config.port)
             .pool_config(PoolConfig::new().max_size(config.pool_size));
+        if !config.ssl && config.tls {
+            b = b.tls(Tls::Required(
+                TlsParameters::new_native(config.host.clone()).map_err(Error::invalid_data)?,
+            ));
+        } else if !config.tls && !config.ssl {
+            b = b.tls(Tls::None);
+        }
         if let Some(ref username) = config.username {
             b = b.credentials(Credentials::new(
                 username.clone(),
@@ -174,6 +185,8 @@ struct SmtpConfig {
     port: u16,
     #[serde(default)]
     tls: bool,
+    #[serde(default)]
+    ssl: bool,
     #[serde(default)]
     username: Option<String>,
     #[serde(default)]
