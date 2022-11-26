@@ -1,5 +1,5 @@
 send:
-  des: Sends an e-mail letter
+  des: Sends a e-mail letter
   par:
     - nam: rcp
       typ: String/Vec<String>
