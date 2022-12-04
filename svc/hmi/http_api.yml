@@ -55,6 +55,71 @@ logout:
   http_req:
     token: "token:1oeb5vHbLTTABBg2DfoueSHl9kT3ZPm6"
   http_req_omit_key: true
+api_log.get:
+  des: Gets log of recent API calls
+  par:
+    - nam: t_start
+      typ: String/i64
+      des: Start time
+      req: false
+    - nam: t_end
+      typ: String/i64
+      des: End time
+      req: false
+    - nam: user
+      typ: String
+      des: Filter by user (requires admin access)
+      req: false
+    - nam: acl
+      typ: String
+      des: Filter by ACL ID
+      req: false
+    - nam: method
+      typ: String
+      des: Filter by method
+      req: false
+    - nam: source
+      typ: String
+      des: Filter by source
+      req: false
+    - nam: code
+      typ: i64
+      des: Filter by code
+      req: false
+    - nam: success
+      typ: bool
+      des: Filter by success/failed
+      req: false
+  ret: List of recent API calls
+  exm: |
+    [
+        {
+            "acl": "admin",
+            "auth": "token",
+            "code": 0,
+            "dt": "2022-05-10T03:43:26+02:00",
+            "elapsed": 0.023,
+            "id": "41770402-8154-4d3f-ae49-55fa9b9840b6",
+            "method": "action.toggle",
+            "msg": null,
+            "source": "127.0.0.1",
+            "t": 1652147006,
+            "user": "admin"
+        },
+        {
+            "acl": "admin",
+            "auth": "token",
+            "code": 0,
+            "dt": "2022-05-10T03:43:32+02:00",
+            "elapsed": 0.019,
+            "id": "6d12a29e-ba5f-4757-a2d3-770641393dd3",
+            "method": "action.toggle",
+            "msg": null,
+            "source": "127.0.0.1",
+            "t": 1652147012,
+            "user": "admin"
+        }
+    ]
 test:
   des: Tests the node and HMI svc, returns system info
   par:

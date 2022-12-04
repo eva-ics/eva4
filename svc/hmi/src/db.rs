@@ -34,7 +34,7 @@ macro_rules! not_impl {
 pub struct ApiLogFilter {
     t_start: Option<Value>,
     t_end: Option<Value>,
-    user: Option<String>,
+    pub(crate) user: Option<String>,
     acl: Option<String>,
     method: Option<String>,
     source: Option<String>,

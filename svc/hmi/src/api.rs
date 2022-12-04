@@ -427,6 +427,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                             method_item_state_log(params, &mut aci).await
                         }
                         "log.get" | "log_get" => method_log_get(params, &mut aci).await,
+                        "api_log.get" => method_api_log_get(params, &mut aci).await,
                         "action" => method_action(params, &mut aci).await,
                         "action.toggle" | "action_toggle" => {
                             method_action_toggle(params, &mut aci).await
@@ -909,6 +910,31 @@ async fn method_item_state_log(params: Value, aci: &mut ACI) -> EResult<Value> {
         .payload(),
     )?;
     Ok(result)
+}
+
+async fn method_api_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
+    aci.log_request(log::Level::Debug).await.log_ef();
+    let mut filter = if params == Value::Unit {
+        crate::db::ApiLogFilter::default()
+    } else {
+        crate::db::ApiLogFilter::deserialize(params)?
+    };
+    if !aci.acl().check_admin() {
+        if let Some(token) = aci.token() {
+            if let Some(ref f_user) = filter.user {
+                if token.user() != f_user {
+                    return Err(Error::access(
+                        "admin access is required to get other users' logs",
+                    ));
+                }
+            } else {
+                filter.user = Some(token.user().to_owned());
+            }
+        } else {
+            return Err(Error::access("token authentication required"));
+        }
+    }
+    to_value(crate::aci::log_get(&filter).await?).map_err(Into::into)
 }
 
 async fn method_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
