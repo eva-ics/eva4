@@ -206,6 +206,7 @@ async fn login(
         ip.map_or_else(String::new, |v| v.to_string())
     );
     let e = Error::access("access denied");
+    aci.log_param("login", login)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.log_error(&e).await;
     Err(e)
@@ -540,7 +541,7 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
 
 async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Deserialize)]
-    struct ParamsSetPaasword {
+    struct ParamsSetPassword {
         current_password: String,
         password: String,
     }
@@ -560,7 +561,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Warn).await.log_ef();
     if let Some(token) = aci.token() {
         aci.check_write()?;
-        let p = ParamsSetPaasword::deserialize(params)?;
+        let p = ParamsSetPassword::deserialize(params)?;
         let rpc = RPC.get().unwrap();
         let timeout = *TIMEOUT.get().unwrap();
         // verify old password
@@ -1004,9 +1005,12 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
             }
         }
     }
+    let p = ParamsAction::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
+    aci.log_param("status", p.status)?;
+    aci.log_param("value", &p.value)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsAction::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     let mut timeout = *TIMEOUT.get().unwrap();
     if let Some(w) = p.wait {
@@ -1068,9 +1072,10 @@ pub async fn method_run(params: Value, aci: &mut ACI) -> EResult<Value> {
             }
         }
     }
+    let p = ParamsRun::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsRun::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     let mut timeout = *TIMEOUT.get().unwrap();
     if let Some(w) = p.wait {
@@ -1108,9 +1113,10 @@ async fn method_action_toggle(params: Value, aci: &mut ACI) -> EResult<Value> {
         #[serde(default, alias = "w")]
         wait: Option<f64>,
     }
+    let p = ParamsAction::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsAction::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     let mut timeout = *TIMEOUT.get().unwrap();
     if let Some(w) = p.wait {
@@ -1190,9 +1196,10 @@ async fn method_action_terminate(params: Value, aci: &mut ACI) -> EResult<Value>
     struct PayloadTerminate {
         u: Uuid,
     }
+    let p = ParamsTerminate::deserialize(params)?;
+    aci.log_param("u", &p.u)?;
     aci.log_request(log::Level::Warn).await.log_ef();
     aci.check_write()?;
-    let p = ParamsTerminate::deserialize(params)?;
     let payload = PayloadTerminate { u: p.u.parse()? };
     let info: Value = unpack(
         safe_rpc_call(
@@ -1235,9 +1242,10 @@ async fn method_action_kill(params: Value, aci: &mut ACI) -> EResult<Value> {
     struct ParamsKill {
         i: OID,
     }
+    let p = ParamsKill::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Warn).await.log_ef();
     aci.check_write()?;
-    let p = ParamsKill::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     safe_rpc_call(
         RPC.get().unwrap(),
@@ -1265,9 +1273,12 @@ async fn method_lvar_set(params: Value, aci: &mut ACI) -> EResult<Value> {
         )]
         value: ValueOptionOwned,
     }
+    let p = ParamsSet::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
+    aci.log_param("status", p.status)?;
+    aci.log_param("value", &p.value)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsSet::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     safe_rpc_call(
         RPC.get().unwrap(),
@@ -1287,9 +1298,10 @@ async fn method_lvar_reset(params: Value, aci: &mut ACI) -> EResult<Value> {
     struct ParamsReset {
         i: OID,
     }
+    let p = ParamsReset::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsReset::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     safe_rpc_call(
         RPC.get().unwrap(),
@@ -1306,12 +1318,13 @@ async fn method_lvar_reset(params: Value, aci: &mut ACI) -> EResult<Value> {
 async fn method_lvar_clear(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct ParamsReset {
+    struct ParamsClear {
         i: OID,
     }
+    let p = ParamsClear::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsReset::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     safe_rpc_call(
         RPC.get().unwrap(),
@@ -1328,12 +1341,13 @@ async fn method_lvar_clear(params: Value, aci: &mut ACI) -> EResult<Value> {
 async fn method_lvar_toggle(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct ParamsReset {
+    struct ParamsToggle {
         i: OID,
     }
+    let p = ParamsToggle::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsReset::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     safe_rpc_call(
         RPC.get().unwrap(),
@@ -1350,12 +1364,13 @@ async fn method_lvar_toggle(params: Value, aci: &mut ACI) -> EResult<Value> {
 async fn method_lvar_incr(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct ParamsReset {
+    struct ParamsIncr {
         i: OID,
     }
+    let p = ParamsIncr::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsReset::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     let result: Value = unpack(
         safe_rpc_call(
@@ -1375,12 +1390,13 @@ async fn method_lvar_incr(params: Value, aci: &mut ACI) -> EResult<Value> {
 async fn method_lvar_decr(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
-    struct ParamsReset {
+    struct ParamsDecr {
         i: OID,
     }
+    let p = ParamsDecr::deserialize(params)?;
+    aci.log_param("i", &p.i)?;
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
-    let p = ParamsReset::deserialize(params)?;
     aci.acl().require_item_write(&p.i)?;
     let result: Value = unpack(
         safe_rpc_call(

@@ -4,7 +4,7 @@ use futures::TryStreamExt;
 use lazy_static::lazy_static;
 use log::error;
 use once_cell::sync::OnceCell;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{
     any::{AnyConnectOptions, AnyKind, AnyPool, AnyPoolOptions, AnyRow},
     sqlite, ConnectOptions, Row,
@@ -92,7 +92,7 @@ pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
     match kind {
         AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => {
             let q = format!(
-                r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed
+                r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params
             FROM api_log {} ORDER BY t"#,
                 filter.condition()?
             );
@@ -125,14 +125,23 @@ pub async fn api_log_clear(keep: u32) -> EResult<()> {
     Ok(())
 }
 
-pub async fn api_log_insert(id_str: &str, auth: &Auth, source: &str, method: &str) -> EResult<()> {
+pub async fn api_log_insert<T>(
+    id_str: &str,
+    auth: &Auth,
+    source: &str,
+    method: &str,
+    params: Option<T>,
+) -> EResult<()>
+where
+    T: Serialize,
+{
     let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method)
-                VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
             )
             .bind(id_str)
             .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
@@ -141,13 +150,18 @@ pub async fn api_log_insert(id_str: &str, auth: &Auth, source: &str, method: &st
             .bind(auth.acl_id())
             .bind(source)
             .bind(method)
+            .bind(if let Some(ref p) = params {
+                Some(serde_json::to_string(p)?)
+            } else {
+                None
+            })
             .execute(pool)
             .await?;
         }
         AnyKind::Postgres => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             )
             .bind(id_str)
             .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
@@ -156,6 +170,11 @@ pub async fn api_log_insert(id_str: &str, auth: &Auth, source: &str, method: &st
             .bind(auth.acl_id())
             .bind(source)
             .bind(method)
+            .bind(if let Some(ref p) = params {
+                Some(serde_json::to_string(p)?)
+            } else {
+                None
+            })
             .execute(pool)
             .await?;
         }
@@ -581,6 +600,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             code INT,
             msg VARCHAR(256),
             elapsed REAL,
+            params VARCHAR(4096),
             PRIMARY KEY(id)
         )"#,
             )
@@ -635,6 +655,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             code INT,
             msg VARCHAR(256),
             elapsed REAL,
+            params VARCHAR(4096),
             PRIMARY KEY(id)
         )"#,
             )
@@ -689,6 +710,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             code BIGINT,
             msg VARCHAR(256),
             elapsed DOUBLE PRECISION,
+            params VARCHAR(4096),
             PRIMARY KEY(id)
         )"#,
             )
@@ -731,6 +753,9 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
         }
         AnyKind::Mssql => not_impl!(kind),
     }
+    let _r = sqlx::query("ALTER TABLE api_log ADD params VARCHAR(4096)")
+        .execute(&pool)
+        .await;
     DB_POOL
         .set(pool)
         .map_err(|_| Error::core("unable to set DB_POOL"))?;

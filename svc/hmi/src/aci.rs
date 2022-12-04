@@ -8,6 +8,7 @@ use futures::TryStreamExt;
 use log::{error, trace};
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use sqlx::Row;
+use std::collections::BTreeMap;
 use std::sync::atomic;
 use std::time::Duration;
 use std::time::Instant;
@@ -35,6 +36,7 @@ pub struct ApiCallInfo {
     code: i16,
     msg: Option<String>,
     elapsed: Option<f64>,
+    params: Option<Value>,
     t: i64,
 }
 
@@ -48,6 +50,7 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
             let code: i64 = row.try_get("code")?;
             let dt_utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(t, 0), Utc);
             let dt: DateTime<Local> = DateTime::from(dt_utc);
+            let params: Option<String> = row.try_get("params")?;
             let call_info = ApiCallInfo {
                 id: row.try_get("id")?,
                 dt: dt.to_rfc3339_opts(SecondsFormat::Secs, false),
@@ -59,6 +62,11 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
                 code: i16::try_from(code).map_err(Error::invalid_data)?,
                 msg: row.try_get("msg")?,
                 elapsed: row.try_get("elapsed")?,
+                params: if let Some(p) = params {
+                    serde_json::from_str(&p)?
+                } else {
+                    None
+                },
                 t,
             };
             result.push(call_info);
@@ -90,6 +98,7 @@ pub struct ACI {
     auth: Auth,
     source: String,
     method: String,
+    params: Option<BTreeMap<String, Value>>,
     log_level: log::Level,
     t: Instant,
 }
@@ -122,6 +131,7 @@ impl ACI {
             auth,
             source,
             method: method.to_owned(),
+            params: None,
             log_level: log::Level::Info,
             t: Instant::now(),
         }
@@ -150,6 +160,19 @@ impl ACI {
             Err(Error::access("Session is in the read-only mode"))
         }
     }
+    pub fn log_param<T>(&mut self, name: &str, val: T) -> EResult<()>
+    where
+        T: Serialize,
+    {
+        if let Some(ref mut p) = self.params {
+            p.insert(name.to_owned(), to_value(val)?);
+        } else {
+            let mut p = BTreeMap::new();
+            p.insert(name.to_owned(), to_value(val)?);
+            self.params.replace(p);
+        }
+        Ok(())
+    }
     pub async fn log_request(&mut self, level: log::Level) -> EResult<()> {
         self.log_level = level;
         log::log!(
@@ -161,10 +184,16 @@ impl ACI {
             self.method
         );
         if api_log_enabled() && level <= log::Level::Info {
-            if let Err(e) =
-                db::api_log_insert(&self.id_str, &self.auth, &self.source, &self.method).await
+            if let Err(e) = db::api_log_insert(
+                &self.id_str,
+                &self.auth,
+                &self.source,
+                &self.method,
+                self.params.take(),
+            )
+            .await
             {
-                error!("db log error: {}", e);
+                error!("db log req error: {}", e);
             }
         }
         Ok(())
@@ -180,7 +209,7 @@ impl ACI {
         );
         if api_log_enabled() && self.log_level <= log::Level::Info {
             if let Err(e) = db::api_log_mark_success(&self.id_str, elapsed).await {
-                error!("db log error: {}", e);
+                error!("db log mark success error: {}", e);
             }
         }
     }
@@ -190,7 +219,7 @@ impl ACI {
         error!("API request {} failed. {} ({} sec)", self.id, err, elapsed);
         if api_log_enabled() && self.log_level <= log::Level::Info {
             if let Err(e) = db::api_log_mark_error(&self.id_str, elapsed, err).await {
-                error!("db log error: {}", e);
+                error!("db log mark err error: {}", e);
             }
         }
     }

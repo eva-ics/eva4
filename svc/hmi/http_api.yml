@@ -102,6 +102,9 @@ api_log.get:
             "id": "41770402-8154-4d3f-ae49-55fa9b9840b6",
             "method": "action.toggle",
             "msg": null,
+            "params": {
+              "i": "unit:tests/door1"
+            },
             "source": "127.0.0.1",
             "t": 1652147006,
             "user": "admin"
@@ -115,6 +118,9 @@ api_log.get:
             "id": "6d12a29e-ba5f-4757-a2d3-770641393dd3",
             "method": "action.toggle",
             "msg": null,
+            "params": {
+              "i": "unit:tests/door2"
+            },
             "source": "127.0.0.1",
             "t": 1652147012,
             "user": "admin"
