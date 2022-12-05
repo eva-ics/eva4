@@ -58,3 +58,25 @@ file.unlink:
       des: Relative file path
       req: true
   ret:
+sh:
+  des: Executes a shell command
+  par:
+    - nam: c
+      typ: String
+      des: Command to execute
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max command timeout
+      req: false
+    - nam: stdin
+      typ: String
+      des: STDIN data
+      req: false
+  ret: Command execution info
+  exm: |
+    {
+        "err": "STDERR OUTPUT",
+        "exitcode": 0,
+        "out": "STDOUT OUTPUT"
+    }

@@ -224,6 +224,46 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
+            "sh" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct CmdParams {
+                        c: String,
+                        #[serde(
+                            default,
+                            deserialize_with = "eva_common::tools::de_opt_float_as_duration"
+                        )]
+                        timeout: Option<Duration>,
+                        stdin: Option<String>,
+                    }
+                    #[derive(Serialize)]
+                    struct CmdResult {
+                        exitcode: i32,
+                        out: String,
+                        err: String,
+                    }
+                    let mut p: CmdParams = unpack(payload)?;
+                    let mut opts = bmart::process::Options::default();
+                    if let Some(s) = p.stdin.take() {
+                        opts = opts.input(std::borrow::Cow::Owned(s.as_bytes().to_vec()));
+                    }
+                    let result = bmart::process::command(
+                        "sh",
+                        ["-c", &p.c],
+                        p.timeout.unwrap_or_else(|| *TIMEOUT.get().unwrap()),
+                        opts,
+                    )
+                    .await?;
+                    Ok(Some(pack(&CmdResult {
+                        exitcode: result.code.unwrap_or(-15),
+                        out: result.out.join("\n"),
+                        err: result.err.join("\n"),
+                    })?))
+                }
+            }
             "file.get" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
@@ -494,6 +534,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
         HashMap::new()
     };
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(
+        ServiceMethod::new("sh")
+            .required("c")
+            .optional("timeout")
+            .optional("stdin"),
+    );
     info.add_method(
         ServiceMethod::new("file.get")
             .required("path")
