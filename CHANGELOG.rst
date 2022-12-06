@@ -4,7 +4,7 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
-* 2022120601 build 2022120601: File manager service "sh" EAPI method
+* 2022-12-06 build 2022120601: File manager service "sh" EAPI method
 * 2022-12-04 build 2022120401: HMI api_log.get HTTP method
 * 2022-12-04 build 2022120401: API call "params" in HTTP API log
 * 2022-11-26 build 2022112601: mailer svc STARTTLS fix, "ssl" option
