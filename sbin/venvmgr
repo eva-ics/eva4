@@ -175,6 +175,8 @@ class App:
                 'https://bootstrap.pypa.io/get-pip.py |'
                 f' "{eva_dir}/venv/bin/python"',
                 ps='Downloading pip3')
+        if not pip3.exists():
+            raise RuntimeError('pip3 installation failed')
         mods = [x for x in mods if not l_startswith(x, skip, '=')]
         mf = [x for x in mods if l_startswith(x, MODS_FIRST, '=')]
         mods = [x for x in mods if not l_startswith(x, MODS_FIRST, '=')]
