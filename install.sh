@@ -245,15 +245,10 @@ if [ $MODE -ge 1 ]; then
   fi
 fi
 
-addgroup --system "${EVA_USER}"
-if ! id "${EVA_USER}" > /dev/null 2>&1; then
-  adduser --system --no-create-home --home "${PREFIX}" --ingroup eva eva
-fi
-
 case $ID_LIKE in
   debian)
     apt-get install -y --no-install-recommends \
-      bash jq curl procps ca-certificates tar gzip || exit 10
+      bash jq curl procps ca-certificates tar gzip adduser || exit 10
     if [ $MODE -ge 1 ]; then
       apt-get install -y --no-install-recommends \
         python3 || exit 10
@@ -268,6 +263,7 @@ case $ID_LIKE in
     if [ "$LOGROTATE" ]; then
       apt-get install -y --no-install-recommends logrotate
     fi
+    ADDGROUP=$(command -v addgroup || echo /usr/sbin/addgroup)
     ;;
   alpine)
     apk update || exit 10
@@ -285,9 +281,10 @@ case $ID_LIKE in
     if [ "$LOGROTATE" ]; then
       apk add logrotate
     fi
+    ADDGROUP=$(command -v addgroup || echo /usr/sbin/addgroup)
     ;;
   fedora)
-    yum install -y bash jq curl procps ca-certificates tar gzip hostname which || exit 10
+    yum install -y bash jq curl procps ca-certificates tar gzip hostname which adduser || exit 10
     if [ $MODE -ge 1 ]; then
       yum install -y python3
     fi
@@ -301,8 +298,25 @@ case $ID_LIKE in
     if [ "$LOGROTATE" ]; then
       yum install -y logrotate
     fi
+    ADDGROUP=$(command -v groupadd || echo /usr/sbin/groupadd)
     ;;
 esac
+
+ADDUSER=$(command -v adduser || echo /usr/sbin/adduser)
+
+"$ADDGROUP" --system "${EVA_USER}"
+if ! id "${EVA_USER}" > /dev/null 2>&1; then
+  if [ $ID_LIKE = "debian" ]; then
+    "$ADDUSER" --system --no-create-home --home "${PREFIX}" --ingroup eva eva
+  else
+    "$ADDUSER" --system --no-create-home --home "${PREFIX}" -g eva eva
+  fi
+fi
+
+if ! id "${EVA_USER}" > /dev/null 2>&1; then
+  echo "Unable to create eva user"
+  exit 10
+fi
 
 if [ $MODE -ge 3 ]; then
   if [ ! -f "$HOME/.cargo/env" ]; then
