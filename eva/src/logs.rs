@@ -537,7 +537,7 @@ impl<'a> Serialize for LogRecordS<'a> {
         map.serialize_entry(
             "t",
             &(f64::from(self.time.timestamp() as u32)
-                + f64::from(self.time.timestamp_subsec_micros() as u32) / 1_000_000.0),
+                + f64::from(self.time.timestamp_subsec_micros()) / 1_000_000.0),
         )?;
         map.serialize_entry("th", &None::<&str>)?;
         map.end()

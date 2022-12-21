@@ -35,7 +35,7 @@ fn main() {
     db.open().expect("Unable to init/open the registry");
     println!("Importing registry schema...");
     let schema: BTreeMap<String, Value> = serde_yaml::from_str(
-        &fs::read_to_string(&format!("{dir_eva}/share/registry/schema.yml")).unwrap(),
+        &fs::read_to_string(format!("{dir_eva}/share/registry/schema.yml")).unwrap(),
     )
     .unwrap();
     for (k, v) in schema {

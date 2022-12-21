@@ -486,7 +486,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     {
         let mut nodes = nodes::NODES.write().await;
         for node in static_nodes {
-            nodes::append_static_node(node, &mut *nodes).await?;
+            nodes::append_static_node(node, &mut nodes).await?;
         }
     }
     NODES_LOADED.store(true, atomic::Ordering::SeqCst);

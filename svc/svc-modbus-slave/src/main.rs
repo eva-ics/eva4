@@ -224,8 +224,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                     c.unit,
                     c.timeout.unwrap_or(timeout),
                     rmodbus::ModbusProto::Rtu,
-                )
-                .await?;
+                )?;
                 servers.push(Box::new(server));
             }
             ProtocolKind::Ascii => {
@@ -234,8 +233,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                     c.unit,
                     c.timeout.unwrap_or(timeout),
                     rmodbus::ModbusProto::Ascii,
-                )
-                .await?;
+                )?;
                 servers.push(Box::new(server));
             }
         }

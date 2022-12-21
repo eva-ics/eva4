@@ -472,7 +472,7 @@ impl Handlers {
             let mut path = self.runtime_dir.clone();
             path.extend(fpath);
             for p in &self.protected {
-                if path.starts_with(&p) {
+                if path.starts_with(p) {
                     return Err(Error::access("the path is protected"));
                 }
             }

@@ -93,7 +93,7 @@ async fn pull(
                     Ok(data) => {
                         for task in pull_reg.map() {
                             if let Some(val) = data.get(task.block_offset() as usize) {
-                                let value = Value::U8(if *val { 1 } else { 0 });
+                                let value = Value::U8(u8::from(*val));
                                 if task.need_transform() {
                                     if let Ok(val) = TryInto::<f64>::try_into(value).log_err() {
                                         if let Ok(n) = task.transform_value(val).log_err() {

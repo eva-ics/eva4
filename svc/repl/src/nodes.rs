@@ -206,7 +206,7 @@ async fn reloader(
             .last_reload;
         if !force {
             if let Some(last) = last_reload {
-                if Instant::now() - last > reload_interval / 2 {
+                if last.elapsed() > reload_interval / 2 {
                     let lvl = if from_trig {
                         log::Level::Warn
                     } else {

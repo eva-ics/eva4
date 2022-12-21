@@ -28,7 +28,7 @@ struct ItemWatch {
 impl ItemWatch {
     #[inline]
     fn is_expired(&self) -> bool {
-        Instant::now() - *self.last_event.lock().unwrap() >= self.expires
+        (*self.last_event.lock().unwrap()).elapsed() >= self.expires
     }
     #[inline]
     fn is_marked_expired(&self) -> bool {

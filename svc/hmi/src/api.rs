@@ -76,7 +76,7 @@ pub async fn processor(
     let result = match call(&request.method, params, meta).await {
         Ok(v) => v,
         Err(e) if e.kind() == ErrorKind::EvaHIAuthenticationRequired => {
-            let mut je = rjrpc::JrpcException::new(401, "".to_owned());
+            let mut je = rjrpc::JrpcException::new(401, String::new());
             je.set_header(
                 "www-authenticate".to_owned(),
                 "Basic realm=\"?\"".to_owned(),

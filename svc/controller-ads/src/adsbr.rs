@@ -190,7 +190,7 @@ impl Var {
         Ok(match self.kind {
             Kind::Bool => {
                 let val: bool = value.clone().try_into()?;
-                vec![if val { 1 } else { 0 }]
+                vec![u8::from(val)]
             }
             Kind::Int => TryInto::<i16>::try_into(value.clone())?.as_bytes().to_vec(),
             Kind::Dint => TryInto::<i32>::try_into(value.clone())?.as_bytes().to_vec(),
@@ -225,7 +225,7 @@ impl Var {
             Kind::Usint => Value::U8(value.try_into()?),
             Kind::Bool => {
                 if let Value::Bool(v) = value {
-                    Value::U8(if v { 1 } else { 0 })
+                    Value::U8(u8::from(v))
                 } else {
                     Value::U8(value.try_into()?)
                 }
@@ -572,7 +572,7 @@ async fn read_vals_multi(vars: &[&Var]) -> EResult<Vec<EResult<Value>>> {
             if r.code == 0 {
                 if let Some(data) = r.data {
                     if data.len() == var.buf_size() {
-                        result.push(parse_buf(&data, *var));
+                        result.push(parse_buf(&data, var));
                     } else {
                         result.push(Err(Error::io("truncated data received")));
                     }

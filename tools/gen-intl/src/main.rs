@@ -139,7 +139,7 @@ fn main() -> EResult<()> {
                 let mut lang_msg_ids = msg_ids.clone();
                 let write_header = if po_fname.exists() {
                     let mut existing: HashSet<&str> = HashSet::new();
-                    let data = fs::read_to_string(&po_fname)?;
+                    let data = fs::read_to_string(po_fname)?;
                     for line in data.split('\n') {
                         if let Some(message) = line.strip_prefix("msgid ") {
                             let mut msgid = message.trim();
@@ -187,7 +187,7 @@ fn main() -> EResult<()> {
                 let mo_fname = po_fname.with_extension("mo");
                 let need_compile = if mo_fname.exists() {
                     let mo_metadata = fs::metadata(&mo_fname)?;
-                    let po_metadata = fs::metadata(&po_fname)?;
+                    let po_metadata = fs::metadata(po_fname)?;
                     mo_metadata.modified()? < po_metadata.modified()?
                 } else {
                     true
@@ -207,7 +207,7 @@ fn main() -> EResult<()> {
                 }
             }
             Command::Stat => {
-                let data = fs::read_to_string(&po_fname)?;
+                let data = fs::read_to_string(po_fname)?;
                 let mut total = 0;
                 let mut translated = 0;
                 for line in data.split('\n') {

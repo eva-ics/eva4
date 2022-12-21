@@ -1060,7 +1060,7 @@ impl RpcHandlers for BusApi {
                         write!(update_command, " >> {} 2>&1)&", log_file.to_string_lossy())
                             .map_err(Error::failed)?;
                         let _r = tokio::process::Command::new("sh")
-                            .args(&["-c", &update_command])
+                            .args(["-c", &update_command])
                             .spawn()?
                             .wait()
                             .await?;

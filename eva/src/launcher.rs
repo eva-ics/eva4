@@ -199,7 +199,7 @@ impl Service {
                 let mut buf = vec![SERVICE_PAYLOAD_INITIAL];
                 let payload = pack(&initial)?;
                 let payload_len: u32 = payload.len().try_into().map_err(Error::failed)?;
-                buf.extend(&payload_len.to_le_bytes());
+                buf.extend(payload_len.to_le_bytes());
                 buf.extend(&payload);
                 match bmart::process::command(
                     command,

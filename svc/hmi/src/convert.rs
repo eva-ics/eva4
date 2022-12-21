@@ -28,9 +28,9 @@ impl<'a> Convert<'a> {
     }
 }
 
-pub async fn payload<'a>(
+pub async fn payload(
     mut data: Value,
-    c: Convert<'a>,
+    c: Convert<'_>,
 ) -> EResult<(Vec<u8>, Option<&'static String>)> {
     if let Some(lang) = c.lang {
         data = crate::I18N

@@ -260,7 +260,7 @@ async fn bus_get(
                     result.push(RegisterValue::new0(
                         reg_kind,
                         rn as u16,
-                        Value::U8(if val { 1 } else { 0 }),
+                        Value::U8(u8::from(val)),
                     ));
                 }
                 Ok(result)
@@ -334,15 +334,9 @@ pub fn parse_block_value(
     Ok(match tp {
         ModbusType::Bit => {
             let reg_value = get!(offset);
-            Value::U8(
-                if reg_value.get_bit(u32::from(
-                    bit.ok_or_else(|| Error::invalid_params("bit not specified"))?,
-                )) {
-                    1
-                } else {
-                    0
-                },
-            )
+            Value::U8(u8::from(reg_value.get_bit(u32::from(
+                bit.ok_or_else(|| Error::invalid_params("bit not specified"))?,
+            ))))
         }
         ModbusType::Uint16 => Value::U16(get!(offset)),
         ModbusType::Int16 => Value::I16(get!(offset) as i16),

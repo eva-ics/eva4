@@ -40,7 +40,7 @@ impl Server for SerialServer {
 }
 
 impl SerialServer {
-    pub async fn create(
+    pub fn create(
         path: &str,
         unit: u8,
         timeout: Duration,

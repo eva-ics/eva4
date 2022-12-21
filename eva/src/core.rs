@@ -762,7 +762,7 @@ impl Core {
                     p
                 } else if let Some(state) = item.state() {
                     eva_common::actions::Params::new_unit(
-                        if state.lock().status() == 0 { 1 } else { 0 },
+                        ItemStatus::from(state.lock().status() == 0),
                         None,
                     )
                 } else {
@@ -1088,7 +1088,7 @@ impl Core {
                     LvarOp::Toggle => {
                         trace!("toggling lvar {} state", oid);
                         let st = state.status();
-                        state.force_set_state(Some(if st == 0 { 1 } else { 0 }), None, ieid);
+                        state.force_set_state(Some(ItemStatus::from(st == 0)), None, ieid);
                         None
                     }
                     LvarOp::Increment => {

@@ -25,11 +25,11 @@ struct Bus {
 }
 
 impl Bus {
-    pub async fn create(path: &str, timeout: Duration) -> EResult<Self> {
-        Ok(Self {
+    pub fn new(path: &str, timeout: Duration) -> Self {
+        Self {
             svc: path.to_owned(),
             timeout,
-        })
+        }
     }
 }
 
@@ -53,7 +53,7 @@ struct Serial {
 }
 
 impl Serial {
-    pub async fn create(
+    pub fn create(
         path: &str,
         proto: rmodbus::ModbusProto,
         timeout: Duration,
@@ -374,13 +374,12 @@ impl Client {
             ProtocolKind::Rtu | ProtocolKind::Ascii => {
                 let proto = kind.into();
                 let client: Box<dyn ModbusClient + Send + Sync> =
-                    Box::new(Serial::create(path, proto, timeout, frame_delay).await?);
+                    Box::new(Serial::create(path, proto, timeout, frame_delay)?);
                 (client, proto)
             }
             ProtocolKind::Native => {
                 let proto = kind.into();
-                let client: Box<dyn ModbusClient + Send + Sync> =
-                    Box::new(Bus::create(path, timeout).await?);
+                let client: Box<dyn ModbusClient + Send + Sync> = Box::new(Bus::new(path, timeout));
                 (client, proto)
             }
         };
