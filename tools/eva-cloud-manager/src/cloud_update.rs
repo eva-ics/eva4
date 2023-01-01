@@ -4,7 +4,7 @@ use eva_client::{EvaClient, EvaCloudClient, NodeMap, SystemInfo, VersionInfo};
 use eva_common::common_payloads::{NodeData, ParamsId};
 use eva_common::prelude::*;
 use log::{error, info, warn};
-use prettytable::{cell, row};
+use prettytable::row;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
