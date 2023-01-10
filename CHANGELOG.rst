@@ -4,6 +4,8 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2023-01-10 build 2023011001: minor fixes
+* 2023-01-10 build 2023011001: public_api_log HMI svc option
 * 2022-12-12 v4 installer: Fedora/RHEL installer fixes
 * 2022-12-06 build 2022120601: File manager service "sh" EAPI method
 * 2022-12-04 build 2022120401: HMI api_log.get HTTP method
