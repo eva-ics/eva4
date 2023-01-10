@@ -22,6 +22,8 @@ config:
     stick_ip: true
     allow_list_neighbors: false
   keep_api_log: 86400
+  # any user can get API log for everyone (false = admins only)
+  # public_api_log: true
   ui_path: ui
   pvt_path: pvt
   # default database service ID for item.state_log & item.state_history,

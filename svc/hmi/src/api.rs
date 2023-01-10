@@ -920,7 +920,7 @@ async fn method_api_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     } else {
         crate::db::ApiLogFilter::deserialize(params)?
     };
-    if !aci.acl().check_admin() {
+    if !crate::public_api_log() && !aci.acl().check_admin() {
         if let Some(token) = aci.token() {
             if let Some(ref f_user) = filter.user {
                 if token.user() != f_user {

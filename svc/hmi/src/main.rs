@@ -55,9 +55,16 @@ lazy_static! {
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
+static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
 #[inline]
 fn buf_size() -> usize {
     BUF_SIZE.load(atomic::Ordering::SeqCst)
+}
+
+#[inline]
+fn public_api_log() -> bool {
+    PUBLIC_API_LOG.load(atomic::Ordering::SeqCst)
 }
 
 #[cfg(not(feature = "std-alloc"))]
@@ -112,6 +119,8 @@ struct Config {
     session: SessionConfig,
     #[serde(default)]
     keep_api_log: u32,
+    #[serde(default)]
+    public_api_log: bool,
     mime_types: Option<String>,
     #[serde(default = "default_buf_size")]
     buf_size: usize,
@@ -163,6 +172,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     DEFAULT_HISTORY_DB_SVC
         .set(config.default_history_db_svc)
         .map_err(|_| Error::core("Unable to set DEFAULT_DB"))?;
+    PUBLIC_API_LOG.store(config.public_api_log, atomic::Ordering::SeqCst);
     BUF_SIZE.store(config.buf_size, atomic::Ordering::SeqCst);
     api::set_timeout(timeout)?;
     api::set_auth_svcs(config.auth_svcs)?;
