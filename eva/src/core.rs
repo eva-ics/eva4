@@ -752,7 +752,7 @@ impl Core {
             }
             None
         };
-        let (action, listener, core_listener) = {
+        let (action, listener, core_listener, action_timeout) = {
             let inv = self.inventory.read().await;
             if let Some(item) = inv.get_item(oid) {
                 if !item.enabled() {
@@ -774,19 +774,23 @@ impl Core {
                             uuid: u,
                             oid,
                             params: a_params,
-                            timeout: if let Some(n) = self.nodes.lock().unwrap().get(source.node())
-                            {
-                                n.timeout()
-                            } else {
-                                None
-                            },
+                            timeout: None,
                             priority,
                             config: None,
                             node: Some(source.node().to_owned()),
                             target: source.svc().to_owned(),
                             wait,
                         });
-                    (action, listener, core_listener)
+                    (
+                        action,
+                        listener,
+                        core_listener,
+                        if let Some(n) = self.nodes.lock().unwrap().get(source.node()) {
+                            n.timeout()
+                        } else {
+                            None
+                        },
+                    )
                 } else if let Some(action_params) = item.action() {
                     let (action, listener, core_listener) =
                         actmgr::Action::create(actmgr::ActionArgs {
@@ -812,7 +816,7 @@ impl Core {
                         let rpc = self.rpc.get().unwrap();
                         announce_local_state(item.oid(), &s_state, &rpc.client()).await?;
                     }
-                    (action, listener, core_listener)
+                    (action, listener, core_listener, None)
                 } else {
                     return Err(Error::failed(format!("{oid} action not configured")));
                 }
@@ -878,7 +882,7 @@ impl Core {
                 Ok(ActionLaunchResult::Local(info))
             }
         } else {
-            let timeout = action.timeout().unwrap_or(self.timeout);
+            let timeout = action_timeout.unwrap_or(self.timeout);
             let res = self
                 .action_manager
                 .launch_action(action, None, timeout)
