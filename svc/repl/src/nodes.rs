@@ -142,7 +142,7 @@ async fn reload_node(
             QoS::Processed,
         )
         .await?;
-    mark_node(name, true, Some(res.info), false).await?;
+    mark_node(name, true, Some(res.info), false, Some(timeout)).await?;
     Ok(())
 }
 
@@ -218,7 +218,7 @@ async fn reloader(
         }
         reloader_active.store(true, atomic::Ordering::SeqCst);
         if let Err(e) = reload_node(name, &key_id, compress, node_timeout, trusted).await {
-            mark_node(name, false, None, false).await?;
+            mark_node(name, false, None, false, None).await?;
             error!("failed to reload the node {}: {}", name, e);
         }
         reloader_active.store(false, atomic::Ordering::SeqCst);
@@ -251,7 +251,7 @@ async fn pinger(name: &str, ready: triggered::Listener) -> EResult<()> {
             && !reloader_active.load(atomic::Ordering::SeqCst)
         {
             if let Err(e) = ping_node(name, &key_id, compress, node_timeout).await {
-                mark_node(name, false, None, false).await?;
+                mark_node(name, false, None, false, None).await?;
                 error!("failed to ping the node {}: {}", name, e);
             }
         }
@@ -446,6 +446,7 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
                 pack(&NodeStateEvent {
                     status: NodeStatus::Removed,
                     info: None,
+                    timeout: None,
                 })?
                 .into(),
                 QoS::No,
@@ -469,6 +470,7 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
             pack(&NodeStateEvent {
                 status: NodeStatus::Offline,
                 info: None,
+                timeout: None,
             })?
             .into(),
             QoS::No,
@@ -560,6 +562,7 @@ pub async fn remove_node(name: &str, nodes: &mut HashMap<String, Node>) -> EResu
             pack(&NodeStateEvent {
                 status: NodeStatus::Removed,
                 info: None,
+                timeout: None,
             })?
             .into(),
             QoS::No,
@@ -573,6 +576,7 @@ pub async fn mark_node(
     online: bool,
     info: Option<NodeInfo>,
     force: bool,
+    timeout: Option<Duration>,
 ) -> EResult<()> {
     {
         let mut nodes = NODES.write().await;
@@ -593,7 +597,7 @@ pub async fn mark_node(
         } else if !force {
             return Ok(());
         }
-    }
+    };
     crate::RPC
         .get()
         .unwrap()
@@ -609,6 +613,7 @@ pub async fn mark_node(
                     NodeStatus::Offline
                 },
                 info,
+                timeout,
             })?
             .into(),
             QoS::No,

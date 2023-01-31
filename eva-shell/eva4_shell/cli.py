@@ -790,9 +790,11 @@ class CLI:
                         d['build'] = info.get('build')
                     except KeyError:
                         pass
-            print_result(
-                data,
-                cols=['name', 'svc', 'type', 'online', 'version', 'build'])
+            print_result(data,
+                         cols=[
+                             'name', 'svc', 'type', 'online', 'timeout',
+                             'version', 'build'
+                         ])
         else:
             data = call_rpc('node.list', target=repl_svc)
             print_result(data,

@@ -235,12 +235,24 @@ async fn replication_node_state_handler(
             match unpack::<NodeStateEvent>(frame.payload()) {
                 Ok(nse) => match nse.status {
                     NodeStatus::Online => {
-                        core.mark_source_online(frame.subtopic(), frame.sender(), true, nse.info)
-                            .await;
+                        core.mark_source_online(
+                            frame.subtopic(),
+                            frame.sender(),
+                            true,
+                            nse.info,
+                            nse.timeout,
+                        )
+                        .await;
                     }
                     NodeStatus::Offline => {
-                        core.mark_source_online(frame.subtopic(), frame.sender(), false, None)
-                            .await;
+                        core.mark_source_online(
+                            frame.subtopic(),
+                            frame.sender(),
+                            false,
+                            None,
+                            nse.timeout,
+                        )
+                        .await;
                     }
                     NodeStatus::Removed => core.destroy_source(frame.subtopic()).await,
                 },
@@ -443,6 +455,10 @@ impl RpcHandlers for BusApi {
                         online: bool,
                         #[serde(skip_serializing_if = "Option::is_none")]
                         info: Option<&'a NodeInfo>,
+                        #[serde(
+                            serialize_with = "eva_common::tools::serialize_opt_duration_as_f64"
+                        )]
+                        timeout: Option<Duration>,
                     }
                     let nodes = self.core.nodes().lock().unwrap();
                     let mut info: Vec<NodeData> = nodes
@@ -453,6 +469,7 @@ impl RpcHandlers for BusApi {
                             online: n.online(),
                             remote: true,
                             info: n.info(),
+                            timeout: n.timeout(),
                         })
                         .collect();
                     let li = crate::local_node_info();
@@ -462,6 +479,7 @@ impl RpcHandlers for BusApi {
                         online: true,
                         remote: false,
                         info: Some(&li),
+                        timeout: Some(self.core.timeout()),
                     });
                     info.sort();
                     Ok(Some(pack(&info)?))

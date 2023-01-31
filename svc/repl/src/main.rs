@@ -170,10 +170,12 @@ async fn mark_all_offline() -> EResult<()> {
     let offline_payload: Vec<u8> = pack(&NodeStateEvent {
         status: NodeStatus::Offline,
         info: None,
+        timeout: None,
     })?;
     let remove_payload: Vec<u8> = pack(&NodeStateEvent {
         status: NodeStatus::Removed,
         info: None,
+        timeout: None,
     })?;
     for t in node_topics {
         client
@@ -284,7 +286,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 k,
                 node.name()
             );
-            nodes::mark_node(node.name(), false, None, true).await?;
+            nodes::mark_node(node.name(), false, None, true, None).await?;
             n.push(node);
         }
         n

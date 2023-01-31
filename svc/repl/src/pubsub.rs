@@ -274,7 +274,7 @@ async fn discovery_handler(
         match p.status() {
             eva_sdk::pubsub::NodeStatus::Running => nodes::append_discovered_node(name).await?,
             eva_sdk::pubsub::NodeStatus::Terminating => {
-                nodes::mark_node(name, false, None, false).await?;
+                nodes::mark_node(name, false, None, false, None).await?;
             }
         }
     }

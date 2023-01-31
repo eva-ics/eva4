@@ -292,21 +292,21 @@ pub fn start_node_checker(core: Arc<Core>) {
     let c = core.clone();
     let node_checker_fut = tokio::spawn(async move {
         loop {
-            let mut ntc: HashMap<String, Vec<String>> = HashMap::new();
+            let mut ntc: HashMap<String, Vec<(String, Option<Duration>)>> = HashMap::new();
             // insert owned to release mutex asap
             for (k, v) in c.nodes.lock().unwrap().iter() {
                 let node_name = k.clone();
                 if let Some(s) = ntc.get_mut(v.svc().unwrap()) {
-                    s.push(node_name);
+                    s.push((node_name, v.timeout()));
                 } else {
-                    ntc.insert(v.svc().unwrap().to_owned(), vec![node_name]);
+                    ntc.insert(v.svc().unwrap().to_owned(), vec![(node_name, v.timeout())]);
                 }
             }
             for (s, nodes) in ntc {
                 if let Ok(v) = c.service_manager.is_service_online(&s, timeout).await {
                     if !v {
-                        for node in nodes {
-                            c.mark_source_online(&node, &s, false, None).await;
+                        for (node, timeout) in nodes {
+                            c.mark_source_online(&node, &s, false, None, timeout).await;
                         }
                     }
                 }
@@ -774,7 +774,12 @@ impl Core {
                             uuid: u,
                             oid,
                             params: a_params,
-                            timeout: None,
+                            timeout: if let Some(n) = self.nodes.lock().unwrap().get(source.node())
+                            {
+                                n.timeout()
+                            } else {
+                                None
+                            },
                             priority,
                             config: None,
                             node: Some(source.node().to_owned()),
@@ -873,9 +878,10 @@ impl Core {
                 Ok(ActionLaunchResult::Local(info))
             }
         } else {
+            let timeout = action.timeout().unwrap_or(self.timeout);
             let res = self
                 .action_manager
-                .launch_action(action, None, self.timeout)
+                .launch_action(action, None, timeout)
                 .await
                 .log_err()?
                 .ok_or_else(|| Error::invalid_data("no action info from svc"))?;
@@ -944,6 +950,7 @@ impl Core {
         svc: &str,
         online: bool,
         info: Option<NodeInfo>,
+        timeout: Option<Duration>,
     ) -> bool {
         macro_rules! log_node_online {
             () => {
@@ -972,9 +979,13 @@ impl Core {
             if let Some(i) = info {
                 node.update_info(i);
             }
+            node.update_timeout(timeout);
         } else {
             log_node_online!();
-            nodes.insert(source_id.to_owned(), NodeData::new(Some(svc), online, info));
+            nodes.insert(
+                source_id.to_owned(),
+                NodeData::new(Some(svc), online, info, timeout),
+            );
         }
         true
     }
@@ -985,8 +996,9 @@ impl Core {
         svc: &str,
         online: bool,
         info: Option<NodeInfo>,
+        timeout: Option<Duration>,
     ) {
-        if self.mark_core_node_online(source_id, svc, online, info) {
+        if self.mark_core_node_online(source_id, svc, online, info, timeout) {
             self.inventory
                 .read()
                 .await

@@ -1,4 +1,4 @@
-__version__ = '0.0.25'
+__version__ = '0.0.26'
 
 import evaics.sdk as sdk
 from types import SimpleNamespace
@@ -43,10 +43,12 @@ def get_key_val(key_id):
         return key
 
 
-def mark_node(node, status, info=None):
+def mark_node(node, status, info=None, timeout=None):
     payload = {'status': status}
     if info is not None:
         payload['info'] = info
+    if timeout is not None:
+        payload['timeout'] = timeout
     _d.service.bus.send(
         f'RPL/NODE/{node}',
         busrt.client.Frame(pack(payload), tp=busrt.client.OP_PUBLISH))
@@ -247,13 +249,14 @@ class LegacyNode:
                 if i == 0:
                     self.build = result['product_build']
                     self.version = result['version']
-            logger.warning(f'{self.id} ping passed')
+            logger.debug(f'{self.id} ping passed')
             mark_node(self.id,
                       'online',
                       info={
                           'build': self.build,
                           'version': self.version
-                      })
+                      },
+                      timeout=self.timeout)
         except:
             sdk.log_traceback()
             self.online = False
@@ -347,7 +350,8 @@ class LegacyNode:
                       info={
                           'build': self.build,
                           'version': self.version
-                      })
+                      },
+                      timeout=self.timeout)
         except:
             sdk.log_traceback()
             self.online = False
