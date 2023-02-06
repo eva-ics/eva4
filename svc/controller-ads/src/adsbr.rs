@@ -937,9 +937,7 @@ pub async fn write_by_names_multi(
         .collect();
     let op = Op::new(timeout);
     for _ in 0..=retries {
-        let t = if let Ok(t) = op.timeout() {
-            t
-        } else {
+        let Ok(t) = op.timeout() else {
             return Ok(jobs.iter().map(|job| job.name.clone()).collect());
         };
         if let Ok(failed_symbols) = write_jobs_multi(&jobs, t, verify).await {

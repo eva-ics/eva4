@@ -51,9 +51,8 @@ async fn handle_tcp(
 ) -> EResult<()> {
     loop {
         let mut buf: ModbusFrameBuf = [0; 256];
-        let len = match tokio::time::timeout(keep_alive_timeout, stream.read(&mut buf)).await {
-            Ok(v) => v,
-            Err(_) => break,
+        let Ok(len) = tokio::time::timeout(keep_alive_timeout, stream.read(&mut buf)).await else {
+            break
         };
         if len? == 0 {
             break;
