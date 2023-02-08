@@ -183,6 +183,7 @@ set_password:
       typ: String
       des: New user's password
       req: true
+  ret: if the password has been changed, the session is dropped and the user must re-login
 item.state:
   des: Gets state of item(s)
   par:
