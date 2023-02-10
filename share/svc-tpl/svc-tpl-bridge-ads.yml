@@ -8,8 +8,8 @@ config:
   #ping_ams_netid: 192.168.1.100.1.1
   #ping_ams_port: 200
   # store ping result (ADS state,
-  # https://infosys.beckhoff.com/english.php?content=../content/1033/tc3_adsnetref/7313361035.html&id=)
-  #ping_ads_state: sensor:ads/ads1
+  # https://infosys.beckhoff.com/content/1033/tc3_adsnetref/7313023115.html)
+  #store_ads_state: sensor:ads/ads1
   #set if the local address can not be detected automatically (e.g. tunnels
   # are used)
   #local_ams_netid: 192.168.1.2.1.1

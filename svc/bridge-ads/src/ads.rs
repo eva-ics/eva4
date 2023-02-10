@@ -116,11 +116,11 @@ pub async fn ping(addr: AmsAddr) -> EResult<u16> {
 pub async fn ping_worker(
     addr: AmsAddr,
     timeout: Duration,
-    ping_ads_state: Option<OID>,
+    store_ads_state: Option<OID>,
 ) -> EResult<()> {
     let mut int = tokio::time::interval(timeout / 2);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let ping_oid_topic = ping_ads_state.map(|v| format!("{}{}", RAW_STATE_TOPIC, v.as_path()));
+    let ping_oid_topic = store_ads_state.map(|v| format!("{}{}", RAW_STATE_TOPIC, v.as_path()));
     let rpc = crate::RPC.get().unwrap();
     while !eva_sdk::service::svc_is_terminating() {
         match ping(addr).await {

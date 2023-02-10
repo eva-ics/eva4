@@ -105,7 +105,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("Unable to set RPC"))?;
     if initial.is_mode_rtf() {
-        if let Some(oid) = config.ping_ads_state {
+        if let Some(oid) = config.store_ads_state {
             let event = RawStateEvent::new0(-1);
             rpc.client()
                 .lock()
@@ -137,7 +137,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .set(Mutex::new(ads_client))
         .map_err(|_| Error::core("Unable to set ADS_CLIENT"))?;
     tokio::spawn(async move {
-        if let Err(e) = crate::ads::ping_worker(ping_device, timeout, config.ping_ads_state).await {
+        if let Err(e) = crate::ads::ping_worker(ping_device, timeout, config.store_ads_state).await
+        {
             error!("ping worker critical error: {}", e);
             poc();
         }
