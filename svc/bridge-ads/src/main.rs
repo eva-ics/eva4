@@ -1,10 +1,13 @@
 use ::ads::AmsAddr;
+use eva_common::events::{RawStateEvent, RAW_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -27,6 +30,7 @@ lazy_static! {
     static ref ADS_CLIENT: OnceCell<Mutex<::ads::Client>> = <_>::default();
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref VERIFY_DELAY: OnceCell<Option<Duration>> = <_>::default();
+    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
 }
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -98,6 +102,23 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .required("length"),
     );
     let rpc = initial.init_rpc(eapi::Handlers::new(info)).await?;
+    RPC.set(rpc.clone())
+        .map_err(|_| Error::core("Unable to set RPC"))?;
+    if initial.is_mode_rtf() {
+        if let Some(oid) = config.ping_ads_state {
+            let event = RawStateEvent::new0(-1);
+            rpc.client()
+                .lock()
+                .await
+                .publish(
+                    &format!("{}{}", RAW_STATE_TOPIC, oid.as_path()),
+                    pack(&event)?.into(),
+                    QoS::No,
+                )
+                .await?;
+        }
+        return Ok(());
+    }
     let client = rpc.client().clone();
     initial.drop_privileges()?;
     svc_init_logs(&initial, client.clone())?;
@@ -116,7 +137,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .set(Mutex::new(ads_client))
         .map_err(|_| Error::core("Unable to set ADS_CLIENT"))?;
     tokio::spawn(async move {
-        crate::ads::ping_worker(ping_device, timeout).await;
+        if let Err(e) = crate::ads::ping_worker(ping_device, timeout, config.ping_ads_state).await {
+            error!("ping worker critical error: {}", e);
+            poc();
+        }
     });
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());

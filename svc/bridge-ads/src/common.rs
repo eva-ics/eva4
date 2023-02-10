@@ -1,3 +1,4 @@
+use eva_common::OID;
 use serde::Deserialize;
 
 #[inline]
@@ -27,4 +28,5 @@ pub struct Config {
     pub ping_ams_netid: Option<String>,
     #[serde(default = "default_ams_ping_port")]
     pub ping_ams_port: u16,
+    pub ping_ads_state: Option<OID>,
 }

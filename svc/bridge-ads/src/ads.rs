@@ -1,5 +1,9 @@
 use crate::get_client;
 use ::ads::AmsAddr;
+use busrt::rpc::Rpc;
+use busrt::QoS;
+use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::payload::pack;
 use eva_common::prelude::*;
 use eva_sdk::service::poc;
 use log::error;
@@ -96,29 +100,56 @@ impl ParseAmsNetId for String {
     }
 }
 
-fn ping_sync(addr: AmsAddr) -> EResult<()> {
+fn ping_sync(addr: AmsAddr) -> EResult<u16> {
     let client = crate::ADS_CLIENT.get().unwrap().lock().unwrap();
     let device = client.device(addr);
     device
         .get_state()
-        .map_err(|e| Error::io(format!("device state query error: {}", e)))?;
-    Ok(())
+        .map_err(|e| Error::io(format!("device state query error: {}", e)))
+        .map(|v| v.0 as u16)
 }
 
-pub async fn ping(addr: AmsAddr) -> EResult<()> {
+pub async fn ping(addr: AmsAddr) -> EResult<u16> {
     tokio::task::spawn_blocking(move || ping_sync(addr)).await?
 }
 
-pub async fn ping_worker(addr: AmsAddr, timeout: Duration) {
+pub async fn ping_worker(
+    addr: AmsAddr,
+    timeout: Duration,
+    ping_ads_state: Option<OID>,
+) -> EResult<()> {
     let mut int = tokio::time::interval(timeout / 2);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let ping_oid_topic = ping_ads_state.map(|v| format!("{}{}", RAW_STATE_TOPIC, v.as_path()));
+    let rpc = crate::RPC.get().unwrap();
     while !eva_sdk::service::svc_is_terminating() {
-        if let Err(e) = ping(addr).await {
-            error!("ADS ping error: {}", e);
-            poc();
+        match ping(addr).await {
+            Ok(state) => {
+                if let Some(ref topic) = ping_oid_topic {
+                    let event = RawStateEventOwned::new(1, Value::U16(state));
+                    rpc.client()
+                        .lock()
+                        .await
+                        .publish(topic, pack(&event)?.into(), QoS::No)
+                        .await?;
+                }
+            }
+            Err(e) => {
+                error!("ADS ping error: {}", e);
+                if let Some(ref topic) = ping_oid_topic {
+                    let event = RawStateEventOwned::new0(-1);
+                    rpc.client()
+                        .lock()
+                        .await
+                        .publish(topic, pack(&event)?.into(), QoS::No)
+                        .await?;
+                }
+                poc();
+            }
         }
         int.tick().await;
     }
+    Ok(())
 }
 
 fn read_sync(addr: AmsAddr, group: u32, offset: u32, size: usize) -> EResult<Vec<u8>> {
