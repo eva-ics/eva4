@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.0-stable
 ============
 
+* 2022-02-10 build 2023021001: ADS bridge stores ADS state into a sensor
 * 2022-01-31 build 2023013102: use node timeout for remote actions
 * 2022-01-30 eva-js-framework 0.3.45: bulk API calls
 * 2023-01-10 build 2023011001: minor fixes
