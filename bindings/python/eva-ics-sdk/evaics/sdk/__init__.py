@@ -488,3 +488,150 @@ def no_rpc_method():
 def log_traceback():
     import traceback
     print(traceback.format_exc(), flush=True, file=sys.stderr)
+
+
+class ACI:
+
+    def __init__(self, aci_payload):
+        self.auth = aci_payload.get('auth')
+        self.token_mode = aci_payload.get('token_mode')
+        self.user = aci_payload.get('u')
+        self.acl = aci_payload.get('acl')
+
+    def is_writable(self):
+        return self.auth != 'token' or self.token_mode != 'readonly'
+
+
+class XCall:
+
+    def __init__(self, payload):
+        self.method = payload.get('method')
+        self.params = payload.get('params', {})
+        self.aci = ACI(payload.get('aci', {}))
+        self.acl = payload.get('acl', {})
+
+    def get_items_allow_deny_reading(self):
+        if self.check_admin():
+            return (['#'], [''])
+        else:
+            allow = set()
+            for oid in self.acl.get('read', {}).get('items', []):
+                allow.add(OID(oid))
+            for oid in self.acl.get('write', {}).get('items', []):
+                allow.add(OID(oid))
+            return list(allow)
+
+    def is_writable(self):
+        return self.aci.is_writable()
+
+    def is_admin(self):
+        return self.acl.get('admin')
+
+    def check_op(self, op):
+        return self.is_admin() or op in self.acl.get('ops', [])
+
+    def is_item_readable(self, oid):
+        return self.is_admin() or oid_match(
+            oid,
+            self.acl.get('read', {}).get('items', [])) or oid_match(
+                oid,
+                self.acl.get('write', {}).get('items', []))
+
+    def is_item_writable(self, oid):
+        return self.is_admin() or (
+            oid_match(oid,
+                      self.acl.get('write', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny', {}).get('items', [])))
+
+    def is_pvt_readable(self, path):
+        return self.is_admin() or (
+            path_match(path,
+                       self.acl.get('read', {}).get('pvt', [])) and
+            not path_match(path,
+                           self.acl.get('deny', {}).get('pvt', [])))
+
+
+def oid_match(oid, oid_masks):
+    return path_match(oid.to_path(), [OID(o).to_path() for o in oid_masks])
+
+
+def path_match(path, masks):
+    if '#' in masks or path in masks:
+        return True
+    for mask in masks:
+        p = mask.find('#')
+        if p > -1 and mask[:p] == path[:p]:
+            return True
+        if mask.find('+') > -1:
+            g1 = mask.split('/')
+            g2 = path.split('/')
+            if len(g1) == len(g2):
+                match = True
+                for i in range(0, len(g1)):
+                    if g1[i] != '+' and g1[i] != g2[i]:
+                        match = False
+                        break
+                if match:
+                    return True
+    return False
+
+
+def self_test():
+    assert path_match('content/data', ['#', 'content'])
+    assert not path_match('content/data', ['content'])
+    assert path_match('content/data', ['content/+'])
+    assert path_match('content/data', ['+/data'])
+    assert not path_match('content/data', ['content/+/data'])
+    assert path_match('content/data', ['content/data', 'content/+/data'])
+
+    payload = {
+        'method': 'list',
+        'params': {
+            'i': 'test'
+        },
+        'aci': {
+            'auth': 'token',
+            'token_mode': 'normal',
+            'u': 'admin',
+            'acl': 'admin'
+        },
+        'acl': {
+            'id': 'admin',
+            'read': {
+                'items': ['unit:#'],
+                'pvt': ['data/#'],
+                'rpvt': []
+            },
+            'write': {
+                'items': []
+            },
+            'deny': {
+                'items': [],
+                'pvt': ['data/secret'],
+                'rpvt': []
+            },
+            'ops': ['supervisor'],
+            'meta': {
+                'admin': ['any']
+            },
+            'from': ['admin']
+        }
+    }
+
+    xcall = XCall(payload)
+    assert xcall.method == 'list'
+    assert xcall.params.get('i') == 'test'
+    assert xcall.aci.auth == 'token'
+    assert xcall.aci.user == 'admin'
+    assert xcall.aci.is_writable()
+    assert xcall.is_item_readable(OID('unit:tests/t1'))
+    assert not xcall.is_item_readable(OID('sensor:tests/t1'))
+    assert xcall.is_pvt_readable('data/var1')
+    assert not xcall.is_pvt_readable('data2/var1')
+    assert not xcall.is_pvt_readable('data/secret')
+    assert xcall.check_op('supervisor')
+    assert not xcall.check_op('devices')
+
+
+self_test()
