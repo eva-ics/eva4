@@ -1,4 +1,4 @@
-__version__ = '0.0.38'
+__version__ = '0.0.39'
 
 import busrt
 import sys
@@ -550,6 +550,11 @@ class XCall:
                        self.acl.get('read', {}).get('pvt', [])) and
             not path_match(path,
                            self.acl.get('deny', {}).get('pvt', [])))
+
+    def require_writable(self):
+        if not self.is_writable():
+            raise busrt.rpc.RpcException('the session is read-only',
+                                         ERR_CODE_ACCESS_DENIED)
 
     def require_admin(self):
         if not self.is_admin:
