@@ -1,4 +1,4 @@
-__version__ = '0.0.37'
+__version__ = '0.0.38'
 
 import busrt
 import sys
@@ -550,6 +550,31 @@ class XCall:
                        self.acl.get('read', {}).get('pvt', [])) and
             not path_match(path,
                            self.acl.get('deny', {}).get('pvt', [])))
+
+    def require_admin(self):
+        if not self.is_admin:
+            raise busrt.rpc.RpcException('admin access required',
+                                         ERR_CODE_ACCESS_DENIED)
+
+    def require_op(self, op):
+        if not self.check_op(op):
+            raise busrt.rpc.RpcException(f'operation access required: {op}',
+                                         ERR_CODE_ACCESS_DENIED)
+
+    def require_item_read(self, oid):
+        if not self.is_item_readable(oid):
+            raise busrt.rpc.RpcException(f'read access required for: {oid}',
+                                         ERR_CODE_ACCESS_DENIED)
+
+    def require_item_write(self, oid):
+        if not self.is_item_writable(oid):
+            raise busrt.rpc.RpcException(f'write access required for: {oid}',
+                                         ERR_CODE_ACCESS_DENIED)
+
+    def require_pvt_read(self, path):
+        if not self.is_pvt_readable(path):
+            raise busrt.rpc.RpcException(f'read access required for: {path}',
+                                         ERR_CODE_ACCESS_DENIED)
 
 
 def oid_match(oid, oid_masks):
