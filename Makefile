@@ -61,3 +61,6 @@ update-version:
 	find eva svc tools -name Cargo.toml -exec sed -i "s/^version = .*/version = \"${VERSION}\"/g" {} \;
 	sed -i "s/^VERSION=.*/VERSION=${VERSION}/g" update.sh
 	sed -i "s/^__version__ =.*/__version__ = '${VERSION}'/g" /opt/eva-doc/doc/conf.py
+
+repo-cleanup:
+	@./dev/repo-cleanup.sh
