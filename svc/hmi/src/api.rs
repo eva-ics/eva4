@@ -2,7 +2,7 @@ use crate::aaa::{self, Auth, Token};
 use crate::aci::ACI;
 use busrt::rpc::RpcClient;
 use busrt::QoS;
-use eva_common::acl::{Acl, OIDMask};
+use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::{IdOrListOwned, ParamsIdOrListOwned};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -920,7 +920,10 @@ async fn method_api_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     } else {
         crate::db::ApiLogFilter::deserialize(params)?
     };
-    if !crate::public_api_log() && !aci.acl().check_admin() {
+    if !crate::public_api_log()
+        && !aci.acl().check_admin()
+        && !aci.acl().check_op(acl::Op::Moderator)
+    {
         if let Some(token) = aci.token() {
             if let Some(ref f_user) = filter.user {
                 if token.user() != f_user {
