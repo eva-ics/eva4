@@ -1,0 +1,6 @@
+command: path/to/eva-svc-example-sensor-set
+bus:
+  path: var/bus.ipc
+config: {}
+user: nobody
+workers: 1

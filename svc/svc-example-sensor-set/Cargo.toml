@@ -1,0 +1,17 @@
+[package]
+name = "eva-svc-example-sensor-set"
+version = "4.0.0"
+edition = "2021"
+
+[dependencies]
+eva-common = { version = "0.1.186", features = ["events", "common-payloads", "payload", "acl"] }
+eva-sdk = { version = "0.1.112", features = ["hmi"] }
+tokio = { version = "1.20.1", features = ["full"] }
+async-trait = { version = "0.1.51" }
+serde = { version = "1.0.133", features = ["derive", "rc"] }
+log = "0.4.14"
+jemallocator = { version = "0.5.0" }
+once_cell = "1.13.1"
+
+[features]
+std-alloc = []

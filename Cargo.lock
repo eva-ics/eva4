@@ -1587,6 +1587,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-svc-example-sensor-set"
+version = "4.0.0"
+dependencies = [
+ "async-trait",
+ "eva-common",
+ "eva-sdk",
+ "jemallocator",
+ "log",
+ "once_cell",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "eva-svc-example-temp"
 version = "4.0.0"
 dependencies = [

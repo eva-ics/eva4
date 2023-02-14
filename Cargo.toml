@@ -4,6 +4,7 @@ members = [
   "eva",
   #"svc/svc-template",
   "svc/svc-example-temp",
+  "svc/svc-example-sensor-set",
   "svc/db-influx",
   "svc/db-sql",
   "svc/aaa-acl",
