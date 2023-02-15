@@ -7,7 +7,6 @@ use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
-use std::time::Duration;
 
 err_logger!();
 
@@ -16,7 +15,6 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Sensor state manipulations";
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -101,9 +99,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let rpc = initial.init_rpc(Handlers { info }).await?;
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("Unable to set RPC"))?;
-    TIMEOUT
-        .set(initial.timeout())
-        .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
     initial.drop_privileges()?;
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;
