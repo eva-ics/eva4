@@ -60,6 +60,8 @@ impl RpcHandlers for Handlers {
                             // check if the caller's ACL has write access to the provided OID
                             xp.acl.require_item_write(&params.i)?;
                             // set the sensor state
+                            // in this example the service does not check does the sensor really
+                            // exist in the core or not
                             let mut event = RawStateEventOwned::new0(params.status);
                             event.value = params.value;
                             let topic = format!("{}{}", RAW_STATE_TOPIC, params.i.as_path());
