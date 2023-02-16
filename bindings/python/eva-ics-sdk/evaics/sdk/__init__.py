@@ -164,8 +164,8 @@ def _action_event_payload(u, status, out=None, err=None, exitcode=None):
 
 class OID:
 
-    def __init__(self, s):
-        self.kind, self.full_id = s.split(':', maxsplit=1)
+    def __init__(self, s, from_path=False):
+        self.kind, self.full_id = s.split('/' if from_path else ':', maxsplit=1)
         self.oid = s
         self.id = s.rsplit('/', 1)[-1] if '/' in s else self.full_id
 
