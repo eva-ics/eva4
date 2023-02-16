@@ -191,11 +191,20 @@ class OID:
             from_path: construct OID from a path (kind/group(s)/id)
         """
         self.kind, self.full_id = s.split('/' if from_path else ':', maxsplit=1)
-        self.oid = f'{self.kind:self.full_id}'
+        self.oid = f'{self.kind}:{self.full_id}'
         self.id = s.rsplit('/', 1)[-1] if '/' in s else self.full_id
 
     def __str__(self):
         return self.oid
+
+    def __hash__(self):
+        return hash(self.oid)
+
+    def __eq__(self, other):
+        if isinstance(other, OID):
+            return self.oid == other.oid
+        else:
+            raise NotImplemented
 
     def to_path(self):
         """
@@ -599,15 +608,14 @@ class Service:
         elif event_kind == 'local':
             topic_pfx = LOCAL_STATE_TOPIC
         else:
-            raise ValueError(
-                'Invalid event kind (accepted: any, remote, remote_arcive or local'
-            )
+            raise ValueError('Invalid event kind (accepted:'
+                             ' any, remote, remote_arcive or local)')
         topics = []
         if oids:
             for oid in oids:
                 if isinstance(oid, str):
                     oid = OID(oid)
-                    topics.append(f'{topic_pfx}{oid.to_path()}')
+                topics.append(f'{topic_pfx}{oid.to_path()}')
             self.bus.subscribe(topics).wait_completed()
 
 
