@@ -123,6 +123,7 @@ def run():
     # * RPC client is disconnected from the bus
     # * the service gets a termination signal
     service.block()
+    # tell the core and other services that the service is terminating
     service.mark_terminating()
 
 
