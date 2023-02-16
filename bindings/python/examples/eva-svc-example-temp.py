@@ -22,6 +22,7 @@ _d = SimpleNamespace(logger=None,
 
 op_lock = threading.RLock()
 
+# the notification map, keeps info which sensors were already processed
 notified = {}
 
 
