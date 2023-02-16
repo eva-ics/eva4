@@ -71,6 +71,22 @@ ERR_CODE_BUS_BUSY = -32118
 ERR_CODE_BUS_NOT_DELIVERED = -32119
 ERR_CODE_BUS_TIMEOUT = -32120
 
+RAW_STATE_TOPIC = 'RAW/'
+LOCAL_STATE_TOPIC = 'ST/LOC/'
+REMOTE_STATE_TOPIC = 'ST/REM/'
+REMOTE_ARCHIVE_STATE_TOPIC = 'ST/RAR/'
+ANY_STATE_TOPIC = 'ST/+/'
+REPLICATION_STATE_TOPIC = 'RPL/ST/'
+REPLICATION_INVENTORY_TOPIC = 'RPL/INVENTORY/'
+REPLICATION_NODE_STATE_TOPIC = 'RPL/NODE/'
+LOG_INPUT_TOPIC = 'LOG/IN/'
+LOG_EVENT_TOPIC = 'LOG/EV/'
+LOG_CALL_TRACE_TOPIC = 'LOG/TR/'
+SERVICE_STATUS_TOPIC = 'SVC/ST'
+AAA_ACL_TOPIC = 'AAA/ACL/'
+AAA_KEY_TOPIC = 'AAA/KEY/'
+AAA_USER_TOPIC = 'AAA/USER/'
+
 pack = msgpack.dumps
 unpack = partial(msgpack.loads, raw=False)
 
@@ -163,28 +179,58 @@ def _action_event_payload(u, status, out=None, err=None, exitcode=None):
 
 
 class OID:
+    """
+    Base item OID class
+    """
 
     def __init__(self, s, from_path=False):
+        """
+        Constructs a new OID from string
+
+        Args:
+            from_path: construct OID from a path (kind/group(s)/id)
+        """
         self.kind, self.full_id = s.split('/' if from_path else ':', maxsplit=1)
-        self.oid = s
+        self.oid = f'{self.kind:self.full_id}'
         self.id = s.rsplit('/', 1)[-1] if '/' in s else self.full_id
 
     def __str__(self):
         return self.oid
 
     def to_path(self):
+        """
+        Converts OID to path
+        """
         return f'{self.kind}/{self.full_id}'
 
 
 class ServiceInfo:
+    """
+    Service info helper class
+    """
 
     def __init__(self, author='', description='', version=''):
+        """
+        Args:
+            author: service author
+            description: service description
+            version: service version
+        """
         self.author = author
         self.description = description
         self.version = version
         self.methods = {}
 
     def add_method(self, method, description='', required=[], optional=[]):
+        """
+        Add a method to service info help
+
+        Args:
+            method: method name
+            description: method description
+            required: list of required param names (strings)
+            optional: list of optional param names
+        """
         params = {}
         for p in required:
             params[p] = {'required': True}
@@ -205,6 +251,9 @@ class ServiceInfo:
 
 
 class Action:
+    """
+    Item action from bus event
+    """
 
     def __init__(self, event):
         a = unpack(event.get_payload())
@@ -216,6 +265,9 @@ class Action:
 
 
 class Controller:
+    """
+    Action handler helper class for controllers
+    """
 
     def __init__(self, bus):
         self.bus = bus
@@ -301,6 +353,9 @@ class EvaLogHandler(logging.Handler):
 
 
 class Service:
+    """
+    The primary service class
+    """
 
     def __init__(self):
         self.active = True
@@ -359,17 +414,31 @@ class Service:
             time.sleep(0.1)
 
     def is_mode_rtf(self):
+        """
+        Is service started in react-to-fail mode
+        """
         return self.initial.get('fail_mode', False)
 
     def is_mode_normal(self):
+        """
+        Is service started in normal mode
+        """
         return not self.initial.get('fail_mode', False)
 
     def need_ready(self):
+        """
+        Raises an exception if not ready
+
+        RPC helper method which raises an exception if the service is not ready
+        """
         if not self.active:
             raise busrt.rpc.RpcException('service not ready',
                                          ERR_CODE_INTERNAL_RPC)
 
     def get_config(self):
+        """
+        Get service configuration
+        """
         config = self.initial.get('config')
         if config is None:
             return {}
@@ -377,6 +446,9 @@ class Service:
             return config
 
     def init_bus(self):
+        """
+        Init the local bus
+        """
         bus_config = self.initial['bus']
         if bus_config['type'] != 'native':
             raise ValueError(f'bus {bus_config["type"]} is not supported')
@@ -387,11 +459,17 @@ class Service:
         self.bus.connect()
 
     def init_rpc(self, svc_info):
+        """
+        Init bus RPC layer
+        """
         self._svc_info = pack(svc_info.serialize())
         self.rpc = busrt.rpc.Rpc(self.bus)
         self.rpc.on_call = self._handle_rpc_call
 
     def wait_core(self, timeout=None, wait_forever=True):
+        """
+        Wait until the EVA ICS core is started
+        """
         if timeout is None:
             timeout = self.timeout.get('startup', self.timeout['default'])
         wait_until = time.perf_counter() + timeout
@@ -421,6 +499,9 @@ class Service:
             return self.on_rpc_call(event)
 
     def init_logs(self):
+        """
+        Initialize service logs
+        """
         level = self.initial['core']['log_level']
         logging.basicConfig(level=level)
         logger = logging.getLogger()
@@ -439,19 +520,31 @@ class Service:
         return logger
 
     def block(self):
+        """
+        Block the service until terminated
+        """
         sleep_step = self.sleep_step
         while self.active and self.bus.is_connected():
             time.sleep(sleep_step)
 
     def mark_ready(self):
+        """
+        Mark the service ready
+        """
         self._mark('ready')
 
     def mark_terminating(self):
+        """
+        Mark the service terminating
+        """
         self.active = False
         self.shutdown_requested = True
         self._mark('terminating')
 
     def drop_privileges(self):
+        """
+        Drop service process privileges
+        """
         user = self.initial.get('user')
         if user is not None:
             u = pwd.getpwnam(user)
@@ -468,6 +561,9 @@ class Service:
                                qos=0))
 
     def register_signals(self):
+        """
+        Register service process system signals
+        """
         signal.signal(signal.SIGINT, self._term_handler)
         signal.signal(signal.SIGTERM, self._term_handler)
 
@@ -475,22 +571,65 @@ class Service:
         self.active = False
 
     def is_active(self):
+        """
+        Check is the service active
+        """
         return self.active
 
     def is_shutdown_requested(self):
+        """
+        Check is the service shutdown requested
+        """
         return self.shutdown_requested
+
+    def subscribe_oids(self, oids, event_kind='any'):
+        """
+        subscribe bus to OID events
+
+        Args:
+            oids: list of OIDs or strings
+            event_kind: any, remote, remote_archive or local
+        """
+        if event_kind == 'any':
+            topic_pfx = ANY_STATE_TOPIC
+        elif event_kind == 'remote':
+            topic_pfx = REMOTE_STATE_TOPIC
+        elif event_kind == 'remote_archive':
+            topic_pfx = REMOTE_ARCHIVE_STATE_TOPIC
+        elif event_kind == 'local':
+            topic_pfx = LOCAL_STATE_TOPIC
+        else:
+            raise ValueError(
+                'Invalid event kind (accepted: any, remote, remote_arcive or local'
+            )
+        topics = []
+        if oids:
+            for oid in oids:
+                if isinstance(oid, str):
+                    oid = OID(oid)
+                    topics.append(f'{topic_pfx}{oid.to_path()}')
+            self.bus.subscribe(topics).wait_completed()
 
 
 def no_rpc_method():
+    """
+    Raise an exception on invalid RPC method
+    """
     raise busrt.rpc.RpcException('no such method', ERR_CODE_METHOD_NOT_FOUND)
 
 
 def log_traceback():
+    """
+    Log an exception traceback
+    """
     import traceback
     print(traceback.format_exc(), flush=True, file=sys.stderr)
 
 
 class ACI:
+    """
+    ACI (API Call Info) helper class
+    """
 
     def __init__(self, aci_payload):
         self.auth = aci_payload.get('auth')
@@ -499,10 +638,16 @@ class ACI:
         self.acl = aci_payload.get('acl')
 
     def is_writable(self):
+        """
+        Check is the current session writable or read-only
+        """
         return self.auth != 'token' or self.token_mode != 'readonly'
 
 
 class XCall:
+    """
+    HMI X calls helper class
+    """
 
     def __init__(self, payload):
         self.method = payload.get('method')
@@ -511,26 +656,44 @@ class XCall:
         self.acl = payload.get('acl', {})
 
     def get_items_allow_deny_reading(self):
+        """
+        Get allow and deny item list from ACL
+        """
         if self.check_admin():
-            return (['#'], [''])
+            return (['#'], [])
         else:
             allow = set()
             for oid in self.acl.get('read', {}).get('items', []):
                 allow.add(OID(oid))
             for oid in self.acl.get('write', {}).get('items', []):
                 allow.add(OID(oid))
-            return list(allow)
+            return (list(allow), [])
 
     def is_writable(self):
+        """
+        Check is the current session writable or read-only
+        """
         return self.aci.is_writable()
 
     def is_admin(self):
+        """
+        Check if the session ACL has admin rights
+        """
         return self.acl.get('admin')
 
     def check_op(self, op):
+        """
+        Check if the session ACL has rights for the operation
+
+        Args:
+            op: operation code (e.g. "supervisor")
+        """
         return self.is_admin() or op in self.acl.get('ops', [])
 
     def is_item_readable(self, oid):
+        """
+        Check if the session ACL has rights to read an item
+        """
         return self.is_admin() or oid_match(
             oid,
             self.acl.get('read', {}).get('items', [])) or oid_match(
@@ -538,6 +701,9 @@ class XCall:
                 self.acl.get('write', {}).get('items', []))
 
     def is_item_writable(self, oid):
+        """
+        Check if the session ACL has rights to write an item
+        """
         return self.is_admin() or (
             oid_match(oid,
                       self.acl.get('write', {}).get('items', [])) and
@@ -545,6 +711,9 @@ class XCall:
                           self.acl.get('deny', {}).get('items', [])))
 
     def is_pvt_readable(self, path):
+        """
+        Check if the session ACL has rights to read a pvt path
+        """
         return self.is_admin() or (
             path_match(path,
                        self.acl.get('read', {}).get('pvt', [])) and
