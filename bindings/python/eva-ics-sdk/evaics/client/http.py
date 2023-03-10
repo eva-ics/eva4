@@ -26,7 +26,7 @@ class Client:
         """
         self.login = None
         self.password = None
-        self.api_key = None
+        self.key = None
         self._token = None
         self._post = partial(requests.post,
                              url,
@@ -57,7 +57,7 @@ class Client:
         Args:
             api_key: API key
         """
-        self.api_key = api_key
+        self.key = api_key
         return self
 
     def _get_call_id(self):
@@ -114,8 +114,8 @@ class Client:
         need_k = method != 'login'
         token_auth = False
         if need_k:
-            if self.api_key is not None:
-                params['k'] = self.api_key
+            if self.key is not None:
+                params['k'] = self.key
             elif self._token is not None:
                 params['k'] = self._token
                 token_auth = True
