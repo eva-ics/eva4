@@ -73,9 +73,10 @@ class Client:
         Call server test method
 
         Returns:
-            API response payload
+            API response payload object (server and session info)
         """
-        return self.call('test')
+        from . import ServerInfo
+        return ServerInfo(self.call('test'))
 
     def authenticate(self):
         """
