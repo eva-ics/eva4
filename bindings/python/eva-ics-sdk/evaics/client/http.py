@@ -18,6 +18,12 @@ logger = logging.getLogger('evaics.client.http')
 class Client:
 
     def __init__(self, url: str):
+        """
+        Create a new HTTP client instance
+
+        Args:
+            url: HMI URL (proto://host:port)
+        """
         self.login = None
         self.password = None
         self.api_key = None
@@ -29,26 +35,73 @@ class Client:
                                  'user-agent': f'evaics-py {__version__}'
                              })
         self._url = url
-        self.call_id = 1
-        self.lock = threading.RLock()
+        self._call_id = 1
+        self._lock = threading.RLock()
+
+    def credentials(self, login: str, password: str):
+        """
+        Set authentication credentials
+
+        Args:
+            login: user name
+            password: user password
+        """
+        self.login = login
+        self.password = password
+        return self
+
+    def api_key(self, api_key: str):
+        """
+        Authenticate with API key
+
+        Args:
+            api_key: API key
+        """
+        self.api_key = api_key
+        return self
 
     def _get_call_id(self):
-        with self.lock:
-            self.call_id += 1
-            if self.call_id > 0xFFFF_FFFF:
-                self.call_id = 1
-            return self.call_id
+        with self._lock:
+            if self._call_id == 0xFFFF_FFFF:
+                self._call_id = 1
+            else:
+                self._call_id += 1
+            return self._call_id
 
     def test(self):
+        """
+        Call server test method
+
+        Returns:
+            API response payload
+        """
         return self.call('test')
 
     def authenticate(self):
+        """
+        Authenticate the client
+
+        Authenticates the client and stores the authentication token. The
+        method may be called manually but is not mandatory to use
+        """
         if self.login is None or self.password is None:
             raise RuntimeError('credentials not set')
         result = self.call('login', dict(u=self.login, p=self.password))
         self._token = result['token']
 
     def call(self, method: str, params: dict = None):
+        """
+        Call server API method
+
+        Args:
+            method: API method
+
+        Optional:
+            params: API method parameters (dict)
+
+        Returns:
+            API response payload
+        """
         params = {} if params is None else params
         logger.info(f'{self._url}::{method}')
         call_id = self._get_call_id()
