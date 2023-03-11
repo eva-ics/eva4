@@ -274,6 +274,10 @@ item.state_history:
       typ: u32
       des: Limit records to
       req: false
+    - nam: prop
+      typ: String
+      des: Fetch the state property status or value only
+      req: false
     - nam: xopts
       typ: Map<String, String>
       des: Extra options, depending on database type
