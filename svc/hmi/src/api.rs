@@ -857,7 +857,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 Ok(to_value(data)?)
             } else {
                 Err(Error::invalid_params(
-                    "fill should be specified for multiple OIDs",
+                    "fill must be specified for multiple OIDs",
                 ))
             }
         }
