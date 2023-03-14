@@ -19,5 +19,5 @@ The update alters ACL logic of the default ACLs:
 
 What is affected:
 
-* if PVT/RPVT access is controlled with "deny" field in certain ACLs, rename it
-  to "deny_read" after the update.
+* if PVT/RPVT access is controlled with "deny" field in certain ACLs, move it
+  to "deny_read" section after the update.
