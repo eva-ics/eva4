@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=4.0.0
+VERSION=4.0.1
 BUILD=2023031203
 
 [ -z "${EVA_REPOSITORY_URL}" ] && EVA_REPOSITORY_URL=https://pub.bma.ai/eva4

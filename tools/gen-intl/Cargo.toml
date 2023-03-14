@@ -1,6 +1,6 @@
 [package]
 name = "gen-intl"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 authors = ["Bohemia Automation / Altertech <div@altertech.com>"]
 license = "Apache-2.0"
@@ -8,6 +8,6 @@ description = ".po generator for UI structured data"
 
 [dependencies]
 serde_yaml = "0.8.26"
-eva-common = { version = "0.1.186", features = ["full"] }
+eva-common = { version = "0.2.1", features = ["full"] }
 clap = { version = "3.0.7", features = ["derive"] }
 colored = "2.0.0"

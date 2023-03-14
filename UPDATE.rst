@@ -1,14 +1,23 @@
-EVA ICS 4.0.0
+EVA ICS 4.0.1
 *************
 
 What is new
 ===========
 
-* New-generation cloud-SCADA platform
+* deny_read in ACL schemas
 
 Update instructions
 ===================
 
-No update from v3 is supported, please migrate your configuration manually. V3
-secondary nodes can co-exist in the same cloud with V4 (v3 to v4 replication
-only) using the legacy replication service.
+The update alters ACL logic of the default ACLs:
+
+* "deny" field has been renamed into "deny_write" (backward-compatible aliases
+  to "deny")
+
+* "deny_read" field is introduced to block read-only access to items (exclude
+  them from allow lists)
+
+What is affected:
+
+* if PVT/RPVT access is controlled with "deny" field in certain ACLs, rename it
+  to "deny_read" after the update.

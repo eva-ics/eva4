@@ -1,6 +1,6 @@
 [package]
 name = "eva-cloud-manager"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 authors = ["Bohemia Automation / Altertech <div@altertech.com>"]
 license = "Apache-2.0"
@@ -17,8 +17,8 @@ path = "src/main.rs"
 [dependencies]
 serde = { version = "1.0.143", features = ["derive", "rc"] }
 serde_yaml = "0.8.26"
-eva-common = { version = "0.1.186", features = ["common-payloads"] }
-eva-client = "0.1.7"
+eva-common = { version = "0.2.1", features = ["common-payloads"] }
+eva-client = "0.2.0"
 clap = { version = "3.0.7", features = ["derive"] }
 tokio = { version = "1.20.1", features = ["full"] }
 tera = "1.15.0"

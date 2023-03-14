@@ -1,4 +1,4 @@
-VERSION=4.0.0
+VERSION=4.0.1
 
 all:
 	@echo select target
@@ -58,9 +58,8 @@ release-switch-arch:
 ver: build-increase update-version
 
 update-version:
-	find eva svc tools -name Cargo.toml -exec sed -i "s/^version = .*/version = \"${VERSION}\"/g" {} \;
+	find eva svc tools /opt/eva4-enterprise/eva4-esvc -name Cargo.toml -exec sed -i "s/^version = .*/version = \"${VERSION}\"/g" {} \;
 	sed -i "s/^VERSION=.*/VERSION=${VERSION}/g" update.sh
-	sed -i "s/^__version__ =.*/__version__ = '${VERSION}'/g" /opt/eva-doc/doc/conf.py
 
 repo-cleanup:
 	@./dev/repo-cleanup.sh

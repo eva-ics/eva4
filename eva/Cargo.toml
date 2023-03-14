@@ -1,6 +1,6 @@
 [package]
 name = "eva-ics"
-version = "4.0.0"
+version = "4.0.1"
 edition = "2021"
 authors = ["Sergei S. <div@altertech.com>"]
 license = "Apache-2.0"
@@ -33,7 +33,7 @@ glob = "0.3.0"
 hostname = "0.3.1"
 lazy_static = "1.4.0"
 chrono = "0.4.19"
-eva-common = { version = "0.1.186", features = ["full"] }
+eva-common = { version = "0.2.1", features = ["full"] }
 bmart = { version = "0.2.2" }
 multi_log = "0.1.2"
 log = "0.4.14"
@@ -55,7 +55,7 @@ sqlx = { version = "0.5.11", features = [
 futures = "0.3.21"
 ipnetwork = "0.20.0"
 async-io = "1.7.0"
-eva-robots = "0.1.6"
+eva-robots = "0.2.0"
 parking_lot = { version = "0.12.1", features = ["serde"] }
 openssl = "0.10.42"
 

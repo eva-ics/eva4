@@ -1022,7 +1022,7 @@ dependencies = [
 
 [[package]]
 name = "eva-aaa-acl"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1040,7 +1040,7 @@ dependencies = [
 
 [[package]]
 name = "eva-aaa-localauth"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1061,7 +1061,7 @@ dependencies = [
 
 [[package]]
 name = "eva-aaa-otp"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1083,7 +1083,7 @@ dependencies = [
 
 [[package]]
 name = "eva-bridge-ads"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "ads",
  "async-channel",
@@ -1105,9 +1105,9 @@ dependencies = [
 
 [[package]]
 name = "eva-client"
-version = "0.1.7"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9882134b5bf18a11d3ab72bb28707e5cbe8d3fcf8c717cd0c9b23796267ae37a"
+checksum = "2726c243c80560ee37e07b9d7a7389c3ef9720696ee7c5155dfe022f3555b6d3"
 dependencies = [
  "busrt",
  "eva-common",
@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "eva-cloud-manager"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "atty",
  "base64",
@@ -1151,9 +1151,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.1.186"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9792bbdbfa66f8b655cf5764dea1a9feb9fcd1055a1f42a53fa7442cc7000ad"
+checksum = "876c96eb0c208b75cacf7c0519e2e94a35bca8244729bcb9f6936b30a4305eba"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1187,7 +1187,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-ads"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "ads",
  "async-channel",
@@ -1209,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-enip"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1230,7 +1230,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-lm"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1253,7 +1253,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-modbus"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1277,7 +1277,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-sr"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1294,7 +1294,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-trap"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1315,7 +1315,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-virtual"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1331,7 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-w1"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1352,7 +1352,7 @@ dependencies = [
 
 [[package]]
 name = "eva-db-influx"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1377,7 +1377,7 @@ dependencies = [
 
 [[package]]
 name = "eva-db-sql"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1397,7 +1397,7 @@ dependencies = [
 
 [[package]]
 name = "eva-filemgr"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1419,7 +1419,7 @@ dependencies = [
 
 [[package]]
 name = "eva-hmi"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1458,7 +1458,7 @@ dependencies = [
 
 [[package]]
 name = "eva-ics"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-io",
@@ -1499,7 +1499,7 @@ dependencies = [
 
 [[package]]
 name = "eva-repl"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1524,9 +1524,9 @@ dependencies = [
 
 [[package]]
 name = "eva-rjrpc"
-version = "0.1.16"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dad70ff40764333e2105c9cdf65c12a699af57ef01178a3630ea1d007c0d5560"
+checksum = "b6f81af72f8a510804dc39bf3493f632fc30ffdbf65ca8f6d5573d4b7e5f19a7"
 dependencies = [
  "base64",
  "eva-common",
@@ -1542,9 +1542,9 @@ dependencies = [
 
 [[package]]
 name = "eva-robots"
-version = "0.1.6"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a61670b939d8ee6b9300ec3885990a481acb7227f43da622eeb8c1decad3fbee"
+checksum = "73a409867cf2b2e6ce377a6214e7993235b36e392e30ca85f6e7a312894f1cf5"
 dependencies = [
  "eva-common",
  "serde",
@@ -1553,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.1.112"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeb56c7944529076046b6f0493c14bced92419eae032a147af7f47f17f2f14d3"
+checksum = "606c549a1967d471bd12a5c49d4d1727a2671523221b02e7fa770c740a62f12c"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",
@@ -1588,7 +1588,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-example-sensor-set"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-trait",
  "eva-common",
@@ -1602,7 +1602,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-example-temp"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-trait",
  "eva-common",
@@ -1616,7 +1616,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-expiration"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-io",
@@ -1633,7 +1633,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-filewriter"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1653,7 +1653,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-locker"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-trait",
  "bmart 0.1.16",
@@ -1667,7 +1667,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-mailer"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-trait",
  "eva-common",
@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-mirror"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1700,7 +1700,7 @@ dependencies = [
 
 [[package]]
 name = "eva-svc-modbus-slave"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1945,7 +1945,7 @@ dependencies = [
 
 [[package]]
 name = "gen-intl"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "clap 3.1.18",
  "colored",
@@ -3306,7 +3306,7 @@ checksum = "1df8c4ec4b0627e53bdf214615ad287367e482558cf84b109250b37464dc03ae"
 
 [[package]]
 name = "plctag"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "cc",
  "libc",

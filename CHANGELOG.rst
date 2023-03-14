@@ -1,6 +1,11 @@
 EVA ICS CHANGELOG
 *****************
 
+4.0.1-stable
+============
+
+* TBA: "deny_read" in the default ACLs
+
 4.0.0-stable
 ============
 
