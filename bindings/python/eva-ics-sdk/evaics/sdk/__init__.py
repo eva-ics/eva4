@@ -1,4 +1,4 @@
-__version__ = '0.0.43'
+__version__ = '0.2.1'
 
 import busrt
 import sys
@@ -702,11 +702,13 @@ class XCall:
         """
         Check if the session ACL has rights to read an item
         """
-        return self.is_admin() or oid_match(
+        return self.is_admin() or (oid_match(
             oid,
             self.acl.get('read', {}).get('items', [])) or oid_match(
                 oid,
-                self.acl.get('write', {}).get('items', []))
+                self.acl.get('write', {}).get('items', []))) and not oid_match(
+                    oid,
+                    self.acl.get('deny_read', {}).get('items', []))
 
     def is_item_writable(self, oid):
         """
@@ -715,6 +717,10 @@ class XCall:
         return self.is_admin() or (
             oid_match(oid,
                       self.acl.get('write', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny_read', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny_write', {}).get('items', [])) and
             not oid_match(oid,
                           self.acl.get('deny', {}).get('items', [])))
 
@@ -726,7 +732,7 @@ class XCall:
             path_match(path,
                        self.acl.get('read', {}).get('pvt', [])) and
             not path_match(path,
-                           self.acl.get('deny', {}).get('pvt', [])))
+                           self.acl.get('deny_read', {}).get('pvt', [])))
 
     def require_writable(self):
         if not self.is_writable():
@@ -813,7 +819,7 @@ def self_test():
             'write': {
                 'items': []
             },
-            'deny': {
+            'deny_read': {
                 'items': [],
                 'pvt': ['data/secret'],
                 'rpvt': []
