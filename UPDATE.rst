@@ -22,4 +22,5 @@ What is affected:
 * if PVT/RPVT access is controlled with "deny" field in certain ACLs, move it
   to "deny_read" section after the update.
 
-* To get access to new features, rebuild custom Rust services with eva-sdk 0.2
+* To get access to the new features, rebuild custom Rust services with eva-sdk
+  0.2
