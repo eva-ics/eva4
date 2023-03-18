@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use simple_pool::ResourcePool;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
@@ -89,7 +89,7 @@ impl RpcHandlers for Handlers {
                     #[serde(alias = "x")]
                     prop: Option<StateProp>,
                     #[serde(alias = "o", default)]
-                    xopts: HashMap<String, Value>,
+                    xopts: BTreeMap<String, Value>,
                     #[serde(default)]
                     compact: bool,
                 }
@@ -133,7 +133,7 @@ impl RpcHandlers for Handlers {
                     #[serde(alias = "n")]
                     limit: Option<usize>,
                     #[serde(alias = "o", default)]
-                    xopts: HashMap<String, Value>,
+                    xopts: BTreeMap<String, Value>,
                 }
                 if payload.is_empty() {
                     Err(RpcError::params(None))

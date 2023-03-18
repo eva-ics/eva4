@@ -127,7 +127,7 @@ impl AuthResult {
 async fn login(
     login: &str,
     password: &str,
-    xopts: Option<&HashMap<String, Value>>,
+    xopts: Option<&BTreeMap<String, Value>>,
     token_id: Option<String>,
     ip: Option<IpAddr>,
     source: &str,
@@ -137,7 +137,7 @@ async fn login(
         login: &'a str,
         password: &'a str,
         timeout: f64,
-        xopts: Option<&'a HashMap<String, Value>>,
+        xopts: Option<&'a BTreeMap<String, Value>>,
     }
     let auth_svcs = AUTH_SVCS.get().unwrap();
     let rpc = RPC.get().unwrap();
@@ -279,7 +279,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                 password: String,
                 #[serde(alias = "a")]
                 token: String,
-                xopts: Option<HashMap<String, Value>>,
+                xopts: Option<BTreeMap<String, Value>>,
             }
             #[derive(Deserialize)]
             #[serde(deny_unknown_fields)]
@@ -288,7 +288,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                 user: String,
                 #[serde(alias = "p")]
                 password: String,
-                xopts: Option<HashMap<String, Value>>,
+                xopts: Option<BTreeMap<String, Value>>,
             }
             #[derive(Deserialize)]
             #[serde(deny_unknown_fields)]
@@ -707,7 +707,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
         #[serde(alias = "x")]
         prop: Option<StateProp>,
         #[serde(alias = "o", default)]
-        xopts: HashMap<String, Value>,
+        xopts: BTreeMap<String, Value>,
         #[serde(alias = "a", default = "get_default_db")]
         database: String,
         #[serde(alias = "g", default)]
@@ -722,7 +722,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
         precision: Option<u32>,
         limit: Option<u32>,
         prop: Option<StateProp>,
-        xopts: &'a HashMap<String, Value>,
+        xopts: &'a BTreeMap<String, Value>,
         compact: bool,
     }
     aci.log_request(log::Level::Debug).await.log_ef();
@@ -781,7 +781,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 ));
             }
             if fill.is_some() {
-                let mut data: HashMap<String, Value> = HashMap::new();
+                let mut data: BTreeMap<String, Value> = <_>::default();
                 let mut times: Option<Vec<f64>> = None;
                 for oid in &oids {
                     aci.acl().require_item_read(oid)?;
@@ -876,7 +876,7 @@ async fn method_item_state_log(params: Value, aci: &mut ACI) -> EResult<Value> {
         #[serde(alias = "w")]
         limit: Option<u32>,
         #[serde(alias = "o", default)]
-        xopts: HashMap<String, Value>,
+        xopts: BTreeMap<String, Value>,
         #[serde(alias = "a", default = "get_default_db")]
         database: String,
     }
@@ -886,7 +886,7 @@ async fn method_item_state_log(params: Value, aci: &mut ACI) -> EResult<Value> {
         t_start: Option<f64>,
         t_end: Option<f64>,
         limit: Option<u32>,
-        xopts: HashMap<String, Value>,
+        xopts: BTreeMap<String, Value>,
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = StateLogParams::deserialize(params)?;

@@ -4,7 +4,7 @@ use hyper::Body;
 use multer::Multipart;
 use openssl::sha::Sha256;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::net::IpAddr;
 
 #[derive(Serialize)]
@@ -12,7 +12,7 @@ struct UploadData {
     aci: Value,
     content_type: Option<String>,
     file_name: Option<String>,
-    form: HashMap<String, String>,
+    form: BTreeMap<String, String>,
     sha256: String,
     system_name: &'static str,
 }
@@ -47,7 +47,7 @@ pub async fn process(
     let mut multipart = Multipart::new(body, boundary);
     let mut process_macro_id: Option<OID> = None;
     let mut rdr: Option<String> = None;
-    let mut form = HashMap::new();
+    let mut form = BTreeMap::new();
     let mut params = HashMap::new();
     let mut wait: Option<f64> = None;
     let mut priority: Option<u8> = None;

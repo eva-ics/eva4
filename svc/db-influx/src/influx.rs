@@ -8,7 +8,7 @@ use hyper::{
 use hyper_tls::HttpsConnector;
 use log::trace;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::time::Duration;
 
@@ -339,7 +339,7 @@ impl InfluxClient {
         precision: Option<u32>,
         limit: Option<usize>,
         prop: Option<StateProp>,
-        mut xopts: HashMap<String, Value>,
+        mut xopts: BTreeMap<String, Value>,
         compact: bool,
     ) -> EResult<StateHistoryData> {
         let mut data = Vec::new();
@@ -459,7 +459,7 @@ impl InfluxClient {
         t_start: f64,
         t_end: Option<f64>,
         limit: Option<usize>,
-        mut xopts: HashMap<String, Value>,
+        mut xopts: BTreeMap<String, Value>,
     ) -> EResult<Vec<ItemState>> {
         let mut data = Vec::new();
         let q = match self.api_version {
