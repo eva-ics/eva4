@@ -124,3 +124,47 @@ session.destroy:
       des: Session token ID
       req: true
   ret:
+authenticate:
+  des: Allows other services to directly authenticate users
+  par:
+    - nam: key
+      typ: String
+      des: API key or a token
+      req: true
+    - nam: ip
+      typ: String
+      des: IP Address of the client
+      req: false
+  ret: Serialized ACL
+  exm: |
+    {
+        "admin": true,
+        "deny_read": {
+            "items": [],
+            "pvt": [],
+            "rpvt": []
+        },
+        "deny_write": {
+            "items": [],
+            "pvt": [],
+            "rpvt": []
+        },
+        "from": [
+            "admin"
+        ],
+        "id": "admin",
+        "meta": {
+            "admin": [
+                "any"
+            ]
+        },
+        "ops": [],
+        "read": {
+            "items": [],
+            "pvt": [],
+            "rpvt": []
+        },
+        "write": {
+            "items": []
+        }
+    }

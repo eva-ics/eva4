@@ -87,7 +87,7 @@ pub async fn process(
         if let Some(macro_id) = process_macro_id {
             let auth = crate::aaa::parse_auth(Some(&params), headers);
             if let Some(ref k) = auth {
-                if let Ok(auth) = crate::api::authenticate(k, Some(ip)).await {
+                if let Ok(auth) = crate::aaa::authenticate(k, Some(ip)).await {
                     let mut aci = crate::aci::ACI::new(auth, "upload", ip.to_string());
                     let upload_data = UploadData {
                         aci: to_value(&aci)?,

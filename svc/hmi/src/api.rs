@@ -1,40 +1,27 @@
 use crate::aaa::{self, Auth, Token};
 use crate::aci::ACI;
-use busrt::rpc::RpcClient;
+use crate::{RPC, TIMEOUT};
 use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::{IdOrListOwned, ParamsIdOrListOwned};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
-use lazy_static::lazy_static;
 use log::{error, trace};
-use once_cell::sync::OnceCell;
 use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
-use ttl_cache::TtlCache;
 use uuid::Uuid;
 
 err_logger!();
 
 const ERR_NO_PARAMS: &str = "no params provided";
 const ERR_DF_TIMES: &str = "dataframe times mismatch";
-const ACL_TTL: Duration = Duration::from_secs(5);
 
 const API_VERSION: u16 = 4;
-
-lazy_static! {
-    pub static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref AUTH_SVCS: OnceCell<Vec<String>> = <_>::default();
-    pub static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref ACL_CACHE_BY_KEY_VALUE: Mutex<TtlCache<String, Arc<Acl>>> =
-        Mutex::new(TtlCache::new(8192));
-}
 
 macro_rules! parse_ts {
     ($t: expr) => {
@@ -44,25 +31,6 @@ macro_rules! parse_ts {
             None
         }
     };
-}
-
-#[inline]
-pub fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
-    RPC.set(rpc).map_err(|_| Error::core("unable to set RPC"))
-}
-
-#[inline]
-pub fn set_auth_svcs(svcs: Vec<String>) -> EResult<()> {
-    AUTH_SVCS
-        .set(svcs)
-        .map_err(|_| Error::core("unable to set AUTH SVCS"))
-}
-
-#[inline]
-pub fn set_timeout(timeout: Duration) -> EResult<()> {
-    TIMEOUT
-        .set(timeout)
-        .map_err(|_| Error::core("unable to set timeout"))
 }
 
 /// # Note
@@ -139,7 +107,7 @@ async fn login(
         timeout: f64,
         xopts: Option<&'a BTreeMap<String, Value>>,
     }
-    let auth_svcs = AUTH_SVCS.get().unwrap();
+    let auth_svcs = aaa::auth_svcs();
     let rpc = RPC.get().unwrap();
     let timeout = *TIMEOUT.get().unwrap();
     let payload = pack(&AuthPayload {
@@ -210,51 +178,6 @@ async fn login(
     aci.log_request(log::Level::Info).await.log_ef();
     aci.log_error(&e).await;
     Err(e)
-}
-
-pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
-    #[derive(Serialize)]
-    struct AuthPayload<'a> {
-        key: &'a str,
-        timeout: f64,
-    }
-    if let Some(token_str) = key.strip_prefix("token:") {
-        let token = aaa::get_token(token_str.try_into()?, ip).await?;
-        return Ok(Auth::Token(token));
-    }
-    if let Some(acl) = ACL_CACHE_BY_KEY_VALUE.lock().unwrap().get(key) {
-        return Ok(Auth::Key(key.to_owned(), acl.clone()));
-    }
-    let auth_svcs = AUTH_SVCS.get().unwrap();
-    let rpc = RPC.get().unwrap();
-    let timeout = *TIMEOUT.get().unwrap();
-    let payload = pack(&AuthPayload {
-        key,
-        timeout: timeout.as_secs_f64(),
-    })?;
-    for svc in auth_svcs {
-        match safe_rpc_call(
-            rpc,
-            svc,
-            "auth.key",
-            payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await
-        {
-            Ok(result) => {
-                let acl = Arc::new(unpack::<Acl>(result.payload())?);
-                ACL_CACHE_BY_KEY_VALUE
-                    .lock()
-                    .unwrap()
-                    .insert(key.to_owned(), acl.clone(), ACL_TTL);
-                return Ok(Auth::Key(key.to_owned(), acl));
-            }
-            Err(e) => trace!("auth service returned an error: {} {}", svc, e),
-        }
-    }
-    Err(Error::access("access denied"))
 }
 
 #[derive(Deserialize)]
@@ -363,7 +286,7 @@ pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta)
                 } else {
                     return Err(Error::new0(ErrorKind::AccessDenied));
                 };
-                let auth = match authenticate(&auth_key, ip).await {
+                let auth = match aaa::authenticate(&auth_key, ip).await {
                     Ok(v) => v,
                     Err(e) => {
                         error!("API access error from {}: {}", source, e);

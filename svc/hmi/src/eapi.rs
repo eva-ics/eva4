@@ -1,3 +1,4 @@
+use crate::aaa;
 use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::events::{
     LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_USER_TOPIC, LOCAL_STATE_TOPIC,
@@ -6,7 +7,7 @@ use eva_common::events::{
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullRemoteItemState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 err_logger!();
@@ -140,6 +141,25 @@ impl RpcHandlers for Handlers {
                     let p: ParamsIdOwned = unpack(payload)?;
                     crate::aaa::destroy_token(&(p.i.try_into()?)).await?;
                     Ok(None)
+                }
+            }
+            "authenticate" => {
+                #[derive(Deserialize)]
+                struct AuthInfo {
+                    key: String,
+                    ip: Option<String>,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: AuthInfo = unpack(payload)?;
+                    let ip = if let Some(ip_str) = p.ip {
+                        Some(ip_str.parse().map_err(Error::invalid_params)?)
+                    } else {
+                        None
+                    };
+                    let auth = aaa::authenticate(&p.key, ip).await?;
+                    Ok(Some(pack(auth.acl())?))
                 }
             }
             _ => svc_handle_default_rpc(method, &self.info),

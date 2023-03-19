@@ -2,7 +2,9 @@ use crate::db;
 use crate::handler::WebSocket;
 use eva_common::acl::Acl;
 use eva_common::err_logger;
+use eva_common::payload::{pack, unpack};
 use eva_common::{EResult, Error};
+use eva_sdk::prelude::*;
 use genpass_native::random_string;
 use lazy_static::lazy_static;
 use log::error;
@@ -18,6 +20,7 @@ use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
+use ttl_cache::TtlCache;
 use uuid::Uuid;
 
 err_logger!();
@@ -28,6 +31,8 @@ static SESSION_ALLOW_LIST_NEIGHBORS: atomic::AtomicBool = atomic::AtomicBool::ne
 
 const TOKEN_MODE_NORMAL: u8 = 1;
 const TOKEN_MODE_READONLY: u8 = 2;
+
+const ACL_TTL: Duration = Duration::from_secs(5);
 
 pub const SESSION_CLEANUP_INTERVAL: Duration = Duration::from_secs(15);
 pub const TOKEN_WEBSOCKETS_CLEANUP_INTERVAL: Duration = Duration::from_secs(5);
@@ -40,6 +45,21 @@ const ERR_SESSIONS_DISABLED: &str = "sessions are disabled";
 lazy_static! {
     static ref SESSION_TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref TOKEN_WEBSOCKETS: Mutex<HashMap<TokenId, HashMap<Uuid, WebSocket>>> = <_>::default();
+    static ref AUTH_SVCS: OnceCell<Vec<String>> = <_>::default();
+    static ref ACL_CACHE_BY_KEY_VALUE: Mutex<TtlCache<String, Arc<Acl>>> =
+        Mutex::new(TtlCache::new(8192));
+}
+
+#[inline]
+pub fn auth_svcs() -> &'static [String] {
+    AUTH_SVCS.get().unwrap()
+}
+
+#[inline]
+pub fn set_auth_svcs(svcs: Vec<String>) -> EResult<()> {
+    AUTH_SVCS
+        .set(svcs)
+        .map_err(|_| Error::core("unable to set AUTH SVCS"))
 }
 
 pub fn parse_auth(
@@ -150,6 +170,51 @@ impl Auth {
             Auth::Key(_, _) => None,
         }
     }
+}
+
+pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
+    #[derive(Serialize)]
+    struct AuthPayload<'a> {
+        key: &'a str,
+        timeout: f64,
+    }
+    if let Some(token_str) = key.strip_prefix("token:") {
+        let token = get_token(token_str.try_into()?, ip).await?;
+        return Ok(Auth::Token(token));
+    }
+    if let Some(acl) = ACL_CACHE_BY_KEY_VALUE.lock().unwrap().get(key) {
+        return Ok(Auth::Key(key.to_owned(), acl.clone()));
+    }
+    let auth_svcs = AUTH_SVCS.get().unwrap();
+    let rpc = crate::RPC.get().unwrap();
+    let timeout = *crate::TIMEOUT.get().unwrap();
+    let payload = pack(&AuthPayload {
+        key,
+        timeout: timeout.as_secs_f64(),
+    })?;
+    for svc in auth_svcs {
+        match safe_rpc_call(
+            rpc,
+            svc,
+            "auth.key",
+            payload.as_slice().into(),
+            QoS::Processed,
+            timeout,
+        )
+        .await
+        {
+            Ok(result) => {
+                let acl = Arc::new(unpack::<Acl>(result.payload())?);
+                ACL_CACHE_BY_KEY_VALUE
+                    .lock()
+                    .unwrap()
+                    .insert(key.to_owned(), acl.clone(), ACL_TTL);
+                return Ok(Auth::Key(key.to_owned(), acl));
+            }
+            Err(e) => trace!("auth service returned an error: {} {}", svc, e),
+        }
+    }
+    Err(Error::access("access denied"))
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Hash)]

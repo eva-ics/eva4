@@ -458,7 +458,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
         });
         if let Some(p) = params {
             if let Some(k) = p.get("k") {
-                match crate::api::authenticate(k, Some(ip)).await {
+                match crate::aaa::authenticate(k, Some(ip)).await {
                     Ok(auth) => {
                         if let Some(token) = auth.clone_token() {
                             let (response, websocket) = match hyper_tungstenite::upgrade(req, None)

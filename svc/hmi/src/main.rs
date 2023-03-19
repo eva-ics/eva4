@@ -51,11 +51,25 @@ lazy_static! {
     static ref DEFAULT_HISTORY_DB_SVC: OnceCell<String> = <_>::default();
     static ref I18N: OnceCell<lang::Converter> = <_>::default();
     static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
+    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
+    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
 }
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
 static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
+#[inline]
+fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
+    RPC.set(rpc).map_err(|_| Error::core("unable to set RPC"))
+}
+
+#[inline]
+fn set_timeout(timeout: Duration) -> EResult<()> {
+    TIMEOUT
+        .set(timeout)
+        .map_err(|_| Error::core("unable to set timeout"))
+}
 
 #[inline]
 fn buf_size() -> usize {
@@ -174,8 +188,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .map_err(|_| Error::core("Unable to set DEFAULT_DB"))?;
     PUBLIC_API_LOG.store(config.public_api_log, atomic::Ordering::SeqCst);
     BUF_SIZE.store(config.buf_size, atomic::Ordering::SeqCst);
-    api::set_timeout(timeout)?;
-    api::set_auth_svcs(config.auth_svcs)?;
+    set_timeout(timeout)?;
+    aaa::set_auth_svcs(config.auth_svcs)?;
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("tpl.reload"));
     info.add_method(ServiceMethod::new("i18n.cache_purge"));
@@ -195,6 +209,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("session.list"));
     info.add_method(ServiceMethod::new("session.destroy").required("i"));
     info.add_method(ServiceMethod::new("ws.stats"));
+    info.add_method(
+        ServiceMethod::new("authenticate")
+            .required("key")
+            .optional("ip"),
+    );
     let handlers = eapi::Handlers::new(info);
     let rpc: Arc<RpcClient> = initial.init_rpc(handlers).await?;
     initial.drop_privileges()?;
@@ -215,7 +234,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     db::init(&db_path, workers, timeout).await?;
     aaa::start().await?;
     aci::start(config.keep_api_log).await?;
-    api::set_rpc(rpc.clone())?;
+    set_rpc(rpc.clone())?;
     let client = rpc.client().clone();
     let mut topics = vec![
         format!("{AAA_ACL_TOPIC}#"),

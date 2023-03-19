@@ -167,7 +167,7 @@ pub async fn pvt<'a>(
     if let Some(pvt_path) = crate::PVT_PATH.get().unwrap() {
         let auth = crate::aaa::parse_auth(params, headers);
         if let Some(ref k) = auth {
-            if let Ok(a) = crate::api::authenticate(k, Some(ip)).await {
+            if let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await {
                 if a.acl().check_pvt_read(pvt_file) {
                     return file(
                         uri,
@@ -217,7 +217,7 @@ pub async fn remote_pvt<'a>(
         };
     }
     if let Some(ref k) = auth {
-        if let Ok(a) = crate::api::authenticate(k, Some(ip)).await {
+        if let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await {
             if a.acl().check_rpvt_read(target.as_ref()) {
                 let mut sp = target.splitn(2, '/');
                 let node = sp.next().unwrap();
@@ -228,8 +228,8 @@ pub async fn remote_pvt<'a>(
                 if node == ".local" || node == crate::SYSTEM_NAME.get().unwrap() {
                     serve_local!(client, uri);
                 }
-                let rpc = crate::api::RPC.get().unwrap();
-                let timeout = *crate::api::TIMEOUT.get().unwrap();
+                let rpc = crate::RPC.get().unwrap();
+                let timeout = *crate::TIMEOUT.get().unwrap();
                 let res = safe_rpc_call(
                     rpc,
                     "eva.core",
@@ -288,7 +288,7 @@ pub async fn pvt_key<'a>(
 ) -> HResult {
     let auth = crate::aaa::parse_auth(params, headers);
     if let Some(ref k) = auth {
-        match crate::api::authenticate(k, Some(ip)).await {
+        match crate::aaa::authenticate(k, Some(ip)).await {
             Ok(a) => {
                 if a.acl().require_pvt_read(&format!("%/{pvt_key}")).is_err() {
                     return Err(Error::access(pvt_key));
