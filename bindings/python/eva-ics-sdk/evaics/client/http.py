@@ -27,7 +27,7 @@ class Client:
         self.login = None
         self.password = None
         self.key = None
-        self._token = None
+        self.token = None
         self._post = partial(requests.post,
                              url,
                              headers={
@@ -88,7 +88,7 @@ class Client:
         if self.login is None or self.password is None:
             raise RuntimeError('credentials not set')
         result = self.call('login', dict(u=self.login, p=self.password))
-        self._token = result['token']
+        self.token = result['token']
 
     def call(self, method: str, params: dict = None):
         """
@@ -117,12 +117,12 @@ class Client:
         if need_k:
             if self.key is not None:
                 params['k'] = self.key
-            elif self._token is not None:
-                params['k'] = self._token
+            elif self.token is not None:
+                params['k'] = self.token
                 token_auth = True
             else:
                 self.authenticate()
-                params['k'] = self._token
+                params['k'] = self.token
                 # do not attempt to refresh newly issued tokens
         result = self._post(data=pack(req))
         if need_k:
@@ -138,7 +138,7 @@ class Client:
             if error is not None:
                 code = error.get('code')
                 if code == ERR_CODE_ACCESS_DENIED and token_auth:
-                    self._token = None
+                    self.token = None
                     return self.call(method, params)
                 raise rpc_e2e(
                     SimpleNamespace(rpc_error_code=code,
