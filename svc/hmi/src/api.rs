@@ -709,11 +709,14 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 for oid in &oids {
                     aci.acl().require_item_read(oid)?;
                 }
+                let ts_now = eva_common::time::now_ns_float();
+                let t_start = Some(parse_ts!(p.t_start).unwrap_or_else(|| ts_now - 86_400.0));
+                let t_end = Some(parse_ts!(p.t_start).unwrap_or(ts_now));
                 for oid in oids {
                     let payload = StateHistoryPayload {
                         i: &oid,
-                        t_start: parse_ts!(p.t_start),
-                        t_end: parse_ts!(p.t_end),
+                        t_start,
+                        t_end,
                         fill,
                         precision,
                         limit: p.limit,
