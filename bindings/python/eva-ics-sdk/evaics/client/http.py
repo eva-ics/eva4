@@ -17,16 +17,21 @@ logger = logging.getLogger('evaics.client.http')
 
 class Client:
 
-    def __init__(self, url: str):
+    def __init__(self,
+                 url: str = 'http://localhost:7727',
+                 user: str = None,
+                 password: str = None,
+                 key: str = None):
         """
         Create a new HTTP client instance
 
         Args:
             url: HMI URL (proto://host:port)
         """
-        self.login = None
-        self.password = None
-        self.key = None
+        self.url = url
+        self.user = user
+        self.password = password
+        self.key = key
         self.token = None
         self._post = partial(requests.post,
                              url,
@@ -34,19 +39,18 @@ class Client:
                                  'content-type': 'application/msgpack',
                                  'user-agent': f'evaics-py {__version__}'
                              })
-        self._url = url
         self._call_id = 1
         self._lock = threading.RLock()
 
-    def credentials(self, login: str, password: str):
+    def credentials(self, user: str, password: str):
         """
         Set authentication credentials
 
         Args:
-            login: user name
+            user: user name
             password: user password
         """
-        self.login = login
+        self.user = user
         self.password = password
         return self
 
@@ -85,9 +89,9 @@ class Client:
         Authenticates the client and stores the authentication token. The
         method may be called manually but is not mandatory to use
         """
-        if self.login is None or self.password is None:
+        if self.user is None or self.password is None:
             raise RuntimeError('credentials not set')
-        result = self.call('login', dict(u=self.login, p=self.password))
+        result = self.call('login', dict(u=self.user, p=self.password))
         self.token = result['token']
 
     def call(self, method: str, params: dict = None):
@@ -104,7 +108,7 @@ class Client:
             API response payload
         """
         params = {} if params is None else params
-        logger.info(f'{self._url}::{method}')
+        logger.info(f'{self.url}::{method}')
         call_id = self._get_call_id()
         req = {
             'jsonrpc': '2.0',
