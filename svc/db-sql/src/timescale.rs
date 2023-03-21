@@ -67,6 +67,11 @@ pub async fn state_history_filled(
     let mut result = Vec::new();
     while let Some(row) = rows.try_next().await? {
         let t: f64 = row.try_get("t")?;
+        if let Some(e) = t_end {
+            if t > e {
+                break;
+            }
+        }
         let status: Option<Value> = if need_status {
             let s: Option<i32> = row.try_get("status")?;
             Some(if let Some(st) = s {
