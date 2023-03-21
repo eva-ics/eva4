@@ -711,7 +711,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 }
                 let ts_now = eva_common::time::now_ns_float();
                 let t_start = Some(parse_ts!(p.t_start).unwrap_or_else(|| ts_now - 86_400.0));
-                let t_end = Some(parse_ts!(p.t_start).unwrap_or(ts_now));
+                let t_end = Some(parse_ts!(p.t_end).unwrap_or(ts_now));
                 for oid in oids {
                     let payload = StateHistoryPayload {
                         i: &oid,
