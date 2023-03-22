@@ -1151,9 +1151,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876c96eb0c208b75cacf7c0519e2e94a35bca8244729bcb9f6936b30a4305eba"
+checksum = "1ed76e88c1b7b4a8c1b31b418511274b4d6db286b077e9d806d1ceacdbbeef9e"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1553,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "606c549a1967d471bd12a5c49d4d1727a2671523221b02e7fa770c740a62f12c"
+checksum = "29dc95755489df86bd8b7c657603e53a1cbdf6e2b667af942b3e17827b1f5e51"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",

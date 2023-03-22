@@ -64,7 +64,7 @@ pub async fn state_history_filled(
     query += ") AS q1";
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);
-    let mut result = Vec::new();
+    let mut data = Vec::new();
     while let Some(row) = rows.try_next().await? {
         let t: f64 = row.try_get("t")?;
         if let Some(e) = t_end {
@@ -98,14 +98,22 @@ pub async fn state_history_filled(
             status,
             value,
         };
-        result.push(state);
+        data.push(state);
     }
-    if limit.is_some() {
-        result.reverse();
+    if data.is_empty() {
+        data = fill.fill_na(
+            t_start,
+            t_end.unwrap_or_else(|| eva_common::time::now_ns_float()),
+            limit,
+            need_status,
+            need_value,
+        );
+    } else if limit.is_some() {
+        data.reverse();
     }
     Ok(if compact {
-        StateHistoryData::new_compact(result, need_status, need_value)
+        StateHistoryData::new_compact(data, need_status, need_value)
     } else {
-        StateHistoryData::new_regular(result)
+        StateHistoryData::new_regular(data)
     })
 }

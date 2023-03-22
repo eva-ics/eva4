@@ -435,15 +435,25 @@ impl InfluxClient {
                 data.push(s.into_historical_state(need_status, need_value, precision)?);
             }
         }
-        // shift values for influxV2
-        if fill.is_some() && self.api_version == ApiVersion::V2 {
-            if data.len() < 2 {
-                data.pop();
-            } else {
-                for i in (0..data.len() - 1).rev() {
-                    data[i + 1].set_time = data[i].set_time;
+        if let Some(ref f) = fill {
+            if data.is_empty() {
+                data = f.fill_na(
+                    t_start,
+                    t_end.unwrap_or_else(|| eva_common::time::now_ns_float()),
+                    limit,
+                    need_status,
+                    need_value,
+                );
+            } else if self.api_version == ApiVersion::V2 {
+                // shift values for influxV2
+                if data.len() < 2 {
+                    data.pop();
+                } else {
+                    for i in (0..data.len() - 1).rev() {
+                        data[i + 1].set_time = data[i].set_time;
+                    }
+                    data.remove(0);
                 }
-                data.remove(0);
             }
         }
         Ok(if compact {
