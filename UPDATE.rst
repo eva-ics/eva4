@@ -5,6 +5,7 @@ What is new
 ===========
 
 * deny_read in ACL schemas
+* various time series data frame fixes
 
 Update instructions
 ===================
