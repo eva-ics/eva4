@@ -4,7 +4,7 @@ EVA ICS CHANGELOG
 4.0.1-stable
 ============
 
-* TBA: "deny_read" in the default ACLs, various time series data frame fixes
+* 2023-03-23 build 2023032301: "deny_read" in the default ACLs, various time series data frame fixes
 
 4.0.0-stable
 ============
