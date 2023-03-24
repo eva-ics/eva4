@@ -21,7 +21,8 @@ class Client:
                  url: str = 'http://localhost:7727',
                  user: str = None,
                  password: str = None,
-                 key: str = None):
+                 key: str = None,
+                 timeout: float = 120):
         """
         Create a new HTTP client instance
 
@@ -33,12 +34,14 @@ class Client:
         self.password = password
         self.key = key
         self.token = None
+        self.timeout = timeout
         self._post = partial(requests.post,
                              url,
                              headers={
                                  'content-type': 'application/msgpack',
                                  'user-agent': f'evaics-py {__version__}'
-                             })
+                             },
+                             timeout=timeout)
         self._call_id = 1
         self._lock = threading.RLock()
 
