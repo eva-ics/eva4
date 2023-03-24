@@ -174,6 +174,15 @@ impl RpcHandlers for Handlers {
                     Ok(Some(pack(&data)?))
                 }
             }
+            "state_push" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Event = unpack(payload)?;
+                    notify(p).await?;
+                    Ok(None)
+                }
+            }
             m => svc_handle_default_rpc(m, &self.info),
         }
     }
@@ -200,6 +209,8 @@ impl RpcHandlers for Handlers {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
 enum Event {
     State(ItemState),
     BulkState(Vec<ItemState>),

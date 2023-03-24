@@ -159,6 +159,15 @@ impl RpcHandlers for Handlers {
                     Ok(Some(pack(&data)?))
                 }
             }
+            "state_push" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Event = unpack(payload)?;
+                    notify(p.as_data()).await?;
+                    Ok(None)
+                }
+            }
             m => svc_handle_default_rpc(m, &self.info),
         }
     }
@@ -189,9 +198,20 @@ enum Data<'a> {
     Bulk(&'a Vec<ItemState>),
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
 enum Event {
     State(ItemState),
     BulkState(Vec<ItemState>),
+}
+
+impl Event {
+    fn as_data(&self) -> Data {
+        match self {
+            Event::State(v) => Data::Single(v),
+            Event::BulkState(v) => Data::Bulk(v),
+        }
+    }
 }
 
 async fn notify(data: Data<'_>) -> EResult<()> {

@@ -12,7 +12,7 @@ eva-common = { version = "0.2.2", features = ["events", "time", "db", "workers",
 log = "0.4.14"
 lazy_static = "1.4.0"
 async-channel = "1.7.1"
-eva-sdk = { version = "0.2.2" }
+eva-sdk = { version = "0.2.3" }
 once_cell = "1.9.0"
 bmart = "0.1.10"
 sqlx = { version = "0.5.11", features = [
