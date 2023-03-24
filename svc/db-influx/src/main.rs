@@ -50,7 +50,7 @@ async fn process_state(
     match OID::from_path(path) {
         Ok(oid) => match unpack::<State>(payload) {
             Ok(v) => {
-                if v.value.as_ref().map_or(false, Value::is_numeric) {
+                if v.value.as_ref().map_or(true, Value::is_numeric) {
                     tx.send(Event::State(ItemState::from_state(v, oid)))
                         .await
                         .map_err(Error::core)?;
@@ -315,7 +315,7 @@ async fn collect_periodic(
             )
             .await?;
         let mut states: Vec<ShortItemState> = unpack(data.payload())?;
-        states.retain(|s| s.value.as_ref().map_or(false, Value::is_numeric));
+        states.retain(|s| s.value.as_ref().map_or(true, Value::is_numeric));
         if !states.is_empty() {
             let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
