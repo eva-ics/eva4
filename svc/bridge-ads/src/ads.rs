@@ -83,7 +83,7 @@ impl SumUpResult {
 
 impl ParseAmsNetId for String {
     fn ams_net_id(&self) -> EResult<[u8; 6]> {
-        let chunks: Vec<&str> = self.split('.').into_iter().collect();
+        let chunks: Vec<&str> = self.split('.').collect();
         if chunks.len() == 6 || chunks.get(6).map_or(false, |v| v.is_empty()) {
             let mut res = Vec::with_capacity(6);
             for c in chunks.iter().take(6) {

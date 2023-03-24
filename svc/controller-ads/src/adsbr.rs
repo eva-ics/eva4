@@ -32,7 +32,7 @@ pub trait ParseAmsNetId {
 
 impl ParseAmsNetId for String {
     fn ams_net_id(&self) -> EResult<[u8; 6]> {
-        let chunks: Vec<&str> = self.split('.').into_iter().collect();
+        let chunks: Vec<&str> = self.split('.').collect();
         if chunks.len() == 6 || chunks.get(6).map_or(false, |v| v.is_empty()) {
             let mut res = Vec::with_capacity(6);
             for c in chunks.iter().take(6) {
@@ -658,7 +658,6 @@ fn parse_buf(buf: &[u8], var: &Var) -> EResult<Value> {
         let kind_size = var.kind.size().try_into()?;
         let vals = buf
             .chunks(kind_size)
-            .into_iter()
             .map(|v| parse_buf_value(v, var))
             .collect::<Vec<Value>>();
         Ok(Value::Seq(vals))

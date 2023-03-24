@@ -29,21 +29,16 @@ const DEFAULT_MIME: &str = "application/octet-stream";
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-#[derive(Deserialize, Eq, PartialEq, Copy, Clone)]
+#[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 enum Extract {
+    #[default]
     No,
     Tar,
     Txz,
     Tgz,
     Tbz2,
     Zip,
-}
-
-impl Default for Extract {
-    fn default() -> Self {
-        Self::No
-    }
 }
 
 struct Handlers {
@@ -53,38 +48,28 @@ struct Handlers {
     mime_types: HashMap<String, String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 enum Mode {
     #[serde(alias = "t")]
     Text,
     #[serde(alias = "b")]
     Binary,
+    #[default]
     #[serde(alias = "i")]
     Info,
     #[serde(alias = "x", rename = "extended_info")]
     ExtendedInfo,
 }
 
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::Info
-    }
-}
-
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 enum Caller {
     #[serde(alias = "h")]
     Human,
+    #[default]
     #[serde(alias = "m")]
     Machine,
-}
-
-impl Default for Caller {
-    fn default() -> Self {
-        Caller::Machine
-    }
 }
 
 #[derive(Serialize, Deserialize)]

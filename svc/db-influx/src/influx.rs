@@ -439,7 +439,7 @@ impl InfluxClient {
             if data.is_empty() {
                 data = f.fill_na(
                     t_start,
-                    t_end.unwrap_or_else(|| eva_common::time::now_ns_float()),
+                    t_end.unwrap_or_else(eva_common::time::now_ns_float),
                     limit,
                     need_status,
                     need_value,

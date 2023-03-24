@@ -22,17 +22,12 @@ fn prop_value() -> StatePropExt {
     StatePropExt::Value
 }
 
-#[derive(Deserialize, Eq, PartialEq, Copy, Clone)]
+#[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 enum InitialKind {
+    #[default]
     Process,
     Skip,
     Only,
-}
-
-impl Default for InitialKind {
-    fn default() -> Self {
-        InitialKind::Process
-    }
 }
 
 #[derive(Default)]

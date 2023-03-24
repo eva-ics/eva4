@@ -13,18 +13,12 @@ pub fn parse_flags(flags: u8) -> EResult<(Encryption, Compression)> {
     Ok((encryption, compression))
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub enum Encryption {
+    #[default]
     No,
     Aes128Gcm,
     Aes256Gcm,
-}
-
-impl Default for Encryption {
-    #[inline]
-    fn default() -> Self {
-        Encryption::No
-    }
 }
 
 impl Encryption {
@@ -52,18 +46,12 @@ impl TryFrom<u8> for Encryption {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
 #[repr(u8)]
 pub enum Compression {
+    #[default]
     No = COMPRESSION_NO,
     Bzip2 = COMPRESSION_BZIP2,
-}
-
-impl Default for Compression {
-    #[inline]
-    fn default() -> Self {
-        Compression::No
-    }
 }
 
 impl TryFrom<u8> for Compression {

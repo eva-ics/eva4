@@ -19,19 +19,14 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD: u64 = 2023032301;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize, Default)]
 #[enumstr(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Mode {
+    #[default]
     Regular,
     SPoint,
     Info,
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Mode::Regular
-    }
 }
 
 #[inline]

@@ -67,6 +67,7 @@ async fn process_state(
 
 #[async_trait::async_trait]
 impl RpcHandlers for Handlers {
+    #[allow(clippy::too_many_lines)]
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         let method = event.parse_method()?;
         let payload = event.payload();

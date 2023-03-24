@@ -18,9 +18,10 @@ pub enum ProtocolCpu {
     Mlgx800,
 }
 
-#[derive(Deserialize, Eq, PartialEq, Copy, Clone)]
+#[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum EipType {
+    #[default]
     Bit,
     #[serde(alias = "byte", alias = "BOOL", alias = "USINT")]
     Uint8,
@@ -42,12 +43,6 @@ pub enum EipType {
     Real32,
     #[serde(alias = "LREAL")]
     Real64,
-}
-
-impl Default for EipType {
-    fn default() -> Self {
-        EipType::Bit
-    }
 }
 
 impl EipType {

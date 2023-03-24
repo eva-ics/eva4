@@ -23,9 +23,10 @@ impl From<ProtocolKind> for rmodbus::ModbusProto {
     }
 }
 
-#[derive(Deserialize, Eq, PartialEq, Copy, Clone)]
+#[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ModbusType {
+    #[default]
     Bit,
     Uint16,
     #[serde(alias = "sint16", alias = "INT")]
@@ -65,12 +66,6 @@ impl ModbusType {
             ModbusType::Real32 => Value::F32(value.try_into()?),
             ModbusType::Real64 => Value::F64(value.try_into()?),
         })
-    }
-}
-
-impl Default for ModbusType {
-    fn default() -> Self {
-        ModbusType::Bit
     }
 }
 

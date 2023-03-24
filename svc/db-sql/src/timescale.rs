@@ -7,6 +7,7 @@ use std::fmt::Write as _;
 use sqlx::Row;
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines)]
 pub async fn state_history_filled(
     oid: OID,
     t_start: f64,
@@ -103,7 +104,7 @@ pub async fn state_history_filled(
     if data.is_empty() {
         data = fill.fill_na(
             t_start,
-            t_end.unwrap_or_else(|| eva_common::time::now_ns_float()),
+            t_end.unwrap_or_else(eva_common::time::now_ns_float),
             limit,
             need_status,
             need_value,

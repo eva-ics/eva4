@@ -58,18 +58,13 @@ impl RpcHandlers for Handlers {
     }
 }
 
-#[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
 enum Proto {
     SnmpV1,
+    #[default]
     SnmpV2c,
     EvaV1,
-}
-
-impl Default for Proto {
-    fn default() -> Self {
-        Proto::SnmpV2c
-    }
 }
 
 #[derive(Deserialize)]
