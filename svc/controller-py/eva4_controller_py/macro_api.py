@@ -43,6 +43,19 @@ def parse_action_payload(payload):
     return payload
 
 
+def get_service():
+    """
+    Get the service object for the direct access
+
+    e.g. service.bus: direct access to BUS/RT
+    service.rpc: direct access to BUS/RT RPC
+
+    Returns:
+        the service object
+    """
+    return service
+
+
 def rpc_call(method=None, _target='eva.core', _timeout=None, **kwargs):
     """
     Performs a bus RPC call
@@ -823,6 +836,7 @@ api_globals = {
     'result': result,
     'start': action_start,
     'stop': action_stop,
+    'service': get_service,
     'terminate': terminate,
     'kill': kill,
     'run': run,
