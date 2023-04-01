@@ -56,6 +56,16 @@ def get_service():
     return service
 
 
+def get_system_name():
+    """
+    Get the system name
+
+    Returns:
+        system name
+    """
+    return service.system_name
+
+
 def rpc_call(method=None, _target='eva.core', _timeout=None, **kwargs):
     """
     Performs a bus RPC call
@@ -837,6 +847,7 @@ api_globals = {
     'start': action_start,
     'stop': action_stop,
     'service': get_service,
+    'system_name': get_system_name,
     'terminate': terminate,
     'kill': kill,
     'run': run,

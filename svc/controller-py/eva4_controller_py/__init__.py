@@ -1,4 +1,4 @@
-__version__ = '0.0.21'
+__version__ = '0.0.22'
 
 from evaics.sdk import Service, Controller, Action, no_rpc_method, ServiceInfo
 from evaics.sdk import OID

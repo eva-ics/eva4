@@ -1,4 +1,4 @@
-VERSION=0.0.21
+VERSION=0.0.22
 
 all:
 	@echo "what do you want to build today?"
