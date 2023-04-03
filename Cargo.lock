@@ -1599,9 +1599,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f28e7de4c1cc2b1c73804ebf9c555e2862c14bedd451d43bd91fab0bc1b97ce4"
+checksum = "788658f3dcfde9f5f8eb5474a6a99055941d075f05b654d30301c8bd8bfe70de"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",
