@@ -99,6 +99,8 @@ fi
 
 ./prepare || exit 8
 
+rm -f ./svc/sblock.sh
+
 if [ ! -f /.eva_container ]; then
   echo "- Cleaning up"
   rm -rf _update
