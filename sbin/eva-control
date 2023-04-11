@@ -131,25 +131,25 @@ case $1 in
     pgrep -fa ^/opt/eva4/venv/bin/python | \
       grep " /opt/eva4/venv/bin/python" | \
       grep "\-svc-"|awk '{ print $1 }'|xargs kill -KILL >& /dev/null
-          rm -f ./var/eva.reload
-          [ "$INVOCATION_ID" ] && pkill -KILL -f "$EVA_DIR/svc/sblock.sh"
-          exit 0
-          ;;
-        restart)
-          ./sbin/eva-control stop "$2"
-          ./sbin/eva-control start "$2"
-          ;;
-        status)
-          if pgrep -f "${EVA_NODE}" >& /dev/null; then
-            echo "running"
-          else
-            echo "stopped"
-          fi
-          ;;
-        version)
-          exec_cmd "${EVA_NODE}" --mode info
-          ;;
-        *)
-          echo "Usage: eva-control start|stop|restart|version"
-          ;;
-      esac
+    rm -f ./var/eva.reload
+    [ "$INVOCATION_ID" ] && pkill -KILL -f "$EVA_DIR/svc/sblock.sh"
+    exit 0
+  ;;
+  restart)
+    ./sbin/eva-control stop "$2"
+    ./sbin/eva-control start "$2"
+    ;;
+  status)
+    if pgrep -f "${EVA_NODE}" >& /dev/null; then
+      echo "running"
+    else
+      echo "stopped"
+    fi
+    ;;
+  version)
+    exec_cmd "${EVA_NODE}" --mode info
+    ;;
+  *)
+    echo "Usage: eva-control start|stop|restart|version"
+    ;;
+  esac
