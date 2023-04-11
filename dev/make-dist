@@ -230,7 +230,6 @@ cp -prvf ../eva4-enterprise/svc-tpl/*.yml share/svc-tpl/ || exit 1
 
 cp -rvf ../eva4/svc/watchdog.sh svc/ || exit 1
 cp -rvf ../eva4/svc/safe-run.sh svc/ || exit 1
-cp -rvf ../eva4/svc/sblock.sh svc/ || exit 1
 cp -rvf ../eva4/cli/pypi-mirror cli/ || exit 1
 
 for f in init-registry; do
