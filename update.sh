@@ -113,10 +113,12 @@ if [ ! -f /.eva_container ]; then
         if [ -f ./etc/eva_config ]; then
           if ! grep "^SYSTEMD_EVA4_SERVICE=" ./etc/eva_config > /dev/null 2>&1; then
             echo SYSTEMD_EVA4_SERVICE=eva4.service >> ./etc/eva_config
+            systemctl stop eva4.service
           fi
         else
           cp ./etc/eva_config-dist ./etc/eva_config
           echo SYSTEMD_EVA4_SERVICE=eva4.service >> ./etc/eva_config
+          systemctl stop eva4.service
         fi
       fi
     fi
