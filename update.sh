@@ -107,6 +107,19 @@ if [ ! -f /.eva_container ]; then
     echo "- Current build: ${BUILD}"
     echo "---------------------------------------------"
     echo "Update completed. Starting everything back"
+    # update eva4 config for systemd
+    if command -v systemctl; then
+      if systemctl -a |grep " eva4.service " > /dev/null 2>&1; then
+        if [ -f ./etc/eva_config ]; then
+          if ! grep "^SYSTEMD_EVA4_SERVICE=" ./etc/eva_config > /dev/null 2>&1; then
+            echo SYSTEMD_EVA4_SERVICE=eva4.service >> ./etc/eva_config
+          fi
+        else
+          cp ./etc/eva_config-dist ./etc/eva_config
+          echo SYSTEMD_EVA4_SERVICE=eva4.service >> ./etc/eva_config
+        fi
+      fi
+    fi
     ./sbin/eva-control start
   else
     echo "Update failed"

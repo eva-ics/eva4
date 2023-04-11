@@ -385,7 +385,9 @@ if [ "$AUTOSTART" ]; then
     if ! command -v systemctl > /dev/null; then
       echo "[!] systemctl is not installed. Skipping auto-startup setup"
     else
-      sed "s|/opt/eva4|${PREFIX}|g" ./etc/systemd/eva4.service > /etc/systemd/system/eva4.service
+      sed "s|/opt/eva4|${PREFIX}|g" ./etc/systemd/eva4.service > /etc/systemd/system/eva4.service || exit 9
+      cp "${PREFIX}/etc/eva_config-dist" "${PREFIX}/etc/eva_config" || exit 9
+      echo "SYSTEMD_EVA4_SERVICE=eva4.service" >> "${PREFIX}/etc/eva_config" || exit 9
       systemctl enable eva4 || exit 9
       echo "Starting EVA ICS with systemctl..."
       systemctl restart eva4 || exit 11

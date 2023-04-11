@@ -35,8 +35,16 @@ function exec_cmd {
   return $?
 }
 
+function handle_systemd {
+  if [ "$SYSTEMD_EVA4_SERVICE" ] && [ -z "$INVOCATION_ID" ]; then
+    systemctl "$1" "$SYSTEMD_EVA4_SERVICE"
+    exit $?
+  fi
+}
+
 case $1 in
   start)
+    handle_systemd start
     echo -n "Starting EVA ICS ."
     if pgrep -f "${EVA_NODE}" >& /dev/null; then
       echo
@@ -80,7 +88,6 @@ case $1 in
         "${WATCHDOG}" >& /dev/null &
         ;;
     esac
-    [ "$INVOCATION_ID" ] && "$EVA_DIR/svc/sblock.sh" &
     exit 0
     ;;
   launch)
@@ -88,6 +95,7 @@ case $1 in
     "${EVA_NODE}" --mode "${MODE}" --system-name "${SYSTEM_NAME}" --pid-file "${PID_FILE}" ${ARGS}
     ;;
   stop)
+    handle_systemd stop
     PID_WATCHDOG=
     [ -f "${WATCHDOG_PID_FILE}" ] && PID_WATCHDOG=$(cat "${WATCHDOG_PID_FILE}")
     if [ "${PID_WATCHDOG}" ]; then
@@ -132,10 +140,10 @@ case $1 in
       grep " /opt/eva4/venv/bin/python" | \
       grep "\-svc-"|awk '{ print $1 }'|xargs kill -KILL >& /dev/null
     rm -f ./var/eva.reload
-    [ "$INVOCATION_ID" ] && pkill -KILL -f "$EVA_DIR/svc/sblock.sh"
     exit 0
   ;;
   restart)
+    handle_systemd restart
     ./sbin/eva-control stop "$2"
     ./sbin/eva-control start "$2"
     ;;
