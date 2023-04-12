@@ -647,14 +647,18 @@ pub fn init(
             .expect("logger output is not a string");
         match output.as_str() {
             "console" => {
+                let mut level = parse_level!();
+                if verbose_mode {
+                    if max_filter < LevelFilter::Debug {
+                        max_filter = LevelFilter::Debug;
+                    }
+                    if level < LevelFilter::Debug {
+                        level = LevelFilter::Debug;
+                    }
+                }
                 loggers.push(Box::new(ConsoleLogger::new(
                     system_name,
-                    if verbose_mode {
-                        max_filter = LevelFilter::Trace;
-                        LevelFilter::Trace
-                    } else {
-                        parse_level!()
-                    },
+                    level,
                     parse_format(&mut logger_config),
                 )));
                 console_ready = true;
