@@ -10,9 +10,5 @@ instant_save: true
 # keep action history in memory (seconds)
 keep_action_history: 86400
 # optional inventory database (for huge projects)
-# SQLite:
-#inventory_db: sqlite:///opt/eva4/var/inventory.db
-# MySQL:
-#inventory_db: mysql://USER:PASSWORD@HOST/DB
-# PostgreSQL
+# NOTE: sqlite and MySQL support is deprecated, use PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB
