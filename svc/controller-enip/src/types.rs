@@ -23,19 +23,19 @@ pub enum ProtocolCpu {
 pub enum EipType {
     #[default]
     Bit,
-    #[serde(alias = "byte", alias = "BOOL", alias = "USINT")]
+    #[serde(alias = "byte", alias = "BYTE", alias = "BOOL", alias = "USINT")]
     Uint8,
     #[serde(alias = "sint8", alias = "SINT")]
     Int8,
-    #[serde(alias = "word", alias = "UINT")]
+    #[serde(alias = "word", alias = "WORD", alias = "UINT")]
     Uint16,
     #[serde(alias = "sint16", alias = "INT")]
     Int16,
-    #[serde(alias = "dword", alias = "UDINT")]
+    #[serde(alias = "dword", alias = "DWORD", alias = "UDINT")]
     Uint32,
     #[serde(alias = "sint32", alias = "DINT")]
     Int32,
-    #[serde(alias = "qword", alias = "ULINT")]
+    #[serde(alias = "qword", alias = "QWORD", alias = "ULINT")]
     Uint64,
     #[serde(alias = "sint64", alias = "LINT")]
     Int64,
