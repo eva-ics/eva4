@@ -221,7 +221,9 @@ if [ -d "$PREFIX" ] && [ -z "${PREPARE_ONLY}" ]; then
 fi
 
 if [ $ID_LIKE = "debian" ]; then
-  apt-get update || exit 10
+  if [ -z "$SKIP_SYSTEM_UPDATE" ]; then
+    apt-get update || exit 10
+  fi
   if [ ! -f /etc/localtime ]; then
     env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y tzdata || exit 10
     ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
@@ -266,7 +268,9 @@ case $ID_LIKE in
     ADDGROUP=$(command -v addgroup || echo /usr/sbin/addgroup)
     ;;
   alpine)
-    apk update || exit 10
+    if [ -z "$SKIP_SYSTEM_UPDATE" ]; then
+      apk update || exit 10
+    fi
     apk add bash jq curl tar || exit 10
     if [ $MODE -ge 1 ]; then
       apk add python3
