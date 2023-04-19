@@ -136,10 +136,11 @@ case $1 in
     fi
     pkill -KILL -f "^$EVA_DIR/svc/" >& /dev/null
     pkill -KILL -f "^$EVA_DIR/target/" >& /dev/null
-    pgrep -fa ^/opt/eva4/venv/bin/python | \
-      grep " /opt/eva4/venv/bin/python" | \
+    pgrep -fa ^${EVA_DIR}/venv/bin/python | \
+      grep " ${EVA_DIR}/venv/bin/python" | \
       grep "\-svc-"|awk '{ print $1 }'|xargs kill -KILL >& /dev/null
     rm -f ./var/eva.reload
+    rm -f ./var/bus.ipc
     exit 0
   ;;
   restart)
