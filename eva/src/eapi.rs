@@ -31,6 +31,9 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+const HANDLER_ID_RAW_STATE: usize = 1;
+const HANDLER_ID_ACTION: usize = 2;
+
 err_logger!();
 
 pub const EAPI_VERSION: u16 = 1;
@@ -93,19 +96,19 @@ impl BusApi {
         }
     }
     pub fn start(&mut self) -> EResult<()> {
-        let (_, rx) = self
-            .topic_broker
-            .register_prefix(RAW_STATE_TOPIC, self.channel_size)?;
+        let (tx, rx) = self.topic_broker.register_prefix_with_handler_id(
+            RAW_STATE_TOPIC,
+            HANDLER_ID_RAW_STATE,
+            self.channel_size,
+        )?;
+        self.topic_broker.register_prefix_tx_with_handler_id(
+            eva_common::actions::ACTION_TOPIC,
+            HANDLER_ID_ACTION,
+            tx,
+        )?;
         let core = self.core.clone();
         tokio::spawn(async move {
-            raw_state_handler(&core, rx).await;
-        });
-        let (_, rx) = self
-            .topic_broker
-            .register_prefix(eva_common::actions::ACTION_TOPIC, self.channel_size)?;
-        let core = self.core.clone();
-        tokio::spawn(async move {
-            action_state_handler(&core, rx).await;
+            raw_state_and_action_handler(&core, rx).await;
         });
         let (_, rx) = self
             .topic_broker
@@ -138,39 +141,55 @@ impl BusApi {
     }
 }
 
-async fn raw_state_handler(core: &Core, rx: async_channel::Receiver<pubsub::Publication>) {
+async fn raw_state_and_action_handler(
+    core: &Core,
+    rx: async_channel::Receiver<pubsub::Publication>,
+) {
     while let Ok(frame) = rx.recv().await {
-        if core.is_active() {
-            match OID::from_path(frame.subtopic()) {
-                Ok(oid) => match unpack::<RawStateEventOwned>(frame.payload()) {
-                    Ok(raw) => {
-                        core.update_state_from_raw(&oid, raw).await.log_efd();
-                    }
-                    Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
-                },
-                Err(e) => warn!("invalid OID in raw event {}: {}", frame.topic(), e),
+        match frame.handler_id() {
+            HANDLER_ID_RAW_STATE => {
+                handle_raw_state_event(core, frame).await;
             }
+            HANDLER_ID_ACTION => {
+                handle_action_state(core, frame);
+            }
+            v => warn!(
+                "core raw state and action handler, orphaned handler id: {}",
+                v
+            ),
         }
     }
 }
 
-async fn action_state_handler(core: &Core, rx: async_channel::Receiver<pubsub::Publication>) {
-    while let Ok(frame) = rx.recv().await {
-        if core.is_active() {
-            if let Err(e) = OID::from_path(frame.subtopic()) {
-                warn!("invalid OID in action event {}: {}", frame.topic(), e);
-            } else {
-                match unpack::<eva_common::actions::ActionEvent>(frame.payload()) {
-                    Ok(action_event) => {
-                        core.action_manager().process_event(action_event).log_ef();
-                    }
-                    Err(e) => {
-                        warn!(
-                            "invalid payload in action event, topic {}: {}",
-                            frame.topic(),
-                            e
-                        );
-                    }
+async fn handle_raw_state_event(core: &Core, frame: pubsub::Publication) {
+    if core.is_active() {
+        match OID::from_path(frame.subtopic()) {
+            Ok(oid) => match unpack::<RawStateEventOwned>(frame.payload()) {
+                Ok(raw) => {
+                    core.update_state_from_raw(&oid, raw).await.log_efd();
+                }
+                Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
+            },
+            Err(e) => warn!("invalid OID in raw event {}: {}", frame.topic(), e),
+        }
+    }
+}
+
+fn handle_action_state(core: &Core, frame: pubsub::Publication) {
+    if core.is_active() {
+        if let Err(e) = OID::from_path(frame.subtopic()) {
+            warn!("invalid OID in action event {}: {}", frame.topic(), e);
+        } else {
+            match unpack::<eva_common::actions::ActionEvent>(frame.payload()) {
+                Ok(action_event) => {
+                    core.action_manager().process_event(action_event).log_ef();
+                }
+                Err(e) => {
+                    warn!(
+                        "invalid payload in action event, topic {}: {}",
+                        frame.topic(),
+                        e
+                    );
                 }
             }
         }
