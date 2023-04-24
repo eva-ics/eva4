@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.1-stable
 ============
 
+* 2023-04-25 build 2023042501: fixed state event ordering for units
 * 2023-04-18 build 2023041801: added uppercase WORD types in En/IP, debug log level on launch
 * 2023-04-12 build 2023041201: systemd startup updates
 * 2023-04-04 build 2023040402: SDK fixes for data frame filling
