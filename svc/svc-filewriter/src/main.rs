@@ -195,11 +195,29 @@ async fn sync_dirs(paths: &[&str]) -> EResult<()> {
         }
     }
     for d in dirs {
-        tokio::fs::File::open(d).await?.sync_all().await?;
+        tokio::fs::File::open(&d)
+            .await
+            .map_err(|e| {
+                Error::io(format!(
+                    "unable to open directory {} for sync: {}",
+                    d.to_string_lossy(),
+                    e
+                ))
+            })?
+            .sync_all()
+            .await
+            .map_err(|e| {
+                Error::io(format!(
+                    "unable to sync directory {}: {}",
+                    d.to_string_lossy(),
+                    e
+                ))
+            })?;
     }
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn file_handler(
     rx: &async_channel::Receiver<Event>,
     base_file_path: &str,
@@ -207,6 +225,11 @@ async fn file_handler(
     gen: &DataGen,
     auto_flush: bool,
 ) -> EResult<()> {
+    macro_rules! explain_io {
+        ($msg: expr, $err: expr) => {
+            Error::io(format!("{} {}", $msg, $err))
+        };
+    }
     let mut dt = Local::now();
     let mut file_path = generate_file_path(base_file_path, dt);
     let mut fx: Option<tokio::fs::File> = None;
@@ -214,7 +237,10 @@ async fn file_handler(
         let mut fd_opt = None;
         if let Some(ref mut existing_fh) = fx {
             if let Ok(path_metadata) = tokio::fs::metadata(&file_path).await {
-                let metadata = existing_fh.metadata().await?;
+                let metadata = existing_fh
+                    .metadata()
+                    .await
+                    .map_err(|e| explain_io!("unable to get metadata", e))?;
                 if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
                     fd_opt = Some(existing_fh);
                 }
@@ -230,38 +256,62 @@ async fn file_handler(
                 .append(true)
                 .create(true)
                 .open(&file_path)
-                .await?;
+                .await
+                .map_err(|e| explain_io!("unable to create file", e))?;
             sync_dirs(&[&file_path]).await?;
-            f.seek(SeekFrom::End(0)).await?;
+            f.seek(SeekFrom::End(0))
+                .await
+                .map_err(|e| explain_io!("unable to seek file from end", e))?;
             fx.replace(f);
             dt = Local::now();
             fx.as_mut().unwrap()
         };
-        let pos = fd.seek(SeekFrom::Current(0)).await?;
+        let pos = fd
+            .seek(SeekFrom::Current(0))
+            .await
+            .map_err(|e| explain_io!("unable to seek file from current", e))?;
         if pos == 0 {
             if let Some(header) = gen.header() {
-                fd.write_all(&header).await?;
+                fd.write_all(&header)
+                    .await
+                    .map_err(|e| explain_io!("unable to write file header", e))?;
             }
         }
         match event {
-            Event::State(state) => fd.write_all(&gen.line(state)?).await?,
+            Event::State(state) => fd
+                .write_all(&gen.line(state)?)
+                .await
+                .map_err(|e| explain_io!("unable to write state data", e))?,
             Event::BulkState(states) => {
                 let mut buf = Vec::new();
                 for state in states {
                     buf.extend(&gen.line(state)?);
                 }
-                fd.write_all(&buf).await?;
+                fd.write_all(&buf)
+                    .await
+                    .map_err(|e| explain_io!("unable to write bulk state data", e))?;
             }
             Event::Flush => {
-                fd.flush().await?;
+                fd.flush()
+                    .await
+                    .map_err(|e| explain_io!("unable to flush", e))?;
                 continue;
             }
             Event::Rotate => {
-                fd.flush().await?;
+                fd.flush()
+                    .await
+                    .map_err(|e| explain_io!("unable to flush", e))?;
                 fx.take();
                 if let Some(path) = base_rotated_path {
                     let rotated_path = generate_file_path(path, dt);
-                    tokio::fs::rename(&file_path, &rotated_path).await?;
+                    tokio::fs::rename(&file_path, &rotated_path)
+                        .await
+                        .map_err(|e| {
+                            explain_io!(
+                                format!("unable to rename {} to {}", file_path, rotated_path),
+                                e
+                            )
+                        })?;
                     sync_dirs(&[&file_path, &rotated_path]).await?;
                     file_path = generate_file_path(base_file_path, dt);
                 } else if base_file_path.contains('%') {
@@ -272,14 +322,23 @@ async fn file_handler(
                         &file_path,
                         dt.to_rfc3339_opts(SecondsFormat::Secs, false)
                     );
-                    tokio::fs::rename(&file_path, &rotated_path).await?;
+                    tokio::fs::rename(&file_path, &rotated_path)
+                        .await
+                        .map_err(|e| {
+                            explain_io!(
+                                format!("unable to rename {} to {}", file_path, rotated_path),
+                                e
+                            )
+                        })?;
                     sync_dirs(&[&file_path, &rotated_path]).await?;
                 }
                 continue;
             }
         }
         if auto_flush {
-            fd.flush().await?;
+            fd.flush()
+                .await
+                .map_err(|e| explain_io!("unable to flush", e))?;
         }
     }
     Ok(())
@@ -429,6 +488,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)
                 .await
                 .log_ef();
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
