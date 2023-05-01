@@ -522,6 +522,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 collect_periodic(&config.oids, interval, &txc)
                     .await
                     .log_ef();
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
     }
