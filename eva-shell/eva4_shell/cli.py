@@ -628,8 +628,12 @@ class CLI:
         data = call_rpc('stats', target='.broker')
         print_result(data, need_header=False, name_value=True)
 
-    def broker_client_list(self):
-        data = call_rpc('client.list', target='.broker')
+    def broker_client_list(self, filter=None):
+        if filter is None:
+            params = None
+        else:
+            params = dict(filter='^' + filter.replace('.', '\\.') + '.*$')
+        data = call_rpc('client.list', params, target='.broker')
         if current_command.json:
             print_result(data)
         else:

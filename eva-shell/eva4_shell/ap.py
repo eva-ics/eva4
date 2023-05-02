@@ -193,7 +193,8 @@ def append_broker_cli(root_sp):
     ap = root_sp.add_parser('broker', help='bus broker commands')
     sp = ap.add_subparsers(dest='_subc', help='sub command')
 
-    sp.add_parser('client.list', help='list registered bus clients')
+    p = sp.add_parser('client.list', help='list registered bus clients')
+    p.add_argument('-x', '--filter', type=str)
     sp.add_parser('test', help='test broker')
     sp.add_parser('info', help='broker info')
     sp.add_parser('stats', help='broker stats')
