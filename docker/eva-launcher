@@ -2,17 +2,14 @@
 
 cd /opt/eva4 || exit 1
 
-# external runtime - mount
-if [ -d /runtime ]; then
-  rm -rf runtime
-  ln -sf /opt/eva4/runtime || exit 1
-fi
-
-# external log - mount
-if [ -d /log ]; then
-  rm -rf log
-  ln -sf /log log
-fi
+# mount external dirs
+EXTERNAL_DIRS="runtime log"
+for dir in $EXTERNAL_DIRS; do
+  if [ -d "/$dir" ]; then
+    rm -rf "$dir"
+    ln -sf "/$dir" "/opt/eva4/$dir" || exit 1
+  fi
+done
 
 # prepare if the registry is not initialized
 if [ ! -d ./runtime/registry ]; then
