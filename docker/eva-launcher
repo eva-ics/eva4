@@ -33,12 +33,19 @@ fi
 # launch the node
 ./sbin/eva-control launch &
 
+[ -f ./etc/eva_config ] && source ./etc/eva_config
+
+[ -z "$MAX_START_WAIT" ] && MAX_START_WAIT=10
+
+C=0
+
 # wait until the node becomes active
-while true; do
+while [ $C -lt $MAX_START_WAIT ]; do
   sleep 1
   if [ "$(./sbin/bus -s /opt/eva4/var/bus.ipc rpc call eva.core test|jq .active)" = "true" ]; then
     break
   fi
+  (( C++ ))
 done
 
 # perform initial setup if required
@@ -63,7 +70,5 @@ if [ ! -f "$SETUP_FLAG" ]; then
   fi
 fi
 
-# block forever
-while true; do
-  sleep 1
-done
+# block until stopped
+fg
