@@ -51,25 +51,28 @@ while [ $C -lt $MAX_START_WAIT ]; do
 done
 
 # perform initial setup if required
-if [ ! -f "$SETUP_FLAG" ]; then
+if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
   touch "$SETUP_FLAG"
   if [ -f /mnt/init/init.sh ]; then
     # launch directly init script if executable
     if [ -x /mnt/init/init.sh ]; then
-      /mnt/init/init.sh
+      /mnt/init/init.sh || exit 4
     else
       # otherwise launch it with bash
-      bash /mnt/init/init.sh
+      bash /mnt/init/init.sh || exit 4
     fi
   fi
-  if [ -f /mnt/init/init.yml ]; then
+  for file in $(ls -1 /mnt/init/init*.yml | sort); do
     ARGS=
-    if [ -f /mnt/init/vars.yml ]; then
-      ARGS="--config /mnt/init/vars.yml"
+    var_file=$(echo $file | sed -E 's|(.*)/init(.*)$|\1/vars\2|')
+    if [ -f $var_file ]; then
+      ARGS="--config $var_file"
     fi
+    echo "Deploying $file..."
     /opt/eva4/bin/eva-cloud-manager cloud deploy -t 60 \
-      -C /opt/eva4/var/bus.ipc $ARGS /mnt/init/init.yml
-  fi
+      -C /opt/eva4/var/bus.ipc $ARGS "$file" || exit 5
+  done
+  echo "Deployment completed"
 fi
 
 # block until stopped

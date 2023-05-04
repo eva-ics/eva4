@@ -1,0 +1,27 @@
+version: 4
+content:
+  - node: .local
+    svcs:
+    - id: eva.aaa.acl
+      params:
+        bus:
+          path: var/bus.ipc
+        command: svc/eva-aaa-acl
+        config: {}
+        enabled: true
+        launcher: eva.launcher.main
+        user: eva
+        workers: 1
+    - id: eva.aaa.localauth
+      params:
+        bus:
+          path: var/bus.ipc
+        command: svc/eva-aaa-localauth
+        config:
+          acl_svc: eva.aaa.acl
+          one_time:
+            expires: 30
+        enabled: true
+        launcher: eva.launcher.main
+        user: eva
+        workers: 1

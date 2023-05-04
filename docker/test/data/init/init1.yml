@@ -1,0 +1,11 @@
+version: 4
+content:
+  - node: .local
+    acls:
+      - id: admin
+        admin: true
+    users:
+      - login: admin
+        password: {{ admin_password }}
+        acls:
+          - admin
