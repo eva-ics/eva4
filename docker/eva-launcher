@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 
+SETUP_FLAG=/opt/eva4/var/.eva_container_setup_completed
+
 cd /opt/eva4 || exit 1
 
 # mount external dirs
-EXTERNAL_DIRS="runtime log"
+EXTERNAL_DIRS="runtime log ui pvt etc"
 for dir in $EXTERNAL_DIRS; do
-  if [ -d "/$dir" ]; then
+  if [ -d "/mnt/$dir" ]; then
     rm -rf "$dir"
-    ln -sf "/$dir" "/opt/eva4/$dir" || exit 1
+    ln -sf "/mnt/$dir" "/opt/eva4/$dir" || exit 1
   fi
 done
 
@@ -23,4 +25,32 @@ if [ -f ./update.sh ]; then
   rmdir log > /dev/null 2>&1
 fi
 
-./sbin/eva-control launch
+# launch the node
+./sbin/eva-control launch &
+
+# wait until the node becomes active
+while true; do
+  sleep 1
+  if [ "$(./sbin/bus -s /opt/eva4/var/bus.ipc rpc call eva.core test|jq .active)" = "true" ]; then
+    break
+  fi
+done
+
+# perform initial setup if required
+if [ ! -f "$SETUP_FLAG" ]; then
+  touch "$SETUP_FLAG"
+  [ -f /mnt/init/init.sh ] && /mnt/init/init.sh
+  if [ -f /mnt/init/init.yml ]; then
+    ARGS=
+    if [ -f /mnt/init/vars.yml ]; then
+      ARGS="--config /mnt/init/vars.yml"
+    fi
+    /opt/eva4/bin/eva-cloud-manager cloud deploy -t 60 \
+      -C /opt/eva4/var/bus.ipc $ARGS /mnt/init/init.yml
+  fi
+fi
+
+# block forever
+while true; do
+  sleep 1
+done
