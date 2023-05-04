@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
-SETUP_FLAG=/opt/eva4/var/.eva_container_setup_completed
+SETUP_FLAG=/opt/eva4/runtime/.container_setup_completed
 
 cd /opt/eva4 || exit 1
+
+# keep the default runtime if external is mounted
+if [ -d /mnt/runtime ] && [ ! -f "$SETUP_FLAG" ] && [ ! -d /mnt/runtime/registry ]; then
+  mv -f ./runtime/* /mnt/runtime/
+fi
 
 # mount external dirs
 EXTERNAL_DIRS="runtime log ui pvt etc"
@@ -39,7 +44,15 @@ done
 # perform initial setup if required
 if [ ! -f "$SETUP_FLAG" ]; then
   touch "$SETUP_FLAG"
-  [ -f /mnt/init/init.sh ] && /mnt/init/init.sh
+  if [ -f /mnt/init/init.sh ]; then
+    # launch directly init script if executable
+    if [ -x /mnt/init/init.sh ]; then
+      /mnt/init/init.sh
+    else
+      # otherwise launch it with bash
+      bash /mnt/init/init.sh
+    fi
+  fi
   if [ -f /mnt/init/init.yml ]; then
     ARGS=
     if [ -f /mnt/init/vars.yml ]; then

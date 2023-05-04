@@ -1,0 +1,33 @@
+version: '3'
+services:
+  eva-ics:
+    container_name: eva_basic_1
+    hostname: eva_1
+    image: altertech/eva-ics4
+    volumes:
+        - ./data/init:/mnt/init
+        - ./data/ui:/mnt/ui
+        - ./data/pvt:/mnt/pvt
+        - ./data/backup:/mnt/backup
+        - ./data/runtime:/mnt/runtime
+        - ./data/etc:/mnt/etc
+        - ./data/log:/mnt/log
+    networks:
+      ic:
+        ipv4_address: 10.27.5.10
+
+networks:
+  ic:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.27.5.0/24
+
+volumes:
+  ui:
+  pvt:
+  backup:
+  runtime:
+  etc:
+  log:
