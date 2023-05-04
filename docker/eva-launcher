@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+cd /opt/eva4 || exit 1
+
+# external runtime - mount
+if [ -d /runtime ]; then
+  rm -rf runtime
+  ln -sf /opt/eva4/runtime || exit 1
+fi
+
+# external log - mount
+if [ -d /log ]; then
+  rm -rf log
+  ln -sf /log log
+fi
+
+# prepare if the registry is not initialized
+if [ ! -d ./runtime/registry ]; then
+  ./prepare || exit 2
+fi
+
+# run update if not initialized
+if [ -f ./update.sh ]; then
+  bash ./update.sh || exit 3
+  rm -f update.sh prepare
+  rmdir log > /dev/null 2>&1
+fi
+
+./sbin/eva-control launch
