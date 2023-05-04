@@ -44,7 +44,7 @@ C=0
 # wait until the node becomes active
 while [ $C -lt $MAX_START_WAIT ]; do
   sleep 1
-  if [ "$(./sbin/bus -s /opt/eva4/var/bus.ipc rpc call eva.core test|jq .active)" = "true" ]; then
+  if [ "$(./sbin/bus -s /opt/eva4/var/bus.ipc rpc call eva.core test|jq -r .active)" = "true" ]; then
     break
   fi
   (( C++ ))
