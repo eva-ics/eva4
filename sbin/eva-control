@@ -10,7 +10,7 @@ EVA_DIR=$(pwd)
 export EVA_DIR
 
 [ -f ./etc/eva_config ] && source ./etc/eva_config
-[ -z "${MAX_START_WAIT}" ] && MAX_START_WAIT=20
+[ -z "${MAX_START_WAIT}" ] && MAX_START_WAIT=30
 [ -z "${MODE}" ] && MODE=regular
 [ -z "${SYSTEM_NAME}" ] && SYSTEM_NAME=$(hostname -s)
 [ -z "${PID_FILE}" ] && PID_FILE=${EVA_DIR}/var/eva.pid

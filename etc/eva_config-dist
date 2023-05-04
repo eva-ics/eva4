@@ -1,4 +1,4 @@
-# MAX_START_WAIT=10 # max start wait (for regular mode)
+# MAX_START_WAIT=30 # max start wait (for regular mode)
 # VERBOSE_STARTUP=0 # verbose startup
 # SYSTEM_NAME=node1 # override the system name
 # PID_FILE=var/eva.pid # override the pid file location
