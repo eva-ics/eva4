@@ -24,6 +24,15 @@ if [ ! -d ./runtime/registry ]; then
 fi
 
 if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
+  if [ -f /mnt/init/prepare.sh ]; then
+    # launch directly prepare script if executable
+    if [ -x /mnt/init/prepare.sh ]; then
+      /mnt/init/prepare.sh || exit 4
+    else
+      # otherwise launch it with bash
+      bash /mnt/init/prepare.sh || exit 4
+    fi
+  fi
   # init config keys if exist
   KEYS="bus cloud-manager core logs registry"
   for key in $KEYS; do
