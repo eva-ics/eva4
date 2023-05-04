@@ -42,6 +42,7 @@ do-stable-build-create:
 
 stable-release:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
+	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
 	./dev/make-release
 	jks build pub.bma.ai
 

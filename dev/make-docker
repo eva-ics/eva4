@@ -1,0 +1,12 @@
+#!/bin/bash
+
+VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
+
+echo "Releasing Docker image for EVA distribution ver ${VERSION} build ${BUILD}"
+
+cd ./docker/build
+./build.sh "$VERSION" "$BUILD" || exit 1
+./push.sh "$BUILD" || exit 1
+
+echo "Docker image uploaded for ${VERSION} build ${BUILD}"

@@ -1,12 +1,12 @@
-#!/bin/sh
+#!/bin/sh -x
 
-BUILD=$2
+BUILD=$1
 
 if [ -z $BUILD ]; then
   echo "Usage $0 <BUILD>"
   exit 9
 fi
 
-docket tag "altertech/eva-ics4:${BUILD}" altertech/eva-ics4:latest || exit 1
-docker push "altertech/eva-ics:$BUILD" || exit 1
-docker push altertech/eva-ics:latest || exit 1
+docker tag altertech/eva-ics4:latest "altertech/eva-ics4:${BUILD}" || exit 1
+docker push "altertech/eva-ics4:$BUILD" || exit 1
+docker push altertech/eva-ics4:latest || exit 1
