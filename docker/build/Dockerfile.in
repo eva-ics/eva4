@@ -6,7 +6,7 @@ RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends bash jq curl procps ca-certificates tar gzip adduser
 RUN apt-get install -y --no-install-recommends python3 python3-venv
-RUN apt-get install  -y --no-install-recommends vim-nox
+RUN apt-get install  -y --no-install-recommends vim-tiny
 RUN addgroup --system eva
 RUN adduser --system --no-create-home --home /opt/eva4 --ingroup eva eva
 RUN curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64-ubuntu20.04.tgz | tar xzf - -C /opt

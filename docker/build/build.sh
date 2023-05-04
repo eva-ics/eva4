@@ -13,3 +13,4 @@ ARGS="--no-cache"
 sed "s/%VERSION%/$VERSION/g" Dockerfile.in | sed "s/%BUILD%/$BUILD/g" > Dockerfile || exit 1
 docker build $ARGS -t altertech/eva-ics4 . || exit 1
 echo "Image build completed (${VERSION} $BUILD)"
+rm -f Dockerfile
