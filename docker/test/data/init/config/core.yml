@@ -1,0 +1,5 @@
+instant_save: true
+keep_action_history: 86400
+suicide_timeout: 15
+timeout: 5
+workers: 4

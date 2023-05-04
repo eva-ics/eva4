@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -m
-
 SETUP_FLAG=/opt/eva4/runtime/.container_setup_completed
 
 cd /opt/eva4 || exit 1
@@ -23,6 +21,18 @@ done
 # prepare if the registry is not initialized
 if [ ! -d ./runtime/registry ]; then
   ./prepare || exit 2
+fi
+
+if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
+  # init config keys if exist
+  KEYS="bus cloud-manager core logs registry"
+  for key in $KEYS; do
+    if [ -f "/mnt/init/config/$key.yml" ]; then
+      echo "Setting eva/config/$key registry key"
+      ./sbin/eva-registry-cli set \
+        eva/config/core - -p yaml < "/mnt/init/config/$key.yml" > /dev/null || exit 2
+    fi
+  done
 fi
 
 # run update if not initialized
@@ -64,8 +74,8 @@ if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
   fi
   for file in $(ls -1 /mnt/init/init*.yml | sort); do
     ARGS=
-    var_file=$(echo $file | sed -E 's|(.*)/init(.*)$|\1/vars\2|')
-    if [ -f $var_file ]; then
+    var_file=$(echo "$file" | sed -E 's|(.*)/init(.*)$|\1/vars\2|')
+    if [ -f "$var_file" ]; then
       ARGS="--config $var_file"
     fi
     echo "Deploying $file..."
@@ -75,5 +85,16 @@ if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
   echo "Deployment completed"
 fi
 
+_term() { 
+  echo "Terminating..." 
+  ./sbin/eva-control stop
+  exit 0
+}
+
+trap _term SIGTERM
+trap _term SIGINT
+
 # block until stopped
-fg > /dev/null
+while true; do
+  sleep 1
+done

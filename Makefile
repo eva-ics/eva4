@@ -40,11 +40,15 @@ do-stable-build-create:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
 	MASTER=deny ./dev/build-and-upload
 
-stable-release:
+stable-release: stable-release-dist stable-release-docker
+
+stable-release-dist:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
-	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
 	./dev/make-release
 	jks build pub.bma.ai
+
+stable-release-docker:
+	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
 
 release-installer:
 	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
