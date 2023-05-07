@@ -12,7 +12,6 @@ config:
   # HMI database for API log and sessions, can be shared between instances
   # default: runtime/svc_data/<SVC_ID>/hmi.db
   #db: sqlite:///tmp/hmi.db
-  #db: mysql://USER:PASSWORD@HOST/DB
   #db: postgres://USER:PASSWORD@HOST/DB
   auth_svcs:
     - eva.aaa.localauth
