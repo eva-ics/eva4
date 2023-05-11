@@ -63,6 +63,7 @@ impl Otp {
         let auth = boringauth::oath::TOTPBuilder::new()
             .base32_key(&self.secret)
             .output_len(6)
+            .tolerance(1)
             .hash_function(boringauth::oath::HashFunction::Sha1)
             .finalize()
             .map_err(|e| Error::failed(format!("{:?}", e)))?;
