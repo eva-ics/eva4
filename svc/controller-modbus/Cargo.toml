@@ -21,7 +21,7 @@ itertools = "0.10.3"
 lazy_static = "1.4.0"
 bmart = "0.1.15"
 rmodbus = { version = "0.6.0", features = [ "std" ] }
-simple-pool = "0.0.13"
+simple-pool = "0.0.14"
 ieee754 = "0.2.6"
 tokio-serial = "5.4.3"
 
