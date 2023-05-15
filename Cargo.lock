@@ -1325,7 +1325,7 @@ dependencies = [
  "once_cell",
  "rmodbus",
  "serde",
- "simple-pool 0.0.9",
+ "simple-pool 0.0.12",
  "tokio",
  "tokio-serial",
  "uuid 1.1.2",
@@ -1426,7 +1426,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
- "simple-pool 0.0.11",
+ "simple-pool 0.0.12",
  "tokio",
  "urlencoding",
 ]
@@ -3992,15 +3992,15 @@ dependencies = [
 
 [[package]]
 name = "simple-pool"
-version = "0.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "642dde52b03e52e608e28e472c175225b0c037e09d58ca173f1e30f63b91078d"
-
-[[package]]
-name = "simple-pool"
 version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "221c4d7aa7a3aab1262af53537c9e24ce4436b72a8b7a1534ff371ae2f38c294"
+
+[[package]]
+name = "simple-pool"
+version = "0.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e05bdf5782d17115f8d10e99135f4f07ea9dccf0eee3b93677af3b104a69b733"
 
 [[package]]
 name = "siphasher"
