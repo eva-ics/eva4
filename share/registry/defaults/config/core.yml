@@ -10,5 +10,5 @@ instant_save: true
 # keep action history in memory (seconds)
 keep_action_history: 86400
 # optional inventory database (for huge projects)
-# NOTE: sqlite and MySQL support is deprecated, use PostgreSQL only
+# NOTE: MySQL support is deprecated, use SQLite or PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB
