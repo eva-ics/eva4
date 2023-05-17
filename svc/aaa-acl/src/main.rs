@@ -44,7 +44,9 @@ struct Acl {
     #[serde(skip_serializing_if = "Option::is_none")]
     write: Option<HashMap<String, HashSet<Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    deny: Option<HashMap<String, HashSet<Value>>>,
+    deny_read: Option<HashMap<String, HashSet<Value>>>,
+    #[serde(alias = "deny", skip_serializing_if = "Option::is_none")]
+    deny_write: Option<HashMap<String, HashSet<Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ops: Option<HashSet<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -62,7 +64,9 @@ struct AclInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     write: Option<&'a HashMap<String, HashSet<Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    deny: Option<&'a HashMap<String, HashSet<Value>>>,
+    deny_read: Option<&'a HashMap<String, HashSet<Value>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deny_write: Option<&'a HashMap<String, HashSet<Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ops: Option<&'a HashSet<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -81,7 +85,9 @@ struct AclData<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     write: Option<HashMap<&'a str, HashSet<&'a Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    deny: Option<HashMap<&'a str, HashSet<&'a Value>>>,
+    deny_read: Option<HashMap<&'a str, HashSet<&'a Value>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deny_write: Option<HashMap<&'a str, HashSet<&'a Value>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ops: Option<HashSet<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,7 +101,8 @@ impl<'a> From<&'a Acl> for AclInfo<'a> {
             admin: acl.admin,
             read: acl.read.as_ref(),
             write: acl.write.as_ref(),
-            deny: acl.deny.as_ref(),
+            deny_read: acl.deny_read.as_ref(),
+            deny_write: acl.deny_write.as_ref(),
             ops: acl.ops.as_ref(),
             meta: acl.meta.as_ref(),
         }
@@ -122,7 +129,12 @@ impl<'a> From<&'a Acl> for AclData<'a> {
                     .map(|(k, v)| (k.as_str(), v.iter().collect()))
                     .collect()
             }),
-            deny: acl.deny.as_ref().map(|r| {
+            deny_read: acl.deny_read.as_ref().map(|r| {
+                r.iter()
+                    .map(|(k, v)| (k.as_str(), v.iter().collect()))
+                    .collect()
+            }),
+            deny_write: acl.deny_write.as_ref().map(|r| {
                 r.iter()
                     .map(|(k, v)| (k.as_str(), v.iter().collect()))
                     .collect()
@@ -179,7 +191,8 @@ impl<'a> From<Vec<&'a Acl>> for AclData<'a> {
             }
             form_field!(acl.read, acl_data.read);
             form_field!(acl.write, acl_data.write);
-            form_field!(acl.deny, acl_data.deny);
+            form_field!(acl.deny_read, acl_data.deny_read);
+            form_field!(acl.deny_write, acl_data.deny_write);
             if let Some(ops) = acl.ops.as_ref() {
                 if let Some(ref mut f) = acl_data.ops {
                     for o in ops {
