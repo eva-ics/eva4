@@ -716,6 +716,18 @@ core.shutdown:
   des: Shuts down the core (will be usually auto-restarted)
   par:
   ret:
+bus.publish:
+  des: Publish a bus event via RPC (useful for bus calls via HMI)
+  par:
+    - nam: topic
+      typ: String
+      des: Event topic
+      req: true
+    - nam: message
+      typ: Any
+      des: Event message
+      req: true
+  ret:
 update:
   des: Updates the node
   par:

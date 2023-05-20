@@ -1052,6 +1052,15 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 }
             }
+            "bus.publish" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let message: crate::core::BusMessage = unpack(payload)?;
+                    self.core.publish_bus_messge(message).await?;
+                    Ok(None)
+                }
+            }
             "update" => {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]

@@ -61,6 +61,12 @@ pub enum ActionLaunchResult {
     Remote(Box<actmgr::ActionInfoOwned>),
 }
 
+#[derive(Deserialize)]
+pub struct BusMessage {
+    topic: String,
+    message: Value,
+}
+
 #[allow(clippy::option_option)]
 #[derive(Serialize)]
 struct LvarRemoteOp<'a> {
@@ -1721,6 +1727,18 @@ impl Core {
             .open(&format!("{}/var/eva.reload", self.dir_eva))
             .await?;
         let _r = f.write(&[0x00]).await?;
+        Ok(())
+    }
+    pub async fn publish_bus_messge(&self, msg: BusMessage) -> EResult<()> {
+        let rpc = self
+            .rpc
+            .get()
+            .ok_or_else(|| Error::not_ready("core RPC not ready"))?;
+        rpc.client()
+            .lock()
+            .await
+            .publish(&msg.topic, pack(&msg.message)?.into(), QoS::Processed)
+            .await?;
         Ok(())
     }
     #[inline]
