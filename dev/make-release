@@ -24,6 +24,6 @@ echo "Releasing EVA distribution ver ${VERSION} build ${BUILD}"
 if [ "$1" = "--test" ]; then
   echo "TEST ON" | figlet
 else
-  jks build pub.bma.ai
+  rci job run pub.bma.ai
   echo RELEASED! | figlet
 fi

@@ -30,7 +30,7 @@ done
 
 #rm -f "/tmp/yedb-manifest-${YEDB_VERSION}.json"
 
-jks build pub.bma.ai || exit 3
+rci job run pub.bma.ai || exit 3
 echo "================================"
 echo "v${YEDB_VERSION} UPLOADED"
 exit 0

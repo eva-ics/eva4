@@ -24,5 +24,5 @@ for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/stable/manifest*"|sort
   remove_build "$build" stable
 done
 
-jks build pub.bma.ai
+rci job run pub.bma.ai
 echo "Repo cleanup completed"
