@@ -24,7 +24,7 @@ do-test-build-create:
 
 test-release:
 	./dev/make-release --test
-	jks build pub.bma.ai
+	rci job run pub.bma.ai
 
 stable-build-mark:
 	git rev-parse --abbrev-ref HEAD |grep ^stable > /dev/null
@@ -45,7 +45,7 @@ stable-release: stable-release-dist stable-release-docker
 stable-release-dist:
 	git rev-parse --abbrev-ref HEAD |grep ^stable$ > /dev/null
 	./dev/make-release
-	jks build pub.bma.ai
+	rci job run pub.bma.ai
 
 stable-release-docker:
 	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
@@ -53,12 +53,12 @@ stable-release-docker:
 release-installer:
 	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
 		cp -a public-read install.sh gs://pub.bma.ai/eva4/install
-	jks build pub.bma.ai
+	rci job run pub.bma.ai
 
 release-switch-arch:
 	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
 		cp -a public-read ./tools/switch-arch gs://pub.bma.ai/eva4/tools/switch-arch
-	jks build pub.bma.ai
+	rci job run pub.bma.ai
 
 ver: build-increase update-version
 
