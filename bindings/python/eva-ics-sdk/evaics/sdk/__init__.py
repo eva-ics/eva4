@@ -613,9 +613,13 @@ class Service:
         topics = []
         if oids:
             for oid in oids:
-                if isinstance(oid, str):
-                    oid = OID(oid)
-                topics.append(f'{topic_pfx}{oid.to_path()}')
+                if oid == '#':
+                    path = oid
+                else:
+                    if isinstance(oid, str):
+                        oid = OID(oid)
+                    path = oid.to_path()
+                topics.append(f'{topic_pfx}{path}')
             self.bus.subscribe(topics).wait_completed()
 
 
