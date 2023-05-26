@@ -1,15 +1,14 @@
-params:
-  bus:
-    path: var/bus.ipc
-  # service location
-  command: venv/bin/python /opt/eva4/contrib/bus-to-udp/bus-to-udp.py
-  config:
-    # OIDS to subscribe
-    oids:
-    - sensor:nr/temp
-    # target to send UDP events to
-    target: 172.17.0.2:9999
-    # msgpack (default) or json
-    #format: json
-  user: nobody
-  workers: 1
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/bus-to-udp/bus-to-udp.py
+config:
+  # OIDS to subscribe
+  oids:
+  - sensor:nr/temp
+  # target to send UDP events to
+  target: 172.17.0.2:9999
+  # msgpack (default) or json
+  #format: json
+user: nobody
+workers: 1

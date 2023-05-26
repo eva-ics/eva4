@@ -19,21 +19,20 @@ The UDP payload contains additional "oid" field with item OID.
 Download [bus-to-udp.py](bus-to-udp.py), copy-paste the service template:
 
 ```yaml
-params:
-  bus:
-    path: var/bus.ipc
-  # service location
-  command: venv/bin/python /opt/eva4/contrib/bus-to-udp/bus-to-udp.py
-  config:
-    # OIDS to subscribe
-    oids:
-    - sensor:nr/temp
-    # target to send UDP events to
-    target: 172.17.0.2:9999
-    # msgpack (default) or json
-    #format: json
-  user: nobody
-  workers: 1
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/bus-to-udp/bus-to-udp.py
+config:
+  # OIDS to subscribe
+  oids:
+  - sensor:nr/temp
+  # target to send UDP events to
+  target: 172.17.0.2:9999
+  # msgpack (default) or json
+  #format: json
+user: nobody
+workers: 1
 ```
 
 (edit the command path if necessary), then run
