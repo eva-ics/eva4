@@ -1,4 +1,4 @@
-__version__ = '0.2.9'
+__version__ = '0.2.10'
 
 import busrt
 import sys
@@ -491,7 +491,6 @@ class Service:
         self.bus = busrt.client.Client(bus_config['path'], self.id)
         self.bus.buf_size = bus_config['buf_size']
         self.bus.timeout = bus_config['timeout']
-        self.bus.ping_interval = bus_config['ping_interval']
         self.bus.connect()
 
     def init_rpc(self, svc_info):
