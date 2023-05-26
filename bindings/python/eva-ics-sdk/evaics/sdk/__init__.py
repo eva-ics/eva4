@@ -367,6 +367,12 @@ class Service:
     """
 
     def __init__(self):
+        self.svc_info = None
+        self.logger = None
+        self.signals_registered = False
+        self.marked_ready = False
+        self.marked_terminating = False
+        self.privileges_dropped = False
         self.active = True
         stdin = sys.stdin.buffer
         payload_code = stdin.read(1)
@@ -454,6 +460,27 @@ class Service:
         else:
             return config
 
+    def init(self, info=None, on_frame=None, on_rpc_call=None):
+        """
+        Init the service
+
+        Automatically calls init_bus, drop_privileges, init_logs and init_rpc
+        (if info specified)
+
+        Optional:
+            info: RPC info
+            on_frame: bus frame handler
+        """
+        self.init_bus()
+        self.drop_privileges()
+        self.init_logs()
+        if info:
+            self.init_rpc(info)
+            if on_frame:
+                self.rpc.on_frame = on_frame
+            if on_rpc_call:
+                self.on_rpc_call = on_rpc_call
+
     def init_bus(self):
         """
         Init the local bus
@@ -471,7 +498,8 @@ class Service:
         """
         Init bus RPC layer
         """
-        self._svc_info = pack(svc_info.serialize())
+        self.svc_info = svc_info
+        self._svc_info_packed = pack(svc_info.serialize())
         self.rpc = busrt.rpc.Rpc(self.bus)
         self.rpc.on_call = self._handle_rpc_call
 
@@ -500,7 +528,7 @@ class Service:
         if method == b'test':
             return
         elif method == b'info':
-            return self._svc_info
+            return self._svc_info_packed
         elif method == b'stop':
             self.active = False
             return
@@ -526,21 +554,35 @@ class Service:
             logger.log(1, msg, *args, **kwargs)
 
         logger.trace = log_trace
-        return logger
+        self.logger = logger
+        return self.logger
 
     def block(self):
         """
         Block the service until terminated
+
+        Automatically calls register_signals, mark_ready, mark_terminating
+        (after receiving a termination signal/event)
         """
+        self.register_signals()
+        self.mark_ready()
         sleep_step = self.sleep_step
         while self.active and self.bus.is_connected():
             time.sleep(sleep_step)
+        self.mark_terminating()
 
     def mark_ready(self):
         """
         Mark the service ready
+
+        Automatically logs the service is started if logs are initialized
         """
-        self._mark('ready')
+        if not self.marked_ready:
+            self._mark('ready')
+            self.marked_ready = True
+            if self.logger:
+                desc = self.svc_info.description if self.svc_info else None
+                self.logger.info(f'{desc} started' if desc else 'started')
 
     def mark_terminating(self):
         """
@@ -548,19 +590,23 @@ class Service:
         """
         self.active = False
         self.shutdown_requested = True
-        self._mark('terminating')
+        if not self.marked_terminating:
+            self._mark('terminating')
+            self.marked_terminating = True
 
     def drop_privileges(self):
         """
         Drop service process privileges
         """
-        user = self.initial.get('user')
-        if user is not None:
-            u = pwd.getpwnam(user)
-            groups = os.getgrouplist(user, u.pw_gid)
-            os.setgroups(groups)
-            os.setgid(u.pw_gid)
-            os.setuid(u.pw_uid)
+        if not self.privileges_dropped:
+            user = self.initial.get('user')
+            if user is not None:
+                u = pwd.getpwnam(user)
+                groups = os.getgrouplist(user, u.pw_gid)
+                os.setgroups(groups)
+                os.setgid(u.pw_gid)
+                os.setuid(u.pw_uid)
+            self.privileges_dropped = True
 
     def _mark(self, status):
         self.bus.send(
