@@ -13,8 +13,7 @@ import threading
 HYSTERESIS = 2.0
 
 # define a global namespace
-_d = SimpleNamespace(logger=None,
-                     service=None,
+_d = SimpleNamespace(service=None,
                      counter=0,
                      threshold=0,
                      rcpt=None,
@@ -57,7 +56,7 @@ def on_frame(frame):
                 if temperature > _d.threshold and not was_notified:
                     # notify high
                     text = f'{oid} temperature is {temperature}'
-                    _d.logger.warning(text)
+                    _d.service.logger.warning(text)
                     letter = {
                         'rcp': _d.rcpt,
                         'subject': f'{oid} is hot',
@@ -67,7 +66,7 @@ def on_frame(frame):
                 elif temperature < _d.threshold - HYSTERESIS and was_notified:
                     # notify back to normal
                     text = f'{oid} temperature is {temperature}'
-                    _d.logger.info(text)
+                    _d.service.logger.info(text)
                     letter = {
                         'rcp': _d.rcpt,
                         'subject': f'{oid} is back to normal',
@@ -100,31 +99,14 @@ def run():
     _d.threshold = config.get('threshold')
     _d.mailer_svc = config.get('mailer_svc')
     _d.rcpt = config.get('rcpt')
-    # init the service bus
-    service.init_bus()
-    # drop the service process privileges
-    service.drop_privileges()
-    # init the service logger
-    _d.logger = service.init_logs()
-    # set RPC handler
-    service.on_rpc_call = handle_rpc
-    # init the service RPC
-    service.init_rpc(info)
+    # init the service
+    service.init(info, on_frame=on_frame, on_rpc_call=handle_rpc)
     # subscribe sensor OIDs via the helper method
     service.subscribe_oids(config.get('sensors'), event_kind='local')
-    # set BUS/RT frame handler on the service RPC layer
-    service.rpc.on_frame = on_frame
-    # register service process signals
-    service.register_signals()
-    # mark the instance ready and active
-    service.mark_ready()
-    _d.logger.info('Temperature monitor service started')
     # the service is blocked until one of the following:
     # * RPC client is disconnected from the bus
     # * the service gets a termination signal
     service.block()
-    # tell the core and other services that the service is terminating
-    service.mark_terminating()
 
 
 run()

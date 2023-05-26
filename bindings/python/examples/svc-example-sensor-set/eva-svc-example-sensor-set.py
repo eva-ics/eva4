@@ -9,10 +9,7 @@ from types import SimpleNamespace
 from evaics.sdk import pack, unpack, OID, RAW_STATE_TOPIC, XCall
 
 # define a global namespace
-_d = SimpleNamespace(
-    logger=None,
-    service=None,
-)
+_d = SimpleNamespace(service=None)
 
 
 # RPC calls handler
@@ -60,16 +57,8 @@ def run():
                            version=__version__)
     service = sdk.Service()
     _d.service = service
-    service.init_bus()
-    service.drop_privileges()
-    _d.logger = service.init_logs()
-    service.on_rpc_call = handle_rpc
-    service.init_rpc(info)
-    service.register_signals()
-    service.mark_ready()
-    _d.logger.info('Sensor state manipulations service started')
+    service.init(info, on_rpc_call=handle_rpc)
     service.block()
-    service.mark_terminating()
 
 
 run()
