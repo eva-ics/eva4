@@ -1206,9 +1206,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.2.4"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aebb93e42a5e444355348140a0fd24860d5d466d9f4dfbc3f721a9fc7624b627"
+checksum = "3fb248ef2834ebcc2a09eea949894b51062cb9a522ec3133816ac3d3b35ed554"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1325,7 +1325,7 @@ dependencies = [
  "once_cell",
  "rmodbus",
  "serde",
- "simple-pool 0.0.14",
+ "simple-pool",
  "tokio",
  "tokio-serial",
  "uuid 1.1.2",
@@ -1426,7 +1426,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
- "simple-pool 0.0.14",
+ "simple-pool",
  "tokio",
  "urlencoding",
 ]
@@ -1609,9 +1609,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.2.5"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "788658f3dcfde9f5f8eb5474a6a99055941d075f05b654d30301c8bd8bfe70de"
+checksum = "c9f39dbdf8a64b49acaab26c991213b1f0effe66a5b3f446028223e983f22600"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",
@@ -1625,7 +1625,7 @@ dependencies = [
  "log",
  "parking_lot 0.12.1",
  "serde",
- "simple-pool 0.0.11",
+ "simple-pool",
  "tokio",
  "tokio-fd",
  "ttl_cache",
@@ -3989,12 +3989,6 @@ checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "simple-pool"
-version = "0.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221c4d7aa7a3aab1262af53537c9e24ce4436b72a8b7a1534ff371ae2f38c294"
 
 [[package]]
 name = "simple-pool"

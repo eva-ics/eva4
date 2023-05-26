@@ -407,8 +407,8 @@ impl RpcHandlers for Handlers {
                                 AclData::default()
                             }
                         }
-                        IdOrList::Multi(ids) => {
-                            let mut srcs: Vec<&Acl> = Vec::new();
+                        IdOrList::Multiple(ids) => {
+                            let mut srcs: Vec<&Acl> = Vec::with_capacity(ids.len());
                             for i in ids {
                                 if let Some(acl) = acls.get(i) {
                                     srcs.push(acl);

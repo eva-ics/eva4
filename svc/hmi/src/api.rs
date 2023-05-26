@@ -3,7 +3,7 @@ use crate::aci::ACI;
 use crate::{RPC, TIMEOUT};
 use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
-use eva_common::common_payloads::{IdOrListOwned, ParamsIdOrListOwned};
+use eva_common::common_payloads::ParamsIdOrListOwned;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
@@ -569,16 +569,9 @@ async fn method_item_check_access(params: Value, aci: &mut ACI) -> EResult<Value
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = ParamsIdOrListOwned::deserialize(params)?;
     let mut result = BTreeMap::new();
-    let mut oids = Vec::new();
-    match p.i {
-        IdOrListOwned::Single(i) => {
-            oids.push(i.parse()?);
-        }
-        IdOrListOwned::Multi(seq) => {
-            for i in seq {
-                oids.push(i.parse()?);
-            }
-        }
+    let mut oids = Vec::with_capacity(p.i.len());
+    for i in p.i {
+        oids.push(i.parse()?);
     }
     for oid in oids {
         let access = PayloadAccess {
