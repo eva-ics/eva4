@@ -1,4 +1,4 @@
-__version__ = '0.0.22'
+__version__ = '0.0.23'
 
 import setuptools
 
@@ -16,7 +16,7 @@ setuptools.setup(
     url='https://github.com/eva-ics/eva4',
     packages=setuptools.find_packages(),
     license='Apache License 2.0',
-    install_requires=['busrt>=0.1.0', 'evaics>=0.0.33', 'timeouter>=0.0.15'],
+    install_requires=['busrt>=0.1.0', 'evaics>=0.2.9', 'timeouter>=0.0.15'],
     classifiers=('Programming Language :: Python :: 3',
                  'License :: OSI Approved :: MIT License',
                  'Topic :: Communications'),

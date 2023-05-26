@@ -1,4 +1,4 @@
-__version__ = '0.0.22'
+__version__ = '0.0.23'
 
 from evaics.sdk import Service, Controller, Action, no_rpc_method, ServiceInfo
 from evaics.sdk import OID
@@ -185,12 +185,11 @@ def run():
     macro_api.mailer_svc = config.get('mailer_svc')
     service.on_rpc_call = handle_rpc
     service.init_rpc(info)
-    _d.logger.info(f'Python macros controller started ({service.id}), '
-                   f'dir: {_d.dir_xcpy}, pool_size: {pool_size}')
+    _d.logger.info(f'dir: {_d.dir_xcpy}, pool_size: {pool_size}')
     service.register_signals()
     service.mark_ready()
     service.wait_core()
     _d.pool.submit(safe_run_system_macro, 'autoexec')
-    service.block()
+    service.block(prepare=False)
     _d.pool.submit(safe_run_system_macro, 'shutdown')
     service.mark_terminating()
