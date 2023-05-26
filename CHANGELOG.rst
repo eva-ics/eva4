@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.1-stable
 ============
 
+* 2023-05-26 build 2023052601: Python SDK update to 0.2.9
 * 2023-05-22 build 2023052201: new core EAPI method: bus.publish
 * 2023-05-17 build 2023051702: ACLs fixes, Modbus and database pool fixes
 * 2023-05-11 build 2023051101: OTP auth tolerance (1 forward/back period), BUS/RT 0.4.5
