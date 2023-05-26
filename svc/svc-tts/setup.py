@@ -1,4 +1,4 @@
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 import setuptools
 
@@ -16,7 +16,7 @@ setuptools.setup(name='eva4-svc-tts',
                  packages=setuptools.find_packages(),
                  license='Apache License 2.0',
                  install_requires=[
-                     'evaics>=0.0.33', 'ttsbroker', 'soundfile', 'sounddevice',
+                     'evaics>=0.2.8', 'ttsbroker', 'soundfile', 'sounddevice',
                      'oauth2client', 'numpy'
                  ],
                  classifiers=('Programming Language :: Python :: 3',
