@@ -16,6 +16,9 @@ logger = logging.getLogger('evaics.client.http')
 
 
 class Client:
+    """
+    HTTP client for EVA ICS (HMI HTPT API)
+    """
 
     def __init__(self,
                  url: str = 'http://localhost:7727',
