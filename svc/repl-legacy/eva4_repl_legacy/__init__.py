@@ -1,4 +1,4 @@
-__version__ = '0.0.26'
+__version__ = '0.0.27'
 
 import evaics.sdk as sdk
 from types import SimpleNamespace
@@ -612,14 +612,13 @@ def run():
     pubsub.subscribe_bulk(_d.bulks)
     service.register_signals()
     service.mark_ready()
-    logger.info('legacy replication service started')
     service.wait_core()
     for _, c in _d.lc.items():
         c.start()
     threading.Thread(target=watch_pubsub, daemon=True).start()
     threading.Thread(target=ping_pubsub, args=(test_topic,),
                      daemon=True).start()
-    service.block()
+    service.block(prepare=False)
     service.mark_terminating()
     for _, c in _d.lc.items():
         mark_node(c.id, 'removed')

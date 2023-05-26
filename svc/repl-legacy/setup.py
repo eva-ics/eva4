@@ -1,4 +1,4 @@
-__version__ = '0.0.26'
+__version__ = '0.0.27'
 
 import setuptools
 
@@ -16,7 +16,7 @@ setuptools.setup(name='eva4-repl-legacy',
                  packages=setuptools.find_packages(),
                  license='Apache License 2.0',
                  install_requires=[
-                     'cachetools>=4.11', 'busrt>=0.1.0', 'evaics>=0.0.33',
+                     'cachetools>=4.11', 'busrt>=0.1.0', 'evaics>=0.2.9',
                      'psrt>=0.0.18', 'pyaltt2>=0.0.116', 'pycryptodomex>=3.12.0'
                  ],
                  classifiers=('Programming Language :: Python :: 3',
