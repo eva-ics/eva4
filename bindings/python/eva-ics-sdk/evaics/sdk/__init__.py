@@ -1,4 +1,4 @@
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 
 import busrt
 import sys
@@ -557,19 +557,25 @@ class Service:
         self.logger = logger
         return self.logger
 
-    def block(self):
+    def block(self, prepare=True):
         """
         Block the service until terminated
 
         Automatically calls register_signals, mark_ready, mark_terminating
         (after receiving a termination signal/event)
+
+        Optional:
+            prepare: default: True, if False, register_signals, mark_ready and
+                     mark_terminating must be called manually
         """
-        self.register_signals()
-        self.mark_ready()
+        if prepare:
+            self.register_signals()
+            self.mark_ready()
         sleep_step = self.sleep_step
         while self.active and self.bus.is_connected():
             time.sleep(sleep_step)
-        self.mark_terminating()
+        if prepare:
+            self.mark_terminating()
 
     def mark_ready(self):
         """
