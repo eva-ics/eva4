@@ -40,18 +40,11 @@ def run():
     d.target_host, d.target_port = config['target'].rsplit(':', maxsplit=1)
     d.target_port = int(d.target_port)
     d.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    service.init_bus()
-    service.drop_privileges()
-    logger = service.init_logs()
-    service.init_rpc(info)
-    service.rpc.on_frame = on_frame
+
+    service.init(info, on_frame=on_frame)
     service.subscribe_oids(config.get('oids', []), event_kind='local')
-    service.register_signals()
-    service.mark_ready()
-    logger.info(
-        f'{info.description} started, target: {d.target_host}:{d.target_port}')
+    service.logger.info(f'target: {d.target_host}:{d.target_port}')
     service.block()
-    service.mark_terminating()
 
 
 run()
