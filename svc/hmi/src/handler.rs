@@ -419,7 +419,17 @@ pub async fn web(
     let method = req.method().clone();
     let uri = req.uri().clone();
     match handle_web_request(req, ip_addr).await {
-        Ok(resp) => {
+        Ok(mut resp) => {
+            if crate::development_mode() {
+                resp.headers_mut().insert(
+                    hyper::header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                    "*".try_into().unwrap(),
+                );
+                resp.headers_mut().insert(
+                    hyper::header::ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type".try_into().unwrap(),
+                );
+            }
             let status_code = resp.status().as_u16();
             let uri_string = uri.to_string();
             let display_uri = uri_string
@@ -654,6 +664,14 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                     }
                 }
                 hyper_response!(StatusCode::NOT_FOUND)
+            }
+            Method::OPTIONS => {
+                if uri == "/jrpc" {
+                    return Response::builder()
+                        .status(StatusCode::NO_CONTENT)
+                        .body(Body::from(""));
+                }
+                hyper_response!(StatusCode::METHOD_NOT_ALLOWED)
             }
             _ => hyper_response!(StatusCode::METHOD_NOT_ALLOWED),
         }

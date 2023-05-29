@@ -59,6 +59,8 @@ static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
 static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+static DEVELOPMEPT_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
 #[inline]
 fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
     RPC.set(rpc).map_err(|_| Error::core("unable to set RPC"))
@@ -79,6 +81,11 @@ fn buf_size() -> usize {
 #[inline]
 fn public_api_log() -> bool {
     PUBLIC_API_LOG.load(atomic::Ordering::SeqCst)
+}
+
+#[inline]
+fn development_mode() -> bool {
+    DEVELOPMEPT_MODE.load(atomic::Ordering::Relaxed)
 }
 
 #[cfg(not(feature = "std-alloc"))]
@@ -142,6 +149,8 @@ struct Config {
     pvt_path: Option<String>,
     #[serde(default = "default_history_db_svc")]
     default_history_db_svc: String,
+    #[serde(default)]
+    development: bool,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -253,6 +262,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
         )
         .await?;
     svc_init_logs(&initial, client.clone())?;
+    if config.development {
+        warn!("development mode started");
+        DEVELOPMEPT_MODE.store(true, atomic::Ordering::Relaxed);
+    }
     let mime_types = if let Some(mime_types_path) = config.mime_types {
         let types = tokio::fs::read_to_string(eva_common::tools::format_path(
             eva_dir,

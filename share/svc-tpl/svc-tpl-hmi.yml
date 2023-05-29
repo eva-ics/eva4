@@ -30,6 +30,8 @@ config:
   #default_history_db_svc: default
   mime_types: share/mime.yml
   buf_size: 16384
+  # enable development mode (CORS headers etc.)
+  #development: true
 user: eva
 timeout:
   default: 10
