@@ -1,0 +1,80 @@
+var.get:
+  des: Get node value from OPC-UA
+  par:
+    - nam: i
+      typ: String
+      des: symbol name
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret: Node value, single or list
+var.set:
+  des: Set node value on OPC-UA
+  par:
+    - nam: i
+      typ: String
+      des: symbol name
+      req: true
+    - nam: value
+      typ: Any
+      des: value to set
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret:
+var.set_bulk:
+  des: Set symbols on OPC-UA in bulk
+  par:
+    - nam: i
+      typ: Vec<String>
+      des: symbol names
+      req: true
+    - nam: values
+      typ: Vec<Any>
+      des: values to set
+      req: true
+    - nam: type
+      typ: String
+      des: Data type (e.g. DINT)
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: retries
+      typ: u8
+      des: Retry attempts
+      req: false
+  ret: "Operation status: failed-to-set node list or an empty dict"
+  exm: |
+    {
+      "failed": [ "ns=2;s=vari32" ]
+    }
+action:
+  des: Executes a mapped unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+terminate:
+  des: Attempts to terminate/cancel a unit action
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
+kill:
+  des: Attempts to terinate/cancel all actions for a unit
+  par: See :ref:`eva4_unit_action`
+  ret: See :ref:`eva4_unit_action`
