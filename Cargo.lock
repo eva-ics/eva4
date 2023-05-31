@@ -1224,9 +1224,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "746e7c8994540fed016bfdfbe87c22bffa78b360f15604b8ab2828740971d838"
+checksum = "6415deab421c02d51cef6d3b4945586f2c31216bf9d182d1fd84c5df1f008bb5"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1256,7 +1256,6 @@ dependencies = [
  "submap",
  "tokio",
  "uuid 1.3.3",
- "yedb",
 ]
 
 [[package]]
@@ -5373,12 +5372,13 @@ dependencies = [
 
 [[package]]
 name = "yedb"
-version = "0.4.12"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba6cd2c723686d7b593253ed7243f23f4ada5306f2957ae45fbb65df5dafdd3"
+checksum = "4cb5c8a0916db0317a83852c9ad36359e957dda00b34c04d1c0e8257e76f75d8"
 dependencies = [
  "async-trait",
  "busrt",
+ "eva-common",
  "fs2",
  "fs_extra",
  "glob",
