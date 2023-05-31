@@ -40,7 +40,7 @@ config:
      #pull an array
     #- node: ns=2;g=c8a2e6f8-accf-4442-a8d0-7dbf3e384b81
       # an optional array range
-      #range: "1-5"
+      #range: "1:5"
       #map:
         #- idx: 0 # payload index, starting from zero (from pulled)
         #  oid: sensor:tests/test0
@@ -75,16 +75,18 @@ config:
   #action_map:
     #unit:tests/u1:
       #value:
-        # an optional array range
-        #range: "1-5"
         #node: ns=2;s=varf64
         # allowed types: real (REAL), real32, real64 (LREAL), uint8 (USINT),
         # int8, sint8 (SINT), byte, uint16 (UINT), word, uint32 (UDINT), dword,
         # sint16 (INT), int16, sint32 (DINT), int32, sint64
         # (LINT), int64, uint64 (ULINT), qword, boolean (BOOLEAN)
         #type: LREAL
+        # an optional array range
+        #range: "1:5"
       #status:
         #node: ns=2;s=vari16
         #type: INT
+        # an optional array range (single index)
+        #range: "1"
 user: nobody
 react_to_fail: true

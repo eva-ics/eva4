@@ -34,7 +34,11 @@ async fn pull(
         .iter()
         .map(|v| v.node().clone())
         .collect::<Vec<NodeId>>();
-    match crate::comm::read_multi(vars, timeout, retries).await {
+    let ranges = nodes
+        .iter()
+        .map(common::PullNode::range)
+        .collect::<Vec<Option<&str>>>();
+    match crate::comm::read_multi(vars, ranges, timeout, retries).await {
         Ok(result) => {
             for (res, node) in result.into_iter().zip(nodes.iter()) {
                 if let Some(val) = res.value.and_then(|v| {

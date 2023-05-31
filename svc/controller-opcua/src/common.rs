@@ -99,6 +99,8 @@ impl From<OpcType> for VariantTypeId {
 pub struct PropActionMap {
     #[serde(deserialize_with = "deserialize_node_id_from_str")]
     node: NodeId,
+    #[serde(default, deserialize_with = "deserialize_opt_range")]
+    range: Option<String>,
     #[serde(default)]
     transform: Vec<transform::Task>,
     #[serde(rename = "type", deserialize_with = "deserialize_opc_tp")]
@@ -144,6 +146,10 @@ impl PropActionMap {
     #[inline]
     pub fn node(&self) -> &NodeId {
         &self.node
+    }
+    #[inline]
+    pub fn range(&self) -> Option<&str> {
+        self.range.as_deref()
     }
     #[inline]
     pub fn need_transform(&self) -> bool {
@@ -217,13 +223,28 @@ pub struct Config {
 pub struct PullNode {
     #[serde(deserialize_with = "deserialize_node_id_from_str")]
     node: NodeId,
+    #[serde(default, deserialize_with = "deserialize_opt_range")]
+    range: Option<String>,
     map: Vec<PullTask>,
+}
+
+#[inline]
+pub fn deserialize_opt_range<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let buf: Option<Value> = Option::deserialize(deserializer)?;
+    Ok(buf.map(|v| v.to_string()))
 }
 
 impl PullNode {
     #[inline]
     pub fn node(&self) -> &NodeId {
         &self.node
+    }
+    #[inline]
+    pub fn range(&self) -> Option<&str> {
+        self.range.as_deref()
     }
     #[inline]
     pub fn map(&self) -> &[PullTask] {

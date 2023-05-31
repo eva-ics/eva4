@@ -26,9 +26,15 @@ async fn run_action(
         } else {
             params.status
         };
+        let mut val = Value::I16(st);
+        let range = s.range();
+        if range.is_some() {
+            val = Value::Seq(vec![val]);
+        }
         crate::comm::write(
             s.node().clone(),
-            Variant::from_eva_value(Value::I16(st), s.tp())?,
+            range,
+            Variant::from_eva_value(val, s.tp())?,
             op.timeout()?,
             retries,
             Some(t),
@@ -45,6 +51,7 @@ async fn run_action(
             };
             crate::comm::write(
                 v.node().clone(),
+                v.range(),
                 Variant::from_eva_value(val, v.tp())?,
                 op.timeout()?,
                 retries,

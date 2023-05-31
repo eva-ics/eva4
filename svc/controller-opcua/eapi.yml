@@ -3,8 +3,12 @@ var.get:
   par:
     - nam: i
       typ: String
-      des: symbol name
+      des: node id
       req: true
+    - nam: range
+      typ: String
+      des: array range
+      req: false
     - nam: timeout
       typ: f64
       des: Max operation timeout
@@ -19,7 +23,7 @@ var.set:
   par:
     - nam: i
       typ: String
-      des: symbol name
+      des: node id
       req: true
     - nam: value
       typ: Any
@@ -29,6 +33,10 @@ var.set:
       typ: String
       des: Data type (e.g. DINT)
       req: true
+    - nam: range
+      typ: String
+      des: array range
+      req: false
     - nam: timeout
       typ: f64
       des: Max operation timeout
@@ -43,16 +51,20 @@ var.set_bulk:
   par:
     - nam: i
       typ: Vec<String>
-      des: symbol names
+      des: node ids
       req: true
     - nam: values
       typ: Vec<Any>
       des: values to set
       req: true
-    - nam: type
-      typ: String
-      des: Data type (e.g. DINT)
+    - nam: types
+      typ: Vec<String>
+      des: Data types (e.g. DINT)
       req: true
+    - nam: ranges
+      typ: Vec<Option<String>>
+      des: array ranges
+      req: false
     - nam: timeout
       typ: f64
       des: Max operation timeout

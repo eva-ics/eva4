@@ -71,6 +71,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(
         ServiceMethod::new("var.get")
             .required("i")
+            .optional("range")
             .optional("timeout")
             .optional("retries"),
     );
@@ -79,6 +80,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .required("i")
             .required("value")
             .required("type")
+            .optional("range")
             .optional("timeout")
             .optional("retries"),
     );
@@ -86,7 +88,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("var.set_bulk")
             .required("i")
             .required("values")
-            .required("type")
+            .required("types")
+            .optional("ranges")
             .optional("timeout")
             .optional("retries"),
     );

@@ -15,12 +15,13 @@ static SESSION: OnceCell<OpcSession> = OnceCell::new();
 
 pub async fn write(
     node: NodeId,
+    range: Option<&str>,
     value: Variant,
     timeout: Duration,
     retries: u8,
     t: Option<DateTime>,
 ) -> EResult<()> {
-    if write_multi(vec![node], vec![value], timeout, retries, t)
+    if write_multi(vec![node], vec![range], vec![value], timeout, retries, t)
         .await?
         .is_empty()
     {
@@ -32,11 +33,22 @@ pub async fn write(
 
 pub async fn write_multi(
     nodes: Vec<NodeId>,
+    ranges: Vec<Option<&str>>,
     values: Vec<Variant>,
     timeout: Duration,
     retries: u8,
     t: Option<DateTime>,
 ) -> EResult<Vec<NodeId>> {
+    if nodes.len() != ranges.len() {
+        return Err(Error::invalid_params(
+            "node number does not correspond with range number",
+        ));
+    }
+    if nodes.len() != values.len() {
+        return Err(Error::invalid_params(
+            "node number does not correspond with value number",
+        ));
+    }
     let op = eva_common::op::Op::new(timeout);
     let dt = t.unwrap_or_else(DateTime::now);
     let session = SESSION
@@ -44,11 +56,16 @@ pub async fn write_multi(
         .ok_or_else(|| Error::not_ready("OPC session not ready"))?;
     let mut to_write: Vec<WriteValue> = nodes
         .into_iter()
-        .zip(values.into_iter())
-        .map(|(node, value)| WriteValue {
+        .zip(ranges)
+        .zip(values)
+        .map(|((node, range), value)| WriteValue {
             node_id: node,
             attribute_id: AttributeId::Value as u32,
-            index_range: UAString::null(),
+            index_range: if let Some(r) = range {
+                UAString::from(r)
+            } else {
+                UAString::null()
+            },
             value: DataValue {
                 value: Some(value),
                 status: Some(StatusCode::Good),
@@ -94,6 +111,7 @@ pub async fn write_multi(
 
 pub async fn read_multi(
     nodes: Vec<NodeId>,
+    ranges: Vec<Option<&str>>,
     timeout: Duration,
     retries: u8,
 ) -> EResult<Vec<DataValue>> {
@@ -103,10 +121,15 @@ pub async fn read_multi(
         .ok_or_else(|| Error::not_ready("OPC session not ready"))?;
     let to_read: Vec<ReadValueId> = nodes
         .into_iter()
-        .map(|node| ReadValueId {
+        .zip(ranges)
+        .map(|(node, range)| ReadValueId {
             node_id: node,
             attribute_id: AttributeId::Value as u32,
-            index_range: UAString::null(),
+            index_range: if let Some(r) = range {
+                UAString::from(r)
+            } else {
+                UAString::null()
+            },
             data_encoding: QualifiedName::null(),
         })
         .collect();

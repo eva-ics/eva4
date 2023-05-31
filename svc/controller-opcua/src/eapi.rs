@@ -4,7 +4,7 @@ use eva_common::common_payloads::{ParamsOID, ParamsUuid};
 use eva_common::prelude::*;
 use eva_sdk::controller::{format_action_topic, Action};
 use eva_sdk::prelude::*;
-use opcua::types::{NodeId, Variant};
+use opcua::types::{NodeId, Variant, VariantTypeId};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic;
 use std::time::Duration;
@@ -40,6 +40,11 @@ impl RpcHandlers for Handlers {
                         i: NodeId,
                         #[serde(
                             default,
+                            deserialize_with = "crate::common::deserialize_opt_range"
+                        )]
+                        range: Option<String>,
+                        #[serde(
+                            default,
                             deserialize_with = "eva_common::tools::de_opt_float_as_duration"
                         )]
                         timeout: Option<Duration>,
@@ -50,6 +55,7 @@ impl RpcHandlers for Handlers {
                     let node_id = p.i.clone();
                     let result = crate::comm::read_multi(
                         vec![p.i],
+                        vec![p.range.as_deref()],
                         p.timeout.unwrap_or_else(|| *crate::TIMEOUT.get().unwrap()),
                         p.retries.unwrap_or_else(|| {
                             crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst)
@@ -77,6 +83,11 @@ impl RpcHandlers for Handlers {
                         #[serde(deserialize_with = "deserialize_node_id_from_str")]
                         i: NodeId,
                         value: Value,
+                        #[serde(
+                            default,
+                            deserialize_with = "crate::common::deserialize_opt_range"
+                        )]
+                        range: Option<String>,
                         #[serde(rename = "type")]
                         tp: crate::common::OpcType,
                         #[serde(
@@ -90,6 +101,7 @@ impl RpcHandlers for Handlers {
                     let p: ParamsNodeSet = unpack(payload)?;
                     crate::comm::write(
                         p.i,
+                        p.range.as_deref(),
                         Variant::from_eva_value(p.value, p.tp.into())?,
                         p.timeout.unwrap_or_else(|| *crate::TIMEOUT.get().unwrap()),
                         p.retries.unwrap_or_else(|| {
@@ -111,8 +123,10 @@ impl RpcHandlers for Handlers {
                         #[serde(deserialize_with = "deserialize_vec_node_id_from_str")]
                         i: Vec<NodeId>,
                         values: Vec<Value>,
-                        #[serde(rename = "type")]
-                        tp: crate::common::OpcType,
+                        #[serde(default)]
+                        ranges: Vec<Option<String>>,
+                        #[serde(rename = "types")]
+                        tp: Vec<crate::common::OpcType>,
                         #[serde(
                             default,
                             deserialize_with = "eva_common::tools::de_opt_float_as_duration"
@@ -127,14 +141,19 @@ impl RpcHandlers for Handlers {
                         failed: Vec<String>,
                     }
                     let p: ParamsNodeSetBulk = unpack(payload)?;
-                    let tp = p.tp.into();
+                    let tp: Vec<VariantTypeId> = p.tp.into_iter().map(Into::into).collect();
                     let vals: Vec<Variant> = p
                         .values
                         .into_iter()
-                        .map(|v| Variant::from_eva_value(v, tp))
+                        .zip(tp)
+                        .map(|(v, t)| Variant::from_eva_value(v, t))
                         .collect::<Result<Vec<Variant>, Error>>()?;
+                    let mut ranges: Vec<Option<&str>> =
+                        p.ranges.iter().map(Option::as_deref).collect();
+                    ranges.resize(p.i.len(), None);
                     let failed = crate::comm::write_multi(
                         p.i,
+                        ranges,
                         vals,
                         p.timeout.unwrap_or_else(|| *crate::TIMEOUT.get().unwrap()),
                         p.retries.unwrap_or_else(|| {
