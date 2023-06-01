@@ -1,0 +1,97 @@
+# OPC-UA controller gateway service
+command: target/debug/eva-controller-opcua
+bus:
+  path: var/bus.ipc
+config:
+  opcua: 
+    url: opc.tcp://localhost:4855
+    # PKI directory, the default is /opt/eva4/runtime/svc_data/SVCID/pki
+    #pki_dir: path/to/dir 
+    # uncomment to trust server certs
+    #trust_server_certs: true
+    # auto create keys if missing
+    create_keys: true
+    # user/password authentication
+    #auth:
+      #user: user1
+      #password: SECRET
+    # x509 authentication, absolute paths or relative to pki_dir
+    #cert_file: own/cert.der
+    #key_file: private/private.pem
+  # panic on critical errors in X seconds after happened (0 - panic immediately)
+  panic_in: 0
+  # default retry attempts for all operations (0 - no retries, give up if the
+  # first attempt fails)
+  retries: 1
+  # event queue size, pull events ARE DROPPED on overflow. consider ALWAYS
+  # having queue size > max possible symbols pulled
+  queue_size: 32768
+  # ping block must be present if there is no pull block, optional if pull
+  # interval is less than timeout. contains any small node to ping
+  # periodically, with interval = timeout/2
+  #ping:
+  #  node: ns=2;s=varbool
+  # ttl cache for pull events (sec, skip non-modified)
+  pull_cache_sec: 3600
+  # PLC pull interval, in seconds
+  pull_interval: 1
+  # pull nodes and parse maps
+  #
+  # by default, sends raw events with status=1, value=<pulled value>
+  # if item statuses need to be collected, specify prop: status in the map
+  # block
+  #
+  #pull:
+     #pull an array
+    #- node: ns=2;g=c8a2e6f8-accf-4442-a8d0-7dbf3e384b81
+      # an optional array range
+      #range: "1:5"
+      #map:
+        #- idx: 0 # payload index, starting from zero (from pulled)
+        #  oid: sensor:tests/test0
+        #  prop: value # status or value (default = value)
+        #- idx: 4
+          #oid: sensor:tests/test1
+          #value_delta: 0.5 # report event only if the new value difference is >=
+          #transform:
+            #- func: multiply # multiply the value by N
+              #params: [ 1000 ]
+            #- func: divide # divide the value by N
+              #params: [ 1000 ]
+            #- func: round # round the value to N digits after comma
+              #params: [ 2 ]
+            #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+              #params: [ 1 ]
+            #- func: invert # invert the value between 0/1
+            # #params: []
+    # pull a node value
+    #- node: ns=2;s=varf64
+      #map:
+         #- oid: sensor:tests/test2
+    # pull a node value
+    #- node: ns=2;s=varf64
+      #map:
+         #- oid: sensor:tests/test2
+  # action queue size, per item, actions on overflow are not dropped but wait
+  # their attempt to enter the queue. The core marks an action as failed if it
+  # does not enter the queue for <action timeout> seconds
+  action_queue_size: 32
+  # OID map for actions
+  #action_map:
+    #unit:tests/u1:
+      #value:
+        #node: ns=2;s=varf64
+        # allowed types: real (REAL), real32, real64 (LREAL), uint8 (USINT),
+        # int8, sint8 (SINT), byte, uint16 (UINT), word, uint32 (UDINT), dword,
+        # sint16 (INT), int16, sint32 (DINT), int32, sint64
+        # (LINT), int64, uint64 (ULINT), qword, boolean (BOOLEAN)
+        #type: LREAL
+        # an optional array range
+        #range: "1:5"
+      #status:
+        #node: ns=2;s=vari16
+        #type: INT
+        # an optional array range (single index)
+        #range: "1"
+user: nobody
+react_to_fail: true

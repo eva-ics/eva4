@@ -650,7 +650,7 @@ class CLI:
             params['priority'] = int(priority)
         action_params = {'status': int(status)}
         if value is not None:
-            action_params['value'] = format_value(value)
+            action_params['value'] = format_value(value, advanced=True)
         params['params'] = action_params
         result = call_rpc('action', params)
         if current_command.json:

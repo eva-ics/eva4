@@ -16,6 +16,7 @@ members = [
   "svc/controller-enip",
   "svc/controller-modbus",
   "svc/controller-ads",
+  "svc/controller-opcua",
   "svc/bridge-ads",
   "svc/controller-w1",
   "svc/controller-trap",

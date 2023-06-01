@@ -205,6 +205,7 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-bridge-ads \
   eva-controller-ads \
   eva-controller-modbus \
+  eva-controller-opcua \
   eva-controller-w1 \
   eva-controller-sr \
   eva-controller-virtual \
