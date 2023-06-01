@@ -44,8 +44,8 @@ if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
   done
 fi
 
-if [ -f /etc/rc.local ]; then
-  /etc/rc.local || exit 1
+if [ -f /mnt/init/rc.local ]; then
+  /mnt/init/rc.local || exit 1
 fi
 
 # run update if not initialized
