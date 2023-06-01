@@ -116,21 +116,11 @@ async fn pull(
                             };
                         }
                         if let Some(idx) = task.idx() {
-                            if let Value::Seq(ref vals) = val {
-                                if let Some(value) = vals.get(idx) {
-                                    process!(value);
-                                } else {
-                                    error!(
-                                        "{} pull error: array does not contain the required index",
-                                        task.oid()
-                                    );
-                                    oids_failed.insert(task.oid());
-                                }
-                            } else if idx == 0 {
-                                process!(val.clone());
+                            if let Some(v) = val.get_by_index(idx) {
+                                process!(v);
                             } else {
                                 error!(
-                                    "{} pull error: {} value is not an array",
+                                    "{} pull error: {} value is not an array or index is out of bounds",
                                     task.oid(),
                                     node.node()
                                 );

@@ -1,4 +1,5 @@
 use eva_common::prelude::*;
+use eva_common::value::Index;
 use eva_sdk::controller::transform::{self, Transform};
 use eva_sdk::types::StateProp;
 use opcua::types::{NodeId, VariantTypeId};
@@ -275,7 +276,7 @@ pub struct PullTask {
     value_delta: Option<f64>,
     #[serde(default)]
     transform: Vec<transform::Task>,
-    idx: Option<usize>,
+    idx: Option<Index>,
 }
 
 impl PullTask {
@@ -300,7 +301,7 @@ impl PullTask {
         self.value_delta
     }
     #[inline]
-    pub fn idx(&self) -> Option<usize> {
-        self.idx
+    pub fn idx(&self) -> Option<&Index> {
+        self.idx.as_ref()
     }
 }
