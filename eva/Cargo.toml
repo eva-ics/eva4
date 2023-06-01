@@ -62,3 +62,6 @@ openssl = "0.10.42"
 [features]
 std-alloc = []
 openssl-vendored = ["openssl/vendored"]
+
+[build-dependencies]
+cargo_metadata = "0.15.4"

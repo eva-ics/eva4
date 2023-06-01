@@ -45,3 +45,6 @@ genpass-native = { path = "../../genpass-native" }
 [features]
 std-alloc = []
 openssl-vendored = ["openssl/vendored"]
+
+[build-dependencies]
+cargo_metadata = "0.15.4"
