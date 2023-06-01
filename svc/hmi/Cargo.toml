@@ -22,7 +22,7 @@ jemallocator = { version = "0.5.0" }
 once_cell = "1.9.0"
 lazy_static = "1.4.0"
 hyper = { version = "0.14.18", features = ["server", "http1", "http2"] }
-eva-rjrpc = { version = "0.2.0", features = ["http"] }
+eva-rjrpc = { version = "0.3.0", features = ["http"] }
 ttl_cache = "0.5.1"
 bmart = { version = "0.1.14" }
 sqlx = { version = "0.5", features = [ "runtime-tokio-native-tls" , "sqlite" ] }

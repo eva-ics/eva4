@@ -41,7 +41,7 @@ pub async fn processor(
     meta: JsonRpcRequestMeta,
 ) -> Option<JsonRpcResponse> {
     let params = request.take_params();
-    let result = match call(&request.method, params, meta).await {
+    let result = match api_call(&request.method, params, meta).await {
         Ok(v) => v,
         Err(e) if e.kind() == ErrorKind::EvaHIAuthenticationRequired => {
             let mut je = rjrpc::JrpcException::new(401, String::new());
@@ -184,11 +184,29 @@ async fn login(
 #[serde(deny_unknown_fields)]
 struct ParamsEmpty {}
 
+async fn api_call(
+    method: &str,
+    j_params: Option<serde_json::Value>,
+    meta: JsonRpcRequestMeta,
+) -> EResult<serde_json::Value> {
+    let params = if let Some(p) = j_params {
+        Some(Value::deserialize(p)?)
+    } else {
+        None
+    };
+    let result = call(method, params, meta).await?;
+    serde_json::to_value(result).map_err(Into::into)
+}
+
 /// # Errors
 ///
 /// Returns Err if the call is failed
 #[allow(clippy::too_many_lines)]
-pub async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta) -> EResult<Value> {
+async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta) -> EResult<Value> {
+    //let params = if let Some(p) = j_params {
+    //} else {
+    //None
+    //};
     let ip = meta.ip();
     let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
     match method {

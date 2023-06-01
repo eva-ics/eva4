@@ -99,7 +99,10 @@ async fn read_file<'a>(
     if let Some(c) = convert_to {
         if let Some(mt) = mime {
             let data: Value = match mt.as_str() {
-                "application/json" => serde_json::from_slice(&buf)?,
+                "application/json" => {
+                    let val: serde_json::Value = serde_json::from_slice(&buf)?;
+                    Value::deserialize(val)?
+                }
                 "application/x-yaml" => {
                     serde_yaml::from_slice(&buf).map_err(Error::invalid_data)?
                 }

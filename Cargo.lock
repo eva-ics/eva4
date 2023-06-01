@@ -1178,9 +1178,9 @@ dependencies = [
 
 [[package]]
 name = "eva-client"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82647eb0bb045fa6e415ebdfab5445d549e576910338886175777d16478ed31a"
+checksum = "8ccd7c7af6e970361c48c86f484fd4cca92d7c199bf7b54614d99e984649ca0b"
 dependencies = [
  "busrt",
  "eva-common",
@@ -1188,6 +1188,7 @@ dependencies = [
  "hyper",
  "hyper-tls",
  "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -1617,9 +1618,9 @@ dependencies = [
 
 [[package]]
 name = "eva-rjrpc"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6f81af72f8a510804dc39bf3493f632fc30ffdbf65ca8f6d5573d4b7e5f19a7"
+checksum = "1bf406318fe8868bfb579ccd11dac494d05020cf964459144434a2663d77c3a9"
 dependencies = [
  "base64 0.13.0",
  "eva-common",

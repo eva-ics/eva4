@@ -155,6 +155,7 @@ pub async fn read_multi(
     .await?
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn init_session(
     config: OpcUaConfig,
     initial: &Initial,

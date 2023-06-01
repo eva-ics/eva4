@@ -6,6 +6,7 @@ use eva_common::err_logger;
 use eva_common::prelude::*;
 use futures::TryStreamExt;
 use log::{error, trace};
+use serde::Deserialize;
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use sqlx::Row;
 use std::collections::BTreeMap;
@@ -63,7 +64,12 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
                 msg: row.try_get("msg")?,
                 elapsed: row.try_get("elapsed")?,
                 params: if let Some(p) = params {
-                    serde_json::from_str(&p)?
+                    let val: Option<serde_json::Value> = serde_json::from_str(&p)?;
+                    if let Some(v) = val {
+                        Some(Value::deserialize(v)?)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 },
