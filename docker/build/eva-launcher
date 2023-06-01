@@ -43,16 +43,16 @@ if [ ! -f "$SETUP_FLAG" ] && [ -d /mnt/init ]; then
     fi
   done
 fi
-
-if [ -f /mnt/init/rc.local ]; then
-  /mnt/init/rc.local || exit 1
-fi
-
 # run update if not initialized
 if [ -f ./update.sh ]; then
   bash ./update.sh || exit 3
   rm -f update.sh prepare
   rmdir log > /dev/null 2>&1
+fi
+
+# run rc.local if present
+if [ -f /mnt/init/rc.local ]; then
+  /mnt/init/rc.local || exit 1
 fi
 
 # launch the node
