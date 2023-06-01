@@ -1,7 +1,8 @@
 use crate::common::{OpcAuth, OpcUaConfig};
 use eva_common::prelude::*;
 use eva_common::services::Initial;
-use log::warn;
+use eva_sdk::service::poc;
+use log::{error, warn};
 use once_cell::sync::OnceCell;
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
@@ -158,6 +159,7 @@ pub async fn init_session(
     config: OpcUaConfig,
     initial: &Initial,
     timeout: Duration,
+    ping_node: Option<NodeId>,
 ) -> EResult<()> {
     let pki_dir = if let Some(dir) = config.pki_dir {
         if dir.starts_with('/') {
@@ -226,6 +228,46 @@ pub async fn init_session(
     })
     .await?
     .map_err(Error::io)?;
+    let sess = session.clone();
+    tokio::spawn(async move {
+        let mut int = tokio::time::interval(Duration::from_secs(1));
+        loop {
+            int.tick().await;
+            if !sess.read().is_connected() {
+                error!("OPC session disconnected");
+                poc();
+                return;
+            }
+        }
+    });
+    if let Some(pn) = ping_node {
+        tokio::spawn(async move {
+            macro_rules! poc {
+                ($msg: expr) => {
+                    error!("OPC server ping error ({}): {}", pn, $msg);
+                    poc();
+                    return;
+                };
+            }
+            let n = vec![pn.clone()];
+            let r = vec![None];
+            let timeout = *crate::TIMEOUT.get().unwrap();
+            let mut int = tokio::time::interval(timeout / 2);
+            loop {
+                int.tick().await;
+                match read_multi(n.clone(), r.clone(), timeout, 0).await {
+                    Ok(v) => {
+                        if v.get(0).and_then(|v| v.value.as_ref()).is_none() {
+                            poc!("no value");
+                        }
+                    }
+                    Err(e) => {
+                        poc!(e);
+                    }
+                }
+            }
+        });
+    }
     SESSION
         .set(session)
         .map_err(|_| Error::core("Unable to set SESSION"))?;

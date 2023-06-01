@@ -216,6 +216,7 @@ pub struct Config {
     pub action_queue_size: usize,
     #[serde(default)]
     pub restart_bridge_on_panic: bool,
+    pub ping: Option<Ping>,
 }
 
 #[derive(Deserialize)]
@@ -226,6 +227,13 @@ pub struct PullNode {
     #[serde(default, deserialize_with = "deserialize_opt_range")]
     range: Option<String>,
     map: Vec<PullTask>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Ping {
+    #[serde(deserialize_with = "deserialize_node_id_from_str")]
+    pub node: NodeId,
 }
 
 #[inline]

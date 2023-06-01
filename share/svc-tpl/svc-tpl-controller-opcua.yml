@@ -26,6 +26,11 @@ config:
   # event queue size, pull events ARE DROPPED on overflow. consider ALWAYS
   # having queue size > max possible symbols pulled
   queue_size: 32768
+  # ping block must be present if there is no pull block, optional if pull
+  # interval is less than timeout. contains any small node to ping
+  # periodically, with interval = timeout/2
+  #ping:
+  #  node: ns=2;s=varbool
   # ttl cache for pull events (sec, skip non-modified)
   pull_cache_sec: 3600
   # PLC pull interval, in seconds
