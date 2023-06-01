@@ -16,8 +16,9 @@ config:
       #user: user1
       #password: SECRET
     # x509 authentication, absolute paths or relative to pki_dir
-    #cert_file: own/cert.der
-    #key_file: private/private.pem
+    #auth:
+      #cert_file: own/cert.der
+      #key_file: private/private.pem
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: 0
   # default retry attempts for all operations (0 - no retries, give up if the
