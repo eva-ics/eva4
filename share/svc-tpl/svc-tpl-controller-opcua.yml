@@ -9,7 +9,7 @@ config:
     #pki_dir: path/to/dir 
     # uncomment to trust server certs
     #trust_server_certs: true
-    # auto create keys if missing
+    # automatically create keys if missing
     create_keys: true
     # user/password authentication
     #auth:
