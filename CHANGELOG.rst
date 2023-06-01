@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.1-stable
 ============
 
+* 2023-06-01 build 2023060101: OPC-UA support
 * 2023-05-30 build 2023053001: HMI dev mode, Python SDK 0.2.10
 * 2023-05-26 build 2023052601: Python SDK update to 0.2.9
 * 2023-05-22 build 2023052201: new core EAPI method: bus.publish
