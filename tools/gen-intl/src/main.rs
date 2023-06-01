@@ -98,6 +98,7 @@ fn parse_content(value: Value, ids: &mut Vec<String>) {
 #[allow(clippy::similar_names)]
 #[allow(clippy::too_many_lines)]
 fn main() -> EResult<()> {
+    eva_common::self_test();
     let opts = Opts::parse();
     let fpath = Path::new(&opts.fname);
     let ui_dir = Path::new(&opts.ui_dir).canonicalize()?;

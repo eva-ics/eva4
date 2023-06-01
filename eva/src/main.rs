@@ -29,6 +29,7 @@ struct Args {
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn main() {
+    eva_common::self_test();
     let args = Args::parse();
     if let Err(e) = eva::node::launch(
         args.mode,

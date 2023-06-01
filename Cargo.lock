@@ -1178,17 +1178,16 @@ dependencies = [
 
 [[package]]
 name = "eva-client"
-version = "0.2.2"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ccd7c7af6e970361c48c86f484fd4cca92d7c199bf7b54614d99e984649ca0b"
+checksum = "82647eb0bb045fa6e415ebdfab5445d549e576910338886175777d16478ed31a"
 dependencies = [
  "busrt",
  "eva-common",
- "eva-rjrpc",
+ "eva-rjrpc 0.2.0",
  "hyper",
  "hyper-tls",
  "serde",
- "serde_json",
  "tokio",
 ]
 
@@ -1225,9 +1224,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.2.12"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6415deab421c02d51cef6d3b4945586f2c31216bf9d182d1fd84c5df1f008bb5"
+checksum = "446f743e59e149dd1276a310ad7bb548ef48c0c7b2f8acc3292dc2a6e0267a6f"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1257,6 +1256,7 @@ dependencies = [
  "submap",
  "tokio",
  "uuid 1.3.3",
+ "yedb",
 ]
 
 [[package]]
@@ -1522,7 +1522,7 @@ dependencies = [
  "chrono",
  "cookie",
  "eva-common",
- "eva-rjrpc",
+ "eva-rjrpc 0.3.0",
  "eva-sdk",
  "futures",
  "genpass-native",
@@ -1618,6 +1618,23 @@ dependencies = [
 
 [[package]]
 name = "eva-rjrpc"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6f81af72f8a510804dc39bf3493f632fc30ffdbf65ca8f6d5573d4b7e5f19a7"
+dependencies = [
+ "eva-common",
+ "hyper",
+ "lazy_static",
+ "log",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url 2.2.2",
+]
+
+[[package]]
+name = "eva-rjrpc"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bf406318fe8868bfb579ccd11dac494d05020cf964459144434a2663d77c3a9"
@@ -1647,9 +1664,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9f39dbdf8a64b49acaab26c991213b1f0effe66a5b3f446028223e983f22600"
+checksum = "142b33c2a078439c9ee66a377a65f13141c8f2a53f13c81bf05a2e7eca0e019c"
 dependencies = [
  "async-channel",
  "bmart 0.2.4",
@@ -3798,9 +3815,9 @@ dependencies = [
 
 [[package]]
 name = "rplc_opcua"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "399ce72b2b177cd9ee9ae21fa061f91ca35a4b8ca9d6d97d97a6326f2832963c"
+checksum = "4cfe4ef1cde34cefd23735ac7fedaa09851c408cb4ede769770e682659e9bff4"
 dependencies = [
  "base64 0.21.2",
  "bitflags",
@@ -5373,13 +5390,12 @@ dependencies = [
 
 [[package]]
 name = "yedb"
-version = "0.4.13"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb5c8a0916db0317a83852c9ad36359e957dda00b34c04d1c0e8257e76f75d8"
+checksum = "5ba6cd2c723686d7b593253ed7243f23f4ada5306f2957ae45fbb65df5dafdd3"
 dependencies = [
  "async-trait",
  "busrt",
- "eva-common",
  "fs2",
  "fs_extra",
  "glob",
