@@ -52,7 +52,11 @@ fi
 
 # run rc.local if present
 if [ -f /mnt/init/rc.local ]; then
-  /mnt/init/rc.local || exit 1
+  if [ -x /mnt/init/rc.local ]; then
+    /mnt/init/rc.local || exit 1
+  else
+    bash /mnt/init/rc.local || exit 1
+  fi
 fi
 
 # launch the node
