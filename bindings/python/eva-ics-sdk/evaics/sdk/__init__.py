@@ -1,4 +1,4 @@
-__version__ = '0.2.11'
+__version__ = '0.2.12'
 
 import busrt
 import sys
@@ -12,7 +12,6 @@ try:
     import pwd
 except:
     pwd = None
-import grp
 import os
 
 from ..exceptions import InvalidParameter
