@@ -18,6 +18,8 @@ logger = logging.getLogger('evaics.client.http')
 class Client:
     """
     HTTP client for EVA ICS (HMI HTPT API)
+
+    Requires "requests" Python module to be manually installed
     """
 
     def __init__(self,

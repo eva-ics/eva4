@@ -1,4 +1,4 @@
-__version__ = '0.2.10'
+__version__ = '0.2.11'
 
 import busrt
 import sys
@@ -8,7 +8,10 @@ import time
 import signal
 import threading
 import uuid
-import pwd
+try:
+    import pwd
+except:
+    pwd = None
 import grp
 import os
 
@@ -606,6 +609,9 @@ class Service:
         if not self.privileges_dropped:
             user = self.initial.get('user')
             if user is not None:
+                if pwd is None:
+                    raise RuntimeError(
+                        'pwd module not found, can not drop privileges')
                 u = pwd.getpwnam(user)
                 groups = os.getgrouplist(user, u.pw_gid)
                 os.setgroups(groups)
