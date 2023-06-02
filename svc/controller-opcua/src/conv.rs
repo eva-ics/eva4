@@ -80,6 +80,11 @@ impl ValueConv for Variant {
                             .map(|v| u32::try_from(*v))
                             .collect::<Result<_, _>>()?,
                     );
+                    if !arr.is_valid() {
+                        return Err(Error::invalid_data(
+                            "invalid array length for the chosen dimensions",
+                        ));
+                    }
                 }
                 Ok(Variant::Array(Box::new(arr)))
             }
