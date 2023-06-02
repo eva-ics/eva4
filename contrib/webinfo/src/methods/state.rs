@@ -9,6 +9,13 @@ use eva_sdk::prelude::*;
 use serde::Serialize;
 
 pub async fn handle(ci: ClientInfo, Path(path): Path<String>) -> Result<Json<Value>, HttpError> {
+    #[derive(Serialize)]
+    struct StatePayload {
+        i: Vec<String>,
+        include: Vec<String>,
+        exclude: Vec<String>,
+        full: bool,
+    }
     // firstly add to the query wildcard OID mask if the path is a group
     let mut oids = vec![OIDMask::from_path(&format!("{path}/#"))
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("invalid OID mask: {e}")))?
@@ -16,13 +23,6 @@ pub async fn handle(ci: ClientInfo, Path(path): Path<String>) -> Result<Json<Val
     // if the path is also a valid OID, add it to the query
     if let Ok(oid) = OID::from_path(&path) {
         oids.push(oid.to_string());
-    }
-    #[derive(Serialize)]
-    struct StatePayload {
-        i: Vec<String>,
-        include: Vec<String>,
-        exclude: Vec<String>,
-        full: bool,
     }
     let (allow, deny) = ci.acl.get_items_allow_deny_reading();
     let payload = StatePayload {
