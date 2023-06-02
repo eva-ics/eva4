@@ -89,10 +89,14 @@ config:
         #type: LREAL
         # an optional array range
         #range: "1:5"
+        # an optional array dimensions
+        #dimensions: [2,2]
       #status:
         #node: ns=2;s=vari16
         #type: INT
         # an optional array range (single index)
         #range: "1"
+        # an optional array dimensions
+        #dimensions: [2,2]
 user: nobody
 react_to_fail: true

@@ -88,6 +88,7 @@ impl RpcHandlers for Handlers {
                             deserialize_with = "crate::common::deserialize_opt_range"
                         )]
                         range: Option<String>,
+                        dimensions: Option<Vec<usize>>,
                         #[serde(rename = "type")]
                         tp: crate::common::OpcType,
                         #[serde(
@@ -102,7 +103,7 @@ impl RpcHandlers for Handlers {
                     crate::comm::write(
                         p.i,
                         p.range.as_deref(),
-                        Variant::from_eva_value(p.value, p.tp.into())?,
+                        Variant::from_eva_value(p.value, p.tp.into(), p.dimensions.as_deref())?,
                         p.timeout.unwrap_or_else(|| *crate::TIMEOUT.get().unwrap()),
                         p.retries.unwrap_or_else(|| {
                             crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst)
@@ -125,6 +126,8 @@ impl RpcHandlers for Handlers {
                         values: Vec<Value>,
                         #[serde(default)]
                         ranges: Vec<Option<String>>,
+                        #[serde(default)]
+                        dimensions: Vec<Option<Vec<usize>>>,
                         #[serde(rename = "types")]
                         tp: Vec<crate::common::OpcType>,
                         #[serde(
@@ -140,13 +143,15 @@ impl RpcHandlers for Handlers {
                         #[serde(skip_serializing_if = "Vec::is_empty")]
                         failed: Vec<String>,
                     }
-                    let p: ParamsNodeSetBulk = unpack(payload)?;
+                    let mut p: ParamsNodeSetBulk = unpack(payload)?;
                     let tp: Vec<VariantTypeId> = p.tp.into_iter().map(Into::into).collect();
+                    p.dimensions.resize(tp.len(), None);
                     let vals: Vec<Variant> = p
                         .values
                         .into_iter()
                         .zip(tp)
-                        .map(|(v, t)| Variant::from_eva_value(v, t))
+                        .zip(p.dimensions)
+                        .map(|((v, t), d)| Variant::from_eva_value(v, t, d.as_deref()))
                         .collect::<Result<Vec<Variant>, Error>>()?;
                     let mut ranges: Vec<Option<&str>> =
                         p.ranges.iter().map(Option::as_deref).collect();

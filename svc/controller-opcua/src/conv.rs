@@ -5,7 +5,7 @@ use opcua::types::{Array, Variant, VariantTypeId};
 #[allow(clippy::module_name_repetitions)]
 pub trait ValueConv {
     fn into_eva_value(self) -> EResult<Value>;
-    fn from_eva_value(val: Value, vt: VariantTypeId) -> EResult<Self>
+    fn from_eva_value(val: Value, vt: VariantTypeId, dimensions: Option<&[usize]>) -> EResult<Self>
     where
         Self: Sized;
 }
@@ -33,12 +33,25 @@ impl ValueConv for Variant {
                 for val in v.values {
                     data.push(val.into_eva_value()?);
                 }
-                Ok(Value::Seq(data))
+                let value = Value::Seq(data);
+                if let Some(dim) = v.dimensions {
+                    let dimensions: Vec<usize> = dim
+                        .into_iter()
+                        .map(usize::try_from)
+                        .collect::<Result<_, _>>()?;
+                    Ok(value.into_seq_reshaped(&dimensions))
+                } else {
+                    Ok(value)
+                }
             }
             _ => Err(Error::unsupported("unsupported OPC to data type")),
         }
     }
-    fn from_eva_value(val: Value, vt: VariantTypeId) -> EResult<Self> {
+    fn from_eva_value(
+        val: Value,
+        vt: VariantTypeId,
+        dimensions: Option<&[usize]>,
+    ) -> EResult<Self> {
         match val {
             Value::Unit => Ok(Variant::Empty),
             Value::Bool(v) => Ok(Variant::Boolean(v)),
@@ -54,14 +67,21 @@ impl ValueConv for Variant {
             Value::F64(v) => Ok(Variant::Double(v).cast(vt)),
             Value::String(v) => Ok(Variant::String(v.into())),
             Value::Bytes(v) => Ok(Variant::ByteString(v.into())),
-            Value::Seq(s) => {
+            Value::Seq(_) => {
+                let Value::Seq(s) = val.into_seq_flatten() else { panic!() };
                 let mut data = Vec::with_capacity(s.len());
                 for value in s {
-                    data.push(Variant::from_eva_value(value, vt)?);
+                    data.push(Variant::from_eva_value(value, vt, None)?);
                 }
-                Ok(Variant::Array(Box::new(
-                    Array::new(vt, data).map_err(Error::invalid_data)?,
-                )))
+                let mut arr = Array::new(vt, data).map_err(Error::invalid_data)?;
+                if let Some(dim) = dimensions {
+                    arr.dimensions = Some(
+                        dim.iter()
+                            .map(|v| u32::try_from(*v))
+                            .collect::<Result<_, _>>()?,
+                    );
+                }
+                Ok(Variant::Array(Box::new(arr)))
             }
             _ => Err(Error::unsupported("unsupported data type to OPC")),
         }

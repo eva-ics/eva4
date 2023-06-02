@@ -81,6 +81,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .required("value")
             .required("type")
             .optional("range")
+            .optional("dimensions")
             .optional("timeout")
             .optional("retries"),
     );
@@ -90,6 +91,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .required("values")
             .required("types")
             .optional("ranges")
+            .optional("dimensions")
             .optional("timeout")
             .optional("retries"),
     );

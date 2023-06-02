@@ -37,6 +37,10 @@ var.set:
       typ: String
       des: array range
       req: false
+    - nam: dimensions
+      typ: Vec<u32>
+      des: array dimensions
+      req: false
     - nam: timeout
       typ: f64
       des: Max operation timeout
@@ -64,6 +68,10 @@ var.set_bulk:
     - nam: ranges
       typ: Vec<Option<String>>
       des: array ranges
+      req: false
+    - nam: dimensions
+      typ: Vec<Option<u32>>
+      des: array dimensions
       req: false
     - nam: timeout
       typ: f64

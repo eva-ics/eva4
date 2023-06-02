@@ -34,7 +34,7 @@ async fn run_action(
         crate::comm::write(
             s.node().clone(),
             range,
-            Variant::from_eva_value(val, s.tp())?,
+            Variant::from_eva_value(val, s.tp(), s.dimensions())?,
             op.timeout()?,
             retries,
             Some(t),
@@ -52,7 +52,7 @@ async fn run_action(
             crate::comm::write(
                 v.node().clone(),
                 v.range(),
-                Variant::from_eva_value(val, v.tp())?,
+                Variant::from_eva_value(val, v.tp(), v.dimensions())?,
                 op.timeout()?,
                 retries,
                 Some(t),

@@ -106,6 +106,7 @@ pub struct PropActionMap {
     transform: Vec<transform::Task>,
     #[serde(rename = "type", deserialize_with = "deserialize_opc_tp")]
     tp: VariantTypeId,
+    dimensions: Option<Vec<usize>>,
 }
 
 #[inline]
@@ -163,6 +164,10 @@ impl PropActionMap {
     #[inline]
     pub fn tp(&self) -> VariantTypeId {
         self.tp
+    }
+    #[inline]
+    pub fn dimensions(&self) -> Option<&[usize]> {
+        self.dimensions.as_deref()
     }
 }
 
