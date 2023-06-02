@@ -36,6 +36,10 @@ members = [
   "benchmarks/bm-primary"
 ]
 
+exclude = [
+  "contrib/webinfo"
+]
+
 [profile.release]
 strip = true
 lto = true

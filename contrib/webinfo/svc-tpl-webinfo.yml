@@ -1,0 +1,14 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: /path/to/eva-webinfo
+config:
+  # ip/port listen to
+  listen: 0.0.0.0:9922
+  # the service uses a HMI service instance to authenticate API calls. An
+  # instance must be deployed on the node
+  hmi_svc: eva.hmi.default
+  # optional real ip header
+  #real_ip_header: X-Real-Ip
+user: nobody
+workers: 1
