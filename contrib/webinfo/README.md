@@ -8,8 +8,9 @@ All requests must contain a header X-Auth-Key with a valid API key or token
 
 Methods:
 
-/api/test - get node info (core test)
-/api/item.state/OID - get item/group state (OID as path, e.g. sensor/tests/t1)
+* /api/test - get node info (core test)
+
+* /api/item.state/OID - get item/group state (OID as path, e.g. sensor/tests/t1)
 
 ## Setup
 
