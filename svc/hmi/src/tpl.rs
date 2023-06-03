@@ -2,10 +2,10 @@ use eva_sdk::prelude::*;
 use hyper::header::HeaderMap;
 use lazy_static::lazy_static;
 use log::info;
+use parking_lot::RwLock;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::RwLock;
 use tera::{Context, Tera};
 
 lazy_static! {
@@ -42,11 +42,11 @@ fn reload_tera_dir(path: &str) -> EResult<Tera> {
 }
 
 pub fn reload_ui(ui_path: &str) -> EResult<()> {
-    *TERA_UI.write().unwrap() = reload_tera_dir(ui_path)?;
+    *TERA_UI.write() = reload_tera_dir(ui_path)?;
     Ok(())
 }
 
 pub fn reload_pvt(pvt_path: &str) -> EResult<()> {
-    *TERA_PVT.write().unwrap() = reload_tera_dir(pvt_path)?;
+    *TERA_PVT.write() = reload_tera_dir(pvt_path)?;
     Ok(())
 }

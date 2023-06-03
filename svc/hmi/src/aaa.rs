@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use log::error;
 use log::{debug, trace};
 use once_cell::sync::OnceCell;
+use parking_lot::Mutex;
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
@@ -18,7 +19,6 @@ use std::future::Future;
 use std::net::IpAddr;
 use std::sync::atomic;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 use ttl_cache::TtlCache;
 use uuid::Uuid;
@@ -182,7 +182,7 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
         let token = get_token(token_str.try_into()?, ip).await?;
         return Ok(Auth::Token(token));
     }
-    if let Some(acl) = ACL_CACHE_BY_KEY_VALUE.lock().unwrap().get(key) {
+    if let Some(acl) = ACL_CACHE_BY_KEY_VALUE.lock().get(key) {
         return Ok(Auth::Key(key.to_owned(), acl.clone()));
     }
     let auth_svcs = AUTH_SVCS.get().unwrap();
@@ -207,7 +207,6 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
                 let acl = Arc::new(unpack::<Acl>(result.payload())?);
                 ACL_CACHE_BY_KEY_VALUE
                     .lock()
-                    .unwrap()
                     .insert(key.to_owned(), acl.clone(), ACL_TTL);
                 return Ok(Auth::Key(key.to_owned(), acl));
             }
@@ -342,7 +341,7 @@ pub async fn create_token(
 pub async fn destroy_token(token_id: &TokenId) -> EResult<()> {
     trace!("destroying token {}", token_id);
     db::delete_token(token_id).await?;
-    let websockets = TOKEN_WEBSOCKETS.lock().unwrap().remove(token_id);
+    let websockets = TOKEN_WEBSOCKETS.lock().remove(token_id);
     if let Some(sockets) = websockets {
         for ws in sockets.values() {
             ws.terminate();
@@ -478,7 +477,7 @@ impl Token {
     }
     #[allow(clippy::mutex_atomic)]
     pub fn register_websocket(&self, ws: WebSocket) {
-        let mut websockets = TOKEN_WEBSOCKETS.lock().unwrap();
+        let mut websockets = TOKEN_WEBSOCKETS.lock();
         if let Some(map) = websockets.get_mut(&self.id) {
             map.insert(ws.id(), ws);
         } else {
@@ -488,7 +487,7 @@ impl Token {
         }
     }
     pub fn unregister_websocket(&self, id: Uuid) {
-        if let Some(websockets) = TOKEN_WEBSOCKETS.lock().unwrap().get_mut(&self.id) {
+        if let Some(websockets) = TOKEN_WEBSOCKETS.lock().get_mut(&self.id) {
             if let Some(ws) = websockets.get(&id) {
                 ws.terminate();
             }
@@ -509,7 +508,7 @@ async fn clear_token_websockets() {
     match db::load_token_ids().await {
         Ok(ws_ids) => {
             let ids: HashSet<TokenId> = ws_ids.into_iter().collect();
-            let mut websockets = TOKEN_WEBSOCKETS.lock().unwrap();
+            let mut websockets = TOKEN_WEBSOCKETS.lock();
             let mut to_remove = Vec::new();
             for token_id in websockets.keys() {
                 if !ids.contains(token_id) {

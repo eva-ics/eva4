@@ -1,6 +1,6 @@
 use crate::aaa;
 use crate::{serve, upload};
-use eva_common::acl::OIDMask;
+use eva_common::acl::OIDMaskList;
 use eva_common::hyper_response;
 use eva_common::hyper_tools::HResultX;
 use eva_common::prelude::*;
@@ -14,12 +14,12 @@ use hyper::{http, Body, Method, Request, Response, StatusCode};
 use hyper_tungstenite::{tungstenite, HyperWebsocket, WebSocketStream};
 use lazy_static::lazy_static;
 use log::error;
+use parking_lot::Mutex;
 use rjrpc::http::HyperJsonRpcServer;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap, HashSet};
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 use submap::SubMap;
 use tungstenite::Message;
@@ -35,6 +35,7 @@ enum Topic {
     Pong,
     Reload,
     Server,
+    Bye,
 }
 
 #[derive(Serialize, Eq, PartialEq, Copy, Clone, Hash)]
@@ -44,7 +45,7 @@ pub enum ServerEvent {
 }
 
 const ERR_INVALID_IP: &str = "Invalid IP address";
-const WS_QUEUE: usize = 8192;
+const WS_QUEUE: usize = 32768;
 
 lazy_static! {
     static ref HJRPC: HyperJsonRpcServer = {
@@ -58,57 +59,69 @@ lazy_static! {
         Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#"));
     pub static ref WS_SUB_LOG: Mutex<SubMap<Arc<WsTx>>> =
         Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#"));
-    pub static ref WS_BY_API_KEY: Mutex<HashMap<Uuid, WebSocket>> = <_>::default();
+    // web sockets not registered with any token
+    pub static ref WS_STANDALONE: tokio::sync::Mutex<HashMap<Uuid, WebSocket>> = <_>::default();
 }
 
-macro_rules! notify_ws {
-    ($ws_list: expr, $frame: expr) => {
-        for c in $ws_list {
-            if c.tx.is_full() {
-                warn!("web socket {} buffer is full, terminating", c.id);
-                c.ask_terminate();
-            } else if c.tx.send($frame.clone()).await.is_err() {
-                c.ask_terminate();
-            }
-        }
+struct WsRepl(Arc<OID>, IEID);
+
+fn notify_ws(c: &WsTx, frame: &WsFrame, repl: Option<&WsRepl>) -> EResult<()> {
+    let res = if let Some(repl) = repl {
+        c.try_send_state_frame(frame, repl)
+    } else {
+        c.tx.try_send(frame.clone())
     };
+    if let Err(e) = res {
+        if let async_channel::TrySendError::Full(_) = e {
+            warn!("web socket {} buffer is full, terminating", c.id);
+        }
+        c.ask_terminate();
+        return Err(Error::failed(e));
+    }
+    Ok(())
 }
 
-pub async fn notify_server_event(event: ServerEvent) -> EResult<()> {
-    let clients = WS_SUB.lock().unwrap().list_clients();
+fn notify_ws_list(ws_list: Vec<Arc<WsTx>>, frame: &WsFrame, repl: Option<WsRepl>) {
+    for c in ws_list {
+        let _ = notify_ws(&c, frame, repl.as_ref());
+    }
+}
+
+pub fn notify_server_event(event: ServerEvent) {
+    let clients = WS_SUB.lock().list_clients();
     if !clients.is_empty() {
         let frame = WsFrame::new_server_event(event);
-        notify_ws!(clients, frame);
+        notify_ws_list(clients, &frame, None);
     }
-    Ok(())
 }
 
-pub async fn notify_need_reload() -> EResult<()> {
-    let clients = WS_SUB.lock().unwrap().list_clients();
+pub fn notify_need_reload() {
+    let clients = WS_SUB.lock().list_clients();
     if !clients.is_empty() {
         let frame = WsFrame::new_reload();
-        notify_ws!(clients, frame);
+        notify_ws_list(clients, &frame, None);
     }
-    Ok(())
 }
 
-pub async fn notify_state(state: FullRemoteItemState) -> EResult<()> {
-    let mut clients = WS_SUB.lock().unwrap().get_subscribers(state.oid.as_path());
+#[allow(clippy::mutable_key_type)]
+pub fn notify_state(state: FullRemoteItemState) -> EResult<()> {
+    let mut clients = WS_SUB.lock().get_subscribers(state.oid.as_path());
     clients.retain(|c| c.auth.acl().check_item_read(&state.oid));
+    let ws_repl = WsRepl(Arc::new(state.oid.clone()), state.ieid);
     if !clients.is_empty() {
         let frame = WsFrame::new_state(to_value(state)?);
-        notify_ws!(clients, frame);
+        notify_ws_list(clients.into_iter().collect(), &frame, Some(ws_repl));
     }
     Ok(())
 }
 
-pub async fn notify_log(topic: &str, record: Value) -> EResult<()> {
-    let clients = WS_SUB_LOG.lock().unwrap().get_subscribers(topic);
+#[allow(clippy::mutable_key_type)]
+pub fn notify_log(topic: &str, record: Value) {
+    let clients = WS_SUB_LOG.lock().get_subscribers(topic);
     if !clients.is_empty() {
         let frame = WsFrame::new_log(record);
-        notify_ws!(clients, frame);
+        notify_ws_list(clients.into_iter().collect(), &frame, None);
     }
-    Ok(())
 }
 
 #[derive(Serialize, Clone)]
@@ -134,8 +147,19 @@ impl WsFrame {
         }
     }
     #[inline]
+    fn new_bye() -> Self {
+        Self {
+            s: Topic::Bye,
+            d: None,
+        }
+    }
+    #[inline]
     fn is_data(&self) -> bool {
         self.s == Topic::State
+    }
+    #[inline]
+    fn is_bye(&self) -> bool {
+        self.s == Topic::Bye
     }
     #[inline]
     fn new_pong() -> Self {
@@ -179,13 +203,73 @@ pub struct WsTx {
     id: Uuid,
     auth: aaa::Auth,
     tx: async_channel::Sender<WsFrame>,
+    repl: Mutex<HashMap<Arc<OID>, IEID>>,
 }
 
 impl WsTx {
     fn ask_terminate(&self) {
         if let Some(token) = self.auth.token() {
             token.unregister_websocket(self.id);
+        } else {
+            let id = self.id;
+            tokio::spawn(async move {
+                abort_web_socket_standalone(id).await;
+            });
         }
+    }
+    fn try_send_state_frame(
+        &self,
+        frame: &WsFrame,
+        ws_repl: &WsRepl,
+    ) -> Result<(), async_channel::TrySendError<WsFrame>> {
+        match self.repl.lock().entry(ws_repl.0.clone()) {
+            hash_map::Entry::Vacant(entry) => {
+                entry.insert(ws_repl.1);
+            }
+            hash_map::Entry::Occupied(mut entry) => {
+                if *entry.get() > ws_repl.1 {
+                    return Ok(());
+                }
+                entry.insert(ws_repl.1);
+            }
+        }
+        self.tx.try_send(frame.clone())
+    }
+    async fn send_initial(&self, oids: Option<OIDMaskList>) -> EResult<()> {
+        #[derive(Serialize)]
+        struct StatePayload {
+            i: OIDMaskList,
+            include: Vec<String>,
+            exclude: Vec<String>,
+        }
+        if let Some(oids) = oids {
+            let (allow, deny) = self.auth.acl().get_items_allow_deny_reading();
+            let payload = StatePayload {
+                i: oids,
+                include: allow,
+                exclude: deny,
+            };
+            let states: Vec<FullRemoteItemState> = unpack(
+                safe_rpc_call(
+                    crate::RPC.get().unwrap(),
+                    "eva.core",
+                    "item.state",
+                    pack(&payload)?.into(),
+                    QoS::Processed,
+                    *crate::TIMEOUT.get().unwrap(),
+                )
+                .await?
+                .payload(),
+            )?;
+            for state in states {
+                let ws_repl = WsRepl(Arc::new(state.oid.clone()), state.ieid);
+                let frame = WsFrame::new_state(to_value(state)?);
+                if notify_ws(self, &frame, Some(&ws_repl)).is_err() {
+                    break;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -267,6 +351,9 @@ async fn serve_websocket_sender(
                                 event_buf.insert(frame.s, vec![data]);
                             }
                         }
+                    } else if frame.is_bye() {
+                        send!(&frame);
+                        break;
                     } else {
                         send!(&frame);
                     }
@@ -287,6 +374,9 @@ async fn serve_websocket_sender(
     } else {
         while let Ok(frame) = rx.recv().await {
             send!(&frame);
+            if frame.is_bye() {
+                break;
+            }
         }
     }
 }
@@ -305,12 +395,33 @@ pub fn get_log_topics(level: u8) -> Vec<&'static str> {
     result
 }
 
+pub async fn remove_websocket_by_acl_id(acl_id: &str) {
+    WS_STANDALONE
+        .lock()
+        .await
+        .retain(|_, ws| ws.acl_modified_keep(acl_id));
+}
+
+pub async fn remove_websocket_by_key_id(key_id: &str) {
+    WS_STANDALONE
+        .lock()
+        .await
+        .retain(|_, ws| ws.key_modified_keep(key_id));
+}
+
 async fn serve_websocket(
     ws_tx: Arc<WsTx>,
     rx: async_channel::Receiver<WsFrame>,
     websocket: HyperWebsocket,
     buf_ttl: Option<f64>,
+    oids_masks: Option<OIDMaskList>,
 ) -> EResult<()> {
+    if let Some(masks) = oids_masks {
+        let mut map = WS_SUB.lock();
+        for mask in masks.oid_masks() {
+            map.subscribe(&mask.as_path(), &ws_tx);
+        }
+    }
     let websocket = websocket.await.map_err(Error::io)?;
     let (sender, mut receiver) = websocket.split();
     let ws_tx_c = ws_tx.clone();
@@ -328,17 +439,30 @@ async fn serve_websocket(
                     match method {
                         "subscribe.state" => {
                             if let Some(p) = cmd.params {
-                                let masks: Vec<OIDMask> = Vec::deserialize(p).log_err()?;
-                                let mut map = WS_SUB.lock().unwrap();
-                                for mask in masks {
+                                let masks: OIDMaskList = OIDMaskList::deserialize(p).log_err()?;
+                                let mut map = WS_SUB.lock();
+                                for mask in masks.oid_masks() {
                                     map.subscribe(&mask.as_path(), &ws_tx);
                                 }
+                            }
+                        }
+                        "subscribe.state_initial" => {
+                            if let Some(p) = cmd.params {
+                                let masks: OIDMaskList = OIDMaskList::deserialize(p).log_err()?;
+                                let mut map = WS_SUB.lock();
+                                for mask in masks.oid_masks() {
+                                    map.subscribe(&mask.as_path(), &ws_tx);
+                                }
+                                let ws_tx_c = ws_tx.clone();
+                                tokio::spawn(async move {
+                                    ws_tx_c.send_initial(Some(masks)).await.log_ef();
+                                });
                             }
                         }
                         "subscribe.log" => {
                             if let Some(p) = cmd.params {
                                 let level: u8 = u8::deserialize(p).log_err()?;
-                                let mut map = WS_SUB_LOG.lock().unwrap();
+                                let mut map = WS_SUB_LOG.lock();
                                 for t in get_log_topics(0) {
                                     map.unsubscribe(t, &ws_tx);
                                 }
@@ -371,6 +495,17 @@ async fn serve_websocket(
     Ok(())
 }
 
+fn unsubscribe_web_socket(ws_tx: &Arc<WsTx>) {
+    WS_SUB.lock().unregister_client(ws_tx);
+    WS_SUB_LOG.lock().unregister_client(ws_tx);
+}
+
+async fn abort_web_socket_standalone(ws_id: Uuid) {
+    if let Some(ws) = WS_STANDALONE.lock().await.remove(&ws_id) {
+        ws.terminate();
+    }
+}
+
 #[derive(Debug)]
 pub struct WebSocket {
     id: Uuid,
@@ -384,8 +519,29 @@ impl WebSocket {
     }
     pub fn terminate(&self) {
         self.handler.abort();
-        WS_SUB.lock().unwrap().unregister_client(&self.ws_tx);
-        WS_SUB_LOG.lock().unwrap().unregister_client(&self.ws_tx);
+        let tx = self.ws_tx.tx.clone();
+        tokio::spawn(async move {
+            let _ = tx.send(WsFrame::new_bye()).await;
+        });
+        unsubscribe_web_socket(&self.ws_tx);
+    }
+    fn acl_modified_keep(&self, acl_id: &str) -> bool {
+        if let aaa::Auth::Key(_, acl) = &self.ws_tx.auth {
+            if acl.id() == acl_id {
+                self.terminate();
+                return false;
+            }
+        }
+        true
+    }
+    fn key_modified_keep(&self, key_id: &str) -> bool {
+        if let aaa::Auth::Key(id, _) = &self.ws_tx.auth {
+            if id == key_id {
+                self.terminate();
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -466,62 +622,104 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                 .into_owned()
                 .collect()
         });
-        if let Some(p) = params {
-            if let Some(k) = p.get("k") {
-                match crate::aaa::authenticate(k, Some(ip)).await {
-                    Ok(auth) => {
-                        if let Some(token) = auth.clone_token() {
-                            let (response, websocket) = match hyper_tungstenite::upgrade(req, None)
-                            {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    return hyper_response!(StatusCode::BAD_REQUEST, e.to_string());
-                                }
-                            };
-                            let buf_ttl = if let Some(b) = p.get("buf_ttl") {
-                                let t = b.parse::<f64>().unwrap_or_default();
-                                if t > 0.0 {
-                                    Some(t)
-                                } else {
-                                    warn!("invalid ws buf ttl specified");
-                                    None
-                                }
-                            } else {
-                                None
-                            };
-                            let ws_id = Uuid::new_v4();
-                            let (tx, rx) = async_channel::bounded::<WsFrame>(WS_QUEUE);
-                            let ws_tx = Arc::new(WsTx {
-                                id: ws_id,
-                                tx,
-                                auth,
-                            });
-                            let ws_tx_c = ws_tx.clone();
-                            WS_SUB.lock().unwrap().register_client(&ws_tx);
-                            if ws_tx.auth.acl().check_op(eva_common::acl::Op::Log) {
-                                WS_SUB_LOG.lock().unwrap().register_client(&ws_tx);
-                            }
-                            let ws_handler = tokio::spawn(async move {
-                                if let Err(e) =
-                                    serve_websocket(ws_tx_c.clone(), rx, websocket, buf_ttl).await
-                                {
-                                    error!("error in websocket connection: {}", e);
-                                }
-                                ws_tx_c.ask_terminate();
-                            });
-                            let ws = WebSocket {
-                                id: ws_id,
-                                handler: ws_handler,
-                                ws_tx,
-                            };
-                            token.register_websocket(ws);
-                            return Ok(response);
+        let api_key: Option<&str> = params
+            .as_ref()
+            .and_then(|p| p.get("k").map(String::as_str))
+            .or_else(|| {
+                req.headers()
+                    .get("x-auth-key")
+                    .map(|v| v.to_str().unwrap_or_default())
+            });
+        if let Some(k) = api_key {
+            match crate::aaa::authenticate(k, Some(ip)).await {
+                Ok(auth) => {
+                    let (response, websocket) = match hyper_tungstenite::upgrade(req, None) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            return hyper_response!(StatusCode::BAD_REQUEST, e.to_string());
                         }
-                        return hyper_response!(StatusCode::FORBIDDEN, "auth token required");
+                    };
+                    let buf_ttl = if let Some(b) = params.as_ref().and_then(|p| p.get("buf_ttl")) {
+                        let t = b.parse::<f64>().unwrap_or_default();
+                        if t > 0.0 {
+                            Some(t)
+                        } else {
+                            warn!("invalid ws buf ttl specified");
+                            None
+                        }
+                    } else {
+                        None
+                    };
+                    let oids = if let Some(o) = params.as_ref().and_then(|p| p.get("state")) {
+                        let mut masks = HashSet::new();
+                        for mask in o.split(',') {
+                            match mask.parse() {
+                                Ok(v) => {
+                                    masks.insert(v);
+                                }
+                                Err(e) => {
+                                    return hyper_response!(
+                                        StatusCode::BAD_REQUEST,
+                                        format!("invalid OID mask {mask}: {e}")
+                                    );
+                                }
+                            }
+                        }
+                        Some(OIDMaskList::new(masks))
+                    } else {
+                        None
+                    };
+                    let send_initial: bool = params.as_ref().map_or(false, |p| {
+                        p.get("initial").map_or(false, |v| v == "1" || v == "true")
+                    });
+                    let ws_id = Uuid::new_v4();
+                    let (tx, rx) = async_channel::bounded::<WsFrame>(WS_QUEUE);
+                    let auth_token = auth.clone_token();
+                    let ws_tx = Arc::new(WsTx {
+                        id: ws_id,
+                        tx,
+                        auth,
+                        repl: <_>::default(),
+                    });
+                    let ws_tx_c = ws_tx.clone();
+                    WS_SUB.lock().register_client(&ws_tx);
+                    if ws_tx.auth.acl().check_op(eva_common::acl::Op::Log) {
+                        WS_SUB_LOG.lock().register_client(&ws_tx);
                     }
-                    Err(e) => {
-                        return hyper_response!(StatusCode::FORBIDDEN, e.to_string());
+                    let ws_standalone = if auth_token.is_none() {
+                        Some(WS_STANDALONE.lock().await)
+                    } else {
+                        None
+                    };
+                    let oids_c = if send_initial { oids.clone() } else { None };
+                    let ws_handler = tokio::spawn(async move {
+                        if let Err(e) =
+                            serve_websocket(ws_tx_c.clone(), rx, websocket, buf_ttl, oids).await
+                        {
+                            error!("error in websocket connection: {}", e);
+                        }
+                        ws_tx_c.ask_terminate();
+                    });
+                    let ws_tx_c = ws_tx.clone();
+                    let ws = WebSocket {
+                        id: ws_id,
+                        handler: ws_handler,
+                        ws_tx: ws_tx_c,
+                    };
+                    if let Some(token) = auth_token {
+                        token.register_websocket(ws);
+                    } else {
+                        ws_standalone.unwrap().insert(ws_id, ws);
                     }
+                    if send_initial {
+                        tokio::spawn(async move {
+                            ws_tx.send_initial(oids_c).await.log_ef();
+                        });
+                    }
+                    return Ok(response);
+                }
+                Err(e) => {
+                    return hyper_response!(StatusCode::FORBIDDEN, e.to_string());
                 }
             }
         }

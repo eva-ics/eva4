@@ -41,6 +41,7 @@ hyper-static = "0.1.5"
 urlencoding = "2.1.0"
 openssl = "0.10.42"
 genpass-native = { path = "../../genpass-native" }
+parking_lot = "0.12.1"
 
 [features]
 std-alloc = []

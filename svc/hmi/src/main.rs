@@ -333,7 +333,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_mark_ready(&client).await?;
     info!("Default HMI service started ({})", initial.id());
     svc_block(&rpc).await;
-    handler::notify_server_event(handler::ServerEvent::Restart).await?;
+    handler::notify_server_event(handler::ServerEvent::Restart);
     svc_mark_terminating(&client).await?;
     tokio::time::sleep(Duration::from_millis(100)).await;
     Ok(())

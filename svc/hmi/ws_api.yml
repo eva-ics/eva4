@@ -2,6 +2,10 @@ subscribe.state:
   des: Subscribes to item state events
   par: Vec<OID/OIDMask(String)>
   ret:
+subscribe.state_initial:
+  des: Subscribes to item state events and request initial states
+  par: Vec<OID/OIDMask(String)>
+  ret:
 subscribe.log:
   des: Subscribes to log events
   par: u8 (20 = info, 30 = warn, 40 = error)

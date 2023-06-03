@@ -67,8 +67,8 @@ async fn read_file<'a>(
     let mut mime = mime_types.get(ext);
     let mut buf = if target_is_tera_tpl {
         let tera = match tpl_dir_kind {
-            TplDirKind::Ui => crate::tpl::TERA_UI.read().unwrap(),
-            TplDirKind::Pvt => crate::tpl::TERA_PVT.read().unwrap(),
+            TplDirKind::Ui => crate::tpl::TERA_UI.read(),
+            TplDirKind::Pvt => crate::tpl::TERA_PVT.read(),
             TplDirKind::No => return Err(Error::core("tpl error")),
         };
         let context = crate::tpl::request_context(headers, ip)?;

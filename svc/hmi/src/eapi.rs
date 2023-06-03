@@ -1,8 +1,8 @@
 use crate::aaa;
 use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::events::{
-    LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_USER_TOPIC, LOCAL_STATE_TOPIC,
-    LOG_EVENT_TOPIC, REMOTE_STATE_TOPIC,
+    LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC,
+    LOCAL_STATE_TOPIC, LOG_EVENT_TOPIC, REMOTE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -77,7 +77,7 @@ impl RpcHandlers for Handlers {
                     subscriptions: usize,
                 }
                 if payload.is_empty() {
-                    let sm = crate::handler::WS_SUB.lock().unwrap();
+                    let sm = crate::handler::WS_SUB.lock();
                     let stats = Stats {
                         clients: sm.list_clients().len(),
                         sub_clients: sm.client_count(),
@@ -90,7 +90,7 @@ impl RpcHandlers for Handlers {
             }
             "session.broadcast.reload" => {
                 if payload.is_empty() {
-                    crate::handler::notify_need_reload().await?;
+                    crate::handler::notify_need_reload();
                     Ok(None)
                 } else {
                     Err(RpcError::params(None))
@@ -98,8 +98,7 @@ impl RpcHandlers for Handlers {
             }
             "session.broadcast.restart" => {
                 if payload.is_empty() {
-                    crate::handler::notify_server_event(crate::handler::ServerEvent::Restart)
-                        .await?;
+                    crate::handler::notify_server_event(crate::handler::ServerEvent::Restart);
                     Ok(None)
                 } else {
                     Err(RpcError::params(None))
@@ -170,18 +169,18 @@ impl RpcHandlers for Handlers {
         if frame.kind() == busrt::FrameKind::Publish {
             if let Some(topic) = frame.topic() {
                 if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), true)
-                        .await
-                        .log_ef();
+                    process_state(topic, o, frame.payload(), true).log_ef();
                 } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), false)
-                        .await
-                        .log_ef();
+                    process_state(topic, o, frame.payload(), false).log_ef();
                 } else if let Some(o) = topic.strip_prefix(LOG_EVENT_TOPIC) {
-                    process_log(topic, o, frame.payload()).await.log_ef();
+                    process_log(topic, o, frame.payload());
                 } else if let Some(acl_id) = topic.strip_prefix(AAA_ACL_TOPIC) {
-                    debug!("deleting tokens which contain ACL {}", acl_id);
+                    debug!("deleting tokens/web sockets which contain ACL {}", acl_id);
                     crate::aaa::clear_tokens_by_acl_id(acl_id);
+                    crate::handler::remove_websocket_by_acl_id(acl_id).await;
+                } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
+                    debug!("deleting tokens/web sockets for API key {}", key_id);
+                    crate::handler::remove_websocket_by_key_id(key_id).await;
                 } else if let Some(user) = topic.strip_prefix(AAA_USER_TOPIC) {
                     debug!("deleting tokens which belong to user {}", user);
                     crate::aaa::clear_tokens_by_user(user);
@@ -191,7 +190,7 @@ impl RpcHandlers for Handlers {
     }
 }
 
-async fn process_state(topic: &str, path: &str, payload: &[u8], local: bool) -> EResult<()> {
+fn process_state(topic: &str, path: &str, payload: &[u8], local: bool) -> EResult<()> {
     match OID::from_path(path) {
         Ok(oid) => {
             if local {
@@ -201,8 +200,7 @@ async fn process_state(topic: &str, path: &str, payload: &[u8], local: bool) -> 
                             v,
                             oid,
                             crate::SYSTEM_NAME.get().unwrap(),
-                        ))
-                        .await?;
+                        ))?;
                     }
                     Err(e) => {
                         warn!("invalid local state event payload {}: {}", topic, e);
@@ -211,10 +209,9 @@ async fn process_state(topic: &str, path: &str, payload: &[u8], local: bool) -> 
             } else {
                 match unpack::<RemoteStateEvent>(payload) {
                     Ok(v) => {
-                        crate::handler::notify_state(FullRemoteItemState::from_remote_state_event(
-                            v, oid,
-                        ))
-                        .await?;
+                        crate::handler::notify_state(
+                            FullRemoteItemState::from_remote_state_event(v, oid),
+                        )?;
                     }
                     Err(e) => {
                         warn!("invalid remote state event payload {}: {}", topic, e);
@@ -227,14 +224,13 @@ async fn process_state(topic: &str, path: &str, payload: &[u8], local: bool) -> 
     Ok(())
 }
 
-async fn process_log(topic: &str, path: &str, payload: &[u8]) -> EResult<()> {
+fn process_log(topic: &str, path: &str, payload: &[u8]) {
     match unpack::<Value>(payload) {
         Ok(v) => {
-            crate::handler::notify_log(path, v).await?;
+            crate::handler::notify_log(path, v);
         }
         Err(e) => {
             warn!("invalid local state event payload {}: {}", topic, e);
         }
     }
-    Ok(())
 }

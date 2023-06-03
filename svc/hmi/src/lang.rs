@@ -1,9 +1,10 @@
 use eva_common::prelude::*;
 use gettext::Catalog;
 use log::{info, trace};
+use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct Converter {
@@ -54,7 +55,7 @@ impl Converter {
         Ok(value)
     }
     async fn get_cat(&self, mo_path: &Path) -> EResult<Arc<Catalog>> {
-        if let Some(cat) = self.catalogs.lock().unwrap().get(mo_path) {
+        if let Some(cat) = self.catalogs.lock().get(mo_path) {
             return Ok(cat.clone());
         }
         let data = tokio::fs::read(mo_path).await?;
@@ -62,13 +63,12 @@ impl Converter {
         let cat = Arc::new(Catalog::parse(buf).map_err(Error::invalid_data)?);
         self.catalogs
             .lock()
-            .unwrap()
             .insert(mo_path.to_path_buf(), cat.clone());
         Ok(cat)
     }
     pub fn cache_purge(&self) {
         info!("cleaning i18n cache");
-        self.catalogs.lock().unwrap().clear();
+        self.catalogs.lock().clear();
     }
     fn convert_value(value: Value, cat: &Catalog) -> Value {
         if let Value::String(s) = value {
