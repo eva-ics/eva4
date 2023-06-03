@@ -1,6 +1,6 @@
 # webinfo svc
 
-EVA ICS v4 RESTFul Web Info (node test, item states) (Rust)
+EVA ICS v4 RESTFul Web Info (node test, item states) (Rust/Axum)
 
 ## Usage
 
