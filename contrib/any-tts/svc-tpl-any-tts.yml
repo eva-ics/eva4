@@ -1,0 +1,10 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/any-tts/any-tts.py
+config:
+  # the command must accept text from stdin
+  # e.g. for PicoTTS
+  say: "pico-tts -l en-US|aplay -q -f S16_LE -r 16"
+user: nobody
+workers: 1
