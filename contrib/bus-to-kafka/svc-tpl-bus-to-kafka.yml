@@ -1,0 +1,16 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/bus-to-kafka/bus-to-kafka.py
+config:
+  # OIDS to subscribe
+  oids:
+  - "#"
+  kafka:
+    targets:
+      - 127.0.0.1:9092
+    topics:
+      state: state
+      log: log
+user: nobody
+workers: 1
