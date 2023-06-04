@@ -583,7 +583,7 @@ pub async fn web(
                 );
                 resp.headers_mut().insert(
                     hyper::header::ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type".try_into().unwrap(),
+                    "content-type, x-auth-key".try_into().unwrap(),
                 );
             }
             let status_code = resp.status().as_u16();
@@ -864,12 +864,9 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                 hyper_response!(StatusCode::NOT_FOUND)
             }
             Method::OPTIONS => {
-                if uri == "/jrpc" {
-                    return Response::builder()
-                        .status(StatusCode::NO_CONTENT)
-                        .body(Body::from(""));
-                }
-                hyper_response!(StatusCode::METHOD_NOT_ALLOWED)
+                return Response::builder()
+                    .status(StatusCode::NO_CONTENT)
+                    .body(Body::from(""));
             }
             _ => hyper_response!(StatusCode::METHOD_NOT_ALLOWED),
         }

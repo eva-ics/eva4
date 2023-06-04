@@ -285,8 +285,9 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                     if let Some(v) = m.remove(&Value::String("k".to_owned())) {
                         String::deserialize(v)?
                     } else {
-                        meta.take_key()
-                            .ok_or_else(|| Error::new0(ErrorKind::AccessDenied))?
+                        meta.take_key().ok_or_else(|| {
+                            Error::new(ErrorKind::AccessDenied, "No token/API key specified")
+                        })?
                     }
                 } else {
                     return Err(Error::new0(ErrorKind::AccessDenied));
