@@ -1216,7 +1216,7 @@ checksum = "82647eb0bb045fa6e415ebdfab5445d549e576910338886175777d16478ed31a"
 dependencies = [
  "busrt",
  "eva-common",
- "eva-rjrpc 0.2.0",
+ "eva-rjrpc",
  "hyper",
  "hyper-tls",
  "serde",
@@ -1556,7 +1556,7 @@ dependencies = [
  "chrono",
  "cookie",
  "eva-common",
- "eva-rjrpc 0.3.0",
+ "eva-rjrpc",
  "eva-sdk",
  "futures",
  "genpass-native",
@@ -1653,26 +1653,9 @@ dependencies = [
 
 [[package]]
 name = "eva-rjrpc"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6f81af72f8a510804dc39bf3493f632fc30ffdbf65ca8f6d5573d4b7e5f19a7"
-dependencies = [
- "eva-common",
- "hyper",
- "lazy_static",
- "log",
- "rmp-serde",
- "serde",
- "serde_json",
- "tokio",
- "url 2.2.2",
-]
-
-[[package]]
-name = "eva-rjrpc"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bf406318fe8868bfb579ccd11dac494d05020cf964459144434a2663d77c3a9"
+checksum = "eb00771c0d0565c077850ab9be48f1b264f5d0d8e63c0469ae2e6903b5652de2"
 dependencies = [
  "base64 0.13.0",
  "eva-common",

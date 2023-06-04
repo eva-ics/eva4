@@ -41,7 +41,7 @@ pub async fn processor(
     meta: JsonRpcRequestMeta,
 ) -> Option<JsonRpcResponse> {
     let params = request.take_params();
-    let result = match api_call(&request.method, params, meta).await {
+    let result = match call(&request.method, params, meta).await {
         Ok(v) => v,
         Err(e) if e.kind() == ErrorKind::EvaHIAuthenticationRequired => {
             let mut je = rjrpc::JrpcException::new(401, String::new());
@@ -184,25 +184,11 @@ async fn login(
 #[serde(deny_unknown_fields)]
 struct ParamsEmpty {}
 
-async fn api_call(
-    method: &str,
-    j_params: Option<serde_json::Value>,
-    meta: JsonRpcRequestMeta,
-) -> EResult<serde_json::Value> {
-    let params = if let Some(p) = j_params {
-        Some(Value::deserialize(p)?)
-    } else {
-        None
-    };
-    let result = call(method, params, meta).await?;
-    serde_json::to_value(result).map_err(Into::into)
-}
-
 /// # Errors
 ///
 /// Returns Err if the call is failed
 #[allow(clippy::too_many_lines)]
-async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta) -> EResult<Value> {
+async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta) -> EResult<Value> {
     //let params = if let Some(p) = j_params {
     //} else {
     //None
@@ -299,7 +285,8 @@ async fn call(method: &str, params: Option<Value>, meta: JsonRpcRequestMeta) -> 
                     if let Some(v) = m.remove(&Value::String("k".to_owned())) {
                         String::deserialize(v)?
                     } else {
-                        return Err(Error::new0(ErrorKind::AccessDenied));
+                        meta.take_key()
+                            .ok_or_else(|| Error::new0(ErrorKind::AccessDenied))?
                     }
                 } else {
                     return Err(Error::new0(ErrorKind::AccessDenied));
