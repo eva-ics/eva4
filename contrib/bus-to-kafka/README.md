@@ -28,8 +28,7 @@ config:
   oids:
   - "#"
   kafka:
-    targets:
-      - 127.0.0.1:9092
+    target: 127.0.0.1:9092
     topics:
       state: state
       log: log

@@ -19,7 +19,6 @@ def on_frame(frame):
     if frame.topic:
         if d.topic_state and frame.topic.startswith(LOCAL_STATE_TOPIC):
             kafka_topic = d.topic_state
-            data = unpack(frame.payload)
             key = str(OID(frame.topic[len(LOCAL_STATE_TOPIC):], from_path=True))
             value = json.dumps(unpack(frame.payload))
         elif d.topic_log and frame.topic.startswith(LOG_EVENT_TOPIC):
@@ -28,14 +27,13 @@ def on_frame(frame):
             # do not process logs from the service itself
             if data.get('msg', '').startswith(f'{d.service.id} '):
                 return
-            key = str(frame.topic[len(LOCAL_STATE_TOPIC):])
-            value = json.dumps(unpack(frame.payload))
+            key = frame.topic[len(LOCAL_STATE_TOPIC):]
+            value = json.dumps(data)
         else:
             kafka_topic = None
-    if kafka_topic:
-        d.producer.send(kafka_topic,
-                        key=key.encode(),
-                        value=json.dumps(value).encode()).get(timeout=d.timeout)
+        if kafka_topic:
+            d.producer.send(kafka_topic, key=key.encode(),
+                            value=value.encode()).get(timeout=d.timeout)
 
 
 def run():
