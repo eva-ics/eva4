@@ -821,8 +821,7 @@ call:
     must be comma-separated, e.g. key=1,2,3 (for 1-item array key=1,). Keys
     with dots are formatted as maps (max one level allowed).
 
-    The method is designed for human-interactive environments and is not
-    desiged to be used by machines.
+    The method should be used in human-interactive environments only.
   par:
     - nam: q
       typ: String
