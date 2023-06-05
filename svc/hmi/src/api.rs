@@ -200,7 +200,11 @@ async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> 
     if call_method == "call" {
         Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD))
     } else {
-        call(&call_method, Some(call_params), meta).await
+        match call_method.as_str() {
+            "s" => call("item.state", Some(call_params), meta).await,
+            "sh" => call("item.state_history", Some(call_params), meta).await,
+            _ => call(&call_method, Some(call_params), meta).await,
+        }
     }
 }
 
