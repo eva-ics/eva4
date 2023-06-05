@@ -202,7 +202,7 @@ async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> 
     } else {
         match call_method.as_str() {
             "s" => call("item.state", Some(call_params), meta).await,
-            "sh" => call("item.state_history", Some(call_params), meta).await,
+            "h" => call("item.state_history", Some(call_params), meta).await,
             _ => call(&call_method, Some(call_params), meta).await,
         }
     }
