@@ -10,7 +10,7 @@ use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
 use log::{error, trace};
 use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{btree_map, BTreeMap, HashMap};
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -183,11 +183,20 @@ async fn login(
 
 async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> {
     #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
     struct Params {
         q: String,
+        k: Option<String>,
     }
     let p = Params::deserialize(params)?;
-    let (call_method, call_params) = crate::call_parser::parse_call_str(&p.q)?;
+    let (call_method, mut call_params) = crate::call_parser::parse_call_str(&p.q)?;
+    if let Some(key) = p.k {
+        if let Value::Map(ref mut m) = call_params {
+            if let btree_map::Entry::Vacant(entry) = m.entry(Value::String("k".to_owned())) {
+                entry.insert(Value::String(key));
+            }
+        }
+    }
     if call_method == "call" {
         Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD))
     } else {

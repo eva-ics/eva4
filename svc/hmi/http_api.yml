@@ -268,7 +268,7 @@ item.state_history:
       req: false
     - nam: fill
       typ: String
-      des: "Fill (nS/T/H/D/W e.g. 10T for 10-minute) + optional [:precision]"
+      des: "Fill (nS/T/H/D/W e.g. 10T for 10-minute or nA for n records) + optional [:precision]"
       req: false
     - nam: limit
       typ: u32
@@ -807,9 +807,9 @@ session.set_readonly:
         "result": "hi there"
     }
 call:
-  des: "Call any HMI method with string query"
+  des: Call any HMI method using a string query
   long_des: |
-    Allows to call any HTTP method with query
+    Allows to call any HTTP method using a string query
 
     E.g.
 
@@ -820,8 +820,12 @@ call:
     The first unnamed parameter goes to "i". If an array is required, a value
     must be comma-separated, e.g. key=1,2,3 (for 1-item array key=1,). Keys
     with dots are formatted as maps (max one level allowed).
+
+    The method is designed for human-interactive environments and is not
+    desiged to be used by machines.
   par:
     - nam: q
       typ: String
       des: Call query
       req: true
+  ret: The result of the target method
