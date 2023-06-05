@@ -42,6 +42,8 @@ urlencoding = "2.1.0"
 openssl = "0.10.42"
 genpass-native = { path = "../../genpass-native" }
 parking_lot = "0.12.1"
+shlex = "1.1.0"
+async-recursion = "1.0.4"
 
 [features]
 std-alloc = []

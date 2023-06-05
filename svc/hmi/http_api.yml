@@ -806,3 +806,22 @@ session.set_readonly:
         "jsonrpc": "2.0",
         "result": "hi there"
     }
+call:
+  des: "Call any HMI method with string query"
+  long_des: |
+    Allows to call any HTTP method with query
+
+    E.g.
+
+    .. code::
+
+      item.state_history sensor:tests/temp fill=10T xopts.retention=daily
+
+    The first unnamed parameter goes to "i". If an array is required, a value
+    must be comma-separated, e.g. key=1,2,3 (for 1-item array key=1,). Keys
+    with dots are formatted as maps (max one level allowed).
+  par:
+    - nam: q
+      typ: String
+      des: Call query
+      req: true

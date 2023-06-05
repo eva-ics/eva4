@@ -129,13 +129,13 @@ dependencies = [
 
 [[package]]
 name = "async-recursion"
-version = "1.0.0"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
+checksum = "0e97ce7de6cf12de5d7226c73f5ba9811622f4db3a5b91b55c53e987e5f91cba"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.96",
+ "syn 2.0.10",
 ]
 
 [[package]]
@@ -1549,6 +1549,7 @@ name = "eva-hmi"
 version = "4.0.1"
 dependencies = [
  "async-channel",
+ "async-recursion",
  "async-trait",
  "bmart 0.1.16",
  "busrt",
@@ -1575,6 +1576,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml 0.8.26",
+ "shlex",
  "sqlx",
  "submap",
  "tera",
@@ -4135,6 +4137,12 @@ dependencies = [
  "cpufeatures",
  "digest 0.10.3",
 ]
+
+[[package]]
+name = "shlex"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43b2853a4d09f215c24cc5489c992ce46052d359b5109343cbafbf26bc62f8a3"
 
 [[package]]
 name = "signal-hook-registry"

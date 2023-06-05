@@ -863,11 +863,9 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                 }
                 hyper_response!(StatusCode::NOT_FOUND)
             }
-            Method::OPTIONS => {
-                return Response::builder()
-                    .status(StatusCode::NO_CONTENT)
-                    .body(Body::from(""));
-            }
+            Method::OPTIONS => Response::builder()
+                .status(StatusCode::NO_CONTENT)
+                .body(Body::from("")),
             _ => hyper_response!(StatusCode::METHOD_NOT_ALLOWED),
         }
     }

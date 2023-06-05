@@ -19,6 +19,7 @@ use uuid::Uuid;
 err_logger!();
 
 const ERR_NO_PARAMS: &str = "no params provided";
+const ERR_NO_METHOD: &str = "no such RPC method";
 const ERR_DF_TIMES: &str = "dataframe times mismatch";
 
 const API_VERSION: u16 = 4;
@@ -180,6 +181,20 @@ async fn login(
     Err(e)
 }
 
+async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> {
+    #[derive(Deserialize)]
+    struct Params {
+        q: String,
+    }
+    let p = Params::deserialize(params)?;
+    let (call_method, call_params) = crate::call_parser::parse_call_str(&p.q)?;
+    if call_method == "call" {
+        Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD))
+    } else {
+        call(&call_method, Some(call_params), meta).await
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ParamsEmpty {}
@@ -188,11 +203,11 @@ struct ParamsEmpty {}
 ///
 /// Returns Err if the call is failed
 #[allow(clippy::too_many_lines)]
+#[async_recursion::async_recursion]
 async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta) -> EResult<Value> {
-    //let params = if let Some(p) = j_params {
-    //} else {
-    //None
-    //};
+    if method == "call" {
+        return method_call(params.unwrap_or_default(), meta).await;
+    }
     let ip = meta.ip();
     let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
     match method {
@@ -381,7 +396,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                             method_session_set_readonly(params, &mut aci).await
                         }
                         _ => {
-                            return Err(Error::new0(ErrorKind::MethodNotFound));
+                            return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
                     }
                 };
@@ -638,8 +653,8 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     #[derive(Serialize)]
     struct StateHistoryPayload<'a> {
         i: &'a OID,
-        t_start: Option<f64>,
-        t_end: Option<f64>,
+        t_start: f64,
+        t_end: f64,
         fill: Option<Fill>,
         precision: Option<u32>,
         limit: Option<u32>,
@@ -649,9 +664,33 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = StateHistoryParams::deserialize(params)?;
+    let ts_now = eva_common::time::now_ns_float();
+    let t_start = parse_ts!(p.t_start).unwrap_or_else(|| ts_now - 86_400.0);
+    let t_end = parse_ts!(p.t_end).unwrap_or(ts_now);
+    if t_end < t_start {
+        return Err(Error::invalid_params("invalid period"));
+    }
     let (fill, precision) = if let Some(fill) = p.fill {
         let mut sp = fill.splitn(2, ':');
-        let f: Fill = sp.next().unwrap().parse()?;
+        let fill_str = sp.next().unwrap();
+        let f: Fill = if let Some(x) = fill_str.strip_suffix('A') {
+            let dots: u32 = x.parse()?;
+            if dots > 10_000 {
+                return Err(Error::invalid_params("too many dots (max 10k)"));
+            }
+            if dots < 2 {
+                return Err(Error::invalid_params("dots can not be less than 2"));
+            }
+            let mut period = (t_end - t_start) / f64::from(dots - 1);
+            if period < 1.0 {
+                period = 1.0;
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
+            Fill::Seconds(period.round() as u32)
+        } else {
+            fill_str.parse()?
+        };
         let precs = if let Some(p) = sp.next() {
             Some(p.parse()?)
         } else {
@@ -666,8 +705,8 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
             aci.acl().require_item_read(&oid)?;
             let payload = StateHistoryPayload {
                 i: &oid,
-                t_start: parse_ts!(p.t_start),
-                t_end: parse_ts!(p.t_end),
+                t_start,
+                t_end,
                 fill,
                 precision,
                 limit: p.limit,
@@ -708,9 +747,6 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 for oid in &oids {
                     aci.acl().require_item_read(oid)?;
                 }
-                let ts_now = eva_common::time::now_ns_float();
-                let t_start = Some(parse_ts!(p.t_start).unwrap_or_else(|| ts_now - 86_400.0));
-                let t_end = Some(parse_ts!(p.t_end).unwrap_or(ts_now));
                 for oid in oids {
                     let payload = StateHistoryPayload {
                         i: &oid,

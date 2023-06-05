@@ -29,6 +29,7 @@ macro_rules! ok {
 mod aaa;
 mod aci;
 mod api;
+mod call_parser;
 mod convert;
 mod db;
 mod eapi;
