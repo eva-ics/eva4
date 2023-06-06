@@ -1,6 +1,6 @@
 use bmart::tools::Sorting;
 use busrt::QoS;
-use eva_common::common_payloads::{IdOrList, ParamsId, ParamsIdOrList};
+use eva_common::common_payloads::{IdOrList, ParamsId};
 use eva_common::events::AAA_ACL_TOPIC;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -394,10 +394,16 @@ impl RpcHandlers for Handlers {
                 }
             }
             "acl.format" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Params<'a> {
+                    i: IdOrList<'a>,
+                    key_id: Option<&'a str>,
+                }
                 if payload.is_empty() {
                     Err(RpcError::params(None))
                 } else {
-                    let p: ParamsIdOrList = unpack(payload)?;
+                    let p: Params = unpack(payload)?;
                     let acls = ACLS.lock().unwrap();
                     let mut acl_data: AclData = match p.i {
                         IdOrList::Single(i) => {
@@ -420,6 +426,14 @@ impl RpcHandlers for Handlers {
                     if acl_data.from.is_empty() {
                         warn!("ACLs not found, using empty ACL");
                         acl_data.id = ACL_NONE.to_owned();
+                    }
+                    let key_id_val = p.key_id.map(|k| Value::String(k.to_owned()));
+                    if let Some(ref k_val) = key_id_val {
+                        if let Some(ref mut meta) = acl_data.meta {
+                            let mut h = HashSet::with_capacity(1);
+                            h.insert(k_val);
+                            meta.insert("api_key_id", h);
+                        }
                     }
                     Ok(Some(pack(&acl_data)?))
                 }
@@ -469,7 +483,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(
         ServiceMethod::new("acl.format")
             .description("format ACL")
-            .required("i"),
+            .required("i")
+            .optional("key_id"),
     );
     let handlers = Handlers { info, tx };
     let rpc = initial.init_rpc(handlers).await?;

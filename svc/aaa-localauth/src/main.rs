@@ -468,6 +468,11 @@ impl RpcHandlers for Handlers {
                     )]
                     timeout: Duration,
                 }
+                #[derive(Serialize)]
+                struct Payload<'a> {
+                    i: Vec<String>,
+                    key_id: &'a str,
+                }
                 if payload.is_empty() {
                     return Err(RpcError::params(None));
                 }
@@ -483,7 +488,11 @@ impl RpcHandlers for Handlers {
                     RPC.get().unwrap(),
                     &self.acl_svc,
                     "acl.format",
-                    pack(&ParamsIdListOwned { i: acls })?.into(),
+                    pack(&Payload {
+                        i: acls,
+                        key_id: p.key,
+                    })?
+                    .into(),
                     QoS::Processed,
                     p.timeout,
                 )
