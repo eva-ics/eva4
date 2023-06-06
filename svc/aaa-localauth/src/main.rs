@@ -477,9 +477,9 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: ParamsAuthKey = unpack(payload)?;
-                let acls = if let Some(key) = KEYDB.lock().unwrap().get_by_k(p.key) {
+                let (key, acls) = if let Some(key) = KEYDB.lock().unwrap().get_by_k(p.key) {
                     debug!("API key authenticated: {}", key.id);
-                    key.acls.iter().cloned().collect()
+                    (key.clone(), key.acls.iter().cloned().collect())
                 } else {
                     debug!("API key authentication failed");
                     return Err(Error::access("invalid API key").into());
@@ -490,7 +490,7 @@ impl RpcHandlers for Handlers {
                     "acl.format",
                     pack(&Payload {
                         i: acls,
-                        key_id: p.key,
+                        key_id: &key.id,
                     })?
                     .into(),
                     QoS::Processed,

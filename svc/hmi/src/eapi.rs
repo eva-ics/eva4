@@ -181,6 +181,7 @@ impl RpcHandlers for Handlers {
                 } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
                     debug!("deleting tokens/web sockets for API key {}", key_id);
                     crate::handler::remove_websocket_by_key_id(key_id).await;
+                    crate::aaa::clear_tokens_by_key_id(key_id);
                 } else if let Some(user) = topic.strip_prefix(AAA_USER_TOPIC) {
                     debug!("deleting tokens which belong to user {}", user);
                     crate::aaa::clear_tokens_by_user(user);

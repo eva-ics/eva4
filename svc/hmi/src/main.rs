@@ -1,4 +1,6 @@
-use eva_common::events::{AAA_ACL_TOPIC, AAA_USER_TOPIC, ANY_STATE_TOPIC, LOG_EVENT_TOPIC};
+use eva_common::events::{
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, ANY_STATE_TOPIC, LOG_EVENT_TOPIC,
+};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use hyper::server::conn::AddrStream;
@@ -249,6 +251,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut topics = vec![
         format!("{AAA_ACL_TOPIC}#"),
         format!("{AAA_USER_TOPIC}#"),
+        format!("{AAA_KEY_TOPIC}#"),
         format!("{ANY_STATE_TOPIC}#"),
     ];
     for t in handler::get_log_topics(0) {

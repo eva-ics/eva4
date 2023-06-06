@@ -142,11 +142,20 @@ impl ACI {
             t: Instant::now(),
         }
     }
-    /// set ACL ID for Auth::Login
+    /// set ACL ID for Auth::Login and Auth::LoginKey
     #[inline]
     pub fn set_acl_id(&mut self, acl_id: &str) {
         if let Auth::Login(_, ref mut a) = self.auth {
             a.replace(acl_id.to_owned());
+        } else if let Auth::LoginKey(_, ref mut a) = self.auth {
+            a.replace(acl_id.to_owned());
+        }
+    }
+    /// set Key ID for Auth::LoginKey
+    #[inline]
+    pub fn set_key_id(&mut self, key_id: &str) {
+        if let Auth::LoginKey(ref mut a, _) = self.auth {
+            a.replace(key_id.to_owned());
         }
     }
     #[inline]
