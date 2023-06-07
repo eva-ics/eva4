@@ -1,8 +1,22 @@
 use eva_common::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{btree_map::Entry, BTreeMap};
 
 fn parse_val(s: &str) -> EResult<Value> {
-    if s.contains(',') {
+    if s.contains('=') {
+        let mut m = BTreeMap::new();
+        for chunk in s.split(';') {
+            let mut sp = chunk.splitn(2, '=');
+            let key = sp.next().unwrap();
+            if !key.is_empty() {
+                let val =
+                    parse_val(sp.next().ok_or_else(|| {
+                        Error::invalid_params(format!("key {key} with no value"))
+                    })?)?;
+                m.insert(Value::String(key.to_owned()), val);
+            }
+        }
+        Ok(Value::Map(m))
+    } else if s.contains(',') {
         let mut result = Vec::new();
         for chunk in s.split(',') {
             if !chunk.is_empty() {
@@ -39,7 +53,15 @@ fn parse_param(
                 result.insert(Value::String(key.to_owned()), Value::Map(m));
             }
         } else {
-            result.insert(Value::String(key.to_owned()), val);
+            match result.entry(Value::String(key.to_owned())) {
+                Entry::Vacant(entry) => {
+                    entry.insert(val);
+                }
+                Entry::Occupied(entry) => {
+                    let (k, prev) = entry.remove_entry();
+                    result.insert(k, Value::Seq(vec![prev, val]).into_seq_flatten());
+                }
+            }
         }
     } else if let Some(d) = default {
         result.insert(Value::String(d.to_owned()), parse_val(key)?);

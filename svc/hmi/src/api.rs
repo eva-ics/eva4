@@ -125,8 +125,8 @@ async fn login_key(key: &str, ip: Option<IpAddr>, source: &str) -> EResult<Value
             Ok(result) => {
                 let acl = unpack::<Acl>(result.payload())?;
                 if let Some(id) = acl.api_key_id() {
-                    // API key IDs MUST be prefixed with ! in both ACI and tokens
-                    let login = format!("!{}", id);
+                    // API key IDs MUST be prefixed with a dot in both ACI and tokens
+                    let login = format!(".{}", id);
                     aci.set_key_id(&login);
                     aci.set_acl_id(acl.id());
                     let token = aaa::create_token(&login, acl, svc, ip).await?;

@@ -558,6 +558,13 @@ impl RpcHandlers for Handlers {
                     {
                         let mut users = USERS.lock().unwrap();
                         for user in &new_users.users {
+                            if user.login.starts_with('.') {
+                                return Err(Error::invalid_data(format!(
+                                    "user login can not start with a dot: {}",
+                                    user.login
+                                ))
+                                .into());
+                            }
                             for c in user.login.chars() {
                                 if !c.is_alphanumeric()
                                     && !ID_ALLOWED_SYMBOLS.contains(c)

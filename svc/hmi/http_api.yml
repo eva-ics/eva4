@@ -6,7 +6,7 @@ login:
 
     * if k parameter is given, the method attempts to authenticate API key and
       create a temporary token for it. In ACI and API call logs requests are
-      marked as user=!key_id
+      marked as user=.key_id
     
     * if user and password are set, the method attempts to login user
       using the provided credentials

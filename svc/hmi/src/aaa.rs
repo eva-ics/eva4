@@ -210,7 +210,7 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
                 let key_id = acl
                     .api_key_id()
                     .ok_or_else(|| Error::core("API key ID not found"))?;
-                return Ok(Auth::Key(format!("!{}", key_id), acl));
+                return Ok(Auth::Key(format!(".{}", key_id), acl));
             }
             Err(e) => trace!("auth service returned an error: {} {}", svc, e),
         }
@@ -538,7 +538,7 @@ pub fn clear_tokens_by_user(user: &str) {
 }
 
 pub fn clear_tokens_by_key_id(key_id: &str) {
-    let user = format!("!{}", key_id);
+    let user = format!(".{}", key_id);
     // spawn in bg to unblock bus frame handler
     tokio::spawn(async move {
         db::clear_tokens_by_user(&user).await.log_ef();
