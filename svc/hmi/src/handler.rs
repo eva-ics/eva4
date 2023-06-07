@@ -535,8 +535,9 @@ impl WebSocket {
         true
     }
     fn key_modified_keep(&self, key_id: &str) -> bool {
+        let k = format!("!{}", key_id);
         if let aaa::Auth::Key(id, _) = &self.ws_tx.auth {
-            if id == key_id {
+            if *id == k {
                 self.terminate();
                 return false;
             }

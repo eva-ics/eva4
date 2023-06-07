@@ -1,3 +1,4 @@
+use eva_common::acl::Acl;
 use eva_common::events::{
     AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, ANY_STATE_TOPIC, LOG_EVENT_TOPIC,
 };
@@ -17,6 +18,23 @@ use std::sync::Arc;
 use std::time::Duration;
 
 err_logger!();
+
+trait ApiKeyId {
+    fn api_key_id(&self) -> Option<&str>;
+}
+
+impl ApiKeyId for Acl {
+    fn api_key_id(&self) -> Option<&str> {
+        if let Some(Value::Map(map)) = self.meta() {
+            if let Some(Value::Seq(s)) = map.get(&Value::String("api_key_id".to_owned())) {
+                if let Some(Value::String(val)) = s.get(0) {
+                    return Some(val);
+                }
+            }
+        }
+        None
+    }
+}
 
 macro_rules! ok {
     () => {{

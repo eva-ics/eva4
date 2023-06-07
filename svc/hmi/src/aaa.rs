@@ -1,5 +1,6 @@
 use crate::db;
 use crate::handler::WebSocket;
+use crate::ApiKeyId;
 use eva_common::acl::Acl;
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
@@ -20,7 +21,6 @@ use std::net::IpAddr;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
-use ttl_cache::TtlCache;
 use uuid::Uuid;
 
 err_logger!();
@@ -31,8 +31,6 @@ static SESSION_ALLOW_LIST_NEIGHBORS: atomic::AtomicBool = atomic::AtomicBool::ne
 
 const TOKEN_MODE_NORMAL: u8 = 1;
 const TOKEN_MODE_READONLY: u8 = 2;
-
-const ACL_TTL: Duration = Duration::from_secs(5);
 
 pub const SESSION_CLEANUP_INTERVAL: Duration = Duration::from_secs(15);
 pub const TOKEN_WEBSOCKETS_CLEANUP_INTERVAL: Duration = Duration::from_secs(5);
@@ -46,8 +44,6 @@ lazy_static! {
     static ref SESSION_TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref TOKEN_WEBSOCKETS: Mutex<HashMap<TokenId, HashMap<Uuid, WebSocket>>> = <_>::default();
     static ref AUTH_SVCS: OnceCell<Vec<String>> = <_>::default();
-    static ref ACL_CACHE_BY_KEY_VALUE: Mutex<TtlCache<String, Arc<Acl>>> =
-        Mutex::new(TtlCache::new(8192));
 }
 
 #[inline]
@@ -121,7 +117,7 @@ impl std::fmt::Display for Auth {
             Auth::Key(ref key_id, _) => write!(f, "key:{}", key_id),
             Auth::Login(ref login, _) => write!(f, "login:{}", login),
             Auth::LoginKey(key_id, _) => {
-                write!(f, "login.key:{}", key_id.as_deref().unwrap_or_default())
+                write!(f, "key:{}", key_id.as_deref().unwrap_or_default())
             }
         }
     }
@@ -175,7 +171,7 @@ impl Auth {
         match self {
             Auth::Token(ref token) => Some(token.user()),
             Auth::Login(ref login, _) => Some(login),
-            Auth::Key(_, _) => None,
+            Auth::Key(ref key_id, _) => Some(key_id),
             Auth::LoginKey(key_id, _) => key_id.as_deref(),
         }
     }
@@ -190,9 +186,6 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
     if let Some(token_str) = key.strip_prefix("token:") {
         let token = get_token(token_str.try_into()?, ip).await?;
         return Ok(Auth::Token(token));
-    }
-    if let Some(acl) = ACL_CACHE_BY_KEY_VALUE.lock().get(key) {
-        return Ok(Auth::Key(key.to_owned(), acl.clone()));
     }
     let auth_svcs = AUTH_SVCS.get().unwrap();
     let rpc = crate::RPC.get().unwrap();
@@ -214,10 +207,10 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
         {
             Ok(result) => {
                 let acl = Arc::new(unpack::<Acl>(result.payload())?);
-                ACL_CACHE_BY_KEY_VALUE
-                    .lock()
-                    .insert(key.to_owned(), acl.clone(), ACL_TTL);
-                return Ok(Auth::Key(key.to_owned(), acl));
+                let key_id = acl
+                    .api_key_id()
+                    .ok_or_else(|| Error::core("API key ID not found"))?;
+                return Ok(Auth::Key(format!("!{}", key_id), acl));
             }
             Err(e) => trace!("auth service returned an error: {} {}", svc, e),
         }

@@ -2,7 +2,11 @@ login:
   des: Login and obtain session token (read-write)
   long_des: |
     * if no params are given, the method attempts to login user using basic
-      auth
+      auth or x-auth-key header
+
+    * if k parameter is given, the method attempts to authenticate API key and
+      create a temporary token for it. In ACI and API call logs requests are
+      marked as user=!key_id
     
     * if user and password are set, the method attempts to login user
       using the provided credentials
@@ -23,6 +27,10 @@ login:
     - nam: token
       typ: String
       des: User token
+      req: false
+    - nam: k
+      typ: String
+      des: API key
       req: false
     - nam: xopts
       typ: Map<String, Any>

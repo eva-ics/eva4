@@ -119,6 +119,9 @@ impl Serialize for ACI {
         if let Auth::Token(ref token) = self.auth {
             map.serialize_entry("token_mode", token.mode_as_str())?;
             map.serialize_entry("u", token.user())?;
+        } else if let Auth::Key(_, _) = self.auth {
+            map.serialize_entry("token_mode", &Value::Unit)?;
+            map.serialize_entry("u", &self.auth.user())?;
         } else {
             map.serialize_entry("token_mode", &Value::Unit)?;
             map.serialize_entry("u", &Value::Unit)?;

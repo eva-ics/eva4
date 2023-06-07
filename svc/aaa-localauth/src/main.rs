@@ -312,6 +312,7 @@ impl RpcHandlers for Handlers {
                         }
                         for key in new_keys.keys {
                             let key_id = key.id.clone();
+                            keydb.remove(&key_id);
                             reg_keys.push((key_id, to_value(&key)?));
                             keydb.append(Arc::new(key))?;
                         }

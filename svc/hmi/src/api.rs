@@ -1,5 +1,6 @@
 use crate::aaa::{self, Auth, Token};
 use crate::aci::ACI;
+use crate::ApiKeyId;
 use crate::{RPC, TIMEOUT};
 use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
@@ -92,23 +93,6 @@ impl AuthResult {
             token,
             api_version: API_VERSION,
         }
-    }
-}
-
-trait ApiKeyId {
-    fn api_key_id(&self) -> Option<&str>;
-}
-
-impl ApiKeyId for Acl {
-    fn api_key_id(&self) -> Option<&str> {
-        if let Some(Value::Map(map)) = self.meta() {
-            if let Some(Value::Seq(s)) = map.get(&Value::String("api_key_id".to_owned())) {
-                if let Some(Value::String(val)) = s.get(0) {
-                    return Some(val);
-                }
-            }
-        }
-        None
     }
 }
 
