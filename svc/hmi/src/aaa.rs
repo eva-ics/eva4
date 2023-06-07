@@ -95,11 +95,11 @@ pub fn set_session_config(
             .expect("unable to set session timeout");
     }
     debug!("session.prolong: {}", prolong);
-    SESSION_PROLONG.store(prolong, atomic::Ordering::SeqCst);
+    SESSION_PROLONG.store(prolong, atomic::Ordering::Relaxed);
     debug!("session.stick_ip: {}", stick_ip);
-    SESSION_ALLOW_LIST_NEIGHBORS.store(allow_list_neighbors, atomic::Ordering::SeqCst);
+    SESSION_ALLOW_LIST_NEIGHBORS.store(allow_list_neighbors, atomic::Ordering::Relaxed);
     debug!("session.allow_list_neighbors: {}", allow_list_neighbors);
-    SESSION_STICK_IP.store(stick_ip, atomic::Ordering::SeqCst);
+    SESSION_STICK_IP.store(stick_ip, atomic::Ordering::Relaxed);
 }
 
 #[derive(Debug, Clone)]
@@ -238,7 +238,7 @@ impl TokenId {
 }
 
 pub async fn list_neighbors() -> EResult<Vec<Token>> {
-    if SESSION_ALLOW_LIST_NEIGHBORS.load(atomic::Ordering::SeqCst) {
+    if SESSION_ALLOW_LIST_NEIGHBORS.load(atomic::Ordering::Relaxed) {
         get_tokens().await
     } else {
         Err(Error::access("the method is not allowed to be called"))
@@ -285,12 +285,23 @@ impl fmt::Display for TokenId {
     }
 }
 
+fn check_token_ip(token: &Token, ip: Option<IpAddr>) -> EResult<()> {
+    if SESSION_STICK_IP.load(atomic::Ordering::Relaxed) {
+        if let Some(token_ip) = token.ip {
+            if ip.map_or(false, |i| i == token_ip) {
+                return Ok(());
+            }
+        }
+        return Err(Error::access(ERR_INVALID_TOKEN_IP));
+    }
+    Ok(())
+}
+
 pub async fn get_token(token_id: TokenId, ip: Option<IpAddr>) -> EResult<Arc<Token>> {
     trace!("authenticating token {}", token_id);
     if let Some(mut token) = db::load_token(token_id).await? {
-        if SESSION_STICK_IP.load(atomic::Ordering::SeqCst) && token.ip != ip {
-            Err(Error::access(ERR_INVALID_TOKEN_IP))
-        } else if token.is_expired()? {
+        check_token_ip(&token, ip)?;
+        if token.is_expired()? {
             Err(Error::access(ERR_INVALID_TOKEN))
         } else {
             token.touch().await?;
@@ -404,7 +415,7 @@ impl Token {
     }
     #[inline]
     pub fn mode_as_str(&self) -> &str {
-        if self.mode.load(atomic::Ordering::SeqCst) == TOKEN_MODE_READONLY {
+        if self.mode.load(atomic::Ordering::Relaxed) == TOKEN_MODE_READONLY {
             "readonly"
         } else {
             "normal"
@@ -415,11 +426,11 @@ impl Token {
     }
     #[inline]
     pub fn mode(&self) -> u8 {
-        self.mode.load(atomic::Ordering::SeqCst)
+        self.mode.load(atomic::Ordering::Relaxed)
     }
     #[inline]
     async fn touch(&mut self) -> EResult<()> {
-        if SESSION_PROLONG.load(atomic::Ordering::SeqCst) {
+        if SESSION_PROLONG.load(atomic::Ordering::Relaxed) {
             let now = i64::try_from(eva_common::time::now()).unwrap_or_default();
             self.t = now;
             db::set_token_time(&self.id, self.t).await?;

@@ -22,7 +22,7 @@ static NEED_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[inline]
 fn api_log_enabled() -> bool {
-    NEED_API_LOG.load(atomic::Ordering::SeqCst)
+    NEED_API_LOG.load(atomic::Ordering::Relaxed)
 }
 
 #[derive(Serialize)]
@@ -84,7 +84,7 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
 }
 
 pub async fn start(keep_api_log: u32) -> EResult<()> {
-    NEED_API_LOG.store(keep_api_log > 0, atomic::Ordering::SeqCst);
+    NEED_API_LOG.store(keep_api_log > 0, atomic::Ordering::Relaxed);
     if keep_api_log > 0 {
         eva_common::cleaner!(
             "api_log",

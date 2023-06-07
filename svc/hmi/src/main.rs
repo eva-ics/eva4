@@ -96,12 +96,12 @@ fn set_timeout(timeout: Duration) -> EResult<()> {
 
 #[inline]
 fn buf_size() -> usize {
-    BUF_SIZE.load(atomic::Ordering::SeqCst)
+    BUF_SIZE.load(atomic::Ordering::Relaxed)
 }
 
 #[inline]
 fn public_api_log() -> bool {
-    PUBLIC_API_LOG.load(atomic::Ordering::SeqCst)
+    PUBLIC_API_LOG.load(atomic::Ordering::Relaxed)
 }
 
 #[inline]
@@ -216,8 +216,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     DEFAULT_HISTORY_DB_SVC
         .set(config.default_history_db_svc)
         .map_err(|_| Error::core("Unable to set DEFAULT_DB"))?;
-    PUBLIC_API_LOG.store(config.public_api_log, atomic::Ordering::SeqCst);
-    BUF_SIZE.store(config.buf_size, atomic::Ordering::SeqCst);
+    PUBLIC_API_LOG.store(config.public_api_log, atomic::Ordering::Relaxed);
+    BUF_SIZE.store(config.buf_size, atomic::Ordering::Relaxed);
     set_timeout(timeout)?;
     aaa::set_auth_svcs(config.auth_svcs)?;
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
