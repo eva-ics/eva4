@@ -137,19 +137,6 @@ async fn login_key(key: &str, ip: Option<IpAddr>, source: &str) -> EResult<Value
                 return Err(Error::core("API key ID not found"));
             }
             Err(e) => {
-                match e.kind() {
-                    ErrorKind::AccessDenied => {
-                        if let Some(msg) = e.message() {
-                            if msg.starts_with('|') {
-                                return Err(e);
-                            }
-                        }
-                    }
-                    ErrorKind::AccessDeniedMoreDataRequired => {
-                        return Err(e);
-                    }
-                    _ => {}
-                }
                 trace!("auth service returned an error: {} {}", svc, e);
             }
         }
