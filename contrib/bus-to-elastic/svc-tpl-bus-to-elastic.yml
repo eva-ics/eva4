@@ -1,0 +1,16 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/bus-to-elastic/bus-to-elastic.py
+config:
+  # passed to the client as-is. see https://elasticsearch-py.readthedocs.io
+  client:
+    hosts:
+      - host: localhost
+        port: 9200
+        scheme: http
+    basic_auth: ['elastic', 'changeme']
+  # index name to store logs in
+  index: logs-eva
+user: nobody
+workers: 1
