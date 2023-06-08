@@ -1,5 +1,7 @@
 use crate::aaa::{Auth, Token, TokenId};
+use eva_common::err_logger;
 use eva_common::prelude::*;
+use eva_common::time::now;
 use futures::TryStreamExt;
 use lazy_static::lazy_static;
 use log::error;
@@ -13,6 +15,8 @@ use std::fmt::Write as _;
 //use std::pin::Pin;
 use std::str::FromStr;
 use std::time::Duration;
+
+err_logger!();
 
 //type QueryRows = Pin<Box<dyn futures::Stream<Item = Result<AnyRow, sqlx::Error>> + Send>>;
 
@@ -105,8 +109,7 @@ pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
 pub async fn api_log_clear(keep: u32) -> EResult<()> {
     let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
-    let keep_from =
-        i64::try_from(eva_common::time::now() - u64::from(keep)).map_err(Error::failed)?;
+    let keep_from = i64::try_from(now() - u64::from(keep)).map_err(Error::failed)?;
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query("DELETE FROM api_log WHERE t<?")
@@ -144,7 +147,7 @@ where
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
             )
             .bind(id_str)
-            .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
+            .bind(i64::try_from(now()).map_err(Error::failed)?)
             .bind(auth.user())
             .bind(auth.as_str())
             .bind(auth.acl_id())
@@ -164,7 +167,7 @@ where
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
             )
             .bind(id_str)
-            .bind(i64::try_from(eva_common::time::now()).map_err(Error::failed)?)
+            .bind(i64::try_from(now()).map_err(Error::failed)?)
             .bind(auth.user())
             .bind(auth.as_str())
             .bind(auth.acl_id())
@@ -236,7 +239,7 @@ pub async fn api_log_mark_error(id_str: &str, elapsed: f64, err: &Error) -> ERes
 pub async fn clear_idle_tokens(expiration: Duration) -> EResult<()> {
     let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
-    let t = i64::try_from(eva_common::time::now() - expiration.as_secs()).map_err(Error::failed)?;
+    let t = i64::try_from(now() - expiration.as_secs()).map_err(Error::failed)?;
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query("DELETE FROM tokens WHERE t<?")
@@ -563,6 +566,76 @@ pub async fn clear_tokens_by_acl_id(acl_id: &str) -> EResult<()> {
     Ok(())
 }
 
+pub async fn insert_ehmi_config(
+    token_id: &str,
+    config_key: &str,
+    payload: impl Serialize,
+) -> EResult<()> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    match kind {
+        AnyKind::Sqlite => {
+            sqlx::query("INSERT INTO ehmi_configs(k, token_id, config, t) VALUES (?, ?, ?, ?)")
+                .bind(config_key)
+                .bind(token_id)
+                .bind(serde_json::to_string(&payload)?)
+                .bind(i64::try_from(now()).map_err(Error::failed)?)
+                .execute(pool)
+                .await?;
+        }
+        AnyKind::Postgres => {
+            sqlx::query("INSERT INTO ehmi_configs(k, token_id, config, t) VALUES ($1, $2, $3, $4)")
+                .bind(config_key)
+                .bind(token_id)
+                .bind(serde_json::to_string(&payload)?)
+                .bind(i64::try_from(now()).map_err(Error::failed)?)
+                .execute(pool)
+                .await?;
+        }
+        _ => not_impl!(kind),
+    };
+    Ok(())
+}
+
+pub async fn ehmi_config_token_id(config_key: &str) -> EResult<Option<String>> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let mut rows = match kind {
+        AnyKind::Sqlite => sqlx::query("SELECT token_id FROM ehmi_configs WHERE k = ?")
+            .bind(config_key)
+            .fetch(pool),
+        AnyKind::Postgres => sqlx::query("SELECT token_id FROM ehmi_configs WHERE k = $1")
+            .bind(config_key)
+            .fetch(pool),
+        _ => not_impl!(kind),
+    };
+    if let Some(row) = rows.try_next().await? {
+        Ok(Some(row.try_get(0)?))
+    } else {
+        Ok(None)
+    }
+}
+
+pub async fn get_ehmi_config(config_key: &str) -> EResult<Value> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let mut rows = match kind {
+        AnyKind::Sqlite => sqlx::query("SELECT config FROM ehmi_configs WHERE k = ?")
+            .bind(config_key)
+            .fetch(pool),
+        AnyKind::Postgres => sqlx::query("SELECT config FROM ehmi_configs WHERE k = $1")
+            .bind(config_key)
+            .fetch(pool),
+        _ => not_impl!(kind),
+    };
+    if let Some(row) = rows.try_next().await? {
+        let config: String = row.try_get("config")?;
+        Ok(serde_json::from_str(&config)?)
+    } else {
+        Err(Error::not_found("no such ehmi config"))
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> {
     let mut opts = AnyConnectOptions::from_str(conn)?;
@@ -640,6 +713,19 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             sqlx::query("CREATE INDEX IF NOT EXISTS token_acls_acl_id ON token_acls(acl_id)")
                 .execute(&pool)
                 .await?;
+            sqlx::query(
+                r#"CREATE TABLE IF NOT EXISTS
+        ehmi_configs(
+            k VARCHAR(128) NOT NULL,
+            token_id CHAR(48) NOT NULL,
+            config VARCHAR(16384),
+            t INTEGER NOT NULL,
+            PRIMARY KEY(k)
+            FOREIGN KEY(token_id) REFERENCES tokens(id) ON DELETE CASCADE
+        )"#,
+            )
+            .execute(&pool)
+            .await?;
         }
         AnyKind::MySql => {
             sqlx::query(
@@ -750,6 +836,19 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             sqlx::query("CREATE INDEX IF NOT EXISTS token_acls_acl_id ON token_acls(acl_id)")
                 .execute(&pool)
                 .await?;
+            sqlx::query(
+                r#"CREATE TABLE IF NOT EXISTS
+        ehmi_configs(
+            k VARCHAR(128),
+            token_id CHAR(48) NOT NULL,
+            config VARCHAR(16384),
+            t BIGINT,
+            PRIMARY KEY(k),
+            FOREIGN KEY(token_id) REFERENCES tokens(id) ON DELETE CASCADE
+        )"#,
+            )
+            .execute(&pool)
+            .await?;
         }
         AnyKind::Mssql => not_impl!(kind),
     }

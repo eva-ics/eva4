@@ -43,6 +43,7 @@ genpass-native = { path = "../../genpass-native" }
 parking_lot = "0.12.1"
 shlex = "1.1.0"
 async-recursion = "1.0.4"
+base64 = "0.21.2"
 
 [features]
 std-alloc = []

@@ -1551,6 +1551,7 @@ dependencies = [
  "async-channel",
  "async-recursion",
  "async-trait",
+ "base64 0.21.2",
  "bmart 0.1.16",
  "busrt",
  "cargo_metadata",

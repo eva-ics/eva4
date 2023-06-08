@@ -299,11 +299,9 @@ impl fmt::Display for TokenId {
 }
 
 fn check_token_ip(token: &Token, ip: Option<IpAddr>) -> EResult<()> {
-    if SESSION_STICK_IP.load(atomic::Ordering::Relaxed) {
-        if let Some(token_ip) = token.ip {
-            if ip.map_or(false, |i| i == token_ip) {
-                return Ok(());
-            }
+    if let Some(token_ip) = token.ip {
+        if SESSION_STICK_IP.load(atomic::Ordering::Relaxed) && ip.map_or(false, |i| i == token_ip) {
+            return Ok(());
         }
         return Err(Error::access(ERR_INVALID_TOKEN_IP));
     }

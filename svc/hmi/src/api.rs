@@ -1,13 +1,16 @@
 use crate::aaa::{self, Auth, Token};
 use crate::aci::ACI;
+use crate::db;
 use crate::ApiKeyId;
 use crate::{RPC, TIMEOUT};
+use base64::Engine as _;
 use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::ParamsIdOrListOwned;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
+use lazy_static::lazy_static;
 use log::{error, trace};
 use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -15,6 +18,7 @@ use std::collections::{btree_map, BTreeMap, HashMap};
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 err_logger!();
@@ -24,6 +28,14 @@ const ERR_NO_METHOD: &str = "no such RPC method";
 const ERR_DF_TIMES: &str = "dataframe times mismatch";
 
 const API_VERSION: u16 = 4;
+
+lazy_static! {
+    static ref EHMI_LOCK: Mutex<()> = <_>::default();
+    static ref BASE64: base64::engine::general_purpose::GeneralPurpose = {
+        let config = base64::engine::GeneralPurposeConfig::new().with_encode_padding(false);
+        base64::engine::GeneralPurpose::new(&base64::alphabet::URL_SAFE, config)
+    };
+}
 
 macro_rules! parse_ts {
     ($t: expr) => {
@@ -237,6 +249,7 @@ async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> 
         match call_method.as_str() {
             "s" => call("item.state", Some(call_params), meta).await,
             "h" => call("item.state_history", Some(call_params), meta).await,
+            "ehmi" => call("ehmi.create_config", Some(call_params), meta).await,
             _ => call(&call_method, Some(call_params), meta).await,
         }
     }
@@ -245,6 +258,11 @@ async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ParamsEmpty {}
+
+#[inline]
+fn gen_source(ip: Option<IpAddr>) -> String {
+    ip.map_or_else(|| "-".to_owned(), |v| v.to_string())
+}
 
 /// # Errors
 ///
@@ -256,7 +274,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
         return method_call(params.unwrap_or_default(), meta).await;
     }
     let ip = meta.ip();
-    let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
+    let source = gen_source(ip);
     match method {
         "login" => {
             #[derive(Deserialize)]
@@ -350,6 +368,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
             aaa::destroy_token(&(p.token.try_into()?)).await.log_ef();
             ok!()
         }
+        "ehmi.get_config" => method_ehmi_get_config(params.unwrap_or_default()).await,
         _ => {
             if let Some(mut params) = params {
                 let auth_key: String = if let Value::Map(ref mut m) = params {
@@ -450,6 +469,10 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         }
                         "session.set_readonly" | "set_token_readonly" => {
                             method_session_set_readonly(params, &mut aci).await
+                        }
+                        "ehmi.create_config" => {
+                            method_ehmi_create_config(&auth_key, params, &mut aci, &gen_source(ip))
+                                .await
                         }
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
@@ -1509,4 +1532,89 @@ async fn method_session_set_readonly(params: Value, aci: &mut ACI) -> EResult<Va
     } else {
         Err(Error::failed("no token provided"))
     }
+}
+
+async fn method_ehmi_create_config(
+    key: &str,
+    params: Value,
+    aci: &mut ACI,
+    source: &str,
+) -> EResult<Value> {
+    #[derive(Serialize)]
+    struct AppPayload {
+        token: String,
+        api_version: u16,
+        config: BTreeMap<String, Value>,
+    }
+    #[derive(Serialize)]
+    struct App {
+        ehmi_app_url: String,
+    }
+    aci.log_request(log::Level::Debug).await.log_ef();
+    let mut hasher = openssl::sha::Sha256::new();
+    hasher.update(source.as_bytes());
+    hasher.update(key.as_bytes());
+    hasher.update(&pack(&params)?);
+    let config_key = BASE64.encode(hasher.finish());
+    let mut config: BTreeMap<String, Value> = BTreeMap::deserialize(params)?;
+    let app_id = config
+        .remove("app")
+        .map_or_else(|| "ec".to_owned(), |v| v.to_string());
+    config.remove("uid");
+    let Some(Value::String(hmi_url)) = config.remove("hmi_url") else {
+        return Err(Error::invalid_params("hmi_url not provided"));
+    };
+    let _ehmi_lock = EHMI_LOCK.lock().await;
+    let mut token_short_id = if let Some(ti) = db::ehmi_config_token_id(&config_key).await? {
+        let token_id = aaa::TokenId::try_from(ti.as_str())?;
+        if aaa::get_token(token_id, None).await.is_ok() {
+            Some(ti)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    if token_short_id.is_none() {
+        let token = if key.starts_with("token:") {
+            if let Auth::Token(token) = aaa::authenticate(key, None).await? {
+                token
+            } else {
+                return Err(Error::core("auth token failed"));
+            }
+        } else {
+            login_key(key, None, source).await?
+        };
+        let payload = AppPayload {
+            token: token.id().to_string(),
+            api_version: API_VERSION,
+            config,
+        };
+        let ti = token.id().to_short_string();
+        db::insert_ehmi_config(&ti, &config_key, payload).await?;
+        token_short_id.replace(ti);
+    }
+    let mut hasher = openssl::sha::Sha256::new();
+    hasher.update(token_short_id.unwrap().as_bytes());
+    let uid = BASE64.encode(hasher.finish());
+    let app = App {
+        ehmi_app_url: format!(
+            "{}/ui/ehmi/{}/?ck={}&uid={}",
+            hmi_url.trim_end_matches('/'),
+            app_id,
+            config_key,
+            uid
+        ),
+    };
+    Ok(to_value(app)?)
+}
+
+async fn method_ehmi_get_config(params: Value) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        ck: String,
+    }
+    let p = Params::deserialize(params)?;
+    db::get_ehmi_config(&p.ck).await
 }
