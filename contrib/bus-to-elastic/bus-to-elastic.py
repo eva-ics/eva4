@@ -32,7 +32,6 @@ def run():
     d.index = config.get('index', 'logs-eva')
 
     d.service = service
-    d.timeout = service.timeout['default']
 
     service.init(info, on_frame=on_frame)
     service.bus.subscribe(f'{LOG_EVENT_TOPIC}#').wait_completed()
