@@ -65,7 +65,9 @@ pub async fn processor(
 async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Value> {
     if let Some(key) = meta.key() {
         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
-        login_key(key, ip, &source).await
+        Ok(to_value(AuthResult::new(
+            login_key(key, ip, &source).await?,
+        ))?)
     } else if let Some(creds) = meta.credentials() {
         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
         login(&creds.0, &creds.1, None, None, ip, &source).await
@@ -97,58 +99,31 @@ impl AuthResult {
 }
 
 #[allow(clippy::similar_names)]
-async fn login_key(key: &str, ip: Option<IpAddr>, source: &str) -> EResult<Value> {
-    #[derive(Serialize)]
-    struct AuthPayload<'a> {
-        key: &'a str,
-        timeout: f64,
-    }
-    let auth_svcs = aaa::auth_svcs();
-    let rpc = RPC.get().unwrap();
-    let timeout = *TIMEOUT.get().unwrap();
-    let payload = pack(&AuthPayload {
-        key,
-        timeout: timeout.as_secs_f64(),
-    })?;
+async fn login_key(key: &str, ip: Option<IpAddr>, source: &str) -> EResult<Arc<Token>> {
     let mut aci = ACI::new(Auth::LoginKey(None, None), "login", source.to_owned());
-    for svc in auth_svcs {
-        match safe_rpc_call(
-            rpc,
-            svc,
-            "auth.key",
-            payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await
-        {
-            Ok(result) => {
-                let acl = unpack::<Acl>(result.payload())?;
-                if let Some(id) = acl.api_key_id() {
-                    // API key IDs MUST be prefixed with a dot in both ACI and tokens
-                    let login = format!(".{}", id);
-                    aci.set_key_id(&login);
-                    aci.set_acl_id(acl.id());
-                    let token = aaa::create_token(&login, acl, svc, ip).await?;
-                    aci.log_request(log::Level::Info).await.log_ef();
-                    aci.log_success().await;
-                    return Ok(to_value(AuthResult::new(token))?);
-                }
-                return Err(Error::core("API key ID not found"));
-            }
-            Err(e) => {
-                trace!("auth service returned an error: {} {}", svc, e);
-            }
+    if let Some((acl, svc)) = aaa::auth_key(key).await? {
+        if let Some(id) = acl.api_key_id() {
+            // API key IDs MUST be prefixed with a dot in both ACI and tokens
+            let login = format!(".{}", id);
+            aci.set_key_id(&login);
+            aci.set_acl_id(acl.id());
+            let token = aaa::create_token(&login, acl, svc, ip).await?;
+            aci.log_request(log::Level::Info).await.log_ef();
+            aci.log_success().await;
+            Ok(token)
+        } else {
+            Err(Error::failed("API key ID not found"))
         }
+    } else {
+        error!(
+            "API login with a key failed ({})",
+            ip.map_or_else(String::new, |v| v.to_string())
+        );
+        let e = Error::access("access denied");
+        aci.log_request(log::Level::Info).await.log_ef();
+        aci.log_error(&e).await;
+        Err(e)
     }
-    error!(
-        "API login with a key failed ({})",
-        ip.map_or_else(String::new, |v| v.to_string())
-    );
-    let e = Error::access("access denied");
-    aci.log_request(log::Level::Info).await.log_ef();
-    aci.log_error(&e).await;
-    Err(e)
 }
 
 #[allow(clippy::similar_names)]
@@ -339,7 +314,9 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         )
                         .await
                     }
-                    ParamsLogin::KeyAuth(creds) => login_key(&creds.k, ip, &source).await,
+                    ParamsLogin::KeyAuth(creds) => Ok(to_value(AuthResult::new(
+                        login_key(&creds.k, ip, &source).await?,
+                    ))?),
                     ParamsLogin::TokenInfo(ti) => {
                         let token = aaa::get_token(ti.token.try_into()?, ip).await?;
                         Ok(to_value(AuthResult::new(token))?)

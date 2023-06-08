@@ -177,17 +177,13 @@ impl Auth {
     }
 }
 
-pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
+pub async fn auth_key(key: &str) -> EResult<Option<(Acl, &'static str)>> {
     #[derive(Serialize)]
     struct AuthPayload<'a> {
         key: &'a str,
         timeout: f64,
     }
-    if let Some(token_str) = key.strip_prefix("token:") {
-        let token = get_token(token_str.try_into()?, ip).await?;
-        return Ok(Auth::Token(token));
-    }
-    let auth_svcs = AUTH_SVCS.get().unwrap();
+    let auth_svcs = auth_svcs();
     let rpc = crate::RPC.get().unwrap();
     let timeout = *crate::TIMEOUT.get().unwrap();
     let payload = pack(&AuthPayload {
@@ -205,17 +201,34 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
         )
         .await
         {
-            Ok(result) => {
-                let acl = Arc::new(unpack::<Acl>(result.payload())?);
-                let key_id = acl
-                    .api_key_id()
-                    .ok_or_else(|| Error::core("API key ID not found"))?;
-                return Ok(Auth::Key(format!(".{}", key_id), acl));
+            Ok(result) => return Ok(Some((unpack(result.payload())?, svc))),
+            Err(e) => {
+                trace!("auth service returned an error: {} {}", svc, e);
             }
-            Err(e) => trace!("auth service returned an error: {} {}", svc, e),
         }
     }
-    Err(Error::access("access denied"))
+    Ok(None)
+}
+
+pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
+    #[derive(Serialize)]
+    struct AuthPayload<'a> {
+        key: &'a str,
+        timeout: f64,
+    }
+    if let Some(token_str) = key.strip_prefix("token:") {
+        let token = get_token(token_str.try_into()?, ip).await?;
+        return Ok(Auth::Token(token));
+    }
+    if let Some((acl, _)) = auth_key(key).await? {
+        let acl = Arc::new(acl);
+        let key_id = acl
+            .api_key_id()
+            .ok_or_else(|| Error::core("API key ID not found"))?;
+        Ok(Auth::Key(format!(".{}", key_id), acl))
+    } else {
+        Err(Error::access("access denied"))
+    }
 }
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Hash)]
