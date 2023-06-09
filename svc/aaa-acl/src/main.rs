@@ -429,11 +429,16 @@ impl RpcHandlers for Handlers {
                     }
                     let key_id_val = p.key_id.map(|k| Value::String(k.to_owned()));
                     if let Some(ref k_val) = key_id_val {
-                        if let Some(ref mut meta) = acl_data.meta {
-                            let mut h = HashSet::with_capacity(1);
-                            h.insert(k_val);
-                            meta.insert("api_key_id", h);
-                        }
+                        let meta = if let Some(ref mut meta) = acl_data.meta {
+                            meta
+                        } else {
+                            let meta = HashMap::new();
+                            acl_data.meta.replace(meta);
+                            acl_data.meta.as_mut().unwrap()
+                        };
+                        let mut h = HashSet::with_capacity(1);
+                        h.insert(k_val);
+                        meta.insert("api_key_id", h);
                     }
                     Ok(Some(pack(&acl_data)?))
                 }
