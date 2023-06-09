@@ -1,13 +1,25 @@
 __version__ = '0.0.1'
 
 import evaics.sdk as sdk
-from elasticsearch import Elasticsearch
+import time
+import traceback
+import threading
+import logging
+import sys
 
+from elasticsearch import Elasticsearch, logger as el_logger
+from elasticsearch.helpers import bulk as el_bulk
 from evaics.sdk import unpack, LOG_EVENT_TOPIC
-
 from types import SimpleNamespace
+from threading import Lock
 
-d = SimpleNamespace(es=None, index=None, service=None)
+LOG_PROCESS_DELAY = 1
+
+d = SimpleNamespace(es=None,
+                    index=None,
+                    service=None,
+                    records=[],
+                    record_lock=threading.Lock())
 
 
 def on_frame(frame):
@@ -16,10 +28,31 @@ def on_frame(frame):
         # do not process logs from the service itself
         if data.get('msg', '').startswith(f'{d.service.id} '):
             return
-        d.es.index(index=d.index, document=data)
+        with d.record_lock:
+            d.records.append(data)
+
+
+def logs_worker():
+    while d.service.is_active():
+        time.sleep(LOG_PROCESS_DELAY)
+        process_logs()
+
+
+def process_logs():
+    try:
+        with d.record_lock:
+            records = d.records
+            d.records = []
+        actions = [{'_index': d.index, '_source': l} for l in records]
+        if actions:
+            el_bulk(d.es, actions)
+    except Exception as e:
+        print(traceback.format_exc(e), file=sys.stderr, flush=True)
 
 
 def run():
+    logging.getLogger('elasticsearch').setLevel(logging.WARNING)
+    logging.getLogger('elastic_transport.transport').setLevel(logging.WARNING)
     info = sdk.ServiceInfo(author='Bohemia Automation',
                            description='EAPI to ElasticSearch',
                            version=__version__)
@@ -35,7 +68,9 @@ def run():
 
     service.init(info, on_frame=on_frame)
     service.bus.subscribe(f'{LOG_EVENT_TOPIC}#').wait_completed()
+    threading.Thread(target=logs_worker, daemon=True).start()
     service.block()
+    process_logs()
 
 
 run()
