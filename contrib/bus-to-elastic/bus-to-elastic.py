@@ -11,7 +11,6 @@ from elasticsearch import Elasticsearch, logger as el_logger
 from elasticsearch.helpers import bulk as el_bulk
 from evaics.sdk import unpack, LOG_EVENT_TOPIC
 from types import SimpleNamespace
-from threading import Lock
 
 LOG_PROCESS_DELAY = 1
 
@@ -43,11 +42,11 @@ def process_logs():
         with d.record_lock:
             records = d.records
             d.records = []
-        actions = [{'_index': d.index, '_source': l} for l in records]
-        if actions:
+        if records:
+            actions = [{'_index': d.index, '_source': l} for l in records]
             el_bulk(d.es, actions)
     except Exception as e:
-        print(traceback.format_exc(e), file=sys.stderr, flush=True)
+        print(e, file=sys.stderr, flush=True)
 
 
 def run():
