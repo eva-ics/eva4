@@ -512,8 +512,12 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                             let mut kind: Kind =
                                 u32::from_le_bytes(buf[16..20].try_into().unwrap()).into();
                             let flags: u32 = u32::from_le_bytes(buf[20..24].try_into().unwrap());
+                            let kind_size = kind.size();
+                            if kind_size == 0 {
+                                kind = Kind::Other;
+                            }
                             if flags & 0x1000 == 0 {
-                                let array_len = size / kind.size();
+                                let array_len = if kind_size > 0 { size / kind_size } else { 0 };
                                 result.push(SymbolInfo {
                                     kind,
                                     array_len: if array_len > 1 { Some(array_len) } else { None },
@@ -526,7 +530,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                     | Kind::UnsupportedImpl
                                     | Kind::Str => {}
                                     _ => {
-                                        if size != kind.size() {
+                                        if size != kind_size {
                                             kind = Kind::UnsupportedImpl;
                                         }
                                     }
