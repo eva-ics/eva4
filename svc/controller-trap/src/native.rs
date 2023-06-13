@@ -207,22 +207,22 @@ pub async fn launch_handler(socket: &UdpSocket, config: &Config, rpc: &RpcClient
             Ok(trap_batch) => {
                 if config.verbose {
                     info!("native trap addr: {}", ip);
-                    for trap in trap_batch {
-                        match trap {
-                            Trap::Update(data) => {
-                                if config.verbose {
-                                    info!("update {}", data.oid);
-                                }
-                                process_update(data, rpc).await.log_ef();
+                }
+                for trap in trap_batch {
+                    match trap {
+                        Trap::Update(data) => {
+                            if config.verbose {
+                                info!("update {}", data.oid);
                             }
-                            Trap::UnitAction(data) => {
-                                info!("action {}", data.oid);
-                                process_unit_action(data, rpc).await.log_ef();
-                            }
-                            Trap::UnitActionToggle(data) => {
-                                info!("action.toggle {}", data.oid);
-                                process_unit_action_toggle(data, rpc).await.log_ef();
-                            }
+                            process_update(data, rpc).await.log_ef();
+                        }
+                        Trap::UnitAction(data) => {
+                            info!("action {}", data.oid);
+                            process_unit_action(data, rpc).await.log_ef();
+                        }
+                        Trap::UnitActionToggle(data) => {
+                            info!("action.toggle {}", data.oid);
+                            process_unit_action_toggle(data, rpc).await.log_ef();
                         }
                     }
                 }
