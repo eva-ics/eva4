@@ -9,7 +9,7 @@ Python modules are required.
 
 The service opens UDP input ports (one per item) which allows to connect
 various 3rd party software, such as Matlab Simulink (using DSP system toolbox
--> Sinks -> UDP send).
+-> Sinks -> UDP send) with paced simulation models.
 
 ![Simulink UDP](ss1.png?raw=true)
 
