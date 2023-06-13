@@ -11,7 +11,7 @@ The service opens UDP input ports (one per item) which allows to connect
 various 3rd party software, such as Matlab Simulink (using DSP system toolbox
 -> Sinks -> UDP sink).
 
-![Simulink UDP](ss.png?raw=true)
+![Simulink UDP](ss1.png?raw=true)
 
 ## Setup
 
