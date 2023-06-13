@@ -9,12 +9,12 @@ config:
     # UDP ports, one per item
     # 
     # The service sets item values only, status register is always 1
-    25001:
+    "25001":
       # for decode options, see https://docs.python.org/3/library/struct.html,
       # the default encoding is "<d" (little-endian IEE754 double)
       decode: "<d"
       oid: sensor:tests/t1
-    25002:
+    "25002":
       oid: sensor:tests/t2
 user: nobody
 workers: 1
