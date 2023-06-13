@@ -1,0 +1,20 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/raw-udp-to-bus/raw-udp-to-bus.py
+config:
+  # ip address to listen to
+  listen: 0.0.0.0
+  map:
+    # UDP ports, one per item
+    # 
+    # The service sets item values only, status register is always 1
+    25001:
+      oid: sensor:tests/t1
+    25002:
+      # for decoding, see https://docs.python.org/3/library/struct.html, the
+      # default encoding is "<d" (little-endian IEE754 double)
+      decode: d
+      oid: sensor:tests/t2
+user: nobody
+workers: 1
