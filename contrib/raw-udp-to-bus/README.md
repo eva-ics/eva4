@@ -31,11 +31,11 @@ config:
     # 
     # The service sets item values only, status register is always 1
     25001:
+      # for decode options, see https://docs.python.org/3/library/struct.html,
+      # the default encoding is "<d" (little-endian IEE754 double)
+      decode: "<d"
       oid: sensor:tests/t1
     25002:
-      # for decoding, see https://docs.python.org/3/library/struct.html, the
-      # default encoding is "<d" (little-endian IEE754 double)
-      decode: d
       oid: sensor:tests/t2
 user: nobody
 workers: 1
@@ -45,4 +45,13 @@ workers: 1
 
 ```shell
 eva svc create eva.controller.raw_udp1 /path/to/template.yml
+```
+
+## EAPI methods
+
+The service provides an additional RPC method "port.list" which output all the
+mapped ports:
+
+```shell
+eva svc call eva.controller.raw_udp1 port.list
 ```
