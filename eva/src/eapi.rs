@@ -1052,6 +1052,57 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 }
             }
+            #[allow(clippy::cast_precision_loss)]
+            "core.sysinfo" => {
+                use sysinfo::{DiskExt, SystemExt};
+                #[derive(Serialize)]
+                struct Info {
+                    ram_usage: Option<f64>,
+                    disk_usage: Option<f64>,
+                    la1: f64,
+                    la5: f64,
+                    la15: f64,
+                }
+                if payload.is_empty() {
+                    let mut system = sysinfo::System::new_all();
+                    system.refresh_disks_list();
+                    let d = eva_common::tools::get_eva_dir();
+                    let eva_dir = Path::new(&d);
+                    let mut disk_usage: Option<f64> = None;
+                    for disk in system.disks() {
+                        if eva_dir.starts_with(disk.mount_point()) {
+                            let total = disk.total_space();
+                            if total > 0 {
+                                disk_usage = Some(
+                                    (1.0 - disk.available_space() as f64 / total as f64) * 100.0,
+                                );
+                                break;
+                            }
+                        }
+                    }
+                    let ram_usage: Option<f64> = {
+                        let total = system.total_memory();
+                        if (total) > 0 {
+                            Some(system.used_memory() as f64 / total as f64 * 100.0)
+                        } else {
+                            None
+                        }
+                    };
+                    let la = system.load_average();
+                    let la1 = la.one;
+                    let la5 = la.five;
+                    let la15 = la.fifteen;
+                    Ok(Some(pack(&Info {
+                        ram_usage,
+                        disk_usage,
+                        la1,
+                        la5,
+                        la15,
+                    })?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
             "bus.publish" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
