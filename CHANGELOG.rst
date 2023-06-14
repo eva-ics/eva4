@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.1-stable
 ============
 
+* 2023-06-15 build 2023061501: core.sysinfo EAPI method
 * 2023-06-13 build 2023061301: SNMP and UDP traps bug fixes, ACL fixes
 * 2023-06-07 build 2023060703: Extended HMI API key functions, API key fixes
 * 2023-06-02 build 2023060201: Array ranges and dimensions in OPC-UA
