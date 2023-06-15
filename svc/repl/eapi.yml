@@ -156,5 +156,9 @@ node.mtest:
   ret:
 "bus::<SVC_ID>::<METHOD>":
   des: Calls any remote method (requires management access)
-  par: Always required (provide empty Map if the target method has no ones)
+  par:
+    - nam: node
+      typ: String
+      des: Remote node ID
+      req: true
   ret: RPC result as-is
