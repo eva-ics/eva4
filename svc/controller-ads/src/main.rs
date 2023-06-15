@@ -161,12 +161,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         symbols.insert(pull.symbol());
     }
     for action in config.action_map.values() {
-        if let Some(s) = action.status() {
-            symbols.insert(s.symbol());
-        }
-        if let Some(v) = action.value() {
-            symbols.insert(v.symbol());
-        }
+        symbols.insert(action.symbol());
     }
     set_poc(config.panic_in);
     let vars = match adsbr::create_vars(symbols.into_iter().collect::<Vec<&str>>().as_slice()).await
@@ -200,15 +195,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
             }
         }
         for action in config.action_map.values_mut() {
-            if let Some(s) = action.status_mut() {
-                if let Some(var) = ads_vars.get(s.symbol()) {
-                    s.set_var(var.clone());
-                }
-            }
-            if let Some(v) = action.value_mut() {
-                if let Some(var) = ads_vars.get(v.symbol()) {
-                    v.set_var(var.clone());
-                }
+            if let Some(var) = ads_vars.get(action.symbol()) {
+                action.set_var(var.clone());
             }
         }
     }

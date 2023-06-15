@@ -511,7 +511,7 @@ class Service:
         if timeout is None:
             timeout = self.timeout.get('startup', self.timeout['default'])
         wait_until = time.perf_counter() + timeout
-        while True:
+        while self.is_active():
             try:
                 result = self.rpc.call(
                     'eva.core',

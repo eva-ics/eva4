@@ -1,7 +1,6 @@
 use crate::types::{self, ModbusType, Register, RegisterKind};
 use eva_common::prelude::*;
 use eva_sdk::controller::transform::{self, Transform};
-use eva_sdk::types::StateProp;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -31,7 +30,7 @@ pub struct ModBusConfig {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PropActionMap {
+pub struct ActionMap {
     reg: Register,
     #[serde(rename = "type", default)]
     tp: ModbusType,
@@ -43,7 +42,7 @@ pub struct PropActionMap {
     transform: Vec<transform::Task>,
 }
 
-impl PropActionMap {
+impl ActionMap {
     #[inline]
     pub fn reg(&self) -> Register {
         self.reg
@@ -101,35 +100,6 @@ impl PropActionMap {
     #[inline]
     pub fn transform_value<T: Transform>(&self, value: T, oid: &OID) -> EResult<f64> {
         transform::transform(&self.transform, oid, value)
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ActionMap {
-    #[serde(default)]
-    status: Option<PropActionMap>,
-    #[serde(default)]
-    value: Option<PropActionMap>,
-}
-
-impl ActionMap {
-    #[inline]
-    pub fn status(&self) -> Option<&PropActionMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropActionMap> {
-        self.value.as_ref()
-    }
-    pub fn init(&mut self, default_unit: Option<u8>, oid: &OID) -> EResult<()> {
-        if let Some(ref mut status) = self.status {
-            status.init(default_unit, oid)?;
-        }
-        if let Some(ref mut value) = self.value {
-            value.init(default_unit, oid)?;
-        }
-        Ok(())
     }
 }
 
@@ -237,18 +207,11 @@ impl PullReg {
     }
 }
 
-#[inline]
-fn default_task_prop() -> StateProp {
-    StateProp::Value
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullTask {
     offset: types::Offset,
     oid: OID,
-    #[serde(default = "default_task_prop")]
-    prop: StateProp,
     #[serde(default)]
     value_delta: Option<f64>,
     #[serde(rename = "type", default)]
@@ -267,10 +230,6 @@ impl PullTask {
     #[inline]
     pub fn tp(&self) -> ModbusType {
         self.tp
-    }
-    #[inline]
-    pub fn prop(&self) -> StateProp {
-        self.prop
     }
     #[inline]
     pub fn block_offset(&self) -> u16 {

@@ -1021,9 +1021,9 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
     struct ParamsAction {
         i: OID,
         #[serde(alias = "s")]
-        status: ItemStatus,
+        status: Option<ItemStatus>,
         #[serde(default, alias = "v")]
-        value: ValueOptionOwned,
+        value: Value,
         #[serde(default, alias = "p")]
         priority: Option<u8>,
         #[serde(default, alias = "w")]
@@ -1042,13 +1042,16 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
         fn from(p: ParamsAction) -> Self {
             Self {
                 i: p.i,
-                params: eva_common::actions::Params::new_unit(p.status, p.value.into()),
+                params: eva_common::actions::Params::new_unit(p.value),
                 priority: p.priority,
                 wait: p.wait,
             }
         }
     }
     let p = ParamsAction::deserialize(params)?;
+    if p.status.is_some() {
+        warn!("status field in actions is ignored and deprecated. remove the field from API call payloads");
+    }
     aci.log_param("i", &p.i)?;
     aci.log_param("status", p.status)?;
     aci.log_param("value", &p.value)?;

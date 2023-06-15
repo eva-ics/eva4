@@ -1,6 +1,6 @@
 [package]
 name = "eva-controller-ads"
-version = "4.0.1"
+version = "4.0.2"
 edition = "2021"
 
 [dependencies]
@@ -11,8 +11,8 @@ serde = { version = "1.0.143", features = ["derive", "rc"] }
 log = "0.4.14"
 lazy_static = "1.4.0"
 async-channel = "1.7.1"
-eva-sdk = { version = "0.2.9", features = ["controller"] }
-eva-common = { version = "0.2.14", features = ["events", "time", "common-payloads"] }
+eva-sdk = { version = "0.3.0", features = ["controller"] }
+eva-common = { version = "0.3.0", features = ["events", "time", "common-payloads"] }
 once_cell = "1.9.0"
 jemallocator = { version = "0.5.0" }
 bmart = "0.1.15"

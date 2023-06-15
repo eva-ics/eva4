@@ -124,6 +124,7 @@ def run():
     d.ports.sort(key=lambda k: k['port'])
 
     if interval:
+        service.wait_core()
         threading.Thread(target=collect, daemon=True,
                          args=(interval, oids)).start()
     else:

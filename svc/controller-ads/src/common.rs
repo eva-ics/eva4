@@ -1,6 +1,5 @@
 use eva_common::prelude::*;
 use eva_sdk::controller::transform::{self, Transform};
-use eva_sdk::types::StateProp;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -34,7 +33,7 @@ pub struct AdsConfig {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PropActionMap {
+pub struct ActionMap {
     symbol: String,
     #[serde(default)]
     transform: Vec<transform::Task>,
@@ -42,7 +41,7 @@ pub struct PropActionMap {
     var: Option<Arc<crate::adsbr::Var>>,
 }
 
-impl PropActionMap {
+impl ActionMap {
     #[inline]
     pub fn symbol(&self) -> &str {
         &self.symbol
@@ -62,34 +61,6 @@ impl PropActionMap {
     #[inline]
     pub fn set_var(&mut self, var: Arc<crate::adsbr::Var>) {
         self.var.replace(var);
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ActionMap {
-    #[serde(default)]
-    status: Option<PropActionMap>,
-    #[serde(default)]
-    value: Option<PropActionMap>,
-}
-
-impl ActionMap {
-    #[inline]
-    pub fn status(&self) -> Option<&PropActionMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropActionMap> {
-        self.value.as_ref()
-    }
-    #[inline]
-    pub fn status_mut(&mut self) -> Option<&mut PropActionMap> {
-        self.status.as_mut()
-    }
-    #[inline]
-    pub fn value_mut(&mut self) -> Option<&mut PropActionMap> {
-        self.value.as_mut()
     }
 }
 
@@ -161,17 +132,10 @@ impl PullSymbol {
     }
 }
 
-#[inline]
-fn default_task_prop() -> StateProp {
-    StateProp::Value
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullTask {
     oid: OID,
-    #[serde(default = "default_task_prop")]
-    prop: StateProp,
     #[serde(default)]
     value_delta: Option<f64>,
     #[serde(default)]
@@ -183,10 +147,6 @@ impl PullTask {
     #[inline]
     pub fn oid(&self) -> &OID {
         &self.oid
-    }
-    #[inline]
-    pub fn prop(&self) -> StateProp {
-        self.prop
     }
     #[inline]
     pub fn need_transform(&self) -> bool {

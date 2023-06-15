@@ -30,10 +30,6 @@ config:
   #
   # the configuration is very similar (but extended) to the widely-used
   # https://github.com/alttch/pulr tool
-  #
-  # by default, sends raw events with status=1, value=<pulled value>
-  # if item statuses need to be collected, specify prop: status in the map
-  # block
   #pull:
     #- tag: test_array.test_float_array
       # An optional size/count args for PLC tag read commands, required for
@@ -72,7 +68,6 @@ config:
           #oid: sensor:tests/flag0
         #- offset: 0/1
           #oid: unit:tests/u1
-          #prop: status
   # action queue size, per item, actions on overflow are not dropped but wait
   # their attempt to enter the queue. The core marks an action as failed if it
   # does not enter the queue for <action timeout> seconds
@@ -82,13 +77,8 @@ config:
   # OID map for actions
   #action_map:
     #unit:tests/u1:
-      #value:
-        #tag: test_array.test_float_array[0]
-        #type: real
-      #status:
-        #tag: test_array.test_bool_array
-        #type: bit
-        #bit: 1
+      #tag: test_array.test_float_array[0]
+      #type: real
 timeout:
   # startup timeout should be slightly langer than default to allow the
   # controller prepare connection pool

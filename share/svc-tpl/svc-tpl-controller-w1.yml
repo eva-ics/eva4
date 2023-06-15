@@ -18,23 +18,20 @@ config:
   #pull:
     #- oid: sensor:tests/s1
       #interval: 1 # pull interval (sec)
-      #status:
-        #path: 29.F2FBE3467CC2/power # device path + attribute
-      #value:
-        #path: 29.F2FBE3467CC2/temperature
-        #value_delta: 0.5 # report event only if the new value difference is >=
-        # perform value transformations
-        #transform:
-          #- func: multiply # multiply the value by N
-            #params: [ 1000 ]
-          #- func: divide # divide the value by N
-            #params: [ 1000 ]
-          #- func: round # round the value to N digits after comma
-            #params: [ 2 ]
-          #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
-            #params: [ 1 ]
-          #- func: invert # invert the value between 0/1
-          # #params: []
+      #path: 29.F2FBE3467CC2/temperature
+      #value_delta: 0.5 # report event only if the new value difference is >=
+      # perform value transformations
+      #transform:
+        #- func: multiply # multiply the value by N
+          #params: [ 1000 ]
+        #- func: divide # divide the value by N
+          #params: [ 1000 ]
+        #- func: round # round the value to N digits after comma
+          #params: [ 2 ]
+        #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+          #params: [ 1 ]
+        #- func: invert # invert the value between 0/1
+        # #params: []
   # action queue size, per item, actions on overflow are not dropped but wait
   # their attempt to enter the queue. The core marks an action as failed if it
   # does not enter the queue for <action timeout> seconds
@@ -44,9 +41,6 @@ config:
   # OID map for actions
   #action_map:
     #unit:tests/u1:
-      #value:
-        #path: 29.F2FBE3467CC2/PIO.0
-      #status:
-        #path: 29.F2FBE3467CC2/PIO.2
+      #path: 29.F2FBE3467CC2/PIO.0
 user: nobody
 react_to_fail: true

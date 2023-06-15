@@ -126,26 +126,30 @@ async fn parse_native_trap(
                         .next()
                         .ok_or_else(|| Error::invalid_data("trap OID missing"))?;
                     let oid: OID = oid_str.parse()?;
-                    let status_str = sp
+                    let action_type_str = sp
                         .next()
-                        .ok_or_else(|| Error::invalid_data("update trap status missing"))?;
+                        .ok_or_else(|| Error::invalid_data("action trap type missing"))?;
                     if let Some(ref acl) = acl {
                         acl.require_item_write(&oid)?;
                     }
-                    match status_str {
+                    match action_type_str {
                         "t" | "toggle" => {
                             result.push(Trap::UnitActionToggle(UnitActionToggle { oid }));
                         }
-                        _ => {
-                            let status: ItemStatus = status_str.parse()?;
-                            let value: Option<Value> = sp.next().map(|v| v.parse().unwrap());
+                        "x" | "exec" | "1" => {
+                            let value_str = sp
+                                .next()
+                                .ok_or_else(|| Error::invalid_data("action trap value missing"))?;
+                            let value: Value = value_str.parse()?;
                             result.push(Trap::UnitAction(UnitAction {
                                 oid,
-                                params: ActionParams::Unit(UnitActionParams {
-                                    status,
-                                    value: value.into(),
-                                }),
+                                params: ActionParams::Unit(UnitActionParams { value }),
                             }));
+                        }
+                        _ => {
+                            return Err(Error::invalid_params(format!(
+                                "invalid action type: {action_type_str}"
+                            )));
                         }
                     }
                 }

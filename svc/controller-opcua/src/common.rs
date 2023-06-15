@@ -1,7 +1,6 @@
 use eva_common::prelude::*;
 use eva_common::value::Index;
 use eva_sdk::controller::transform::{self, Transform};
-use eva_sdk::types::StateProp;
 use opcua::types::{NodeId, VariantTypeId};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -97,7 +96,7 @@ impl From<OpcType> for VariantTypeId {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PropActionMap {
+pub struct ActionMap {
     #[serde(deserialize_with = "deserialize_node_id_from_str")]
     node: NodeId,
     #[serde(default, deserialize_with = "deserialize_opt_range")]
@@ -144,7 +143,7 @@ where
     Ok(buf.into())
 }
 
-impl PropActionMap {
+impl ActionMap {
     #[inline]
     pub fn node(&self) -> &NodeId {
         &self.node
@@ -168,26 +167,6 @@ impl PropActionMap {
     #[inline]
     pub fn dimensions(&self) -> Option<&[usize]> {
         self.dimensions.as_deref()
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ActionMap {
-    #[serde(default)]
-    status: Option<PropActionMap>,
-    #[serde(default)]
-    value: Option<PropActionMap>,
-}
-
-impl ActionMap {
-    #[inline]
-    pub fn status(&self) -> Option<&PropActionMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropActionMap> {
-        self.value.as_ref()
     }
 }
 
@@ -266,17 +245,10 @@ impl PullNode {
     }
 }
 
-#[inline]
-fn default_task_prop() -> StateProp {
-    StateProp::Value
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullTask {
     oid: OID,
-    #[serde(default = "default_task_prop")]
-    prop: StateProp,
     #[serde(default)]
     value_delta: Option<f64>,
     #[serde(default)]
@@ -288,10 +260,6 @@ impl PullTask {
     #[inline]
     pub fn oid(&self) -> &OID {
         &self.oid
-    }
-    #[inline]
-    pub fn prop(&self) -> StateProp {
-        self.prop
     }
     #[inline]
     pub fn need_transform(&self) -> bool {

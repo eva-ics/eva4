@@ -474,16 +474,15 @@ def decrement(oid):
     return rpc_call('lvar.decr', i=str(oid))
 
 
-def action(oid, status, value=None, wait=None, priority=None):
+def action(oid, value, status=None, wait=None, priority=None):
     """
     Executes unit control action
     
     Args:
         oid: unit OID
-        status: desired unit status
+        value: desired unit value
 
     Optional:
-        value: desired unit value
         wait: wait for the completion for the specified number of seconds
         priority: queue priority (default is 100, lower is better)
 
@@ -497,9 +496,11 @@ def action(oid, status, value=None, wait=None, priority=None):
     @var_out exitcode Exit code
     @var_out status Action status
     """
-    params = {'status': status}
-    if value is not None:
-        params['value'] = None if value == 'null' else value
+    params = {'value': value}
+    if status is not None:
+        logging.warning(
+            'status field in actions is ignored and deprecated. remove the field from API call payloads'
+        )
     payload = {'i': str(oid), 'params': params}
     if wait is not None:
         payload['wait'] = wait
@@ -573,7 +574,7 @@ def result(oid=None, uuid=None, sq=None, limit=None):
         raise InvalidParameter('either oid or uuid must be specified')
 
 
-def action_start(oid, value=None, wait=None, priority=None):
+def action_start(oid, wait=None, priority=None):
     """
     Executes an action to a unit
     
@@ -583,7 +584,6 @@ def action_start(oid, value=None, wait=None, priority=None):
         oid: unit OID
 
     Optional:
-        value: desired unit value
         wait: wait for the completion for the specified number of seconds
         priority: queue priority (default is 100, lower is better)
 
@@ -596,10 +596,10 @@ def action_start(oid, value=None, wait=None, priority=None):
     @var_out exitcode Exit code
     @var_out status Action status
     """
-    return action(oid, status=1, value=value, wait=wait, priority=priority)
+    return action(oid, value=1, wait=wait, priority=priority)
 
 
-def action_stop(oid, value=None, wait=None, priority=None):
+def action_stop(oid, wait=None, priority=None):
     """
     Executes an action to stop a unit
     
@@ -609,7 +609,6 @@ def action_stop(oid, value=None, wait=None, priority=None):
         oid: unit OID
 
     Optional:
-        value: desired unit value
         wait: wait for the completion for the specified number of seconds
         priority: queue priority (default is 100, lower is better)
 
@@ -622,7 +621,7 @@ def action_stop(oid, value=None, wait=None, priority=None):
     @var_out exitcode Exit code
     @var_out status Action status
     """
-    return action(oid, status=0, value=value, wait=wait, priority=priority)
+    return action(oid, value=0, wait=wait, priority=priority)
 
 
 def terminate(uuid):

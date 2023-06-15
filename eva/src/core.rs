@@ -767,10 +767,12 @@ impl Core {
                 let a_params = if let Some(p) = params {
                     p
                 } else if let Some(state) = item.state() {
-                    eva_common::actions::Params::new_unit(
-                        ItemStatus::from(state.lock().status() == 0),
-                        None,
-                    )
+                    let val = if let Ok(n) = i64::try_from(state.lock().value()) {
+                        Value::U8(u8::from(!(n > 0)))
+                    } else {
+                        Value::U8(1)
+                    };
+                    eva_common::actions::Params::new_unit(val)
                 } else {
                     return Err(Error::access(format!("{oid} has no state to toggle")));
                 };

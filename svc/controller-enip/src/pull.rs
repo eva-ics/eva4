@@ -7,7 +7,6 @@ use eva_common::prelude::*;
 use eva_common::ITEM_STATUS_ERROR;
 use eva_sdk::controller::{format_raw_state_topic, RawStateCache, RawStateEventPreparedOwned};
 use eva_sdk::service::poc;
-use eva_sdk::types::StateProp;
 use log::{error, trace, warn};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
@@ -39,54 +38,16 @@ fn pull_plc(
         } else {
             for task in tag.map() {
                 macro_rules! save_val {
-                    ($val: expr) => {
-                        if let Some(raw_state_prepared) = states_pulled.get_mut(task.oid()) {
-                            let raw_state = raw_state_prepared.state_mut();
-                            match task.prop() {
-                                StateProp::Status => match $val.try_into() {
-                                    Ok(v) => raw_state.status = v,
-                                    Err(e) => {
-                                        error!(
-                                            "Unable to convert status for {}: {}",
-                                            task.oid(),
-                                            e
-                                        );
-                                        poc();
-                                        raw_state.status = ITEM_STATUS_ERROR;
-                                    }
-                                },
-                                StateProp::Value => {
-                                    raw_state.value = ValueOptionOwned::Value($val);
-                                }
-                            }
-                        } else {
-                            let raw_state = match task.prop() {
-                                StateProp::Status => {
-                                    let status = match $val.try_into() {
-                                        Ok(v) => v,
-                                        Err(e) => {
-                                            error!(
-                                                "Unable to convert status for {}: {}",
-                                                task.oid(),
-                                                e
-                                            );
-                                            poc();
-                                            ITEM_STATUS_ERROR
-                                        }
-                                    };
-                                    RawStateEventOwned::new0(status)
-                                }
-                                StateProp::Value => RawStateEventOwned::new(1, $val),
-                            };
-                            states_pulled.insert(
-                                &task.oid(),
-                                RawStateEventPreparedOwned::from_rse_owned(
-                                    raw_state,
-                                    task.value_delta(),
-                                ),
-                            );
-                        }
-                    };
+                    ($val: expr) => {{
+                        let raw_state = RawStateEventOwned::new(1, $val);
+                        states_pulled.insert(
+                            &task.oid(),
+                            RawStateEventPreparedOwned::from_rse_owned(
+                                raw_state,
+                                task.value_delta(),
+                            ),
+                        );
+                    }};
                 }
                 macro_rules! process_tag {
                     ($fn:path, $vt: expr) => {

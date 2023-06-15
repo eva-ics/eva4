@@ -17,45 +17,22 @@ async fn run_action(
 ) -> EResult<()> {
     let verify = crate::ACTIONS_VERIFY.load(atomic::Ordering::SeqCst);
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
-    if let Some(s) = map.status() {
-        let st = if s.need_transform() {
-            let val_f64 = f64::from(params.status);
-            let val = s.transform_value(val_f64, oid)?;
-            val.trunc() as i16
-        } else {
-            params.status
-        };
-        enip::write_tag(
-            s.tag().to_owned(),
-            Value::I16(st),
-            s.tp(),
-            s.bit(),
-            op.timeout()?,
-            verify,
-            retries,
-        )
-        .await?;
-    }
-    if let Some(v) = map.value() {
-        if let ValueOptionOwned::Value(value) = params.value {
-            let val = if v.need_transform() {
-                let val_f64: f64 = value.try_into()?;
-                Value::F64(v.transform_value(val_f64, oid)?)
-            } else {
-                value
-            };
-            enip::write_tag(
-                v.tag().to_owned(),
-                val,
-                v.tp(),
-                v.bit(),
-                op.timeout()?,
-                verify,
-                retries,
-            )
-            .await?;
-        }
-    }
+    let val = if map.need_transform() {
+        let val_f64: f64 = params.value.try_into()?;
+        Value::F64(map.transform_value(val_f64, oid)?)
+    } else {
+        params.value
+    };
+    enip::write_tag(
+        map.tag().to_owned(),
+        val,
+        map.tp(),
+        map.bit(),
+        op.timeout()?,
+        verify,
+        retries,
+    )
+    .await?;
     Ok(())
 }
 

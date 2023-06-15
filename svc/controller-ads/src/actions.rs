@@ -16,35 +16,16 @@ async fn run_action(
 ) -> EResult<()> {
     let verify = crate::ACTIONS_VERIFY.load(atomic::Ordering::SeqCst);
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
-    if let Some(s) = map.status() {
-        if let Some(var) = s.var() {
-            let st = if s.need_transform() {
-                let val_f64 = f64::from(params.status);
-                let val = s.transform_value(val_f64, oid)?;
-                val.trunc() as i16
-            } else {
-                params.status
-            };
-            crate::adsbr::write(var.clone(), Value::I16(st), op.timeout()?, verify, retries)
-                .await?;
+    if let Some(var) = map.var() {
+        let val = if map.need_transform() {
+            let val_f64: f64 = params.value.try_into()?;
+            Value::F64(map.transform_value(val_f64, oid)?)
         } else {
-            return Err(Error::failed("ADS handle for status not created"));
-        }
-    }
-    if let Some(v) = map.value() {
-        if let Some(var) = v.var() {
-            if let ValueOptionOwned::Value(value) = params.value {
-                let val = if v.need_transform() {
-                    let val_f64: f64 = value.try_into()?;
-                    Value::F64(v.transform_value(val_f64, oid)?)
-                } else {
-                    value
-                };
-                crate::adsbr::write(var.clone(), val, op.timeout()?, verify, retries).await?;
-            }
-        } else {
-            return Err(Error::failed("ADS handle for value not created"));
-        }
+            params.value
+        };
+        crate::adsbr::write(var.clone(), val, op.timeout()?, verify, retries).await?;
+    } else {
+        return Err(Error::failed("ADS handle for value not created"));
     }
     Ok(())
 }

@@ -229,7 +229,7 @@ impl ItemState {
     #[inline]
     pub fn new0(ieid: IEID, tp: ItemKind) -> Self {
         let (status, act) = if tp == ItemKind::Unit {
-            (0, Some(0))
+            (1, Some(0))
         } else {
             (1, None)
         };

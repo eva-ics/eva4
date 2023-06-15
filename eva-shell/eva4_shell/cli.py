@@ -644,13 +644,11 @@ class CLI:
                     'r_bytes', 'w_frames', 'w_bytes', 'queue', 'instances|n=ins'
                 ])
 
-    def action_exec(self, i, status, value, priority, wait):
+    def action_exec(self, i, value, priority, wait):
         params = dict(i=i, wait=wait)
         if priority is not None:
             params['priority'] = int(priority)
-        action_params = {'status': int(status)}
-        if value is not None:
-            action_params['value'] = format_value(value, advanced=True)
+        action_params = {'value': format_value(value, advanced=True)}
         params['params'] = action_params
         result = call_rpc('action', params)
         if current_command.json:
@@ -917,10 +915,10 @@ class CLI:
                 print()
 
     def item_set(self, i, status, value):
-        payload = dict(status=status, force=True)
-        if value is not None:
-            val = format_value(value)
-            payload['value'] = val
+        val = format_value(value)
+        payload = dict(status=1 if status is None else status,
+                       value=val,
+                       force=True)
         connect()
         common.bus.send(
             'RAW/' + i.replace(':', '/', 1),
@@ -933,13 +931,13 @@ class CLI:
             err('no such item')
             return
         try:
-            if state['status'] != status or (value is not None and
-                                             state['value'] != val):
+            if state['value'] != val or (status is not None and
+                                         state['status'] != status):
                 err('FAILED')
             else:
                 ok()
         except KeyError:
-            err(f'{i} has no status')
+            err(f'{i} has no state')
 
     def item_deploy(self, file=None):
         import yaml

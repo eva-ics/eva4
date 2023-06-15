@@ -1056,6 +1056,7 @@ impl RpcHandlers for BusApi {
             #[allow(clippy::similar_names)]
             "core.sysinfo" => {
                 use sysinfo::{DiskExt, SystemExt};
+                #[allow(clippy::similar_names)]
                 #[derive(Serialize)]
                 struct Info {
                     ram_usage: Option<f64>,

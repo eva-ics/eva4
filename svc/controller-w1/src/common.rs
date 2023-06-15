@@ -16,13 +16,13 @@ fn default_action_queue_size() -> usize {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PropActionMap {
+pub struct ActionMap {
     path: String,
     #[serde(default)]
     transform: Vec<transform::Task>,
 }
 
-impl PropActionMap {
+impl ActionMap {
     #[inline]
     pub fn path(&self) -> &str {
         &self.path
@@ -34,26 +34,6 @@ impl PropActionMap {
     #[inline]
     pub fn transform_value<T: Transform>(&self, value: T, oid: &OID) -> EResult<f64> {
         transform::transform(&self.transform, oid, value)
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ActionMap {
-    #[serde(default)]
-    status: Option<PropActionMap>,
-    #[serde(default)]
-    value: Option<PropActionMap>,
-}
-
-impl ActionMap {
-    #[inline]
-    pub fn status(&self) -> Option<&PropActionMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropActionMap> {
-        self.value.as_ref()
     }
 }
 
@@ -91,10 +71,11 @@ pub struct Pull {
     oid: OID,
     #[serde(default, deserialize_with = "eva_common::tools::de_float_as_duration")]
     interval: Duration,
+    path: String,
     #[serde(default)]
-    status: Option<PropPullMap>,
+    value_delta: Option<f64>,
     #[serde(default)]
-    value: Option<PropPullMap>,
+    transform: Vec<transform::Task>,
 }
 
 impl Pull {
@@ -106,27 +87,6 @@ impl Pull {
     pub fn interval(&self) -> Duration {
         self.interval
     }
-    #[inline]
-    pub fn status(&self) -> Option<&PropPullMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropPullMap> {
-        self.value.as_ref()
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PropPullMap {
-    path: String,
-    #[serde(default)]
-    value_delta: Option<f64>,
-    #[serde(default)]
-    transform: Vec<transform::Task>,
-}
-
-impl PropPullMap {
     #[inline]
     pub fn path(&self) -> &str {
         &self.path

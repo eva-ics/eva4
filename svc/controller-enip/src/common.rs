@@ -2,7 +2,6 @@ use crate::enip;
 use crate::types::{self, EipType};
 use eva_common::prelude::*;
 use eva_sdk::controller::transform::{self, Transform};
-use eva_sdk::types::StateProp;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -45,7 +44,7 @@ impl PlcConfig {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PropActionMap {
+pub struct ActionMap {
     tag: String,
     #[serde(skip)]
     tag_path: String,
@@ -57,7 +56,7 @@ pub struct PropActionMap {
     transform: Vec<transform::Task>,
 }
 
-impl PropActionMap {
+impl ActionMap {
     #[inline]
     pub fn tag(&self) -> &str {
         &self.tag
@@ -78,26 +77,6 @@ impl PropActionMap {
     pub fn transform_value<T: Transform>(&self, value: T, oid: &OID) -> EResult<f64> {
         transform::transform(&self.transform, oid, value)
     }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ActionMap {
-    #[serde(default)]
-    status: Option<PropActionMap>,
-    #[serde(default)]
-    value: Option<PropActionMap>,
-}
-
-impl ActionMap {
-    #[inline]
-    pub fn status(&self) -> Option<&PropActionMap> {
-        self.status.as_ref()
-    }
-    #[inline]
-    pub fn value(&self) -> Option<&PropActionMap> {
-        self.value.as_ref()
-    }
     pub fn create_tags<'a>(
         &'a mut self,
         oid: &OID,
@@ -106,32 +85,24 @@ impl ActionMap {
         tags_exist: &[&str],
         tags_pending: &mut HashSet<types::PendingTag<'a>>,
     ) -> EResult<()> {
-        macro_rules! create_tag_for_prop_map {
-            ($prop_map: expr) => {
-                if let Some(ref mut s) = $prop_map {
-                    if s.tp == EipType::Bit {
-                        if s.bit.is_none() {
-                            return Err(Error::invalid_data(format!(
-                                "action bit not specified for {}",
-                                oid
-                            )));
-                        }
-                    } else if s.bit.is_some() {
-                        return Err(Error::invalid_data(format!(
-                            "action bit specified for {} but the type is not bit",
-                            oid
-                        )));
-                    }
-                    s.tag_path = enip::format_tag_path(plc_path, &s.tag, None, None);
-                    if !tags_exist.contains(&s.tag_path.as_str()) {
-                        let id = enip::create_client_tag(&s.tag_path, plc_timeout)?;
-                        tags_pending.insert(types::PendingTag::new(id, &s.tag_path));
-                    }
-                }
-            };
+        if self.tp == EipType::Bit {
+            if self.bit.is_none() {
+                return Err(Error::invalid_data(format!(
+                    "action bit not specified for {}",
+                    oid
+                )));
+            }
+        } else if self.bit.is_some() {
+            return Err(Error::invalid_data(format!(
+                "action bit specified for {} but the type is not bit",
+                oid
+            )));
         }
-        create_tag_for_prop_map!(self.status);
-        create_tag_for_prop_map!(self.value);
+        self.tag_path = enip::format_tag_path(plc_path, &self.tag, None, None);
+        if !tags_exist.contains(&self.tag_path.as_str()) {
+            let id = enip::create_client_tag(&self.tag_path, plc_timeout)?;
+            tags_pending.insert(types::PendingTag::new(id, &self.tag_path));
+        }
         Ok(())
     }
 }
@@ -225,18 +196,11 @@ impl PullTag {
     }
 }
 
-#[inline]
-fn default_task_prop() -> StateProp {
-    StateProp::Value
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullTask {
     offset: types::Offset,
     oid: OID,
-    #[serde(default = "default_task_prop")]
-    prop: StateProp,
     #[serde(default)]
     value_delta: Option<f64>,
     #[serde(rename = "type", default)]
@@ -253,10 +217,6 @@ impl PullTask {
     #[inline]
     pub fn tp(&self) -> EipType {
         self.tp
-    }
-    #[inline]
-    pub fn prop(&self) -> StateProp {
-        self.prop
     }
     #[inline]
     pub fn offset(&self) -> u32 {

@@ -74,10 +74,7 @@ async fn handle_action(
         .await
         .map_err(Error::io)?;
     let payload = if let Ok(params) = action.take_unit_params() {
-        let mut args = vec![params.status.to_string()];
-        if let ValueOptionOwned::Value(value) = params.value {
-            args.push(value.to_string());
-        }
+        let args = vec![params.value.to_string()];
         match run_action(command, args, cmd_options, timeout).await {
             Ok(v) => action.event_completed(v.map(Value::String)),
             Err(e) => {

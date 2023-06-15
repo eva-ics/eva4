@@ -118,8 +118,7 @@ def append_action_cli(root_sp):
     p = sp.add_parser('exec', help='exec unit action')
     p.add_argument('i', metavar='OID',
                    help='unit OID').completer = ComplOIDtp('unit')
-    p.add_argument('status', metavar='STATUS', type=int)
-    p.add_argument('-v', '--value', metavar='VALUE')
+    p.add_argument('value', metavar='VALUE')
     p.add_argument('-p', '--priority', metavar='PRIORITY', type=int)
     p.add_argument('-w',
                    '--wait',
@@ -569,8 +568,8 @@ def append_item_cli(root_sp):
 
     p = sp.add_parser('set', help='forcibly set item state')
     p.add_argument('i', metavar='OID').completer = ComplOID()
-    p.add_argument('status', metavar='STATUS', type=int)
-    p.add_argument('-v', '--value', metavar='VALUE')
+    p.add_argument('value', metavar='VALUE')
+    p.add_argument('-s', '--status', metavar='STATUS', type=int)
 
     sp.add_parser('summary', help='item summary per source')
 

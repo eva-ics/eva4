@@ -35,14 +35,7 @@ pub async fn launch(
             }
         }
         let ev_prep = match pull(config).await {
-            Ok(Some(ev)) => Some((
-                ev,
-                if let Some(v) = config.value() {
-                    v.value_delta()
-                } else {
-                    None
-                },
-            )),
+            Ok(Some(ev)) => Some((ev, config.value_delta())),
             Ok(None) => {
                 warn!("Nothing pulled for {}", oid);
                 None
@@ -75,45 +68,25 @@ pub async fn launch(
 async fn pull(config: &Pull) -> EResult<Option<RawStateEventOwned>> {
     trace!("Pulling {}", config.oid());
     let mut raw_state: Option<RawStateEventOwned> = None;
-    if let Some(p_status) = config.status() {
-        trace!("pulling {} status from {}", config.oid(), p_status.path());
-        let st_str = w1::get(
-            Arc::new(p_status.path().to_owned()),
-            *crate::TIMEOUT.get().unwrap(),
-            crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst),
-        )
-        .await?;
-        let st_val: Value = st_str.parse().unwrap();
-        let mut status: ItemStatus = st_val.try_into()?;
-        if p_status.need_transform() {
-            let val_f64 = f64::from(status);
-            if let Ok(n) = p_status.transform_value(val_f64, config.oid()).log_err() {
-                status = n.trunc() as i16;
+    trace!("pulling {} value from {}", config.oid(), config.path());
+    let val_str = w1::get(
+        Arc::new(config.path().to_owned()),
+        *crate::TIMEOUT.get().unwrap(),
+        crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst),
+    )
+    .await?;
+    let mut value: Value = val_str.parse().unwrap();
+    if config.need_transform() {
+        if let Ok(val_f64) = TryInto::<f64>::try_into(value.clone()).log_err() {
+            if let Ok(n) = config.transform_value(val_f64, config.oid()).log_err() {
+                value = Value::F64(n);
             }
         }
-        raw_state.replace(RawStateEventOwned::new0(status));
     }
-    if let Some(p_value) = config.value() {
-        trace!("pulling {} value from {}", config.oid(), p_value.path());
-        let val_str = w1::get(
-            Arc::new(p_value.path().to_owned()),
-            *crate::TIMEOUT.get().unwrap(),
-            crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst),
-        )
-        .await?;
-        let mut value: Value = val_str.parse().unwrap();
-        if p_value.need_transform() {
-            if let Ok(val_f64) = TryInto::<f64>::try_into(value.clone()).log_err() {
-                if let Ok(n) = p_value.transform_value(val_f64, config.oid()).log_err() {
-                    value = Value::F64(n);
-                }
-            }
-        }
-        if let Some(ref mut event) = raw_state {
-            event.value = ValueOptionOwned::Value(value);
-        } else {
-            raw_state.replace(RawStateEventOwned::new(1, value));
-        }
+    if let Some(ref mut event) = raw_state {
+        event.value = ValueOptionOwned::Value(value);
+    } else {
+        raw_state.replace(RawStateEventOwned::new(1, value));
     }
     Ok(raw_state)
 }

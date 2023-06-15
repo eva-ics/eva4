@@ -74,11 +74,11 @@ impl Plan {
     #[allow(clippy::too_many_lines)]
     fn generate(
         config: &PlanConfig,
-        current_pos: ItemStatus,
-        requested_pos: ItemStatus,
+        current_pos: i8,
+        requested_pos: i8,
         break_on_status_error: bool,
     ) -> EResult<Self> {
-        let end_pos: ItemStatus = config.steps.len().try_into().map_err(Error::failed)?;
+        let end_pos: i8 = config.steps.len().try_into().map_err(Error::failed)?;
         if requested_pos < 0 || current_pos < 0 || current_pos > end_pos || requested_pos > end_pos
         {
             return Err(Error::failed("step out of bounds"));
@@ -236,15 +236,15 @@ struct PlanConfig {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     tuning: Option<Duration>,
-    ts: Option<ItemStatus>,
-    te: Option<ItemStatus>,
+    ts: Option<i8>,
+    te: Option<i8>,
 }
 
 async fn execute(
     action_uuid: Uuid,
     config: &Opener,
-    pos: ItemStatus,
-    current_pos: ItemStatus,
+    pos: Value,
+    current_pos: i8,
     timeout: Duration,
 ) -> EResult<()> {
     let port_timeout = config
@@ -253,38 +253,38 @@ async fn execute(
     let plan = Plan::generate(
         &config.plan_config,
         current_pos,
-        pos,
+        pos.try_into()?,
         config.break_on_status_error,
     )?;
     let mut seq = eva_robots::Sequence::new(timeout);
     let seq_uuid = seq.uuid();
     macro_rules! actions {
-        ($src: expr, $status: expr) => {
+        ($src: expr, $value: expr) => {
             $src.iter()
-                .map(|oid| eva_robots::SequenceAction::new_unit(oid, $status, None, port_timeout))
+                .map(|oid| eva_robots::SequenceAction::new_unit(oid, $value, port_timeout))
                 .collect::<Vec<eva_robots::SequenceAction>>()
         };
     }
     for s in plan.seq {
         match s {
             Command::PortOn => {
-                seq.push_actions_multi(actions!(config.port, 1));
+                seq.push_actions_multi(actions!(config.port, Value::I8(1)));
             }
             Command::PortOff => {
-                seq.push_actions_multi(actions!(config.port, 0));
+                seq.push_actions_multi(actions!(config.port, Value::I8(0)));
             }
             Command::DPortOn => {
-                seq.push_actions_multi(actions!(config.dport, 1));
+                seq.push_actions_multi(actions!(config.dport, Value::I8(1)));
             }
             Command::DPortOff => {
-                seq.push_actions_multi(actions!(config.dport, 0));
+                seq.push_actions_multi(actions!(config.dport, Value::I8(0)));
             }
             Command::Delay(d) => seq.push_delay(d),
         }
     }
-    let mut abort_actions = actions!(config.port, 0);
+    let mut abort_actions = actions!(config.port, Value::U8(0));
     if config.plan_config.logic == Logic::Rdc {
-        abort_actions.append(&mut actions!(config.dport, 0));
+        abort_actions.append(&mut actions!(config.dport, Value::U8(0)));
     }
     seq.set_on_abort_multi(abort_actions);
     let rpc = crate::RPC.get().unwrap();
@@ -306,10 +306,10 @@ async fn execute(
     Ok(())
 }
 
-async fn get_current_pos(oid: &OID) -> EResult<ItemStatus> {
+async fn get_current_pos(oid: &OID) -> EResult<i8> {
     #[derive(Deserialize)]
     struct St {
-        status: ItemStatus,
+        value: Value,
     }
     let rpc = crate::RPC.get().unwrap();
     let res = safe_rpc_call(
@@ -322,13 +322,15 @@ async fn get_current_pos(oid: &OID) -> EResult<ItemStatus> {
     )
     .await?;
     let result: Vec<St> = unpack(res.payload())?;
-    Ok(result
-        .get(0)
+    result
+        .into_iter()
+        .next()
         .ok_or_else(|| Error::failed("unit not found"))?
-        .status)
+        .value
+        .try_into()
 }
 
-async fn run_action(u: Uuid, cfg: &Opener, pos: ItemStatus, timeout: Duration) -> EResult<()> {
+async fn run_action(u: Uuid, cfg: &Opener, pos: Value, timeout: Duration) -> EResult<()> {
     let current_pos = get_current_pos(&cfg.oid).await.unwrap_or(-1);
     execute(u, cfg, pos, current_pos, timeout).await
 }
@@ -356,13 +358,13 @@ async fn handle_action(
         .await
         .map_err(Error::io)?;
     let (payload, state_payload) = if let Ok(params) = action.take_unit_params() {
-        match run_action(*action.uuid(), cfg, params.status, action.timeout()).await {
+        match run_action(*action.uuid(), cfg, params.value.clone(), action.timeout()).await {
             Ok(()) => (
                 action.event_completed(None),
                 if cfg.set_state {
-                    Some(eva_common::events::RawStateEvent {
-                        status: params.status,
-                        value: ValueOption::No,
+                    Some(eva_common::events::RawStateEventOwned {
+                        status: 1,
+                        value: ValueOptionOwned::Value(params.value),
                         force: false,
                     })
                 } else {

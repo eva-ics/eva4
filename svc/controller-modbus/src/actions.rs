@@ -16,47 +16,23 @@ async fn run_action(
     let verify = crate::ACTIONS_VERIFY.load(atomic::Ordering::SeqCst);
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
     let timeout = *crate::TIMEOUT.get().unwrap();
-    if let Some(s) = map.status() {
-        let st = if s.need_transform() {
-            let val_f64 = f64::from(params.status);
-            let val = s.transform_value(val_f64, oid)?;
-            val.trunc() as i16
-        } else {
-            params.status
-        };
-        modbus::set(
-            s.unit(),
-            s.reg(),
-            Value::I16(st),
-            Some(s.tp()),
-            s.bit(),
-            timeout,
-            verify,
-            retries,
-        )
-        .await?;
-    }
-    if let Some(v) = map.value() {
-        if let ValueOptionOwned::Value(value) = params.value {
-            let val = if v.need_transform() {
-                let val_f64: f64 = value.try_into()?;
-                Value::F64(v.transform_value(val_f64, oid)?)
-            } else {
-                value
-            };
-            modbus::set(
-                v.unit(),
-                v.reg(),
-                val,
-                Some(v.tp()),
-                v.bit(),
-                timeout,
-                verify,
-                retries,
-            )
-            .await?;
-        }
-    }
+    let val = if map.need_transform() {
+        let val_f64: f64 = params.value.try_into()?;
+        Value::F64(map.transform_value(val_f64, oid)?)
+    } else {
+        params.value
+    };
+    modbus::set(
+        map.unit(),
+        map.reg(),
+        val,
+        Some(map.tp()),
+        map.bit(),
+        timeout,
+        verify,
+        retries,
+    )
+    .await?;
     Ok(())
 }
 

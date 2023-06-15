@@ -464,7 +464,7 @@ def handle_rpc(event):
             i = params['i']
             priority = params['priority']
             ap = params['params']
-            status = ap['status']
+            status = ap.get('status', 1)
             p = {'i': i, 'p': priority, 's': status}
             if 'value' in ap:
                 p['v'] = ap['value']

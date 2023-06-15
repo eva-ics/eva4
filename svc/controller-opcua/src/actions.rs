@@ -18,48 +18,21 @@ async fn run_action(
 ) -> EResult<()> {
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
     let t = opcua::client::prelude::DateTime::now();
-    if let Some(s) = map.status() {
-        let st = if s.need_transform() {
-            let val_f64 = f64::from(params.status);
-            let val = s.transform_value(val_f64, oid)?;
-            val.trunc() as i16
-        } else {
-            params.status
-        };
-        let mut val = Value::I16(st);
-        let range = s.range();
-        if range.is_some() {
-            val = Value::Seq(vec![val]);
-        }
-        crate::comm::write(
-            s.node().clone(),
-            range,
-            Variant::from_eva_value(val, s.tp(), s.dimensions())?,
-            op.timeout()?,
-            retries,
-            Some(t),
-        )
-        .await?;
-    }
-    if let Some(v) = map.value() {
-        if let ValueOptionOwned::Value(value) = params.value {
-            let val = if v.need_transform() {
-                let val_f64: f64 = value.try_into()?;
-                Value::F64(v.transform_value(val_f64, oid)?)
-            } else {
-                value
-            };
-            crate::comm::write(
-                v.node().clone(),
-                v.range(),
-                Variant::from_eva_value(val, v.tp(), v.dimensions())?,
-                op.timeout()?,
-                retries,
-                Some(t),
-            )
-            .await?;
-        }
-    }
+    let val = if map.need_transform() {
+        let val_f64: f64 = params.value.try_into()?;
+        Value::F64(map.transform_value(val_f64, oid)?)
+    } else {
+        params.value
+    };
+    crate::comm::write(
+        map.node().clone(),
+        map.range(),
+        Variant::from_eva_value(val, map.tp(), map.dimensions())?,
+        op.timeout()?,
+        retries,
+        Some(t),
+    )
+    .await?;
     Ok(())
 }
 

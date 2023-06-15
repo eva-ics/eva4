@@ -52,25 +52,15 @@ impl<'a> From<&'a VirtualItem> for VirtualItemInfo<'a> {
 }
 
 impl VirtualItem {
-    fn new(oid: OID, status: Option<ItemStatus>, value: Option<Value>) -> EResult<Self> {
-        let item_status = match oid.kind() {
-            ItemKind::Unit => status.unwrap_or(0),
-            ItemKind::Sensor => status.unwrap_or(1),
-            _ => {
-                return Err(Error::not_implemented(format!(
-                    "{} items are not supported",
-                    oid.kind()
-                )));
-            }
-        };
-        Ok(Self {
+    fn new(oid: OID, status: Option<ItemStatus>, value: Option<Value>) -> Self {
+        Self {
             oid,
-            status: item_status,
+            status: status.unwrap_or(1),
             value: value.unwrap_or_default(),
-        })
+        }
     }
     #[inline]
-    fn new0(oid: OID) -> EResult<Self> {
+    fn new0(oid: OID) -> Self {
         Self::new(oid, None, None)
     }
 }
@@ -132,7 +122,7 @@ impl RpcHandlers for Handlers {
                 }
                 let mut action: Action = unpack(payload)?;
                 let params = action.take_unit_params()?;
-                self.set_item_state(action.oid(), Some(params.status), params.value.into())
+                self.set_item_state(action.oid(), Some(1), Some(params.value))
                     .await?;
                 let payload = pack(&action.event_completed(None))?;
                 let topic = format_action_topic(action.oid());
@@ -165,7 +155,7 @@ impl Handlers {
                 let event = RawStateEvent::new(item.status, &item.value);
                 pack(&event)?
             } else if self.auto_create {
-                let item = VirtualItem::new(oid.clone(), status, value)?;
+                let item = VirtualItem::new(oid.clone(), status, value);
                 let event = RawStateEvent::new(item.status, &item.value);
                 let payload = pack(&event)?;
                 items.insert(oid.clone(), item);
@@ -192,7 +182,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut items = HashMap::new();
     if let Some(citems) = config.items {
         for oid in citems {
-            items.insert(oid.clone(), VirtualItem::new0(oid)?);
+            items.insert(oid.clone(), VirtualItem::new0(oid));
         }
     }
     let (tx, rx) = async_channel::bounded(1024);

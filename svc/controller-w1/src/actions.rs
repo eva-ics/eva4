@@ -17,41 +17,20 @@ async fn run_action(
 ) -> EResult<()> {
     let verify = crate::ACTIONS_VERIFY.load(atomic::Ordering::SeqCst);
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
-    if let Some(s) = map.status() {
-        let st = if s.need_transform() {
-            let val_f64 = f64::from(params.status);
-            let val = s.transform_value(val_f64, oid)?;
-            val.trunc() as i16
-        } else {
-            params.status
-        };
-        w1::set(
-            Arc::new(s.path().to_owned()),
-            Arc::new(st.to_string()),
-            op.timeout()?,
-            verify,
-            retries,
-        )
-        .await?;
-    }
-    if let Some(v) = map.value() {
-        if let ValueOptionOwned::Value(value) = params.value {
-            let val = if v.need_transform() {
-                let val_f64: f64 = value.try_into()?;
-                Value::F64(v.transform_value(val_f64, oid)?)
-            } else {
-                value
-            };
-            w1::set(
-                Arc::new(v.path().to_owned()),
-                Arc::new(val.to_string()),
-                op.timeout()?,
-                verify,
-                retries,
-            )
-            .await?;
-        }
-    }
+    let val = if map.need_transform() {
+        let val_f64: f64 = params.value.try_into()?;
+        Value::F64(map.transform_value(val_f64, oid)?)
+    } else {
+        params.value
+    };
+    w1::set(
+        Arc::new(map.path().to_owned()),
+        Arc::new(val.to_string()),
+        op.timeout()?,
+        verify,
+        retries,
+    )
+    .await?;
     Ok(())
 }
 
