@@ -16,7 +16,7 @@ with the chosen sampling rate and sends them to the specified UDP ports.
 
 Using with Matlab Simulink:
 
-![Simulink UDP](ss.png?raw=true)
+![Simulink UDP](ss1.png?raw=true)
 
 * For interval sampling, use DSP System Toolbox -> Sources -> UDP Receive. The
 sampling rate must match the service interval.
