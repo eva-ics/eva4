@@ -13,6 +13,8 @@ various 3rd party software, such as Matlab Simulink (using DSP system toolbox
 
 ![Simulink UDP](demo.gif?raw=true)
 
+For the opposite operation, see [bus-to-raw-udp](../bus-to-raw-udp)
+
 ## Setup
 
 Download [raw-udp-to-bus.py](raw-udp-to-bus.py), copy-paste the service

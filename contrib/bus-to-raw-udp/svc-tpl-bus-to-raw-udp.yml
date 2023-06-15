@@ -1,0 +1,23 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/bus-to-raw-udp/bus-to-raw-udp.py
+config:
+  # ip address to send packets to
+  target: 127.0.0.1
+  source_port: 9999
+  # sampling interval. if specified, real-time events are not processed
+  #interval: 1
+  map:
+    # UDP ports, one per item
+    # 
+    # The service sets item values only, status register is always 1
+    sensor:tests/t1:
+      # for encode options, see https://docs.python.org/3/library/struct.html,
+      # the default encoding is "<d" (little-endian IEE754 double)
+      encode: "<d"
+      port: 35001
+    sensor:tests/t2:
+      port: 35002
+user: nobody
+workers: 1
