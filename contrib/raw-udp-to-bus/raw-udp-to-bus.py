@@ -71,7 +71,7 @@ def run():
                                   daemon=True,
                                   args=(listen, port, OID(oid),
                                         decode)).start()
-        d.ports.append(dict(port=port, oid=params['oid'], decode=decode))
+        d.ports.append(dict(port=port, oid=oid, decode=decode))
 
     d.ports.sort(key=lambda k: k['port'])
 
