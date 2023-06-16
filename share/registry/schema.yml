@@ -116,6 +116,8 @@ config/core:
     #dump: *bool
     suicide_timeout: *floatpositive
     instant_save: *bool
+    legacy:
+      type: object
   required:
     - workers
     - timeout
