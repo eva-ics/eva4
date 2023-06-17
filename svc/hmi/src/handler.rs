@@ -446,6 +446,10 @@ async fn serve_websocket(
                                 }
                             }
                         }
+                        "unsubscribe.state" => {
+                            let mut map = WS_SUB.lock();
+                            map.unsubscribe_all(&ws_tx);
+                        }
                         "subscribe.state_initial" => {
                             if let Some(p) = cmd.params {
                                 let masks: OIDMaskList = OIDMaskList::deserialize(p).log_err()?;

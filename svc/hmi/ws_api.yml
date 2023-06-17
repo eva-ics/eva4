@@ -2,6 +2,9 @@ subscribe.state:
   des: Subscribes to item state events
   par: Vec<OID/OIDMask(String)>
   ret:
+unsubscribe.state:
+  des: Unsubscribe from all item state events
+  ret:
 subscribe.state_initial:
   des: Subscribes to item state events and request initial states
   par: Vec<OID/OIDMask(String)>
