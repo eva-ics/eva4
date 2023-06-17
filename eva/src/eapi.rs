@@ -1053,6 +1053,7 @@ impl RpcHandlers for BusApi {
                 }
             }
             #[allow(clippy::cast_precision_loss)]
+            #[allow(clippy::similar_names)]
             "core.sysinfo" => {
                 use sysinfo::{DiskExt, SystemExt};
                 #[derive(Serialize)]
