@@ -768,7 +768,7 @@ impl Core {
                     p
                 } else if let Some(state) = item.state() {
                     let val = if let Ok(n) = i64::try_from(state.lock().value()) {
-                        Value::U8(u8::from(!(n > 0)))
+                        Value::U8(u8::from(n <= 0))
                     } else {
                         Value::U8(1)
                     };

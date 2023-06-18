@@ -1022,7 +1022,7 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
         i: OID,
         #[serde(alias = "s")]
         status: Option<ItemStatus>,
-        #[serde(default, alias = "v")]
+        #[serde(alias = "v")]
         value: Value,
         #[serde(default, alias = "p")]
         priority: Option<u8>,

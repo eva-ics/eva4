@@ -304,6 +304,7 @@ impl RpcHandlers for BusApi {
         }
     }
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::similar_names)]
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         let method = event.parse_method()?;
         macro_rules! need_ready {
@@ -1053,10 +1054,8 @@ impl RpcHandlers for BusApi {
                 }
             }
             #[allow(clippy::cast_precision_loss)]
-            #[allow(clippy::similar_names)]
             "core.sysinfo" => {
                 use sysinfo::{DiskExt, SystemExt};
-                #[allow(clippy::similar_names)]
                 #[derive(Serialize)]
                 struct Info {
                     ram_usage: Option<f64>,
