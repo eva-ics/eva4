@@ -38,7 +38,7 @@ The behaviour changed in 4.0.2:
   controller-enip, controller-sr, controller-modbus
 
 * if used in cluster, all v4 nodes must be updated to 4.0.2 to properly accept
-  the new action format.
+  the new action format
 
 HMI service API and Python macros controller output warnings if status
 parameter is specified. Consider removing the parameter from all calls as it
