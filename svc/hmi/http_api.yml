@@ -444,14 +444,10 @@ action:
       typ: String
       des: Unit OID
       req: true
-    - nam: status
-      typ: i16
-      des: Desired unit status
-      req: true
     - nam: value
       typ: Any
       des: Desired unit value
-      req: false
+      req: true
     - nam: priority
       typ: u8
       des: Action priority
