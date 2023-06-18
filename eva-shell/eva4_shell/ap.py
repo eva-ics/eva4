@@ -615,7 +615,7 @@ def append_lvar_cli(root_sp):
 
     p = sp.add_parser('set', help='set lvar state')
     p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
-    p.add_argument('status', metavar='STATUS', nargs='?', type=int)
+    p.add_argument('-s', '--status', metavar='STATUS', type=int)
     p.add_argument('-v', '--value', metavar='VALUE')
 
     p = sp.add_parser('reset', help='reset lvar state')
