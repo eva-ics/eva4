@@ -27,7 +27,7 @@ The behaviour changed in 4.0.2:
 * eva-shell actions require "value" parameter. "item set" parameter require
   value but status is optional
 
-* native UDP traps in trap svc require actions to be started as "a unit:...
+* native UDP traps in trap svc require actions to be started as "a unit:... x
   VALUE"
 
 * external action scripts (controller-sr) no longer accept status
