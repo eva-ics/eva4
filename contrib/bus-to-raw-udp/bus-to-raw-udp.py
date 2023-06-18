@@ -65,7 +65,6 @@ def collect(interval, oids):
                                    busrt.rpc.Request(
                                        'item.state',
                                        payload)).wait_completed().get_payload())
-            print(states, flush=True)
             for state in states:
                 oid = state['oid']
                 val = state['value']
