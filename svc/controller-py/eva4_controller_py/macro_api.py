@@ -578,7 +578,7 @@ def action_start(oid, wait=None, priority=None):
     """
     Executes an action to a unit
     
-    Creates unit control action to set its status to 1
+    Creates unit control action to set its value to 1
 
     Args:
         oid: unit OID
@@ -603,7 +603,7 @@ def action_stop(oid, wait=None, priority=None):
     """
     Executes an action to stop a unit
     
-    Creates unit control action to set its status to 0
+    Creates unit control action to set its value to 0
 
     Args:
         oid: unit OID
