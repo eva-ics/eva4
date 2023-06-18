@@ -56,6 +56,7 @@ def process_state(p, val):
 
 def collect(interval, oids):
     payload = pack({'i': oids})
+    d.service.wait_core()
     while d.service.is_active():
         start = time.perf_counter()
         try:
@@ -123,9 +124,7 @@ def run():
 
     d.ports.sort(key=lambda k: k['port'])
 
-    service.mark_ready()
     if interval:
-        service.wait_core()
         threading.Thread(target=collect, daemon=True,
                          args=(interval, oids)).start()
     else:
