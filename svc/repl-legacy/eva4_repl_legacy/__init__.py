@@ -1,4 +1,4 @@
-__version__ = '0.0.27'
+__version__ = '0.1.0'
 
 import evaics.sdk as sdk
 from types import SimpleNamespace
