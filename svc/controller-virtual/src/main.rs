@@ -4,7 +4,7 @@ use eva_common::prelude::*;
 use eva_sdk::controller::{format_action_topic, format_raw_state_topic, Action};
 use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -33,11 +33,16 @@ struct VirtualItem {
     value: Value,
 }
 
-#[derive(Serialize, bmart::tools::Sorting)]
-#[sorting(id = "oid")]
+#[derive(Serialize)]
 struct VirtualItemInfo<'a> {
     oid: &'a OID,
     status: ItemStatus,
+    value: &'a Value,
+}
+
+#[derive(Serialize)]
+struct VarInfo<'a> {
+    id: &'a str,
     value: &'a Value,
 }
 
@@ -67,7 +72,8 @@ impl VirtualItem {
 
 struct Handlers {
     info: ServiceInfo,
-    items: Mutex<HashMap<OID, VirtualItem>>,
+    items: Mutex<BTreeMap<OID, VirtualItem>>,
+    vars: Mutex<BTreeMap<String, Value>>,
     auto_create: bool,
     tx: async_channel::Sender<(String, Vec<u8>)>,
 }
@@ -83,10 +89,61 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let items = self.items.lock().unwrap();
-                let mut item_list: Vec<VirtualItemInfo> =
+                let item_list: Vec<VirtualItemInfo> =
                     items.values().map(Into::<VirtualItemInfo>::into).collect();
-                item_list.sort();
                 Ok(Some(pack(&item_list)?))
+            }
+            "var.get" => {
+                #[derive(Deserialize)]
+                struct Params {
+                    i: String,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: Params = unpack(payload)?;
+                if let Some(val) = self.vars.lock().unwrap().get(&p.i) {
+                    Ok(Some(pack(val)?))
+                } else {
+                    Err(Error::not_found(p.i).into())
+                }
+            }
+            "var.set" => {
+                #[derive(Deserialize)]
+                struct Params {
+                    i: String,
+                    value: Value,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: Params = unpack(payload)?;
+                self.vars.lock().unwrap().insert(p.i, p.value);
+                Ok(None)
+            }
+            "var.destroy" => {
+                #[derive(Deserialize)]
+                struct Params {
+                    i: String,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: Params = unpack(payload)?;
+                self.vars.lock().unwrap().remove(&p.i);
+                Ok(None)
+            }
+            "var.list" => {
+                if payload.is_empty() {
+                    let vars = self.vars.lock().unwrap();
+                    let result: Vec<VarInfo> = vars
+                        .iter()
+                        .map(|(id, value)| VarInfo { id, value })
+                        .collect();
+                    Ok(Some(pack(&result)?))
+                } else {
+                    Err(RpcError::params(None))
+                }
             }
             "set" => {
                 #[derive(Deserialize)]
@@ -179,7 +236,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
-    let mut items = HashMap::new();
+    let mut items = BTreeMap::new();
     if let Some(citems) = config.items {
         for oid in citems {
             items.insert(oid.clone(), VirtualItem::new0(oid));
@@ -200,9 +257,27 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("status")
             .optional("value"),
     );
+    info.add_method(ServiceMethod::new("var.list").description("list variable values"));
+    info.add_method(
+        ServiceMethod::new("var.get")
+            .description("get variable value")
+            .required("i"),
+    );
+    info.add_method(
+        ServiceMethod::new("var.set")
+            .description("set variable value")
+            .required("i")
+            .required("value"),
+    );
+    info.add_method(
+        ServiceMethod::new("var.destroy")
+            .description("destroy variable")
+            .required("i"),
+    );
     let handlers = Handlers {
         info,
         items: Mutex::new(items),
+        vars: <_>::default(),
         auto_create: config.auto_create,
         tx,
     };

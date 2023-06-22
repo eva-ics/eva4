@@ -50,6 +50,52 @@ set:
       des: Item state value
       req: false
   ret:
+var.get:
+  des: Get virtual variable value
+  par:
+    - nam: i
+      typ: String
+      des: Variable ID
+      req: true
+  ret: value, single or list
+var.set:
+  des: Set virtual variable value
+  par:
+    - nam: i
+      typ: String
+      des: Variable ID
+      req: true
+    - nam: value
+      typ: Any
+      des: value to set
+      req: true
+  ret:
+var.destroy:
+  des: Destroy virtual variable
+  par:
+    - nam: i
+      typ: String
+      des: Variable ID
+      req: true
+var.list:
+  des: List virtual variables
+  par:
+  ret: Virtual variables and their values
+  exm: |
+    [
+        {
+            "id": "some.var1",
+            "value": 25
+        },
+        {
+            "id": "some.var2",
+            "value": 39.32
+        },
+        {
+            "id": "some.var3",
+            "value": true
+        }
+    ]
 action:
   des: Executes a mapped unit action
   par: See :ref:`eva4_unit_action`
