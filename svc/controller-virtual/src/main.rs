@@ -123,6 +123,7 @@ impl RpcHandlers for Handlers {
             }
             "var.destroy" => {
                 #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
                 struct Params {
                     i: String,
                 }
