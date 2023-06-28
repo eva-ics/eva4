@@ -346,7 +346,9 @@ def edit_file(fname):
                     compile(fh.read(), fname, 'exec')
             elif suffix == '.sh':
                 st = os.stat(fname)
-                os.chmod(fname, st.st_mode | stat.S_IEXEC)
+                os.chmod(
+                    fname,
+                    st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
             break
         except:
             print_tb(force=True, delay=True)
