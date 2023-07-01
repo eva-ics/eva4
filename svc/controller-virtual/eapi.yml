@@ -84,16 +84,13 @@ var.list:
   exm: |
     [
         {
-            "id": "some.var1",
-            "value": 25
+            "id": "some.var1"
         },
         {
-            "id": "some.var2",
-            "value": 39.32
+            "id": "some.var2"
         },
         {
-            "id": "some.var3",
-            "value": true
+            "id": "some.var3"
         }
     ]
 action:

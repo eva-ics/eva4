@@ -43,7 +43,6 @@ struct VirtualItemInfo<'a> {
 #[derive(Serialize)]
 struct VarInfo<'a> {
     id: &'a str,
-    value: &'a Value,
 }
 
 impl<'a> From<&'a VirtualItem> for VirtualItemInfo<'a> {
@@ -138,10 +137,7 @@ impl RpcHandlers for Handlers {
             "var.list" => {
                 if payload.is_empty() {
                     let vars = self.vars.lock().unwrap();
-                    let result: Vec<VarInfo> = vars
-                        .iter()
-                        .map(|(id, value)| VarInfo { id, value })
-                        .collect();
+                    let result: Vec<VarInfo> = vars.keys().map(|id| VarInfo { id }).collect();
                     Ok(Some(pack(&result)?))
                 } else {
                     Err(RpcError::params(None))
