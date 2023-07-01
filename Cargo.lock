@@ -321,7 +321,7 @@ name = "bm-primary"
 version = "0.1.0"
 dependencies = [
  "bma-benchmark",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "busrt",
  "clap 3.1.18",
  "env_logger",
@@ -375,15 +375,15 @@ dependencies = [
 
 [[package]]
 name = "bmart"
-version = "0.2.4"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "317e94dcb14134dc2fbbbe9f16a2f0f65284f22efa976deafaa14dd3d8fbbd37"
+checksum = "ddad030cdedba7c8fa6bb7b135745a110cb6b1fc5d0c46ed04238a592d6b7b39"
 dependencies = [
  "bmart-derive",
  "colored",
  "log",
  "nix 0.22.3",
- "sysinfo 0.20.5",
+ "sysinfo 0.29.2",
  "tokio",
  "triggered",
  "uuid 0.8.2",
@@ -1204,7 +1204,7 @@ dependencies = [
  "once_cell",
  "serde",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
  "zerocopy 0.6.1",
 ]
 
@@ -1257,14 +1257,14 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b16e91b01274833ff90e46935276b29f32fcff5d61294688e17d315e7efc0aad"
+checksum = "436218e07b25e9a43898492bf3919d9eb9be5b248110d781d3a2706a128be5fb"
 dependencies = [
  "async-channel",
  "async-recursion",
  "axum",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "busrt",
  "dateparser",
  "hex 0.4.3",
@@ -1288,7 +1288,7 @@ dependencies = [
  "sqlx",
  "submap",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
  "yedb",
 ]
 
@@ -1310,7 +1310,7 @@ dependencies = [
  "once_cell",
  "serde",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
  "zerocopy 0.6.1",
 ]
 
@@ -1332,7 +1332,7 @@ dependencies = [
  "plctag",
  "serde",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1341,7 +1341,7 @@ version = "4.0.2"
 dependencies = [
  "async-channel",
  "async-trait",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "busrt",
  "chrono",
  "cron",
@@ -1355,7 +1355,7 @@ dependencies = [
  "serde",
  "submap",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1379,7 +1379,7 @@ dependencies = [
  "simple-pool",
  "tokio",
  "tokio-serial",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1399,7 +1399,7 @@ dependencies = [
  "rplc_opcua",
  "serde",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1408,7 +1408,7 @@ version = "4.0.2"
 dependencies = [
  "async-channel",
  "async-trait",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "eva-common",
  "eva-sdk",
  "jemallocator",
@@ -1452,8 +1452,9 @@ dependencies = [
  "jemallocator",
  "log",
  "serde",
+ "tagmap",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1474,7 +1475,7 @@ dependencies = [
  "owfs",
  "serde",
  "tokio",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1528,7 +1529,7 @@ version = "4.0.2"
 dependencies = [
  "async-channel",
  "async-trait",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "eva-common",
  "eva-sdk",
  "hex 0.4.3",
@@ -1584,7 +1585,7 @@ dependencies = [
  "tokio",
  "url 2.2.2",
  "urlencoding",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1595,7 +1596,7 @@ dependencies = [
  "async-io",
  "async-trait",
  "atty",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "busrt",
  "bytes",
  "cargo_metadata",
@@ -1626,7 +1627,7 @@ dependencies = [
  "syslog",
  "tokio",
  "triggered",
- "uuid 1.3.3",
+ "uuid 1.4.0",
  "yedb",
 ]
 
@@ -1652,7 +1653,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "triggered",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1681,7 +1682,7 @@ checksum = "f59554da43abd52639f278212811c2e652e506923166b736c2ea0369263268b3"
 dependencies = [
  "eva-common",
  "serde",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -1691,7 +1692,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b8db4a2e0579eb0649c0034e14a22a77950f8850b478e3dd2e058fe75b6f2bb"
 dependencies = [
  "async-channel",
- "bmart 0.2.4",
+ "bmart 0.2.6",
  "busrt",
  "eva-common",
  "eva-sdk-derive",
@@ -1706,7 +1707,7 @@ dependencies = [
  "tokio",
  "tokio-fd",
  "ttl_cache",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -3570,7 +3571,7 @@ dependencies = [
  "serde",
  "tokio",
  "triggered",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -3873,7 +3874,7 @@ dependencies = [
  "tokio",
  "tokio-util 0.6.10",
  "url 1.7.2",
- "uuid 1.3.3",
+ "uuid 1.4.0",
 ]
 
 [[package]]
@@ -4527,6 +4528,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tagmap"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eee1b4f30eff56311b8b2cd57babed8169697f3192712c7e69d046baa562bd20"
+dependencies = [
+ "eva-common",
+ "uuid 1.4.0",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5077,9 +5088,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.3.3"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "345444e32442451b267fc254ae85a209c64be56d2890e601a0c37ff0c3c5ecd2"
+checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
 dependencies = [
  "getrandom 0.2.6",
  "serde",

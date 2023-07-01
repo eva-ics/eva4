@@ -16,6 +16,7 @@ async-channel = "1.7.1"
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
 jemallocator = { version = "0.5.0" }
 bmart = "0.1.14"
+tagmap ="0.0.4"
 
 [features]
 std-alloc = []

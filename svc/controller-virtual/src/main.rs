@@ -72,7 +72,7 @@ impl VirtualItem {
 struct Handlers {
     info: ServiceInfo,
     items: Mutex<BTreeMap<OID, VirtualItem>>,
-    vars: Mutex<BTreeMap<String, Value>>,
+    vars: Mutex<tagmap::TagMap>,
     auto_create: bool,
     tx: async_channel::Sender<(String, Vec<u8>)>,
 }
@@ -102,11 +102,8 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: Params = unpack(payload)?;
-                if let Some(val) = self.vars.lock().unwrap().get(&p.i) {
-                    Ok(Some(pack(val)?))
-                } else {
-                    Err(Error::not_found(p.i).into())
-                }
+                let val = self.vars.lock().unwrap().get(p.i.parse()?)?;
+                Ok(Some(pack(&val)?))
             }
             "var.set" => {
                 #[derive(Deserialize)]
@@ -118,7 +115,7 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: Params = unpack(payload)?;
-                self.vars.lock().unwrap().insert(p.i, p.value);
+                self.vars.lock().unwrap().set(p.i.parse()?, p.value)?;
                 Ok(None)
             }
             "var.destroy" => {
@@ -131,13 +128,19 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: Params = unpack(payload)?;
-                self.vars.lock().unwrap().remove(&p.i);
+                self.vars.lock().unwrap().delete(p.i.parse()?)?;
                 Ok(None)
             }
             "var.list" => {
                 if payload.is_empty() {
                     let vars = self.vars.lock().unwrap();
-                    let result: Vec<VarInfo> = vars.keys().map(|id| VarInfo { id }).collect();
+                    let result: Vec<VarInfo> = vars
+                        .tags()
+                        .keys()
+                        .map(|id| VarInfo {
+                            id: id.as_str().unwrap_or_default(),
+                        })
+                        .collect();
                     Ok(Some(pack(&result)?))
                 } else {
                     Err(RpcError::params(None))
