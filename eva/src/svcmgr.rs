@@ -584,6 +584,13 @@ pub struct Info {
     pid: Option<u32>,
 }
 
+impl Info {
+    #[inline]
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
 /// Used by API to show the actial service state (Unknown = unable to contact the launcher)
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]

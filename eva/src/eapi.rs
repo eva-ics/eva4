@@ -1002,18 +1002,41 @@ impl RpcHandlers for BusApi {
                 )?)?))
             }
             "svc.list" => {
-                need_ready!();
-                if payload.is_empty() {
-                    Ok(Some(pack(
-                        &self
-                            .core
-                            .service_manager()
-                            .list_services(self.core.timeout(), true)
-                            .await,
-                    )?))
-                } else {
-                    Err(RpcError::params(None))
+                #[derive(Deserialize)]
+                struct Params {
+                    filter: Option<String>,
                 }
+                need_ready!();
+                let params: Option<Params> = if payload.is_empty() {
+                    None
+                } else {
+                    Some(unpack(payload)?)
+                };
+                let re: Option<regex::Regex> = if let Some(p) = params {
+                    if let Some(filter) = p.filter {
+                        Some(regex::Regex::new(&filter)?)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                Ok(Some(pack(
+                    &self
+                        .core
+                        .service_manager()
+                        .list_services(self.core.timeout(), true)
+                        .await
+                        .into_iter()
+                        .filter(|v| {
+                            if let Some(ref r) = re {
+                                r.is_match(v.id())
+                            } else {
+                                true
+                            }
+                        })
+                        .collect::<Vec<svcmgr::Info>>(),
+                )?))
             }
             "svc.get" => {
                 need_ready!();

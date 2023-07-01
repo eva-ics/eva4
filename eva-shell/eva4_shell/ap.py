@@ -202,7 +202,8 @@ def append_broker_cli(root_sp):
 def append_svc_cli(root_sp):
     ap = root_sp.add_parser('svc', help='service commands')
     sp = ap.add_subparsers(dest='_subc', help='sub command')
-    sp.add_parser('list', help='list services')
+    p = sp.add_parser('list', help='list services')
+    p.add_argument('-x', '--filter', type=str)
 
     p = sp.add_parser('restart', help='restart service')
     p.add_argument('i', metavar='SVC').completer = ComplSvc()

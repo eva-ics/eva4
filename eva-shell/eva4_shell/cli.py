@@ -482,8 +482,12 @@ class CLI:
             data['acls'] = ', '.join(data['acls'])
         print_result([data], cols=['login', 'acls'])
 
-    def svc_list(self):
-        data = call_rpc('svc.list')
+    def svc_list(self, filter=None):
+        if filter is None:
+            params = None
+        else:
+            params = dict(filter='^' + filter.replace('.', '\\.') + '.*$')
+        data = call_rpc('svc.list', params)
         print_result(data, cols=['id', 'status', 'pid', 'launcher'])
 
     def svc_export(self, i, output=None):
