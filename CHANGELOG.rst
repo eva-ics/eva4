@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-07-03 build 2023070301: virtual controller svc PLC var simulation
 * 2023-06-18 build 2023061803: new status logic (see the update manifest)
 
 4.0.1-stable
