@@ -70,6 +70,22 @@ var.set:
       des: value to set
       req: true
   ret:
+var.set_bulk:
+  des: Set virtual variable values in bulk
+  par:
+    - nam: i
+      typ: Vec<String>
+      des: symbol names
+      req: true
+    - nam: values
+      typ: Vec<Any>
+      des: values to set
+      req: true
+  ret: "Operation status: failed-to-set vars list or an empty dict"
+  exm: |
+    {
+      "failed": [ "var1" ]
+    }
 var.destroy:
   des: Destroy virtual variable
   par:
