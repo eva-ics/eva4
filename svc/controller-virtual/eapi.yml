@@ -80,6 +80,10 @@ var.destroy:
 var.list:
   des: List virtual variables
   par:
+    - nam: full
+      typ: bool
+      des: Full output (id/value)
+      req: false
   ret: Virtual variables and their values
   exm: |
     [
