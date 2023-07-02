@@ -75,7 +75,7 @@ var.set_bulk:
   par:
     - nam: i
       typ: Vec<String>
-      des: vraible IDs
+      des: variable IDs
       req: true
     - nam: values
       typ: Vec<Any>
