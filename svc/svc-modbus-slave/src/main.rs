@@ -178,7 +178,7 @@ async fn save_context() -> EResult<()> {
         Ok(())
     } else {
         Err(Error::failed(
-            "context not saved - running under a restricted user",
+            "context not saved: running under a restricted user or no persistent configured",
         ))
     }
 }
