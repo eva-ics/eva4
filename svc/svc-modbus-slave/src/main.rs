@@ -159,7 +159,7 @@ async fn load_context_data() -> Result<Option<Vec<u8>>, std::io::Error> {
     }
 }
 
-async fn save_context() -> Result<(), std::io::Error> {
+async fn save_context() -> EResult<()> {
     let ctx = CONTEXT.write().await;
     if let Some(data_file) = DATA_FILE.get() {
         let mut data = Vec::new();
@@ -175,8 +175,12 @@ async fn save_context() -> Result<(), std::io::Error> {
         f.write_all(&data).await?;
         f.sync_all().await?;
         info!("context saved");
+        Ok(())
+    } else {
+        Err(Error::failed(
+            "context not saved - running under a restricted user",
+        ))
     }
-    Ok(())
 }
 
 async fn save_and_poc() {
