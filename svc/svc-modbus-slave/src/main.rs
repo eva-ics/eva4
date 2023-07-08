@@ -298,6 +298,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
-    save_context().await?;
+    if DATA_FILE.get().is_some() {
+        save_context().await?;
+    }
     Ok(())
 }
