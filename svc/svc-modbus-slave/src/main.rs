@@ -75,8 +75,9 @@ struct Handlers {
 impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();
+        let payload = event.payload();
         if event.method() == BUS_METHOD {
-            let mut req = event.payload().to_vec();
+            let mut req = payload.to_vec();
             if req.len() > 256 {
                 return Err(Error::io("invalid frame len").into());
             }
@@ -99,8 +100,12 @@ impl RpcHandlers for Handlers {
             let method = event.parse_method()?;
             match method {
                 "save" => {
-                    save_context().await?;
-                    Ok(None)
+                    if payload.is_empty() {
+                        save_context().await?;
+                        Ok(None)
+                    } else {
+                        Err(RpcError::params(None))
+                    }
                 }
                 _ => svc_handle_default_rpc(method, &self.info),
             }
