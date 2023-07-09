@@ -43,14 +43,18 @@ pub enum ModbusType {
     Real32,
     #[serde(alias = "LREAL")]
     Real64,
+    #[serde(alias = "realb", alias = "REALB")]
+    Real32b,
+    #[serde(alias = "LREALB")]
+    Real64b,
 }
 
 impl ModbusType {
     pub fn size(self) -> u16 {
         match self {
             ModbusType::Bit | ModbusType::Uint16 | ModbusType::Int16 => 1,
-            ModbusType::Uint32 | ModbusType::Int32 | ModbusType::Real32 => 2,
-            ModbusType::Uint64 | ModbusType::Int64 | ModbusType::Real64 => 4,
+            ModbusType::Uint32 | ModbusType::Int32 | ModbusType::Real32 | ModbusType::Real32b => 2,
+            ModbusType::Uint64 | ModbusType::Int64 | ModbusType::Real64 | ModbusType::Real64b => 4,
         }
     }
     #[inline]
@@ -63,8 +67,8 @@ impl ModbusType {
             ModbusType::Int32 => Value::I32(value.try_into()?),
             ModbusType::Uint64 => Value::U64(value.try_into()?),
             ModbusType::Int64 => Value::I64(value.try_into()?),
-            ModbusType::Real32 => Value::F32(value.try_into()?),
-            ModbusType::Real64 => Value::F64(value.try_into()?),
+            ModbusType::Real32 | ModbusType::Real32b => Value::F32(value.try_into()?),
+            ModbusType::Real64 | ModbusType::Real64b => Value::F64(value.try_into()?),
         })
     }
 }

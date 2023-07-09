@@ -39,8 +39,9 @@ config:
           #  can be written as N+N+N
           ## absoltue offset (reg no.) can be specified as =N
           #oid: sensor:tests/test0
-          # allowed types: real (REAL), real32, real64 (LREAL), uint16 (UINT),
-          # word, uint32 (UDINT), dword, sint16 (INT), int16, sint32 (DINT),
+          # allowed types: real (REAL), real32, real64 (LREAL), real32b,
+          # real64b (for IEEE 754 big-endian), uint16 (UINT), word, uint32
+          # (UDINT), dword, sint16 (INT), int16, sint32 (DINT),
           # int32, sint64 (LINT), int64, uint64 (ULINT), qword
           # float numbers are decoded/encoded as IEEE754
           #type: real

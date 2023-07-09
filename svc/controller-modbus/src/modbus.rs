@@ -220,6 +220,27 @@ async fn set_reg(
                         (u16::from(b[0]) << 8) + u16::from(b[1]),
                     ]
                 }
+                ModbusType::Real32b => {
+                    let val: f32 = value.try_into()?;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let n: u32 = val.bits().as_u64() as u32;
+                    let b = n.to_be_bytes();
+                    vec![
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                    ]
+                }
+                ModbusType::Real64b => {
+                    let val: f64 = value.try_into()?;
+                    let n: u64 = val.bits().as_u64();
+                    let b = n.to_be_bytes();
+                    vec![
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                        (u16::from(b[4]) << 8) + u16::from(b[5]),
+                        (u16::from(b[6]) << 8) + u16::from(b[7]),
+                    ]
+                }
             };
             tokio::time::timeout(op.timeout()?, modbus_client.set_u16_bulk(unit, reg, &vals))
                 .await?
@@ -407,6 +428,37 @@ pub fn parse_block_value(
             let v2 = get!(offset + 1);
             let v3 = get!(offset + 2);
             let v4 = get!(offset + 3);
+            let val = u64::from_be_bytes([
+                (v4 >> 8) as u8,
+                v4 as u8,
+                (v3 >> 8) as u8,
+                v3 as u8,
+                (v2 >> 8) as u8,
+                v2 as u8,
+                (v1 >> 8) as u8,
+                v1 as u8,
+            ]);
+            let val_f: f64 = Ieee754::from_bits(val);
+            if !val_f.is_finite() {
+                return Err(Error::invalid_data(ERR_INVALID_VALUE));
+            }
+            Value::F64(val_f)
+        }
+        ModbusType::Real32b => {
+            let v1 = get!(offset + 1);
+            let v2 = get!(offset);
+            let val = u32::from_be_bytes([(v2 >> 8) as u8, v2 as u8, (v1 >> 8) as u8, v1 as u8]);
+            let val_f: f32 = Ieee754::from_bits(val);
+            if !val_f.is_finite() {
+                return Err(Error::invalid_data(ERR_INVALID_VALUE));
+            }
+            Value::F32(val_f)
+        }
+        ModbusType::Real64b => {
+            let v1 = get!(offset + 3);
+            let v2 = get!(offset + 2);
+            let v3 = get!(offset + 1);
+            let v4 = get!(offset);
             let val = u64::from_be_bytes([
                 (v4 >> 8) as u8,
                 v4 as u8,
