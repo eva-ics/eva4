@@ -4215,9 +4215,9 @@ dependencies = [
 
 [[package]]
 name = "snmptools"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a11c5d453e341b3bb15278706ee5a5665d43a2f399ad17c9b5e75da696d314f9"
+checksum = "c19be4e7d76a945f1e40350403d4d93fff760021b49e0d9de5abf32866ee1d2e"
 dependencies = [
  "der-parser",
  "netsnmp-sys-nocrypto",
