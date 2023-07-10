@@ -1,6 +1,6 @@
 # The default HMI service
 command: target/debug/eva-hmi
-workers: 4
+workers: 1
 bus:
   path: var/bus.ipc
 config:
