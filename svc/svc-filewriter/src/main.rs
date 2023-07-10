@@ -176,6 +176,7 @@ enum Event {
     BulkState(Vec<ItemState>),
     Flush,
     Rotate,
+    Quit,
 }
 
 fn generate_file_path(base_file_path: &str, dt: DateTime<Local>) -> String {
@@ -290,6 +291,12 @@ async fn file_handler(
                 fd.write_all(&buf)
                     .await
                     .map_err(|e| explain_io!("unable to write bulk state data", e))?;
+            }
+            Event::Quit => {
+                fd.flush()
+                    .await
+                    .map_err(|e| explain_io!("unable to flush", e))?;
+                break;
             }
             Event::Flush => {
                 fd.flush()
@@ -483,11 +490,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let rotated_path = config.rotated_path;
     let auto_flush = config.auto_flush;
     let gen = DataGen::new(config.format, config.dos_cr);
-    tokio::spawn(async move {
+    let fh_fut = tokio::spawn(async move {
         loop {
-            file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)
+            if file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)
                 .await
-                .log_ef();
+                .log_err()
+                .is_ok()
+            {
+                break;
+            }
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
@@ -539,5 +550,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     while !tx.is_empty() {
         tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }
+    tx.send(Event::Quit).await.map_err(Error::failed)?;
+    fh_fut.await?;
     Ok(())
 }
