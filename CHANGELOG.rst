@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-07-10 build 2023071003: Optimized the default memory footprint for embedded devices
 * 2023-07-10 build 2023071001: Modbus controller IEEE754 big-endian support
 * 2023-07-03 build 2023070301: virtual controller svc PLC var simulation
 * 2023-06-18 build 2023061803: new status logic (see the update manifest)
