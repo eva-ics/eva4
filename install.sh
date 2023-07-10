@@ -34,7 +34,7 @@ deploy_svc() {
   ( echo "svcs:" ; echo "- id: ${NAME}"; echo "  params:" ; \
     sed 's/^/   /g' "${TPL}") | \
       ./bin/yml2mp | \
-      ./sbin/bus -s ./var/bus.ipc rpc call eva.core svc.deploy - > /dev/null || exit 12
+      ./sbin/bus --timeout 45 -s ./var/bus.ipc rpc call eva.core svc.deploy - > /dev/null || exit 12
   C=0
   while true; do
     STATUS=$(./sbin/bus ./var/bus.ipc -s rpc call eva.core svc.get "i=$NAME"|jq -r .status)
