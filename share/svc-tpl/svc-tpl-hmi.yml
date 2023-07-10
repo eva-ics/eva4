@@ -35,4 +35,4 @@ config:
 user: eva
 timeout:
   default: 10
-  startup: 15
+  startup: 30
