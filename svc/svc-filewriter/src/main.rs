@@ -15,7 +15,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 err_logger!();
 
@@ -218,6 +218,40 @@ async fn sync_dirs(paths: &[&str]) -> EResult<()> {
     Ok(())
 }
 
+async fn truncate_last_line(f: &mut tokio::fs::File) -> Result<(), std::io::Error> {
+    let mut pos = f.stream_position().await?;
+    loop {
+        if pos < 2 {
+            f.set_len(0).await?;
+            break;
+        }
+        pos = f.seek(SeekFrom::Current(-2)).await?;
+        dbg!(pos);
+        let mut buf = [0u8; 1];
+        f.read_exact(&mut buf).await?;
+        if buf[0] == b'\n' {
+            f.set_len(pos + 1).await?;
+            break;
+        }
+    }
+    f.flush().await?;
+    Ok(())
+}
+
+async fn truncate_if_broken(f: &mut tokio::fs::File) -> Result<(), std::io::Error> {
+    let pos = f.stream_position().await?;
+    if pos > 0 {
+        f.seek(SeekFrom::End(-1)).await?;
+        let mut buf = [0u8; 1];
+        f.read_exact(&mut buf).await?;
+        if buf[0] != b'\n' {
+            warn!("output file broken, removing the last line");
+            truncate_last_line(f).await?;
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
 async fn file_handler(
     rx: &async_channel::Receiver<Event>,
@@ -251,7 +285,7 @@ async fn file_handler(
             fd
         } else {
             let mut f = tokio::fs::OpenOptions::new()
-                .read(false)
+                .read(true)
                 .write(true)
                 .truncate(false)
                 .append(true)
@@ -263,6 +297,9 @@ async fn file_handler(
             f.seek(SeekFrom::End(0))
                 .await
                 .map_err(|e| explain_io!("unable to seek file from end", e))?;
+            truncate_if_broken(&mut f)
+                .await
+                .map_err(|e| explain_io!("unable to truncate last line", e))?;
             fx.replace(f);
             dt = Local::now();
             fx.as_mut().unwrap()
