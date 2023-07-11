@@ -6,26 +6,30 @@ use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_S
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{ItemState, ShortItemState, State};
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
+use openssl::sha::Sha256;
+use parking_lot::Mutex;
 use serde::{Deserialize, Deserializer};
-use std::collections::HashSet;
+use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::io::SeekFrom;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
+use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 err_logger!();
 
-lazy_static! {
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-}
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static NEED_DEDUP_LINES: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static LINE_CACHE: Lazy<Mutex<BTreeMap<[u8; 32], Instant>>> = Lazy::new(<_>::default);
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "File writer service";
+
+const DEDUP_CLEANER_INTERVAL: Duration = Duration::from_secs(30);
 
 const CSV_HEADER: &[&str] = &[
     "OID",
@@ -43,6 +47,33 @@ const CSV_ESCAPED_CHARS: &str = ",\r\n\"";
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[inline]
+fn sha256sum(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hasher.finish()
+}
+
+fn can_write_line(line: &[u8]) -> bool {
+    if NEED_DEDUP_LINES.load(atomic::Ordering::Relaxed) {
+        let checksum = sha256sum(line);
+        let mut cache = LINE_CACHE.lock();
+        if let btree_map::Entry::Vacant(v) = cache.entry(checksum) {
+            v.insert(Instant::now());
+            true
+        } else {
+            false
+        }
+    } else {
+        true
+    }
+}
+
+#[inline]
+fn clean_dedup_cache(d: Duration) {
+    LINE_CACHE.lock().retain(|_, v| v.elapsed() < d);
+}
 
 struct Handlers {
     info: ServiceInfo,
@@ -168,6 +199,7 @@ struct Config {
     auto_rotate: Option<Schedule>,
     #[serde(default)]
     ignore_events: bool,
+    dedup_lines: Option<u64>,
     oids: OIDMaskList,
 }
 
@@ -188,7 +220,7 @@ fn generate_file_path(base_file_path: &str, dt: DateTime<Local>) -> String {
 }
 
 async fn sync_dirs(paths: &[&str]) -> EResult<()> {
-    let mut dirs = HashSet::new();
+    let mut dirs = BTreeSet::new();
     for p in paths {
         let p = Path::new(p).to_owned();
         if let Some(parent) = p.parent() {
@@ -316,14 +348,23 @@ async fn file_handler(
             }
         }
         match event {
-            Event::State(state) => fd
-                .write_all(&gen.line(state)?)
-                .await
-                .map_err(|e| explain_io!("unable to write state data", e))?,
+            Event::State(state) => {
+                let line = gen.line(state)?;
+                if !can_write_line(&line) {
+                    continue;
+                }
+                fd.write_all(&line)
+                    .await
+                    .map_err(|e| explain_io!("unable to write state data", e))?;
+            }
             Event::BulkState(states) => {
                 let mut buf = Vec::new();
                 for state in states {
-                    buf.extend(&gen.line(state)?);
+                    let line = gen.line(state)?;
+                    buf.extend(line);
+                }
+                if buf.is_empty() {
+                    continue;
                 }
                 fd.write_all(&buf)
                     .await
@@ -527,6 +568,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let rotated_path = config.rotated_path;
     let auto_flush = config.auto_flush;
     let gen = DataGen::new(config.format, config.dos_cr);
+    if let Some(dedup_lines) = config.dedup_lines {
+        NEED_DEDUP_LINES.store(true, atomic::Ordering::Relaxed);
+        let d = Duration::from_secs(dedup_lines);
+        tokio::spawn(async move {
+            let mut int = tokio::time::interval(DEDUP_CLEANER_INTERVAL);
+            loop {
+                int.tick().await;
+                clean_dedup_cache(d);
+            }
+        });
+    }
     let fh_fut = tokio::spawn(async move {
         loop {
             if file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)

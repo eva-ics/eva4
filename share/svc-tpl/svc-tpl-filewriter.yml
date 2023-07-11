@@ -24,6 +24,8 @@ config:
   interval: null
   # ignore real-time events
   ignore_events: false
+  # deduplicate lines (if already written within the last N seconds)
+  #dedup_lines; 3600
   # event queue size
   queue_size: 8192
   # auto-rotation, a cron-like schedule:
