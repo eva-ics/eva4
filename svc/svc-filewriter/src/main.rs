@@ -258,7 +258,6 @@ async fn truncate_last_line(f: &mut tokio::fs::File) -> Result<(), std::io::Erro
             break;
         }
         pos = f.seek(SeekFrom::Current(-2)).await?;
-        dbg!(pos);
         let mut buf = [0u8; 1];
         f.read_exact(&mut buf).await?;
         if buf[0] == b'\n' {
