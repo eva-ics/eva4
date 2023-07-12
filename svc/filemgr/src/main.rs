@@ -179,7 +179,7 @@ async fn extract_archive(src: &Path, extract: Extract, dest: &Path) -> EResult<(
         Extract::Tbz2 => ("tar", vec!["hxjf", &src_file, "-C", &dest_dir]),
         Extract::Zip => {
             let s: &str = &src_file;
-            ("unzip", vec![s, "-d", &dest_dir])
+            ("unzip", vec!["-f", s, "-d", &dest_dir])
         }
     };
     let timeout = *TIMEOUT.get().unwrap();
