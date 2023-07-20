@@ -187,32 +187,40 @@ impl Var {
         }
     }
     fn prepare_value_buf(&self, value: &Value) -> EResult<Vec<u8>> {
-        Ok(match self.kind {
-            Kind::Bool => {
-                let val: bool = value.clone().try_into()?;
-                vec![u8::from(val)]
+        if let Value::Seq(s) = value {
+            let mut result = Vec::with_capacity(s.len());
+            for v in s {
+                result.extend(self.prepare_value_buf(v)?);
             }
-            Kind::Int => TryInto::<i16>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Dint => TryInto::<i32>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Real => TryInto::<f32>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Lreal => TryInto::<f64>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Sint => TryInto::<i8>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Usint => TryInto::<u8>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Uint => TryInto::<u16>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Udint => TryInto::<u32>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Lint => TryInto::<i64>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Ulint => TryInto::<u64>::try_into(value.clone())?.as_bytes().to_vec(),
-            Kind::Str => {
-                if let Value::String(s) = value {
-                    s.as_bytes().to_vec()
-                } else {
-                    value.to_string().as_bytes().to_vec()
+            Ok(result)
+        } else {
+            Ok(match self.kind {
+                Kind::Bool => {
+                    let val: bool = value.clone().try_into()?;
+                    vec![u8::from(val)]
                 }
-            }
-            _ => {
-                return Err(Error::io("unable to write the value type"));
-            }
-        })
+                Kind::Int => TryInto::<i16>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Dint => TryInto::<i32>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Real => TryInto::<f32>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Lreal => TryInto::<f64>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Sint => TryInto::<i8>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Usint => TryInto::<u8>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Uint => TryInto::<u16>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Udint => TryInto::<u32>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Lint => TryInto::<i64>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Ulint => TryInto::<u64>::try_into(value.clone())?.as_bytes().to_vec(),
+                Kind::Str => {
+                    if let Value::String(s) = value {
+                        s.as_bytes().to_vec()
+                    } else {
+                        value.to_string().as_bytes().to_vec()
+                    }
+                }
+                _ => {
+                    return Err(Error::io("unable to write the value type"));
+                }
+            })
+        }
     }
     #[inline]
     fn normalize_value(&self, value: Value) -> EResult<Value> {
