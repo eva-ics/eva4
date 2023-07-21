@@ -16,6 +16,8 @@ const ADS_VAR_MAX_STR_LEN: u32 = 1024;
 
 static BULK_ALLOW: atomic::AtomicBool = atomic::AtomicBool::new(true);
 
+static ERR_INVALID_BUFFER_LENGTH: &str = "invalid buffer length";
+
 #[inline]
 pub fn set_bulk_allow(mode: bool) {
     BULK_ALLOW.store(mode, atomic::Ordering::SeqCst);
@@ -671,26 +673,100 @@ fn parse_buf(buf: &[u8], var: &Var) -> EResult<Value> {
         let vals = buf
             .chunks(kind_size)
             .map(|v| parse_buf_value(v, var))
-            .collect::<Vec<Value>>();
+            .collect::<Result<Vec<Value>, _>>()?;
         Ok(Value::Seq(vals))
     } else {
-        Ok(parse_buf_value(buf, var))
+        parse_buf_value(buf, var)
     }
 }
 
 #[allow(clippy::cast_possible_wrap)]
-fn parse_buf_value(buf: &[u8], var: &Var) -> Value {
-    match var.kind {
-        Kind::Int => Value::I16(i16::read_from(&buf[0..2]).unwrap()),
-        Kind::Dint => Value::I32(i32::read_from(&buf[0..4]).unwrap()),
-        Kind::Real => Value::F32(f32::read_from(&buf[0..4]).unwrap()),
-        Kind::Lreal => Value::F64(f64::read_from(&buf[0..8]).unwrap()),
-        Kind::Sint => Value::I8(buf[0] as i8),
-        Kind::Usint | Kind::Bool => Value::U8(buf[0]),
-        Kind::Uint => Value::U16(u16::read_from(&buf[0..2]).unwrap()),
-        Kind::Udint => Value::U32(u32::read_from(&buf[0..4]).unwrap()),
-        Kind::Lint => Value::I64(i64::read_from(&buf[0..8]).unwrap()),
-        Kind::Ulint => Value::U64(u64::read_from(&buf[0..8]).unwrap()),
+fn parse_buf_value(buf: &[u8], var: &Var) -> EResult<Value> {
+    Ok(match var.kind {
+        Kind::Int => {
+            if buf.len() < 2 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::I16(
+                i16::read_from(&buf[0..2])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Dint => {
+            if buf.len() < 4 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::I32(
+                i32::read_from(&buf[0..4])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Real => {
+            if buf.len() < 4 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::F32(
+                f32::read_from(&buf[0..4])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Lreal => {
+            if buf.len() < 8 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::F64(
+                f64::read_from(&buf[0..8])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Sint => {
+            if buf.is_empty() {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::I8(buf[0] as i8)
+        }
+        Kind::Usint | Kind::Bool => {
+            if buf.is_empty() {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::U8(buf[0])
+        }
+        Kind::Uint => {
+            if buf.len() < 2 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::U16(
+                u16::read_from(&buf[0..2])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Udint => {
+            if buf.len() < 4 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::U32(
+                u32::read_from(&buf[0..4])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Lint => {
+            if buf.len() < 8 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::I64(
+                i64::read_from(&buf[0..8])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
+        Kind::Ulint => {
+            if buf.len() < 8 {
+                return Err(Error::invalid_data(ERR_INVALID_BUFFER_LENGTH));
+            }
+            Value::U64(
+                u64::read_from(&buf[0..8])
+                    .ok_or_else(|| Error::invalid_data(ERR_INVALID_BUFFER_LENGTH))?,
+            )
+        }
         Kind::Str => {
             if let Ok(s) = std::str::from_utf8(buf.split(|v| *v == 0).next().unwrap()) {
                 Value::String(s.to_owned())
@@ -699,7 +775,7 @@ fn parse_buf_value(buf: &[u8], var: &Var) -> Value {
             }
         }
         _ => Value::Unit,
-    }
+    })
 }
 
 pub async fn read_multi(
