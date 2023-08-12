@@ -355,7 +355,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     initial.drop_privileges()?;
     db::init(
         &config.db,
-        config.pool_size.unwrap_or_else(|| initial.workers()),
+        config.pool_size.unwrap_or_else(|| initial.workers() * 5),
         timeout,
     )
     .await?;
