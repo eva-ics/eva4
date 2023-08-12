@@ -43,7 +43,7 @@ struct Handlers {
     info: ServiceInfo,
 }
 
-async fn process_state(
+fn process_state(
     topic: &str,
     path: &str,
     payload: &[u8],
@@ -52,9 +52,13 @@ async fn process_state(
     match OID::from_path(path) {
         Ok(oid) => match unpack::<State>(payload) {
             Ok(v) => {
-                tx.send(Event::State(ItemState::from_state(v, oid)))
-                    .await
-                    .map_err(Error::core)?;
+                let res = tx
+                    .try_send(Event::State(ItemState::from_state(v, oid)))
+                    .map_err(Error::core);
+                if res.is_err() {
+                    poc();
+                }
+                res?;
             }
             Err(e) => {
                 warn!("invalid state event payload {}: {}", topic, e);
@@ -192,17 +196,11 @@ impl RpcHandlers for Handlers {
         if frame.kind() == busrt::FrameKind::Publish {
             if let Some(topic) = frame.topic() {
                 if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
+                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
                 } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
+                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
                 } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
+                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
                 }
             }
         }
