@@ -38,7 +38,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .map_err(|_| Error::core("unable to set db kind"))?;
     let pool = AnyPoolOptions::new()
         .max_connections(size)
-        .connect_timeout(timeout)
+        .acquire_timeout(timeout)
         .connect_with(opts)
         .await?;
     match kind {
@@ -54,7 +54,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             .execute(&pool)
             .await?;
         }
-        AnyKind::MySql | AnyKind::Postgres | AnyKind::Mssql => {
+        AnyKind::MySql | AnyKind::Postgres => {
             sqlx::query(
                 r#"CREATE TABLE IF NOT EXISTS state_history
                 (t BIGINT NOT NULL,
@@ -83,9 +83,6 @@ macro_rules! insert {
             }
             AnyKind::Postgres => {
                 "INSERT INTO state_history(t,oid,status,value) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING"
-            }
-            AnyKind::Mssql => {
-                "INSERT INTO state_history(t,oid,status,value) VALUES($1,$2,$3,$4)"
             }
         };
         sqlx::query(q)

@@ -39,26 +39,19 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .map_err(|_| Error::core("unable to set db kind"))?;
     let pool = AnyPoolOptions::new()
         .max_connections(size)
-        .connect_timeout(timeout)
+        .acquire_timeout(timeout)
         .connect_with(opts)
         .await?;
-    match kind {
-        AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => {
-            sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS inventory(
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS inventory(
                     oid VARCHAR(768),
                     cfg VARCHAR(4096),
                     state VARCHAR(8192),
                     PRIMARY KEY(oid))
                 "#,
-            )
-            .execute(&pool)
-            .await?;
-        }
-        AnyKind::Mssql => {
-            return Err(Error::unsupported("unsupported inventory db kind"));
-        }
-    }
+    )
+    .execute(&pool)
+    .await?;
     POOL.set(pool)
         .map_err(|_| Error::core("unable to set db pool"))
 }
@@ -68,7 +61,6 @@ macro_rules! create {
         let q = match DB_KIND.get().unwrap() {
             AnyKind::Sqlite | AnyKind::MySql => "INSERT INTO inventory(oid) VALUES(?)",
             AnyKind::Postgres => "INSERT INTO inventory(oid) VALUES($1) ON CONFLICT DO NOTHING",
-            AnyKind::Mssql => unimplemented!(),
         };
         let _r = sqlx::query(q).bind($oid.as_str()).execute($ex).await;
     }};
@@ -105,7 +97,6 @@ macro_rules! delete {
         let q = match DB_KIND.get().unwrap() {
             AnyKind::Sqlite | AnyKind::MySql => "DELETE FROM inventory WHERE oid=?",
             AnyKind::Postgres => "DELETE FROM inventory WHERE oid=$1",
-            AnyKind::Mssql => unimplemented!(),
         };
         sqlx::query(q).bind($oid.as_str()).execute($ex).await?;
     }};
@@ -126,7 +117,6 @@ macro_rules! set_config {
         let q = match DB_KIND.get().unwrap() {
             AnyKind::Sqlite | AnyKind::MySql => "UPDATE inventory SET cfg=? WHERE oid=?",
             AnyKind::Postgres => "UPDATE inventory SET cfg=$1 WHERE oid=$2",
-            AnyKind::Mssql => unimplemented!(),
         };
         sqlx::query(q)
             .bind(serde_json::to_string(&$config)?)
@@ -162,7 +152,6 @@ macro_rules! set_state {
         let q = match DB_KIND.get().unwrap() {
             AnyKind::Sqlite | AnyKind::MySql => "UPDATE inventory SET state=? WHERE oid=?",
             AnyKind::Postgres => "UPDATE inventory SET state=$1 WHERE oid=$2",
-            AnyKind::Mssql => unimplemented!(),
         };
         sqlx::query(q)
             .bind(serde_json::to_string(&$state)?)

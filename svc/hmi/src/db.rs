@@ -92,18 +92,12 @@ impl ApiLogFilter {
 
 pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
     //let pool = DB_POOL.get().unwrap();
-    let kind = DB_KIND.get().unwrap();
-    match kind {
-        AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => {
-            let q = format!(
-                r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params
+    let q = format!(
+        r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params
             FROM api_log {} ORDER BY t"#,
-                filter.condition()?
-            );
-            Ok(q)
-        }
-        AnyKind::Mssql => not_impl!(kind),
-    }
+        filter.condition()?
+    );
+    Ok(q)
 }
 
 pub async fn api_log_clear(keep: u32) -> EResult<()> {
@@ -123,7 +117,6 @@ pub async fn api_log_clear(keep: u32) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -181,7 +174,6 @@ where
             .execute(pool)
             .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -204,7 +196,6 @@ pub async fn api_log_mark_success(id_str: &str, elapsed: f64) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -231,7 +222,6 @@ pub async fn api_log_mark_error(id_str: &str, elapsed: f64, err: &Error) -> ERes
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -253,7 +243,6 @@ pub async fn clear_idle_tokens(expiration: Duration) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -267,7 +256,6 @@ pub async fn clear_token_acls() -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -288,7 +276,6 @@ pub async fn clear_tokens_by_user(user: &str) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -318,7 +305,6 @@ pub async fn delete_token(token_id: &TokenId) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -342,7 +328,6 @@ pub async fn set_token_time(token_id: &TokenId, t: i64) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -366,7 +351,6 @@ pub async fn set_token_mode(token_id: &TokenId, mode: u8) -> EResult<()> {
                 .execute(pool)
                 .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -414,7 +398,6 @@ pub async fn load_all_tokens() -> EResult<Vec<Token>> {
             sqlx::query("SELECT id, md, t, login, acl, auth_svc, ip FROM tokens ORDER BY t DESC")
                 .fetch(pool)
         }
-        AnyKind::Mssql => not_impl!(kind),
     };
     while let Some(row) = rows.try_next().await? {
         match parse_token(row, None) {
@@ -433,7 +416,6 @@ pub async fn load_token_ids() -> EResult<Vec<TokenId>> {
         AnyKind::Sqlite | AnyKind::MySql | AnyKind::Postgres => {
             sqlx::query("SELECT id FROM tokens").fetch(pool)
         }
-        AnyKind::Mssql => not_impl!(kind),
     };
     while let Some(row) = rows.try_next().await? {
         match parse_token_id(row) {
@@ -459,7 +441,6 @@ pub async fn load_token(token_id: TokenId) -> EResult<Option<Token>> {
                 .bind(token_id_str)
                 .fetch(pool)
         }
-        AnyKind::Mssql => not_impl!(kind),
     };
     if let Some(row) = rows.try_next().await? {
         Ok(Some(parse_token(row, Some(token_id))?))
@@ -536,7 +517,6 @@ pub async fn save_token(token: &Token) -> EResult<()> {
                 .await?;
             }
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -561,7 +541,6 @@ pub async fn clear_tokens_by_acl_id(acl_id: &str) -> EResult<()> {
             .execute(pool)
             .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     Ok(())
 }
@@ -592,7 +571,7 @@ pub async fn insert_ehmi_config(
                 .execute(pool)
                 .await?;
         }
-        _ => not_impl!(kind),
+        AnyKind::MySql => not_impl!(kind),
     };
     Ok(())
 }
@@ -607,7 +586,7 @@ pub async fn ehmi_config_token_id(config_key: &str) -> EResult<Option<String>> {
         AnyKind::Postgres => sqlx::query("SELECT token_id FROM ehmi_configs WHERE k = $1")
             .bind(config_key)
             .fetch(pool),
-        _ => not_impl!(kind),
+        AnyKind::MySql => not_impl!(kind),
     };
     if let Some(row) = rows.try_next().await? {
         Ok(Some(row.try_get(0)?))
@@ -626,7 +605,7 @@ pub async fn get_ehmi_config(config_key: &str) -> EResult<Value> {
         AnyKind::Postgres => sqlx::query("SELECT config FROM ehmi_configs WHERE k = $1")
             .bind(config_key)
             .fetch(pool),
-        _ => not_impl!(kind),
+        AnyKind::MySql => not_impl!(kind),
     };
     if let Some(row) = rows.try_next().await? {
         let config: String = row.try_get("config")?;
@@ -655,7 +634,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
         .map_err(|_| Error::core("unable to set db kind"))?;
     let pool = AnyPoolOptions::new()
         .max_connections(pool_size)
-        .connect_timeout(timeout)
+        .acquire_timeout(timeout)
         .connect_with(opts)
         .await?;
     match kind {
@@ -850,7 +829,6 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             .execute(&pool)
             .await?;
         }
-        AnyKind::Mssql => not_impl!(kind),
     }
     let _r = sqlx::query("ALTER TABLE api_log ADD params VARCHAR(4096)")
         .execute(&pool)

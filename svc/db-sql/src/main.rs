@@ -258,8 +258,7 @@ async fn sender(rx: async_channel::Receiver<Event>, buf_ttl: Option<Duration>) {
 
                 _ = buf_interval.tick() => {
                     if !data_buf.is_empty() {
-                        let mut data = Vec::new();
-                        data.append(&mut data_buf);
+                        let data = std::mem::take(&mut data_buf);
                         notify(Event::BulkState(data)).await.log_ef();
                     }
                 }
