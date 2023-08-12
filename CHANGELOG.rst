@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-08-12 build 2023081201: Fixed memory overhead in database services connected to slow dbs
 * 2023-08-01 build 2023080101: TwinCAT ADS improvements
 * 2023-07-11 build 2023071101: File writer service updates (*dedup_lines* param, cuts broken lines)
 * 2023-07-10 build 2023071003: Optimized the default memory footprint for embedded devices
