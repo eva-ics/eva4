@@ -212,6 +212,7 @@ impl Rule {
                 run(params, self.id.clone(), timeout).await;
             } else {
                 let id = self.id.clone();
+                // TODO move to task pool
                 tokio::spawn(async move {
                     run(params, id, timeout).await;
                 });
@@ -222,6 +223,7 @@ impl Rule {
                 let macro_oid = self.run.clone();
                 let macro_args = self.args.clone();
                 let macro_kwargs = self.kwargs.clone();
+                // TODO move to task pool
                 tokio::spawn(async move {
                     process_chillout(
                         id,

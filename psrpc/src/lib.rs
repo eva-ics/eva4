@@ -243,6 +243,7 @@ async fn processor<H>(
                     let h = handlers.clone();
                     let c = processor_client.clone();
                     let node_rpc_topic_c = node_rpc_topic.clone();
+                    // TODO move to task pool
                     tokio::spawn(async move {
                         if let Err(e) = handle_call(h, c, message, node_rpc_topic_c, qos).await {
                             if e.kind() == ErrorKind::BusClientNotRegistered {

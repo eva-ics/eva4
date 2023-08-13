@@ -223,6 +223,7 @@ async fn replication_inventory_handler(
     while let Ok(frame) = rx.recv().await {
         if core.is_active() {
             let core = core.clone();
+            // TODO move to task pool
             tokio::spawn(async move {
                 match unpack::<Vec<ReplicationInventoryItem>>(frame.payload()) {
                     Ok(remote_items) => {
