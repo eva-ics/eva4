@@ -16,7 +16,7 @@ from .compl import ComplOID, ComplSvc, ComplNode, ComplYamlFile
 from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
-from .client import DEFAULT_KIOSK_SERVICE
+from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
 
 DEFAULT_RPC_ERROR_MESSAGE = {
     -32700: 'parse error',
@@ -29,6 +29,7 @@ DEFAULT_RPC_ERROR_MESSAGE = {
 
 def dispatcher(_command,
                _subc=None,
+               _subc2=None,
                debug=False,
                json=False,
                timeout=5.0,
@@ -40,6 +41,8 @@ def dispatcher(_command,
         method = _command
         if _subc is not None:
             method += '_' + _subc.replace('.', '_')
+        if _subc2 is not None:
+            method += '_' + _subc2.replace('.', '_')
         getattr(common.cli, method.replace('-', '_'))(**kwargs)
         current_command.exit_code = 0
     except RpcException as e:
@@ -890,6 +893,135 @@ def append_cloud_cli(root_sp):
                    action='store_true')
 
 
+def append_generator_cli(root_sp):
+    source_types = ['random', 'random_float', 'counter', 'wave', 'udp_float']
+    ap_generator = root_sp.add_parser('generator', help='generator commands')
+    sp_generator = ap_generator.add_subparsers(dest='_subc', help='sub command')
+
+    ap = sp_generator.add_parser('source', help='generator sources')
+    sp = ap.add_subparsers(dest='_subc2', help='sub command')
+
+    p = sp.add_parser('create', help='create a source')
+    p.add_argument('i', metavar='source')
+    p.add_argument('kind', choices=source_types)
+    p.add_argument('-s',
+                   '--sampling',
+                   default=1,
+                   type=int,
+                   help='Sampling frequency')
+    p.add_argument('--target',
+                   action='append',
+                   help='target (OID or SVC::method[@var])')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('params',
+                   nargs='*',
+                   help='param=value',
+                   metavar='PARAM=VALUE')
+
+    p = sp.add_parser('plan', help='plan a source')
+    p.add_argument('kind', choices=source_types)
+    p.add_argument('-s',
+                   '--sampling',
+                   default=1,
+                   type=int,
+                   help='Sampling frequency')
+    p.add_argument('-d',
+                   '--duration',
+                   default=30.0,
+                   type=float,
+                   help='Planning duration')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-o',
+                   '--output',
+                   default='table',
+                   choices=['table', 'bar', 'line'],
+                   help='Output data format')
+    p.add_argument('params',
+                   nargs='*',
+                   help='param=value',
+                   metavar='PARAM=VALUE')
+
+    p = sp.add_parser('apply', help='apply a source to item archive data')
+    p.add_argument('kind', choices=source_types)
+    p.add_argument('-s',
+                   '--sampling',
+                   default=1,
+                   type=int,
+                   help='Sampling frequency')
+    p.add_argument('--target', action='append', help='target OID')
+    p.add_argument('--start', required=True, help='Starting time')
+    p.add_argument('--end', help='Ending time (defaut: now)')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('params',
+                   nargs='*',
+                   help='param=value',
+                   metavar='PARAM=VALUE')
+
+    p = sp.add_parser('list', help='list sources')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+
+    p = sp.add_parser('edit', help='edit sources')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+
+    p = sp.add_parser('destroy', help='destroy a source')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+
+    p = sp.add_parser('export', help='export source(s) to a deployment file')
+    p.add_argument('i', metavar='MASK')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-o', '--output', metavar='FILE',
+                   help='output file').completer = ComplYamlFile()
+
+    p = sp.add_parser('deploy', help='deploy source(s) from a deployment file')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplYamlFile()
+
+    p = sp.add_parser('undeploy',
+                      help='undeploy source(s) using a deployment file')
+    p.add_argument(
+        '-a',
+        '--generator-svc',
+        help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
+        default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplYamlFile()
+
+
 def append_system_cli(root_sp):
     ap = root_sp.add_parser('system', help='system commands')
     sp = ap.add_subparsers(dest='_subc', help='sub command')
@@ -1186,6 +1318,7 @@ def init_ap():
     append_user_cli(sp)
     append_venv_cli(sp)
     append_cloud_cli(sp)
+    append_generator_cli(sp)
     append_system_cli(sp)
     append_mirror_cli(sp)
     append_kiosk_cli(sp)

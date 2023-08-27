@@ -15,6 +15,7 @@ DEFAULT_REPL_SERVICE = 'eva.repl.default'
 DEFAULT_ACL_SERVICE = 'eva.aaa.acl'
 DEFAULT_AUTH_SERVICE = 'eva.aaa.localauth'
 DEFAULT_KIOSK_SERVICE = 'eva.kioskman.default'
+DEFAULT_GENERATOR_SERVICE = 'eva.generator.default'
 
 
 def print_trace_msg(msg):

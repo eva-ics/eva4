@@ -27,6 +27,7 @@ members = [
   "svc/hmi",
   "svc/mirror",
   "svc/repl",
+  "svc/generator",
   "svc/svc-locker",
   "svc/svc-mailer",
   "tools/eva-cloud-manager",

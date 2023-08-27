@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 from datetime import datetime
@@ -1473,4 +1472,165 @@ class CLI:
 
     def kiosk_dev_close(self, i, kiosk_svc):
         call_rpc('kiosk.dev_close', dict(i=i), target=kiosk_svc)
+        ok()
+
+    def generator_source_list(self, generator_svc):
+        data = call_rpc('source.list', target=generator_svc)
+        print_result(data, cols=['name', 'kind', 'active'])
+
+    def generator_source_edit(self, i, generator_svc):
+
+        def deploy(cfg, i):
+            call_rpc('source.deploy', dict(sources=[cfg]), target=generator_svc)
+            print(f'generator source re-deployed: {i}')
+            print()
+
+        config = call_rpc('source.get_config', dict(i=i), target=generator_svc)
+        edit_config(config,
+                    f'generator.source|{i}|config',
+                    deploy_fn=partial(deploy, i=i))
+
+    def generator_source_deploy(self, generator_svc, file=None):
+        import yaml
+        sources = yaml.safe_load(read_file(file).decode()).pop('sources')
+        call_rpc('source.deploy', dict(sources=sources), target=generator_svc)
+        print(f'{len(sources)} generator source configuration(s) deployed')
+        print()
+
+    def generator_source_undeploy(self, generator_svc, file=None):
+        import yaml
+        sources = yaml.safe_load(read_file(file).decode()).pop('sources')
+        call_rpc('source.undeploy', dict(sources=sources), target=generator_svc)
+        print(f'{len(sources)} generator source configuration(s) undeployed')
+        print()
+
+    def generator_source_create(self, i, kind, sampling, target, generator_svc,
+                                params):
+        p_params = {}
+        payload = {
+            'name': i,
+            'kind': kind,
+            'sampling': sampling,
+            'params': p_params
+        }
+        if target:
+            payload['targets'] = target
+        if params:
+            for param in params:
+                (name, value) = param.split('=', maxsplit=1)
+                try:
+                    value = int(value)
+                except:
+                    try:
+                        value = float(value)
+                    except:
+                        pass
+                p_params[name] = value
+        call_rpc('source.deploy', dict(sources=[payload]), target=generator_svc)
+        ok()
+
+    def generator_source_plan(self, kind, sampling, duration, output,
+                              generator_svc, params):
+        p_params = {}
+        payload = {
+            'name': '',
+            'kind': kind,
+            'sampling': sampling,
+            'params': p_params
+        }
+        if params:
+            for param in params:
+                (name, value) = param.split('=', maxsplit=1)
+                try:
+                    value = int(value)
+                except:
+                    try:
+                        value = float(value)
+                    except:
+                        pass
+                p_params[name] = value
+        data = call_rpc('source.plan',
+                        dict(source=payload, duration=duration),
+                        target=generator_svc)
+        if output == 'table':
+            print_result(data, cols=['t', 'value'])
+        else:
+            from . import charts
+            if output == 'bar':
+                vals = [(str(x['t']), x['value']) for x in data]
+                charts.plot_bar_chart(vals)
+            elif output == 'line':
+                vals = [x['value'] for x in data]
+                max_value_width = 0
+                for z in vals:
+                    x = len(str(z))
+                    if x > max_value_width:
+                        max_value_width = x
+                width, height = get_term_size()
+                vals = vals[:width - max_value_width - 6]
+                charts.plot_line_chart(vals, 20, max_value_width)
+
+    def generator_source_apply(self,
+                               kind,
+                               sampling,
+                               start,
+                               target,
+                               generator_svc,
+                               params,
+                               end=None):
+        p_params = {}
+        payload = {
+            'name': '',
+            'kind': kind,
+            'sampling': sampling,
+            'params': p_params
+        }
+        if params:
+            for param in params:
+                (name, value) = param.split('=', maxsplit=1)
+                try:
+                    value = int(value)
+                except:
+                    try:
+                        value = float(value)
+                    except:
+                        pass
+                p_params[name] = value
+        call_rpc('source.apply',
+                 dict(source=payload,
+                      t_start=start,
+                      t_end=end,
+                      targets=[] if target is None else target),
+                 target=generator_svc)
+        ok()
+
+    def generator_source_export(self, i, generator_svc, output=None):
+        c = 0
+        configs = []
+        for source in call_rpc('source.list', target=generator_svc):
+            name = source['name']
+            if (i.startswith('*') and name.endswith(i[1:])) or \
+                (i.endswith('*') and name.startswith(i[:-1])) or \
+                (i.startswith('*') and i.endswith('*') and i[1:-1] in name) or \
+                i == name:
+                c += 1
+                config = call_rpc('source.get_config',
+                                  dict(i=name),
+                                  target=generator_svc)
+                configs.append(config)
+        result = dict(sources=configs)
+        if current_command.json:
+            print_result(result)
+        else:
+            import yaml
+            dump = yaml.dump(result, default_flow_style=False)
+            if output is None:
+                print(dump)
+            else:
+                write_file(output, dump)
+                print(f'{c} generator source configuration(s) exported')
+                print()
+
+    def generator_source_destroy(self, i, generator_svc):
+        call_rpc('source.destroy', dict(i=i), target=generator_svc)
         ok()
