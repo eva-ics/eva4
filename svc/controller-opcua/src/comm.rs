@@ -220,8 +220,8 @@ pub async fn init_session(
         client.connect_to_endpoint(
             (
                 config.url.as_str(),
-                "None",
-                MessageSecurityMode::None,
+                config.security_policy.to_str(),
+                config.message_security_mode,
                 UserTokenPolicy::anonymous(),
             ),
             token,

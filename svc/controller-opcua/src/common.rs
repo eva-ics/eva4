@@ -1,7 +1,7 @@
 use eva_common::prelude::*;
 use eva_common::value::Index;
 use eva_sdk::controller::transform::{self, Transform};
-use opcua::types::{NodeId, VariantTypeId};
+use opcua::client::prelude::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -23,6 +23,12 @@ pub struct OpcUaConfig {
     pub pki_dir: Option<String>,
     #[serde(default)]
     pub trust_server_certs: bool,
+    #[serde(default)]
+    pub trust_server_x509: bool,
+    #[serde(default)]
+    pub security_policy: SecurityPolicy,
+    #[serde(default)]
+    pub message_security_mode: MessageSecurityMode,
     #[serde(default)]
     pub create_keys: bool,
     pub auth: Option<OpcAuth>,

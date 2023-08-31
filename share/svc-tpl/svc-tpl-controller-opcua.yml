@@ -9,6 +9,12 @@ config:
     #pki_dir: path/to/dir 
     # uncomment to trust server certs
     #trust_server_certs: true
+    # uncomment to trust any server X509 name
+    #trust_server_x509: true
+    # valid values: None, Aes128Sha256RsaOaep, Basic256Sha256, Aes256Sha256RsaPss, Basic128Rsa15, Basic256
+    #security_policy: None
+    # valid values: None, Sign, SignAndEncrypt
+    #message_security_mode: None
     # automatically create keys if missing
     create_keys: true
     # user/password authentication

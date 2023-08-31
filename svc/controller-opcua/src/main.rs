@@ -105,6 +105,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
     set_poc(config.panic_in);
+    if config.opcua.trust_server_x509 {
+        opcua::client::set_trust_any_server_cert(true);
+    }
     comm::init_session(config.opcua, &initial, timeout, config.ping.map(|p| p.node)).await?;
     DEFAULT_RETRIES.store(config.retries.unwrap_or(0), atomic::Ordering::SeqCst);
     let mut action_oids = Vec::new();

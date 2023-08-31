@@ -4113,9 +4113,9 @@ dependencies = [
 
 [[package]]
 name = "rplc_opcua"
-version = "0.12.1"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cfe4ef1cde34cefd23735ac7fedaa09851c408cb4ede769770e682659e9bff4"
+checksum = "f532eb50b1040606e74e0b85f5ffb6c53e42023312ac91228404ba05f350801a"
 dependencies = [
  "base64 0.21.2",
  "bitflags",
