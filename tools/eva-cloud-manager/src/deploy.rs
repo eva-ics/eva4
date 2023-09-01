@@ -288,6 +288,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
         if node.users.is_some() {
             svcs_to_test.insert(&node.params.user_svc, test_mp!("user.deploy", "users"));
         }
+        if node.generator_sources.is_some() {
+            svcs_to_test.insert(
+                &node.params.generator_svc,
+                test_mp!("source.deploy", "sources"),
+            );
+        }
         for (svc, p) in svcs_to_test {
             info!("testing service {}/{}", node.node, svc);
             if let Some((method, params)) = p {
@@ -378,13 +384,16 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     .await?;
             }
             macro_rules! deploy_resource {
-                ($src: expr, $name: expr, $svc: expr, $fn: expr) => {
+                ($src: expr, $name: expr, $field: expr, $svc: expr, $fn: expr) => {
                     if let ValueOptionOwned::Value(res) = $src {
                         info!("deploying {}", $name);
                         client
-                            .call(&node.node, $svc, $fn, dp!($name, to_value(res)?))
+                            .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
                     }
+                };
+                ($src: expr, $name: expr, $svc: expr, $fn: expr) => {
+                    deploy_resource!($src, $name, $name, $svc, $fn);
                 };
             }
             deploy_resource!(node.items, "items", "eva.core", "item.deploy");
@@ -436,6 +445,13 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             deploy_resource!(node.acls, "acls", &node.params.acl_svc, "acl.deploy");
             deploy_resource!(node.keys, "keys", &node.params.key_svc, "key.deploy");
             deploy_resource!(node.users, "users", &node.params.user_svc, "user.deploy");
+            deploy_resource!(
+                node.generator_sources,
+                "generator_sources",
+                "sources",
+                &node.params.generator_svc,
+                "source.deploy"
+            );
             if !node.extra.deploy.after.is_empty() {
                 info!("executing after deploy tasks");
                 execute_extra(&client, &node.node, node.extra.deploy.after, timeout).await?;
@@ -449,16 +465,26 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 execute_extra(&client, &node.node, node.extra.undeploy.before, timeout).await?;
             }
             macro_rules! undeploy_resource {
-                ($src: expr, $name: expr, $svc: expr, $fn: expr) => {
+                ($src: expr, $name: expr, $field: expr, $svc: expr, $fn: expr) => {
                     if let ValueOptionOwned::Value(res) = $src {
                         info!("undeploying {}", $name);
                         client
-                            .call(&node.node, $svc, $fn, dp!($name, to_value(res)?))
+                            .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
                     }
                 };
+                ($src: expr, $name: expr, $svc: expr, $fn: expr) => {
+                    undeploy_resource!($src, $name, $name, $svc, $fn);
+                };
             }
             undeploy_resource!(node.items, "items", "eva.core", "item.undeploy");
+            undeploy_resource!(
+                node.generator_sources,
+                "generator_sources",
+                "sources",
+                &node.params.generator_svc,
+                "source.undeploy"
+            );
             undeploy_resource!(node.users, "users", &node.params.user_svc, "user.undeploy");
             undeploy_resource!(node.keys, "keys", &node.params.key_svc, "key.undeploy");
             undeploy_resource!(node.acls, "acls", &node.params.acl_svc, "acl.undeploy");
@@ -519,6 +545,8 @@ struct DeploymentContent {
     users: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     items: ValueOptionOwned,
+    #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
+    generator_sources: ValueOptionOwned,
     #[serde(default)]
     extra: DeploymentExtra,
 }
@@ -594,6 +622,10 @@ fn default_filemgr_svc() -> String {
     "eva.filemgr.main".to_owned()
 }
 
+fn default_generator_svc() -> String {
+    "eva.generator.default".to_owned()
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 struct NodeParams {
@@ -605,6 +637,8 @@ struct NodeParams {
     user_svc: String,
     #[serde(default = "default_filemgr_svc")]
     filemgr_svc: String,
+    #[serde(default = "default_generator_svc")]
+    generator_svc: String,
 }
 
 impl Default for NodeParams {
@@ -614,6 +648,7 @@ impl Default for NodeParams {
             key_svc: default_auth_svc(),
             user_svc: default_auth_svc(),
             filemgr_svc: default_filemgr_svc(),
+            generator_svc: default_generator_svc(),
         }
     }
 }
