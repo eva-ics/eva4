@@ -1,0 +1,119 @@
+source.list:
+  des: List generator sources
+  par:
+  ret: List of sources (struct)
+  exm: |
+    [
+        {
+            "active": true,
+            "kind": "wave",
+            "name": "v1"
+        }
+    ]
+source.deploy:
+  des: Deploy sources
+  par:
+    - nam: sources
+      typ: Vec<struct>
+      des: Sources
+      req: true
+  ret:
+source.undeploy:
+  des: Undeploy sources
+  par:
+    - nam: sources
+      typ: Vec<struct/String>
+      des: Sources or a list of source names
+      req: true
+  ret:
+source.get_config:
+  des: Get configuration of a single source
+  par:
+    - nam: i
+      typ: String
+      des: Source name
+      req: true
+  ret: Source configuration
+  exm: |
+    {
+        "sources": [
+            {
+                "kind": "wave",
+                "name": "v1",
+                "params": {
+                    "formula": "sin(x/2)*10+10"
+                },
+                "sampling": 1,
+                "targets": [
+                    "sensor:tests/voltage"
+                ]
+            }
+        ]
+    }
+source.destroy:
+  des: Destroy a single source
+  par:
+    - nam: i
+      typ: String
+      des: Source name
+      req: true
+  ret:
+source.plan:
+  des: Plan a source
+  par:
+    - nam: source
+      typ: struct
+      des: Source
+      req: true
+    - nam: duration
+      typ: f64
+      des: planning duration
+      req: false
+  ret: Source output
+  exm: |
+    [
+        {
+            "t": 0.0,
+            "value": 10.0
+        },
+        {
+            "t": 1.0,
+            "value": 17.071067811865476
+        },
+        {
+            "t": 2.0,
+            "value": 20.0
+        },
+        {
+            "t": 3.0,
+            "value": 17.071067811865476
+        },
+        {
+            "t": 4.0,
+            "value": 10.000000000000002
+        },
+        {
+            "t": 5.0,
+            "value": 2.9289321881345254
+        }
+    ]
+source.apply:
+  des: Apply source to archive data
+  par:
+    - nam: source
+      typ: struct
+      des: Source
+      req: true
+    - nam: t_start
+      typ: String/f64
+      des: Starting time/timestamp
+      req: true
+    - nam: t_end
+      typ: String/f64
+      des: "Ending time/timestamp (def: now)"
+      req: false
+    - nam: targets
+      typ: Vec<String>
+      des: target item OIDs
+      req: false
+  ret:

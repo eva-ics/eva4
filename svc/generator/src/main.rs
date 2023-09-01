@@ -99,6 +99,7 @@ impl RpcHandlers for Handlers {
                         source: Source,
                         t_start: Value,
                         t_end: Option<Value>,
+                        #[serde(default)]
                         targets: Vec<OID>,
                     }
                     let p: Payload = unpack(payload)?;
@@ -346,6 +347,18 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("source.undeploy").required("sources"));
     info.add_method(ServiceMethod::new("source.get_config").required("i"));
     info.add_method(ServiceMethod::new("source.destroy").required("i"));
+    info.add_method(
+        ServiceMethod::new("source.plan")
+            .required("source")
+            .optional("duration"),
+    );
+    info.add_method(
+        ServiceMethod::new("source.apply")
+            .required("source")
+            .required("t_start")
+            .optional("t_end")
+            .optional("targets"),
+    );
     let rpc = initial.init_rpc(Handlers { info }).await?;
     initial.drop_privileges()?;
     let client = rpc.client().clone();
