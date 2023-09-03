@@ -1,5 +1,8 @@
 # raw-udp-to-bus svc
 
+**DEPRECATED** please use built-in EVA ICS generator UDP source:
+<https://info.bma.ai/en/actual/eva4/svc/eva-svc-generator.html>
+
 Raw UDP to EVA ICS v4 local bus bridge.
 
 Written in Python, requires EVA ICS v4 and EVA ICS venv set. No additional
