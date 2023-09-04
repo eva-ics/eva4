@@ -9,8 +9,8 @@ pub const DEFAULT_SAMPLING: u32 = 1;
 
 #[derive(Serialize)]
 pub struct GenData {
-    t: f64,
-    value: Value,
+    pub t: f64,
+    pub value: Value,
 }
 
 #[async_trait::async_trait]

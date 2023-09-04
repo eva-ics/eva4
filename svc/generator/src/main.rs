@@ -2,6 +2,7 @@ use bmart_derive::Sorting;
 use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_sdk::types::Fill;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -78,11 +79,12 @@ impl RpcHandlers for Handlers {
                             deserialize_with = "eva_common::tools::de_opt_float_as_duration"
                         )]
                         duration: Option<Duration>,
+                        fill: Option<Fill>,
                     }
                     let p: Payload = unpack(payload)?;
                     let result: Vec<GenData> = tokio::task::spawn_blocking(move || {
                         p.source
-                            .plan(p.duration.unwrap_or(DEFAULT_PLANNING_DURATION))
+                            .plan(p.duration.unwrap_or(DEFAULT_PLANNING_DURATION), p.fill)
                     })
                     .await
                     .map_err(Error::core)??;
@@ -297,13 +299,35 @@ impl Source {
             }
         }
     }
-    fn plan(&self, duration: Duration) -> EResult<Vec<GenData>> {
+    fn plan(&self, duration: Duration, fill: Option<Fill>) -> EResult<Vec<GenData>> {
         let gen = self.kind.to_generator();
-        gen.plan(
+        let data = gen.plan(
             self.params.clone(),
             prepare_sampling(self.sampling)?,
             duration,
-        )
+        )?;
+        if let Some(f) = fill {
+            let mut t = 0.0;
+            let mut result = Vec::new();
+            let period = f.as_secs_f64();
+            for chunk in data.chunks(usize::try_from(f.as_secs())?) {
+                let mut sum = 0.0;
+                for d in chunk {
+                    sum += f64::try_from(d.value.clone())?;
+                }
+                if !chunk.is_empty() {
+                    sum /= f64::from(u32::try_from(chunk.len())?);
+                }
+                result.push(GenData {
+                    t,
+                    value: Value::F64(sum),
+                });
+                t += period;
+            }
+            Ok(result)
+        } else {
+            Ok(data)
+        }
     }
     async fn apply(&self, t_start: f64, t_end: f64, targets: Vec<OID>) -> EResult<()> {
         let gen = self.kind.to_generator();

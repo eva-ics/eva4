@@ -1530,7 +1530,7 @@ class CLI:
         call_rpc('source.deploy', dict(sources=[payload]), target=generator_svc)
         ok()
 
-    def generator_source_plan(self, kind, sampling, duration, output,
+    def generator_source_plan(self, kind, sampling, duration, fill, output,
                               generator_svc, params):
         p_params = {}
         payload = {
@@ -1551,7 +1551,7 @@ class CLI:
                         pass
                 p_params[name] = value
         data = call_rpc('source.plan',
-                        dict(source=payload, duration=duration),
+                        dict(source=payload, duration=duration, fill=fill),
                         target=generator_svc)
         if output == 'table':
             print_result(data, cols=['t', 'value'])

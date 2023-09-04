@@ -934,6 +934,10 @@ def append_generator_cli(root_sp):
                    default=30.0,
                    type=float,
                    help='Planning duration')
+    p.add_argument('-w',
+                   '--fill',
+                   metavar='INTERVAL',
+                   help='fill (e.g. 1T - 1 min, 2H - 2 hours)')
     p.add_argument(
         '-a',
         '--generator-svc',

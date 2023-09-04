@@ -69,6 +69,10 @@ source.plan:
       typ: f64
       des: planning duration
       req: false
+    - nam: fill
+      typ: String
+      des: Fill (nS/T/H/D/W e.g. 10T for 10-minute)
+      req: false
   ret: Source output
   exm: |
     [
