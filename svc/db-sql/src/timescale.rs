@@ -43,7 +43,7 @@ pub async fn state_history_filled(
         eva_common::time::now_ns_float()
     };
     let mut query = format!(
-        r#"SELECT EXTRACT(EPOCH FROM period) AS t,{} FROM
+        r#"SELECT CAST(EXTRACT(EPOCH FROM period) AS DOUBLE PRECISION) AS t,{} FROM
 (SELECT time_bucket_gapfill(
     '{} seconds'::interval,
     to_timestamp(t/1000000000),
