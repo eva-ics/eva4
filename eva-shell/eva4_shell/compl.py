@@ -85,7 +85,7 @@ class ComplSvcRpcParams:
                     yield f'{p}='
 
 
-class ComplYamlFile:
+class ComplDeployFile:
 
     def __call__(self, prefix, **kwargs):
         import glob
@@ -107,15 +107,16 @@ class ComplYamlFile:
                 return '~' + pfx[len(expanded):]
 
         if not prefix:
-            masks = ['*.yml', '*.yaml']
-        elif prefix.endswith('.yml') or prefix.endswith('.yaml'):
+            masks = ['*.yml', '*.yaml', '*.json']
+        elif prefix.endswith('.yml') or prefix.endswith(
+                '.yaml') or prefix.endswith('.json'):
             yield prefix
         elif prefix.endswith('.'):
             prefix = expand_user(prefix)
-            masks = [f'{prefix}*yml', f'{prefix}*yaml']
+            masks = [f'{prefix}*yml', f'{prefix}*yaml', f'{prefix}*json']
         else:
             prefix = expand_user(prefix)
-            masks = [f'{prefix}*.yml', f'{prefix}*.yaml']
+            masks = [f'{prefix}*.yml', f'{prefix}*.yaml', f'{prefix}*.json']
         for mask in masks:
             for f in glob.glob(mask):
                 yield contract_user(f)

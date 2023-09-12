@@ -12,7 +12,7 @@ neotermcolor.readline_always_safe = True
 
 from .sharedobj import common, current_command
 from .tools import print_tb, err
-from .compl import ComplOID, ComplSvc, ComplNode, ComplYamlFile
+from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile
 from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
@@ -232,7 +232,7 @@ def append_svc_cli(root_sp):
                    '--file',
                    metavar='FILE',
                    help='read call params payload form the file'
-                  ).completer = ComplYamlFile()
+                  ).completer = ComplDeployFile()
     p.add_argument('method', metavar='METHOD').completer = ComplSvcRpcMethod()
     p.add_argument('params',
                    nargs='*',
@@ -241,26 +241,26 @@ def append_svc_cli(root_sp):
     p.add_argument('--trace',
                    action='store_true',
                    help='enable call tracing (if supported by the svc)'
-                  ).completer = ComplYamlFile()
+                  ).completer = ComplDeployFile()
 
     p = sp.add_parser('export', help='export service(s) to a deployment file')
     p.add_argument('i', metavar='MASK').completer = ComplSvc()
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy service(s) from a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy service(s) using a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('create', help='create service from the template config')
     p.add_argument('i', metavar='SVC', help='service id').completer = ComplSvc()
     p.add_argument('f', metavar='FILE',
-                   help='configuration template').completer = ComplYamlFile()
+                   help='configuration template').completer = ComplDeployFile()
 
     p = sp.add_parser('destroy', help='destroy service')
     p.add_argument('i', metavar='SVC').completer = ComplSvc()
@@ -293,7 +293,7 @@ def append_acl_cli(root_sp):
                    help=f'ACL service (default: {DEFAULT_ACL_SERVICE})',
                    default=DEFAULT_ACL_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy ACL(s) from a deployment file')
     p.add_argument('-a',
@@ -301,7 +301,7 @@ def append_acl_cli(root_sp):
                    help=f'ACL service (default: {DEFAULT_ACL_SERVICE})',
                    default=DEFAULT_ACL_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy ACL(s) using a deployment file')
@@ -310,7 +310,7 @@ def append_acl_cli(root_sp):
                    help=f'ACL service (default: {DEFAULT_ACL_SERVICE})',
                    default=DEFAULT_ACL_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('create', help='create ACL')
     p.add_argument('i', metavar='ACL', help='ACL id')
@@ -361,7 +361,7 @@ def append_key_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy API key(s) from a deployment file')
     p.add_argument(
@@ -370,7 +370,7 @@ def append_key_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy API key(s) using a deployment file')
@@ -380,7 +380,7 @@ def append_key_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('create', help='create API key')
     p.add_argument('i', metavar='API key', help='API key id')
@@ -441,7 +441,7 @@ def append_user_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy user(s) from a deployment file')
     p.add_argument(
@@ -450,7 +450,7 @@ def append_user_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy user(s) using a deployment file')
@@ -460,7 +460,7 @@ def append_user_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('create', help='create user')
     p.add_argument('i', metavar='user', help='user id')
@@ -580,16 +580,16 @@ def append_item_cli(root_sp):
     p = sp.add_parser('export', help='export item(s) to a deployment file')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy item(s) from a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy item(s) using a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('watch', help='Watch item state')
     p.add_argument('i', metavar='OID').completer = ComplOID()
@@ -730,11 +730,11 @@ def append_node_cli(root_sp):
         default=DEFAULT_REPL_SERVICE,
         metavar='SVC').completer = ComplSvc('repl')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy node(s) from a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
     p.add_argument(
         '-a',
         '--repl-svc',
@@ -745,7 +745,7 @@ def append_node_cli(root_sp):
     p = sp.add_parser('undeploy',
                       help='undeploy node(s) using a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
     p.add_argument(
         '-a',
         '--repl-svc',
@@ -842,7 +842,7 @@ def append_cloud_cli(root_sp):
 
     p = sp.add_parser('deploy', help='cloud deploy')
     p.add_argument('file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
     p.add_argument('-c',
                    '--config-var',
                    metavar='VAR',
@@ -851,14 +851,14 @@ def append_cloud_cli(root_sp):
     p.add_argument('--config',
                    metavar='FILE',
                    help='load configuration variables from YAML file'
-                  ).completer = ComplYamlFile()
+                  ).completer = ComplDeployFile()
     p.add_argument('--test',
                    action='store_true',
                    help=f'test deployment config and exit')
 
     p = sp.add_parser('undeploy', help='cloud undeploy')
     p.add_argument('file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
     p.add_argument('-c',
                    '--config-var',
                    metavar='VAR',
@@ -867,7 +867,7 @@ def append_cloud_cli(root_sp):
     p.add_argument('--config',
                    metavar='FILE',
                    help='load configuration variables from YAML file'
-                  ).completer = ComplYamlFile()
+                  ).completer = ComplDeployFile()
     p.add_argument('--test',
                    action='store_true',
                    help=f'test deployment config and exit')
@@ -1004,7 +1004,7 @@ def append_generator_cli(root_sp):
         help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
         default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy source(s) from a deployment file')
     p.add_argument(
@@ -1013,7 +1013,7 @@ def append_generator_cli(root_sp):
         help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
         default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy source(s) using a deployment file')
@@ -1023,7 +1023,7 @@ def append_generator_cli(root_sp):
         help=f'generator service (default: {DEFAULT_GENERATOR_SERVICE})',
         default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
 
 def append_system_cli(root_sp):
@@ -1229,7 +1229,7 @@ def append_kiosk_cli(root_sp):
         help=f'kiosk service (default: {DEFAULT_KIOSK_SERVICE})',
         default=DEFAULT_KIOSK_SERVICE).completer = ComplSvc('kioskman')
     p.add_argument('-o', '--output', metavar='FILE',
-                   help='output file').completer = ComplYamlFile()
+                   help='output file').completer = ComplDeployFile()
 
     p = sp.add_parser('deploy', help='deploy kiosk(s) from a deployment file')
     p.add_argument(
@@ -1238,7 +1238,7 @@ def append_kiosk_cli(root_sp):
         help=f'kiosk service (default: {DEFAULT_KIOSK_SERVICE})',
         default=DEFAULT_KIOSK_SERVICE).completer = ComplSvc('kioskman')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('undeploy',
                       help='undeploy kiosk(s) using a deployment file')
@@ -1248,7 +1248,7 @@ def append_kiosk_cli(root_sp):
         help=f'kiosk service (default: {DEFAULT_KIOSK_SERVICE})',
         default=DEFAULT_KIOSK_SERVICE).completer = ComplSvc('kioskman')
     p.add_argument('-f', '--file', metavar='FILE',
-                   help='deployment file').completer = ComplYamlFile()
+                   help='deployment file').completer = ComplDeployFile()
 
     p = sp.add_parser('create', help='create kiosk')
     p.add_argument('i', metavar='kiosk', help='kiosk id')
