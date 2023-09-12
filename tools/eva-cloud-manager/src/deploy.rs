@@ -144,7 +144,8 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             tpl_context.insert(name, &val);
         }
     }
-    let fpath = Path::new(&opts.deployment_file);
+    let expanded_path = expanduser::expanduser(&opts.deployment_file)?;
+    let fpath = Path::new(&expanded_path);
     let s = if opts.deployment_file == "-" {
         ecm::tools::read_stdin().await
     } else {

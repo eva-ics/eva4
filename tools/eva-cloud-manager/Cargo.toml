@@ -40,6 +40,7 @@ prettytable-rs = "0.10.0"
 chrono = "0.4.19"
 bzip2 = "0.4.3"
 openssl = "0.10.42"
+expanduser = "1.2.2"
 
 [features]
 openssl-vendored = ["openssl/vendored"]
