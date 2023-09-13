@@ -1647,6 +1647,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-dapp"
+version = "4.0.2"
+dependencies = [
+ "async-channel",
+ "async-trait",
+ "bmart 0.2.6",
+ "eva-common",
+ "eva-sdk",
+ "jemallocator",
+ "log",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "eva-db-influx"
 version = "4.0.2"
 dependencies = [

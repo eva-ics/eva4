@@ -5,6 +5,7 @@ members = [
   #"svc/svc-template",
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
+  "svc/dapp",
   "svc/db-influx",
   "svc/db-sql",
   "svc/aaa-acl",
