@@ -1,3 +1,4 @@
+use bmart::process::CommandResult;
 use eva_common::{EResult, Error};
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
@@ -64,6 +65,7 @@ impl App {
         if self.pid.is_some() {
             return Err(Error::busy("app is already started"));
         }
+        let _ = self.compose_down().await;
         let cmd = format!("chdir \"{}\" && {}", self.path, self.version.cmd_up());
         let mut child = tokio::process::Command::new("sh")
             .stdout(Stdio::piped())
@@ -111,18 +113,22 @@ impl App {
         self.pid.replace(ppid);
         Ok((rx_out, rx_err))
     }
-    pub async fn stop(&mut self) -> EResult<Option<bmart::process::CommandResult>> {
+    async fn compose_down(&self) -> EResult<CommandResult> {
+        let cmd = format!("chdir \"{}\" && {}", self.path, self.version.cmd_down());
+        bmart::process::command(
+            "sh",
+            ["-c", &cmd],
+            self.timeout,
+            bmart::process::Options::default(),
+        )
+        .await
+        .map_err(Into::into)
+    }
+    pub async fn stop(&mut self) -> EResult<Option<CommandResult>> {
         if let Some(pid) = self.pid.take() {
             bmart::process::kill_pstree(pid, Some(self.timeout), true).await;
-            let cmd = format!("chdir \"{}\" && {}", self.path, self.version.cmd_down());
-            let result = bmart::process::command(
-                "sh",
-                ["-c", &cmd],
-                self.timeout,
-                bmart::process::Options::default(),
-            )
-            .await?;
             self.stop_futs();
+            let result = self.compose_down().await?;
             Ok(Some(result))
         } else {
             self.stop_futs();
