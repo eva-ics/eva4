@@ -6,4 +6,4 @@ config:
   # absolute path or relative to EVA_DIR/runtime/dapp
   path: app1
   # docker-compose version (1 or 2, default is 2)
-  compose_version: 2
+  #compose_version: 2
