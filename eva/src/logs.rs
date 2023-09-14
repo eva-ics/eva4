@@ -772,7 +772,7 @@ pub fn init(
 /// # Panics
 ///
 /// Will panic if the mutex is poisoned
-pub async fn start_bus_logger() {
+pub fn start_bus_logger() {
     if let Some(rx) = BUS_RX.lock().unwrap().take() {
         if let Some(rpc) = BUS_RPC.get() {
             let client = rpc.client();

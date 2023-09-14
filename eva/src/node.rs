@@ -62,11 +62,11 @@ async fn run_regular(
     let rpc = RpcClient::new0(core_sec_client);
     core.set_rpc(Arc::new(rpc))?;
     core.set_components()?;
-    crate::logs::start_bus_logger().await;
+    crate::logs::start_bus_logger();
     trace!("writing the pid file");
     core.write_pid_file().await?;
     trace!("registering the signal handler");
-    core.register_signals().await;
+    core.register_signals();
     trace!("starting the core");
     core.start(queue_size).await?;
     trace!("starting the service manager");

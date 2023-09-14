@@ -474,7 +474,7 @@ impl Manager {
                     }
                 }
                 let mut all_started = true;
-                for (s, v) in self.services.lock().unwrap().iter() {
+                for (s, v) in &*self.services.lock().unwrap() {
                     if v.enabled && !online.contains(s) {
                         all_started = false;
                         break;

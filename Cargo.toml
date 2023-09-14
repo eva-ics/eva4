@@ -38,6 +38,8 @@ members = [
   "benchmarks/bm-primary"
 ]
 
+resolver = "2"
+
 exclude = [
   "contrib/webinfo"
 ]

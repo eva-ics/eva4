@@ -300,7 +300,7 @@ pub fn start_node_checker(core: Arc<Core>) {
         loop {
             let mut ntc: HashMap<String, Vec<(String, Option<Duration>)>> = HashMap::new();
             // insert owned to release mutex asap
-            for (k, v) in c.nodes.lock().unwrap().iter() {
+            for (k, v) in &*c.nodes.lock().unwrap() {
                 let node_name = k.clone();
                 if let Some(s) = ntc.get_mut(v.svc().unwrap()) {
                     s.push((node_name, v.timeout()));
@@ -1654,7 +1654,7 @@ impl Core {
             .await
             .map_err(Into::into)
     }
-    pub async fn register_signals(&self) {
+    pub fn register_signals(&self) {
         let mut handle_cc = match std::env::var_os("EVA_ENABLE_CC") {
             Some(v) => v == "1",
             None => false,

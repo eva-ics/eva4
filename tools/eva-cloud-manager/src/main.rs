@@ -42,7 +42,7 @@ impl FileCleaner {
     /// Will panic if the mutex is poisoned
     pub fn clear(&self) {
         let mut paths = self.paths.lock().unwrap();
-        for p in paths.iter() {
+        for p in &*paths {
             let _r = std::fs::remove_file(p);
         }
         paths.clear();

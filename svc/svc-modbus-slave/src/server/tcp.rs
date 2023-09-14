@@ -52,7 +52,7 @@ async fn handle_tcp(
     loop {
         let mut buf: ModbusFrameBuf = [0; 256];
         let Ok(len) = tokio::time::timeout(keep_alive_timeout, stream.read(&mut buf)).await else {
-            break
+            break;
         };
         if len? == 0 {
             break;

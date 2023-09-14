@@ -68,7 +68,9 @@ impl ValueConv for Variant {
             Value::String(v) => Ok(Variant::String(v.into())),
             Value::Bytes(v) => Ok(Variant::ByteString(v.into())),
             Value::Seq(_) => {
-                let Value::Seq(s) = val.into_seq_flatten() else { panic!() };
+                let Value::Seq(s) = val.into_seq_flatten() else {
+                    panic!()
+                };
                 let mut data = Vec::with_capacity(s.len());
                 for value in s {
                     data.push(Variant::from_eva_value(value, vt, None)?);

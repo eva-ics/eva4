@@ -74,14 +74,14 @@ impl App {
             .args(["-c", &cmd])
             .spawn()?;
         let Some(stdout) = child.stdout.take() else {
-            return Err(Error::io("Unable to create stdout reader"))
+            return Err(Error::io("Unable to create stdout reader"));
         };
         let mut stdout_reader = BufReader::new(stdout).lines();
         let Some(stderr) = child.stderr.take() else {
-            return Err(Error::io("Unable to create stderr reader"))
+            return Err(Error::io("Unable to create stderr reader"));
         };
         let Some(ppid) = child.id() else {
-            return Err(Error::io("Unable to take process id"))
+            return Err(Error::io("Unable to take process id"));
         };
         let mut stderr_reader = BufReader::new(stderr).lines();
         let (tx_out, rx_out) = async_channel::bounded(1024);

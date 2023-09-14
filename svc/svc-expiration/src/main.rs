@@ -56,7 +56,7 @@ async fn checker<C>(
     let mut next_iter = Instant::now();
     loop {
         let mut expired: Vec<&str> = Vec::new();
-        for (p, w) in watchers.iter() {
+        for (p, w) in &*watchers {
             if !w.is_marked_expired() && w.is_expired() {
                 log::log!(
                     if w.oid.kind() == ItemKind::Lvar {

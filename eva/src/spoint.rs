@@ -136,7 +136,7 @@ pub async fn run(
     trace!("writing the pid file");
     core.write_pid_file().await?;
     trace!("registering the signal handler");
-    core.register_signals().await;
+    core.register_signals();
     let launcher_name = format!("{}{}", crate::launcher::LAUNCHER_CLIENT_PFX, system_name);
     let launcher_bus_config = busrt::ipc::Config::new(connection_path, &launcher_name)
         .buf_size(bus_config_data.buf_size)

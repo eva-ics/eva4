@@ -257,7 +257,7 @@ impl Service {
         }
         Ok(())
     }
-    async fn start(&mut self, initial: Initial, rpc: Arc<RwLock<Option<RpcClient>>>) {
+    fn start(&mut self, initial: Initial, rpc: Arc<RwLock<Option<RpcClient>>>) {
         self.active.store(true, atomic::Ordering::SeqCst);
         let id = self.id.clone();
         let active = self.active.clone();
@@ -308,7 +308,7 @@ impl RpcHandlers for Handlers {
             "list" => {
                 let mut result: HashMap<&str, ServiceStatus> = HashMap::new();
                 let services = self.services.lock().await;
-                for (s, v) in services.iter() {
+                for (s, v) in &*services {
                     result.insert(
                         s,
                         v.data.lock().await.as_ref().map_or_else(
@@ -383,7 +383,7 @@ impl RpcHandlers for Handlers {
                         }
                     }
                 }
-                service.start(p.initial, self.rpc.clone()).await;
+                service.start(p.initial, self.rpc.clone());
                 services.insert(p.id, Arc::new(service));
                 Ok(None)
             }
@@ -407,7 +407,7 @@ impl RpcHandlers for Handlers {
             }
             "shutdown" => {
                 let mut futs = Vec::new();
-                for (_, svc) in self.services.lock().await.iter() {
+                for svc in self.services.lock().await.values() {
                     let svc = svc.clone();
                     let fut = tokio::spawn(async move {
                         svc.stop().await;
