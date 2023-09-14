@@ -52,6 +52,7 @@ fn process_state(
     match OID::from_path(path) {
         Ok(oid) => match unpack::<State>(payload) {
             Ok(v) => {
+                // TODO move to task pool (remove try_send)
                 let res = tx
                     .try_send(Event::State(ItemState::from_state(v, oid)))
                     .map_err(Error::core);

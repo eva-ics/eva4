@@ -51,6 +51,7 @@ fn process_state(
         Ok(oid) => match unpack::<State>(payload) {
             Ok(v) => {
                 if v.value.as_ref().map_or(true, Value::is_numeric) {
+                    // TODO move to task pool (remove try_send)
                     let res = tx
                         .try_send(Event::State(ItemState::from_state(v, oid)))
                         .map_err(Error::core);
