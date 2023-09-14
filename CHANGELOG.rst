@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-09-15 build 2023091501: Docker application launcher
 * 2023-09-11 build 2023091101: TimescaleDB 14+ fixes
 * 2023-09-04 build 2023090401: Fill param in generator planning
 * 2023-09-01 build 2023090101: Data generators, OPC-UA auth improvements
