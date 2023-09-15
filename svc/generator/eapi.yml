@@ -13,7 +13,7 @@ source.list:
 source.deploy:
   des: Deploy sources
   par:
-    - nam: sources
+    - nam: generator_sources
       typ: Vec<struct>
       des: Sources
       req: true
@@ -21,7 +21,7 @@ source.deploy:
 source.undeploy:
   des: Undeploy sources
   par:
-    - nam: sources
+    - nam: generator_sources
       typ: Vec<struct/String>
       des: Sources or a list of source names
       req: true
@@ -36,18 +36,14 @@ source.get_config:
   ret: Source configuration
   exm: |
     {
-        "sources": [
-            {
-                "kind": "wave",
-                "name": "v1",
-                "params": {
-                    "formula": "sin(x/2)*10+10"
-                },
-                "sampling": 1,
-                "targets": [
-                    "sensor:tests/voltage"
-                ]
-            }
+        "kind": "wave",
+        "name": "v1",
+        "params": {
+            "formula": "sin(x/2)*10+10"
+        },
+        "sampling": 1,
+        "targets": [
+            "sensor:tests/voltage"
         ]
     }
 source.destroy:

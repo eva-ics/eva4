@@ -1482,7 +1482,9 @@ class CLI:
     def generator_source_edit(self, i, generator_svc):
 
         def deploy(cfg, i):
-            call_rpc('source.deploy', dict(sources=[cfg]), target=generator_svc)
+            call_rpc('source.deploy',
+                     dict(generator_sources=[cfg]),
+                     target=generator_svc)
             print(f'generator source re-deployed: {i}')
             print()
 
@@ -1493,15 +1495,21 @@ class CLI:
 
     def generator_source_deploy(self, generator_svc, file=None):
         import yaml
-        sources = yaml.safe_load(read_file(file).decode()).pop('sources')
-        call_rpc('source.deploy', dict(sources=sources), target=generator_svc)
+        sources = yaml.safe_load(
+            read_file(file).decode()).pop('generator_sources')
+        call_rpc('source.deploy',
+                 dict(generator_sources=sources),
+                 target=generator_svc)
         print(f'{len(sources)} generator source configuration(s) deployed')
         print()
 
     def generator_source_undeploy(self, generator_svc, file=None):
         import yaml
-        sources = yaml.safe_load(read_file(file).decode()).pop('sources')
-        call_rpc('source.undeploy', dict(sources=sources), target=generator_svc)
+        sources = yaml.safe_load(
+            read_file(file).decode()).pop('generator_sources')
+        call_rpc('source.undeploy',
+                 dict(generator_sources=sources),
+                 target=generator_svc)
         print(f'{len(sources)} generator source configuration(s) undeployed')
         print()
 
@@ -1527,7 +1535,9 @@ class CLI:
                     except:
                         pass
                 p_params[name] = value
-        call_rpc('source.deploy', dict(sources=[payload]), target=generator_svc)
+        call_rpc('source.deploy',
+                 dict(generator_sources=[payload]),
+                 target=generator_svc)
         ok()
 
     def generator_source_plan(self, kind, sampling, duration, fill, output,
@@ -1619,7 +1629,7 @@ class CLI:
                                   dict(i=name),
                                   target=generator_svc)
                 configs.append(config)
-        result = dict(sources=configs)
+        result = dict(generator_sources=configs)
         if current_command.json:
             print_result(result)
         else:

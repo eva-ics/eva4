@@ -121,12 +121,12 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct Sources {
-                        sources: Vec<Source>,
+                        generator_sources: Vec<Source>,
                     }
                     let p: Sources = unpack(payload)?;
                     let reg = reg!();
                     let mut sources = SOURCES.lock().await;
-                    for mut source in p.sources {
+                    for mut source in p.generator_sources {
                         sources.remove(&source.name);
                         reg.key_set(&format!("sources/{}", source.name), to_value(&source)?)
                             .await?;
@@ -143,7 +143,7 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct Sources {
-                        sources: Vec<IdOrSource>,
+                        generator_sources: Vec<IdOrSource>,
                     }
                     #[derive(Deserialize)]
                     #[serde(untagged)]
@@ -162,7 +162,7 @@ impl RpcHandlers for Handlers {
                     let p: Sources = unpack(payload)?;
                     let reg = reg!();
                     let mut sources = SOURCES.lock().await;
-                    for source in p.sources {
+                    for source in p.generator_sources {
                         sources.remove(source.name());
                         let _ = reg.key_delete(&format!("sources/{}", source.name())).await;
                     }
