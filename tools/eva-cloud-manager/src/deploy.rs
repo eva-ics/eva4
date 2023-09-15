@@ -292,10 +292,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
         if node.generator_sources.is_some() {
             svcs_to_test.insert(
                 &node.params.generator_svc,
-                test_mp!("source.deploy", "sources"),
+                test_mp!("source.deploy", "generator_sources"),
             );
         }
         for (svc, p) in svcs_to_test {
+            if node.svcs.iter().find(|s| s.id == svc).is_some() {
+                info!("skipping service test {}/{}", node.node, svc);
+                continue;
+            }
             info!("testing service {}/{}", node.node, svc);
             if let Some((method, params)) = p {
                 client.call(&node.node, svc, method, Some(params)).await?;
@@ -449,7 +453,6 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             deploy_resource!(
                 node.generator_sources,
                 "generator_sources",
-                "sources",
                 &node.params.generator_svc,
                 "source.deploy"
             );
@@ -482,7 +485,6 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             undeploy_resource!(
                 node.generator_sources,
                 "generator_sources",
-                "sources",
                 &node.params.generator_svc,
                 "source.undeploy"
             );
