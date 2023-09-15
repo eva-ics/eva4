@@ -38,7 +38,7 @@ members = [
   "benchmarks/bm-primary"
 ]
 
-resolver = "2"
+resolver = "1"
 
 exclude = [
   "contrib/webinfo"
