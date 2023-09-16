@@ -1,0 +1,5 @@
+*.pyc
+__pycache__
+eva4_bridge_udp.egg-info
+dist
+build
