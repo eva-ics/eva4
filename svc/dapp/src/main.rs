@@ -1,5 +1,6 @@
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +9,8 @@ err_logger!();
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Docker App Runner";
+
+static PATH: OnceCell<PathBuf> = OnceCell::new();
 
 mod dc;
 
@@ -36,9 +39,20 @@ struct Handlers {
 impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         let method = event.parse_method()?;
-        //let payload = event.payload();
+        let payload = event.payload();
         #[allow(clippy::match_single_binding)]
         match method {
+            "app.get_config" => {
+                if payload.is_empty() {
+                    let mut path = PATH.get().unwrap().clone();
+                    path.push("docker-compose.yml");
+                    let s = tokio::fs::read_to_string(path).await?;
+                    let config: Value = serde_yaml::from_str(&s).map_err(Error::invalid_data)?;
+                    Ok(Some(pack(&config)?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
@@ -63,7 +77,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
         d_app_dir.push(config.path);
         d_app_dir.to_string_lossy().to_string()
     };
-    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    PATH.set(Path::new(&path).to_owned())
+        .map_err(|_| Error::core("unable to set PATH"))?;
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(ServiceMethod::new("app.get_config"));
     let rpc = initial.init_rpc(Handlers { info }).await?;
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;

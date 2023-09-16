@@ -1,1 +1,4 @@
-{}
+app.get_config:
+  des: Get app config (docker-compose.yml)
+  par:
+  ret: Compose payload
