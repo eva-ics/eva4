@@ -8,9 +8,9 @@ config:
   # OIDS to subscribe (both local and remotes are subscribed)
   oids:
   - "#"
-  # target to send UDP events to
+  # target to send UDP events to, optional
   target: 10.20.0.5:9999
-  # incoming listener
+  # incoming listener, optional
   listen: 10.20.0.1:9999
   # format: json or msgpack, the default is json
   #format: json

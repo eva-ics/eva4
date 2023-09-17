@@ -84,13 +84,13 @@ def run():
     else:
         raise RuntimeError(f'unsupported payload format: {fmt}')
 
-    d.target_host, d.target_port = config['target'].rsplit(':', maxsplit=1)
-    d.target_port = int(d.target_port)
-    d.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
     service.init(info, on_frame=on_frame)
-    service.subscribe_oids(config.get('oids', []), event_kind='any')
-    service.logger.info(f'target: {d.target_host}:{d.target_port}')
+    if 'target' in config:
+        d.target_host, d.target_port = config['target'].rsplit(':', maxsplit=1)
+        d.target_port = int(d.target_port)
+        d.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        service.logger.info(f'target: {d.target_host}:{d.target_port}')
+        service.subscribe_oids(config.get('oids', []), event_kind='any')
 
     if 'listen' in config:
         listen_host, listen_port = config['listen'].rsplit(':', maxsplit=1)
