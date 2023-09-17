@@ -11,6 +11,7 @@ import socket
 import json
 import threading
 import busrt
+import time
 
 UDP_BUF_SIZE = 8192
 
@@ -65,6 +66,32 @@ def on_frame(frame):
         d.sock.sendto(d.packer(data), (d.target_host, d.target_port))
 
 
+def collect_periodic(interval, oids):
+    next_iter = time.perf_counter() + interval
+    payload = pack({'i': oids})
+    while True:
+        try:
+            result = unpack(
+                d.service.rpc.call('eva.core',
+                                   busrt.rpc.Request(
+                                       'item.state',
+                                       payload)).wait_completed().get_payload())
+            for data in result:
+                d.sock.sendto(d.packer(data), (d.target_host, d.target_port))
+        except busrt.rpc.RpcException as e:
+            d.service.logger.error(rpc_e2e(e))
+        except Exception as e:
+            d.service.logger.error(e)
+        now = time.perf_counter()
+        to_sleep = next_iter - now
+        if to_sleep > 0:
+            time.sleep(to_sleep)
+            next_iter += interval
+        else:
+            d.service.logger.warning('collect loop timeout')
+            next_iter = now + interval
+
+
 def run():
     info = sdk.ServiceInfo(author='Bohemia Automation',
                            description='UDP Bridge',
@@ -90,7 +117,17 @@ def run():
         d.target_port = int(d.target_port)
         d.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         service.logger.info(f'target: {d.target_host}:{d.target_port}')
-        service.subscribe_oids(config.get('oids', []), event_kind='any')
+        oids = config.get('oids', [])
+        if not config.get('ignore_events'):
+            service.subscribe_oids(oids, event_kind='any')
+        interval = config.get('interval')
+        if interval:
+            threading.Thread(target=collect_periodic,
+                             args=(
+                                 interval,
+                                 oids,
+                             ),
+                             daemon=True).start()
 
     if 'listen' in config:
         listen_host, listen_port = config['listen'].rsplit(':', maxsplit=1)

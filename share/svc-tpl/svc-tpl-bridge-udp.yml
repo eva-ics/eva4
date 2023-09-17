@@ -14,5 +14,9 @@ config:
   listen: 10.20.0.1:9999
   # format: json or msgpack, the default is json
   #format: json
+  # ignore bus events
+  #ignore_events: true
+  # manual data collection interval
+  #interval: 1
 user: nobody
 workers: 1
