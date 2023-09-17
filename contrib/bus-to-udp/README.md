@@ -2,6 +2,9 @@
 
 EVA ICS v4 local bus to UDP bridge.
 
+DEPRECATED. Please use the official Bus to UDP bridge service instead:
+<https://info.bma.ai/en/actual/eva4/svc/eva4-svc-bridge-udp.html>
+
 Written in Python, requires EVA ICS v4 and EVA ICS venv set. No additional
 Python modules are required.
 
