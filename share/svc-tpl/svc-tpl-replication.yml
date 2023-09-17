@@ -50,7 +50,7 @@ config:
         #- all_pub
       #secure_topics:
         # - all
-  # subscribed OIDS
+  # subscribed OIDs
   oids:
     - "#"
   # DANGEROUS, enable for multi-level clusters only

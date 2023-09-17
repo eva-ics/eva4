@@ -27,7 +27,7 @@ bus:
 # service location
 command: venv/bin/python /opt/eva4/contrib/bus-to-udp/bus-to-udp.py
 config:
-  # OIDS to subscribe
+  # OIDs to subscribe
   oids:
   - sensor:nr/temp
   # target to send UDP events to

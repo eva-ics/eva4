@@ -5,7 +5,7 @@ command: venv/bin/eva4-svc-bridge-udp
 bus:
   path: var/bus.ipc
 config:
-  # OIDS to subscribe (both local and remotes are subscribed)
+  # OIDs to subscribe (both local and remotes are subscribed)
   oids:
   - "#"
   # target to send UDP events to, optional

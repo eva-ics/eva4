@@ -175,7 +175,7 @@ item.undeploy:
   par:
     - nam: items
       typ: Vec<struct/String>
-      des: item configuration or a list of OIDS
+      des: item configuration or a list of OIDs
       req: false
   ret:
 item.get_config:

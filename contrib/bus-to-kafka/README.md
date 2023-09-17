@@ -24,7 +24,7 @@ bus:
 # service location
 command: venv/bin/python /opt/eva4/contrib/bus-to-kafka/bus-to-kafka.py
 config:
-  # OIDS to subscribe
+  # OIDs to subscribe
   oids:
   - "#"
   kafka:
