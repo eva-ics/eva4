@@ -453,6 +453,8 @@ if [ "$HMI" ]; then
   echo "Deploying HMI services..."
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
+  [ "$ADMINPASSWD" ] || ADMINPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
+  ADMINPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash "password=${ADMINPASSWD}" algo=pbkdf2 |jq -r .hash)
   [ "$OPPASSWD" ] || OPPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
   OPPASSWD_HASHED=$(./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth password.hash "password=${OPPASSWD}" algo=pbkdf2 |jq -r .hash)
   for svc in hmi:hmi.default; do
@@ -487,6 +489,9 @@ EOF
   (
   cat <<EOF
 users:
+- login: admin
+  password: ${ADMINPASSWD_HASHED}
+  acls: [ "admin" ]
 - login: operator
   password: ${OPPASSWD_HASHED}
   acls: [ "operator" ]
@@ -544,6 +549,9 @@ if [ "$HMI" ]; then
   echo
   echo "Admin key: ${ADMINKEY}"
   echo "Operator key: ${OPKEY}"
+  echo
+  echo "Administrator user: admin"
+  echo "Password: ${ADMINPASSWD}"
   echo
   echo "Default user: operator"
   echo "Password: ${OPPASSWD}"
