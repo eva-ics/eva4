@@ -53,6 +53,9 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             )
             .execute(&pool)
             .await?;
+            sqlx::query("CREATE INDEX IF NOT EXISTS i_t ON state_history(t)")
+                .execute(&pool)
+                .await?;
         }
         AnyKind::MySql | AnyKind::Postgres => {
             sqlx::query(
@@ -65,6 +68,9 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             )
             .execute(&pool)
             .await?;
+            sqlx::query("CREATE INDEX IF NOT EXISTS i_t ON state_history(t)")
+                .execute(&pool)
+                .await?;
         }
     }
     POOL.set(pool)
