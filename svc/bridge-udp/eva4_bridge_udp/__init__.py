@@ -1,4 +1,4 @@
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 import evaics.sdk as sdk
 
@@ -67,6 +67,7 @@ def on_frame(frame):
 
 
 def collect_periodic(interval, oids):
+    d.service.wait_core()
     next_iter = time.perf_counter() + interval
     payload = pack({'i': oids})
     while True:
