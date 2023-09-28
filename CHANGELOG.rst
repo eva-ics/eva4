@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-09-28 build 2023092801: PostgreSQL optimizations in SQL databases svc
 * 2023-09-17 build 2023091701: Bus UDP bridge service
 * 2023-09-15 build 2023091502: Less deploy svc tests, "sources" (generators) renamed to "generator_sources"
 * 2023-09-15 build 2023091501: Docker application launcher
