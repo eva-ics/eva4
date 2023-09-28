@@ -20,6 +20,15 @@ lazy_static! {
     static ref DB_KIND: OnceCell<AnyKind> = <_>::default();
 }
 
+fn safe_sql_string(s: &str) -> EResult<&str> {
+    for ch in s.chars() {
+        if ch == '\'' {
+            return Err(Error::invalid_data("unsupported quote in SQL string"));
+        }
+    }
+    Ok(s)
+}
+
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     let mut opts = AnyConnectOptions::from_str(conn)?;
     opts.log_statements(log::LevelFilter::Trace)
@@ -53,7 +62,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             )
             .execute(&pool)
             .await?;
-            sqlx::query("CREATE INDEX IF NOT EXISTS i_t ON state_history(t)")
+            sqlx::query("CREATE INDEX IF NOT EXISTS state_history_i_t ON state_history(t)")
                 .execute(&pool)
                 .await?;
         }
@@ -68,7 +77,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             )
             .execute(&pool)
             .await?;
-            sqlx::query("CREATE INDEX IF NOT EXISTS i_t ON state_history(t)")
+            sqlx::query("CREATE INDEX IF NOT EXISTS state_history_i_t ON state_history(t)")
                 .execute(&pool)
                 .await?;
         }
@@ -113,13 +122,52 @@ pub async fn submit(state: ItemState) -> EResult<()> {
 }
 
 pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
+    if state.is_empty() {
+        return Ok(());
+    }
     let pool = POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
-    let mut tx = pool.begin().await?;
-    for s in state {
-        insert!(&mut tx, kind, s);
+    if *kind == AnyKind::Postgres {
+        // TODO move to bind when switch out from Any
+        let mut ts = String::new();
+        let mut oids = String::new();
+        let mut statuses = String::new();
+        let mut values = String::new();
+        let last_record = state.len() - 1;
+        for (i, s) in state.into_iter().enumerate() {
+            write!(ts, "{}", ts_to_ns(s.set_time))?;
+            write!(oids, "'{}'", safe_sql_string(s.oid.as_str())?)?;
+            write!(statuses, "{}", s.status)?;
+            if let Some(v) = s.value {
+                write!(values, "'{}'", safe_sql_string(&v.to_string_or_pack()?)?)?;
+            } else {
+                write!(values, "NULL")?;
+            }
+            if i != last_record {
+                write!(ts, ",")?;
+                write!(oids, ",")?;
+                write!(statuses, ",")?;
+                write!(values, ",")?;
+            }
+        }
+        let q = format!(
+            r#"INSERT INTO state_history(t,oid,status,value)
+            VALUES(
+                UNNEST(ARRAY[{}]),
+                UNNEST(ARRAY[{}]),
+                UNNEST(ARRAY[{}]),
+                UNNEST(ARRAY[{}])
+                ) ON CONFLICT DO NOTHING;"#,
+            ts, oids, statuses, values
+        );
+        sqlx::query(&q).execute(pool).await?;
+    } else {
+        let mut tx = pool.begin().await?;
+        for s in state {
+            insert!(&mut tx, kind, s);
+        }
+        tx.commit().await?;
     }
-    tx.commit().await?;
     Ok(())
 }
 
