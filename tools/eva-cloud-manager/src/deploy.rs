@@ -296,7 +296,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             );
         }
         for (svc, p) in svcs_to_test {
-            if node.svcs.iter().find(|s| s.id == svc).is_some() {
+            if node.svcs.iter().any(|s| s.id == svc) {
                 info!("skipping service test {}/{}", node.node, svc);
                 continue;
             }
