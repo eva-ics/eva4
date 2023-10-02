@@ -8,6 +8,7 @@ members = [
   "svc/dapp",
   "svc/db-influx",
   "svc/db-sql",
+  "svc/db-timescale",
   "svc/aaa-acl",
   "svc/aaa-otp",
   "svc/aaa-localauth",
