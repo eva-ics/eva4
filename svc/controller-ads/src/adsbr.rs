@@ -182,7 +182,7 @@ impl Var {
     }
     fn buf_size(&self) -> usize {
         match self.kind {
-            Kind::Str => (ADS_VAR_MAX_STR_LEN * self.array_len.unwrap_or(1))
+            Kind::Str | Kind::WStr => (ADS_VAR_MAX_STR_LEN * self.array_len.unwrap_or(1))
                 .try_into()
                 .unwrap(),
             _ => self.size.try_into().unwrap(),
@@ -212,11 +212,26 @@ impl Var {
                 Kind::Lint => TryInto::<i64>::try_into(value.clone())?.as_bytes().to_vec(),
                 Kind::Ulint => TryInto::<u64>::try_into(value.clone())?.as_bytes().to_vec(),
                 Kind::Str => {
-                    if let Value::String(s) = value {
+                    let mut val = if let Value::String(s) = value {
                         s.as_bytes().to_vec()
                     } else {
                         value.to_string().as_bytes().to_vec()
-                    }
+                    };
+                    val.push(0);
+                    val
+                }
+                Kind::WStr => {
+                    let mut val = if let Value::String(s) = value {
+                        utf16string::WString::<utf16string::LittleEndian>::from(s)
+                            .as_bytes()
+                            .to_vec()
+                    } else {
+                        utf16string::WString::<utf16string::LittleEndian>::from(&value.to_string())
+                            .as_bytes()
+                            .to_vec()
+                    };
+                    val.extend([0, 0]);
+                    val
                 }
                 _ => {
                     return Err(Error::io("unable to write the value type"));
@@ -244,7 +259,7 @@ impl Var {
             Kind::Udint => Value::U32(value.try_into()?),
             Kind::Lint => Value::I64(value.try_into()?),
             Kind::Ulint => Value::U64(value.try_into()?),
-            Kind::Str => value,
+            Kind::Str | Kind::WStr => value,
             _ => {
                 return Err(Error::io("unable to write the value type"));
             }
@@ -265,7 +280,8 @@ pub enum Kind {
     Udint = 19,
     Lint = 20,
     Ulint = 21,
-    Str = 30, // 31 for unicode
+    Str = 30,
+    WStr = 31,
     Bool = 33,
     Other = 0xffff_ffff,
     NotFound = 0xffff_fffe,
@@ -275,7 +291,7 @@ pub enum Kind {
 impl Kind {
     fn size(self) -> u32 {
         match self {
-            Kind::Sint | Kind::Usint | Kind::Bool => 1,
+            Kind::Sint | Kind::Usint | Kind::Bool | Kind::Str | Kind::WStr => 1,
             Kind::Int | Kind::Uint => 2,
             Kind::Dint | Kind::Udint | Kind::Real => 4,
             Kind::Lint | Kind::Ulint | Kind::Lreal => 8,
@@ -304,7 +320,8 @@ impl From<u32> for Kind {
             v if v == Kind::Udint as u32 => Kind::Udint,
             v if v == Kind::Lint as u32 => Kind::Lint,
             v if v == Kind::Ulint as u32 => Kind::Ulint,
-            v if v == Kind::Str as u32 || v == 31 => Kind::Str,
+            v if v == Kind::Str as u32 => Kind::Str,
+            v if v == Kind::WStr as u32 => Kind::WStr,
             v if v == Kind::Bool as u32 => Kind::Bool,
             _ => Kind::Other,
         }
@@ -538,7 +555,8 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                     Kind::Other
                                     | Kind::NotFound
                                     | Kind::UnsupportedImpl
-                                    | Kind::Str => {}
+                                    | Kind::Str
+                                    | Kind::WStr => {}
                                     _ => {
                                         if size != kind_size {
                                             kind = Kind::UnsupportedImpl;
@@ -669,18 +687,23 @@ async fn write_val(var: &Var, value: &Value) -> EResult<()> {
 
 fn parse_buf(buf: &[u8], var: &Var) -> EResult<Value> {
     if var.array_len.is_some() {
-        let kind_size = var.kind.size().try_into()?;
-        let vals = buf
-            .chunks(kind_size)
-            .map(|v| parse_buf_value(v, var))
-            .collect::<Result<Vec<Value>, _>>()?;
-        Ok(Value::Seq(vals))
+        if var.kind == Kind::Str || var.kind == Kind::WStr {
+            parse_buf_value(buf, var)
+        } else {
+            let kind_size = var.kind.size().try_into()?;
+            let vals = buf
+                .chunks(kind_size)
+                .map(|v| parse_buf_value(v, var))
+                .collect::<Result<Vec<Value>, _>>()?;
+            Ok(Value::Seq(vals))
+        }
     } else {
         parse_buf_value(buf, var)
     }
 }
 
 #[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::too_many_lines)]
 fn parse_buf_value(buf: &[u8], var: &Var) -> EResult<Value> {
     Ok(match var.kind {
         Kind::Int => {
@@ -770,6 +793,18 @@ fn parse_buf_value(buf: &[u8], var: &Var) -> EResult<Value> {
         Kind::Str => {
             if let Ok(s) = std::str::from_utf8(buf.split(|v| *v == 0).next().unwrap()) {
                 Value::String(s.to_owned())
+            } else {
+                Value::Unit
+            }
+        }
+        Kind::WStr => {
+            let slice = if let Some(pos) = buf.chunks(2).position(|c| c == [0, 0]) {
+                &buf[..pos * 2]
+            } else {
+                buf
+            };
+            if let Ok(s) = utf16string::WStr::from_utf16le(slice) {
+                Value::String(s.to_string())
             } else {
                 Value::Unit
             }
