@@ -155,6 +155,7 @@ pub struct Var {
     name: String,
     kind: Kind,
     array_len: Option<u32>,
+    string_len: Option<u32>,
     // TODO remove Arc when async client will be available
     handle: Arc<atomic::AtomicU32>,
     size: u32,
@@ -305,6 +306,7 @@ pub struct SymbolInfo {
     kind: Kind,
     size: u32,
     array_len: Option<u32>,
+    string_len: Option<u32>,
 }
 
 impl From<u32> for Kind {
@@ -501,30 +503,51 @@ pub async fn create_vars(names: &[&str]) -> EResult<Vec<Var>> {
             name: (*name).to_owned(),
             kind: info.kind,
             array_len: info.array_len,
+            string_len: info.string_len,
             size: info.size,
             handle: Arc::new(atomic::AtomicU32::new(handle)),
         })
         .collect())
 }
 
-fn is_array_by_definition(buf: &[u8]) -> bool {
+fn parse_symbol_definition(buf: &[u8]) -> Option<&str> {
     if buf.len() < 27 {
-        return false;
+        return None;
     }
     let name_len = u16::from_le_bytes(buf[24..26].try_into().unwrap());
     let definition_len = u16::from_le_bytes(buf[26..28].try_into().unwrap());
     let def_start = 30 + usize::try_from(name_len).unwrap() + 1;
     let def_end = def_start + usize::try_from(definition_len).unwrap();
     if buf.len() < def_end {
-        return false;
+        return None;
     }
-    if let Ok(s) = std::str::from_utf8(&buf[def_start..def_end]) {
-        s.starts_with("ARRAY ")
+    std::str::from_utf8(&buf[def_start..def_end]).ok()
+}
+
+#[inline]
+fn is_array_by_definition(definition: Option<&str>) -> bool {
+    if let Some(def) = definition {
+        def.starts_with("ARRAY ")
     } else {
         false
     }
 }
 
+fn string_len_by_definition(definition: Option<&str>) -> Option<u32> {
+    if let Some(def) = definition {
+        let s = def.trim_end();
+        if s.ends_with(')') {
+            if let Some(pos) = s.rfind('(') {
+                if let Ok(len) = s[pos + 1..s.len() - 1].parse() {
+                    return Some(len);
+                }
+            }
+        }
+    }
+    None
+}
+
+#[allow(clippy::too_many_lines)]
 async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
     let mut result: Vec<SymbolInfo> = Vec::with_capacity(names.len());
     if !names.is_empty() {
@@ -550,6 +573,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                             result.push(SymbolInfo {
                                 kind: Kind::NotFound,
                                 array_len: None,
+                                string_len: None,
                                 size: 0,
                             });
                         } else {
@@ -562,23 +586,49 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                 kind = Kind::Other;
                             }
                             if flags & 0x1000 == 0 {
-                                let array_len = if kind_size > 0 { size / kind_size } else { 0 };
+                                let definition = parse_symbol_definition(&buf);
+                                let (array_len, string_len) = match kind {
+                                    Kind::Str => {
+                                        if let Some(len) = string_len_by_definition(definition) {
+                                            if is_array_by_definition(definition) {
+                                                (Some(size / len + 1), Some(len))
+                                            } else {
+                                                (None, Some(len))
+                                            }
+                                        } else {
+                                            (None, None)
+                                        }
+                                    }
+                                    Kind::WStr => {
+                                        if let Some(len) = string_len_by_definition(definition) {
+                                            if is_array_by_definition(definition) {
+                                                (Some(size / len * 2 + 2), Some(len))
+                                            } else {
+                                                (None, Some(len))
+                                            }
+                                        } else {
+                                            (None, None)
+                                        }
+                                    }
+                                    _ => {
+                                        let arr_len =
+                                            if kind_size > 0 { size / kind_size } else { 0 };
+                                        if arr_len > 1 || is_array_by_definition(definition) {
+                                            (Some(arr_len), None)
+                                        } else {
+                                            (None, None)
+                                        }
+                                    }
+                                };
                                 result.push(SymbolInfo {
                                     kind,
-                                    array_len: if array_len > 1 || is_array_by_definition(&buf) {
-                                        Some(array_len)
-                                    } else {
-                                        None
-                                    },
                                     size,
+                                    array_len,
+                                    string_len,
                                 });
                             } else {
                                 match kind {
-                                    Kind::Other
-                                    | Kind::NotFound
-                                    | Kind::UnsupportedImpl
-                                    | Kind::Str
-                                    | Kind::WStr => {}
+                                    Kind::Other | Kind::NotFound | Kind::UnsupportedImpl => {}
                                     _ => {
                                         if size != kind_size {
                                             kind = Kind::UnsupportedImpl;
@@ -588,6 +638,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                 result.push(SymbolInfo {
                                     kind,
                                     array_len: None,
+                                    string_len: None,
                                     size,
                                 });
                             }
@@ -600,6 +651,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                 result.push(SymbolInfo {
                     kind: Kind::NotFound,
                     array_len: None,
+                    string_len: None,
                     size: 0,
                 });
             }
@@ -709,15 +761,29 @@ async fn write_val(var: &Var, value: &Value) -> EResult<()> {
 
 fn parse_buf(buf: &[u8], var: &Var) -> EResult<Value> {
     if var.array_len.is_some() {
-        if var.kind == Kind::Str || var.kind == Kind::WStr {
-            parse_buf_value(buf, var)
-        } else {
-            let kind_size = var.kind.size().try_into()?;
-            let vals = buf
-                .chunks(kind_size)
-                .map(|v| parse_buf_value(v, var))
-                .collect::<Result<Vec<Value>, _>>()?;
-            Ok(Value::Seq(vals))
+        match var.kind {
+            Kind::Str => {
+                let vals = buf
+                    .chunks(usize::try_from(var.string_len.unwrap())? + 1)
+                    .map(|v| parse_buf_value(v, var))
+                    .collect::<Result<Vec<Value>, _>>()?;
+                Ok(Value::Seq(vals))
+            }
+            Kind::WStr => {
+                let vals = buf
+                    .chunks(usize::try_from(var.string_len.unwrap())? * 2 + 2)
+                    .map(|v| parse_buf_value(v, var))
+                    .collect::<Result<Vec<Value>, _>>()?;
+                Ok(Value::Seq(vals))
+            }
+            _ => {
+                let kind_size = var.kind.size().try_into()?;
+                let vals = buf
+                    .chunks(kind_size)
+                    .map(|v| parse_buf_value(v, var))
+                    .collect::<Result<Vec<Value>, _>>()?;
+                Ok(Value::Seq(vals))
+            }
         }
     } else {
         parse_buf_value(buf, var)
