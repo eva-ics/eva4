@@ -507,6 +507,24 @@ pub async fn create_vars(names: &[&str]) -> EResult<Vec<Var>> {
         .collect())
 }
 
+fn is_array_by_definition(buf: &[u8]) -> bool {
+    if buf.len() < 27 {
+        return false;
+    }
+    let name_len = u16::from_le_bytes(buf[24..26].try_into().unwrap());
+    let definition_len = u16::from_le_bytes(buf[26..28].try_into().unwrap());
+    let def_start = 30 + usize::try_from(name_len).unwrap() + 1;
+    let def_end = def_start + usize::try_from(definition_len).unwrap();
+    if buf.len() < def_end {
+        return false;
+    }
+    if let Ok(s) = std::str::from_utf8(&buf[def_start..def_end]) {
+        s.starts_with("ARRAY ")
+    } else {
+        false
+    }
+}
+
 async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
     let mut result: Vec<SymbolInfo> = Vec::with_capacity(names.len());
     if !names.is_empty() {
@@ -538,7 +556,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                             let size: u32 = u32::from_le_bytes(buf[12..16].try_into().unwrap());
                             let mut kind: Kind =
                                 u32::from_le_bytes(buf[16..20].try_into().unwrap()).into();
-                            let flags: u32 = u32::from_le_bytes(buf[20..24].try_into().unwrap());
+                            let flags: u16 = u16::from_le_bytes(buf[20..22].try_into().unwrap());
                             let kind_size = kind.size();
                             if kind_size == 0 {
                                 kind = Kind::Other;
@@ -547,7 +565,11 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                 let array_len = if kind_size > 0 { size / kind_size } else { 0 };
                                 result.push(SymbolInfo {
                                     kind,
-                                    array_len: if array_len > 1 { Some(array_len) } else { None },
+                                    array_len: if array_len > 1 || is_array_by_definition(&buf) {
+                                        Some(array_len)
+                                    } else {
+                                        None
+                                    },
                                     size,
                                 });
                             } else {
