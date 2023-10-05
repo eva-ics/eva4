@@ -78,7 +78,7 @@ async fn pull(
                                     if let Some(value) = vals.get(idx) {
                                         process!(value);
                                     } else {
-                                        error!(
+                                        warn!(
                                             "{} pull error: array does not contain the required index",
                                             task.oid()
                                         );
