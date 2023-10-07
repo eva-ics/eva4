@@ -511,7 +511,7 @@ pub async fn create_vars(names: &[&str]) -> EResult<Vec<Var>> {
 }
 
 fn parse_symbol_definition(buf: &[u8]) -> Option<&str> {
-    if buf.len() < 27 {
+    if buf.len() < 30 {
         return None;
     }
     let name_len = u16::from_le_bytes(buf[24..26].try_into().unwrap());
