@@ -1,5 +1,4 @@
 import requests
-import json
 import msgpack
 
 from functools import partial
@@ -62,6 +61,12 @@ class Client:
         self.password = password
         return self
 
+    def connect(self):
+        """
+        Blank method, tests HTTP connection only
+        """
+        requests.get(self.url)
+
     def api_key(self, api_key: str):
         """
         Authenticate with API key
@@ -101,6 +106,24 @@ class Client:
             raise RuntimeError('credentials not set')
         result = self.call('login', dict(u=self.user, p=self.password))
         self.token = result['token']
+
+    def bus_call(self, method: str, params: dict = None, target='eva.core'):
+        """
+        Call BUS/RT EAPI method
+
+        Requires admin permissions
+
+        Args:
+            method: API method
+
+        Optional:
+            params: API method parameters (dict)
+            target: target service (default: eva.core)
+
+        Returns:
+            API response payload
+        """
+        return self.call(f'bus::{target}::{method}', params)
 
     def call(self, method: str, params: dict = None):
         """
