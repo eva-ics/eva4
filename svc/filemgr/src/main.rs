@@ -1,5 +1,7 @@
+use eva_common::common_payloads::ValueOrList;
 use eva_common::prelude::*;
 use eva_common::time::Time;
+use eva_sdk::fs as sdkfs;
 use eva_sdk::http;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
@@ -438,6 +440,71 @@ impl RpcHandlers for Handlers {
                     Ok(None)
                 }
             }
+            "list" => {
+                #[derive(Deserialize, Debug)]
+                struct Params {
+                    path: Option<String>,
+                    masks: Option<ValueOrList<String>>,
+                    #[serde(default)]
+                    kind: sdkfs::Kind,
+                    #[serde(default)]
+                    recursive: bool,
+                }
+                let params = if payload.is_empty() {
+                    Params {
+                        path: None,
+                        masks: None,
+                        kind: sdkfs::Kind::Any,
+                        recursive: false,
+                    }
+                } else {
+                    unpack(payload)?
+                };
+                let mut rel_path = "/";
+                if let Some(ref p) = params.path {
+                    if !p.is_empty() {
+                        rel_path = p;
+                    }
+                };
+                let path = self.format_path(Path::new(rel_path))?;
+                let masks: Vec<String> = if let Some(m) = params.masks {
+                    m.to_vec()
+                } else {
+                    vec!["*".to_owned()]
+                };
+                let entries = sdkfs::list(
+                    &path,
+                    &masks.iter().map(String::as_str).collect::<Vec<&str>>(),
+                    params.kind,
+                    params.recursive,
+                    true,
+                )
+                .await?;
+                let s = path.to_string_lossy();
+                let result: Vec<sdkfs::Entry> = entries
+                    .into_iter()
+                    .filter_map(|r| {
+                        let mut p = path.clone();
+                        p.push(&r.path);
+                        for prot in &self.protected {
+                            if p.starts_with(prot) {
+                                return None;
+                            }
+                        }
+                        let p = r.path.to_string_lossy();
+                        if s.len() + 1 < p.len() {
+                            Some(sdkfs::Entry {
+                                path: Path::new(&p[s.len() + 1..]).to_owned(),
+                                meta: r.meta,
+                                kind: r.kind,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                Ok(Some(pack(&result)?))
+            }
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
@@ -447,12 +514,17 @@ impl RpcHandlers for Handlers {
 
 impl Handlers {
     fn format_path(&self, fpath: &Path) -> EResult<PathBuf> {
-        if fpath.to_string_lossy() == "/" {
+        let s = fpath.to_string_lossy();
+        if s == "/" {
             Ok(self.runtime_dir.clone())
         } else if fpath.is_absolute() {
             Err(Error::access(
                 "the path must be relative to the runtime directory",
             ))
+        } else if s.contains("../") {
+            Err(Error::access("the path can not contain ../"))
+        } else if s.contains("/./") || s.starts_with("./") {
+            Err(Error::access("the path can not contain or start with ./"))
         } else {
             let mut path = self.runtime_dir.clone();
             path.extend(fpath);
@@ -538,6 +610,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("permissions"),
     );
     info.add_method(ServiceMethod::new("file.unlink").required("path"));
+    info.add_method(
+        ServiceMethod::new("list")
+            .optional("path")
+            .optional("masks")
+            .optional("kind")
+            .optional("recursive"),
+    );
     let rpc = initial
         .init_rpc(Handlers {
             info,

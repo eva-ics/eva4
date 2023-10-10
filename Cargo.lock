@@ -173,9 +173,9 @@ dependencies = [
 
 [[package]]
 name = "async-recursion"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e97ce7de6cf12de5d7226c73f5ba9811622f4db3a5b91b55c53e987e5f91cba"
+checksum = "5fd55a5ba1179988837d24ab4c7cc8ed6efdeff578ede0416b4225a5fca35bd0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1720,10 +1720,12 @@ name = "eva-filemgr"
 version = "4.0.2"
 dependencies = [
  "async-channel",
+ "async-recursion",
  "async-trait",
  "bmart 0.2.6",
  "eva-common",
  "eva-sdk",
+ "glob-match",
  "hex 0.4.3",
  "jemallocator",
  "lazy_static",
@@ -1879,15 +1881,17 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b16c31ca784ccade8ab547b3d8a9177e5885b8053fcabe6932b09bf950e07e6"
+checksum = "e4aa20e94c1900f7a5a50af499ccee3a8ee8fb39d388b5a050fc1fe119f4d509"
 dependencies = [
  "async-channel",
+ "async-recursion",
  "bmart 0.2.6",
  "busrt",
  "eva-common",
  "eva-sdk-derive",
+ "glob-match",
  "hyper",
  "hyper-tls",
  "lazy_static",
@@ -2399,6 +2403,12 @@ name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
+
+[[package]]
+name = "glob-match"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9985c9503b412198aa4197559e9a318524ebc4519c229bfa05a535828c950b9d"
 
 [[package]]
 name = "globset"
