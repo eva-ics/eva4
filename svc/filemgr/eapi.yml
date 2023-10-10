@@ -1,3 +1,22 @@
+list:
+  des: List files/directories in runtime directory
+  par:
+    - nam: path
+      typ: String
+      des: Relative path
+      req: false
+    - nam: masks
+      typ: String/Vec<String>
+      des: file masks
+      req: false
+    - nam: kind
+      typ: String
+      des: file, dir or any
+      req: false
+    - nam: recursive
+      typ: bool
+      des: recursive listing
+      req: false
 file.get:
   des: Gets a file from runtime directory
   par:
