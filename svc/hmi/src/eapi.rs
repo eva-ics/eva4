@@ -8,7 +8,6 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullRemoteItemState;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 err_logger!();
 
@@ -105,21 +104,11 @@ impl RpcHandlers for Handlers {
                 }
             }
             "session.list" => {
-                #[derive(Serialize, bmart::tools::Sorting)]
-                #[sorting(id = "expires_in")]
-                struct TokenInfo<'a> {
-                    id: String,
-                    mode: &'a str,
-                    user: &'a str,
-                    source: Option<String>,
-                    #[serde(serialize_with = "eva_common::tools::serialize_duration_as_u64")]
-                    expires_in: Duration,
-                }
                 if payload.is_empty() {
-                    let tokens = crate::aaa::get_tokens().await?;
-                    let mut token_info: Vec<TokenInfo> = tokens
+                    let tokens = aaa::get_tokens().await?;
+                    let mut token_info: Vec<aaa::TokenInfo> = tokens
                         .iter()
-                        .map(|t| TokenInfo {
+                        .map(|t| aaa::TokenInfo {
                             id: t.id().to_string(),
                             mode: t.mode_as_str(),
                             user: t.user(),
@@ -127,7 +116,7 @@ impl RpcHandlers for Handlers {
                             expires_in: t.expires_in().unwrap_or_default(),
                         })
                         .collect();
-                    token_info.sort();
+                    token_info.sort_by(|a, b| b.expires_in.partial_cmp(&a.expires_in).unwrap());
                     Ok(Some(pack(&token_info)?))
                 } else {
                     Err(RpcError::params(None))

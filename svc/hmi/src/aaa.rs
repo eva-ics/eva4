@@ -50,6 +50,15 @@ lazy_static! {
 pub fn auth_svcs() -> &'static [String] {
     AUTH_SVCS.get().unwrap()
 }
+#[derive(Serialize)]
+pub struct TokenInfo<'a> {
+    pub id: String,
+    pub mode: &'a str,
+    pub user: &'a str,
+    pub source: Option<String>,
+    #[serde(serialize_with = "eva_common::tools::serialize_duration_as_u64")]
+    pub expires_in: Duration,
+}
 
 #[inline]
 pub fn set_auth_svcs(svcs: Vec<String>) -> EResult<()> {

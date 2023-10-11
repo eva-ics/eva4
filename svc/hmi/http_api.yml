@@ -719,6 +719,30 @@ lvar.decr:
         "jsonrpc": "2.0",
         "result": 0
     }
+session.list:
+  des: Lists active sessions of logged in users (requres admin ACL)
+  par:
+  ret:
+  exm: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+          {
+              "expires_in": 57,
+              "id": "token:unFdcur2dGUcfA4XgBaEIVqVBFjEi83U",
+              "mode": "normal",
+              "source": "127.0.0.1",
+              "user": "admin"
+          },
+          {
+              "expires_in": 59,
+              "id": "token:OziFA5Pzb0IndXHmVVy13Sh24BxFW73E",
+              "mode": "normal",
+              "source": "127.0.0.1",
+              "user": "admin"
+          }]
+    }
 session.list_neighbors:
   des: List all logged in users (if allowed)
   ret: List of logged in users

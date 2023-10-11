@@ -464,6 +464,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "lvar.toggle" | "toggle" => method_lvar_toggle(params, &mut aci).await,
                         "lvar.incr" | "increment" => method_lvar_incr(params, &mut aci).await,
                         "lvar.decr" | "decrement" => method_lvar_decr(params, &mut aci).await,
+                        "session.list" => method_session_list(params, &mut aci).await,
                         "session.list_neighbors" | "get_neighbor_clients" => {
                             method_session_list_neighbors(params, &mut aci).await
                         }
@@ -512,6 +513,25 @@ impl<'a> From<&'a Token> for TokenInfo<'a> {
             u: token.user(),
         }
     }
+}
+
+async fn method_session_list(params: Value, aci: &mut ACI) -> EResult<Value> {
+    aci.log_request(log::Level::Debug).await.log_ef();
+    aci.acl().require_admin()?;
+    ParamsEmpty::deserialize(params)?;
+    let tokens = aaa::get_tokens().await?;
+    let mut token_info: Vec<aaa::TokenInfo> = tokens
+        .iter()
+        .map(|t| aaa::TokenInfo {
+            id: t.id().to_string(),
+            mode: t.mode_as_str(),
+            user: t.user(),
+            source: t.ip().map(ToString::to_string),
+            expires_in: t.expires_in().unwrap_or_default(),
+        })
+        .collect();
+    token_info.sort_by(|a, b| b.expires_in.partial_cmp(&a.expires_in).unwrap());
+    to_value(token_info).map_err(Into::into)
 }
 
 async fn method_session_list_neighbors(params: Value, aci: &mut ACI) -> EResult<Value> {
