@@ -24,7 +24,7 @@ lazy_static = "1.4.0"
 hyper = { version = "0.14.18", features = ["server", "http1", "http2"] }
 eva-rjrpc = { version = "0.3.1", features = ["http"] }
 bmart = { version = "0.1.14" }
-sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
+sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite", "any", "mysql", "postgres" ] }
 futures = "0.3.21"
 chrono = "0.4.19"
 serde_yaml = "0.8.26"
