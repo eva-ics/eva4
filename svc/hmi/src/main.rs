@@ -74,6 +74,7 @@ lazy_static! {
     static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
     static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
+    static ref SVC_ID: OnceCell<String> = <_>::default();
 }
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
@@ -187,6 +188,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     SYSTEM_NAME
         .set(initial.system_name().to_owned())
         .map_err(|_| Error::core("Unable to set SYSTEM_NAME"))?;
+    SVC_ID
+        .set(initial.id().to_owned())
+        .map_err(|_| Error::core("Unable to set SVC_ID"))?;
     HTTP_CLIENT
         .set(eva_sdk::http::Client::new(
             (workers * 100).try_into().map_err(Error::failed)?,
