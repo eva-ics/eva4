@@ -544,6 +544,8 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
         acl: Option<&'a Acl>,
         #[serde(skip_deserializing, skip_serializing_if = "Option::is_none")]
         hmi_svc_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        system_arch: Option<String>,
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     ParamsEmpty::deserialize(params)?;
@@ -564,6 +566,8 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
     if aci.acl().check_admin() {
         info.hmi_svc_id
             .replace(crate::SVC_ID.get().unwrap().clone());
+    } else {
+        info.system_arch.take();
     }
     to_value(info).map_err(Into::into)
 }

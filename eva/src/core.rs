@@ -220,6 +220,8 @@ pub struct Core {
     #[serde(skip)]
     dir_eva: String,
     #[serde(skip_deserializing)]
+    system_arch: Option<&'static str>,
+    #[serde(skip_deserializing)]
     mode: Mode,
     #[serde(skip_serializing)]
     inventory_db: Option<String>,
@@ -398,6 +400,7 @@ impl Core {
             get_hostname()?
         };
         core.action_manager.set_keep_for(core.keep_action_history);
+        core.system_arch.replace(crate::ARCH_SFX);
         Ok(core)
     }
     pub fn new_spoint(
@@ -413,6 +416,7 @@ impl Core {
             eapi_version: crate::eapi::EAPI_VERSION,
             boot_id: 0,
             dir_eva: <_>::default(),
+            system_arch: Some(crate::ARCH_SFX),
             mode: Mode::SPoint,
             inventory_db: None,
             system_name: system_name.to_owned(),
