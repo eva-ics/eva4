@@ -530,6 +530,7 @@ async fn collect_periodic(
 #[allow(clippy::cast_possible_truncation)]
 #[inline]
 fn date_str(t: f64) -> String {
+    #[allow(deprecated)]
     let dt_utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(t.round() as i64, 0), Utc);
     let dt: DateTime<Local> = DateTime::from(dt_utc);
     dt.to_rfc3339_opts(SecondsFormat::Secs, false)

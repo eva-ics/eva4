@@ -49,6 +49,7 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
         while let Some(row) = rows.try_next().await? {
             let t: i64 = row.try_get("t")?;
             let code: i64 = row.try_get("code")?;
+            #[allow(deprecated)]
             let dt_utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(t, 0), Utc);
             let dt: DateTime<Local> = DateTime::from(dt_utc);
             let params: Option<String> = row.try_get("params")?;
