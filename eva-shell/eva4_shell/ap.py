@@ -11,7 +11,7 @@ from neotermcolor import colored
 neotermcolor.readline_always_safe = True
 
 from .sharedobj import common, current_command
-from .tools import print_tb, err
+from .tools import print_tb, err, is_local_shell
 from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile
 from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
@@ -1317,14 +1317,19 @@ def init_ap():
     append_log_cli(sp)
     append_node_cli(sp)
     append_spoint_cli(sp)
-    append_registry_cli(sp)
-    append_server_cli(sp)
+    if is_local_shell():
+        append_registry_cli(sp)
+    if is_local_shell():
+        append_server_cli(sp)
     append_user_cli(sp)
-    append_venv_cli(sp)
+    if is_local_shell():
+        append_venv_cli(sp)
     append_cloud_cli(sp)
     append_generator_cli(sp)
-    append_system_cli(sp)
-    append_mirror_cli(sp)
+    if is_local_shell():
+        append_system_cli(sp)
+    if is_local_shell():
+        append_mirror_cli(sp)
     append_kiosk_cli(sp)
 
     sp.add_parser('save', help='save scheduled states (if instant-save is off)')
@@ -1342,6 +1347,12 @@ def init_ap():
         metavar='CONFIG',
         help='config key to edit',
     ).completer = ComplEdit()
+    p.add_argument('-a',
+                   '--filemgr-svc',
+                   default='eva.filemgr.main',
+                   help='for files: use the specified file manager service'
+                  ).completer = ComplSvc('filemgr')
+
     p.add_argument(
         '--offline',
         action='store_true',
@@ -1349,32 +1360,35 @@ def init_ap():
         'for keys: connect directly to the registry db when the node is offline'
     )
 
-    p = sp.add_parser('update', help='update the node')
-    p.add_argument('--download-timeout',
-                   type=float,
-                   help='update file download timeout (default: timeout*30)')
-    p.add_argument('-u',
-                   '--repository-url',
-                   metavar='URL',
-                   help='repository url')
-    p.add_argument('--YES',
-                   dest='yes',
-                   action='store_true',
-                   help='update without a confirmation')
-    p.add_argument('-i',
-                   '--info-only',
-                   action='store_true',
-                   help='get update info only')
-    p.add_argument('--test',
-                   action='store_true',
-                   help='install a build marked as test')
+    if is_local_shell():
+        p = sp.add_parser('update', help='update the node')
+        p.add_argument(
+            '--download-timeout',
+            type=float,
+            help='update file download timeout (default: timeout*30)')
+        p.add_argument('-u',
+                       '--repository-url',
+                       metavar='URL',
+                       help='repository url')
+        p.add_argument('--YES',
+                       dest='yes',
+                       action='store_true',
+                       help='update without a confirmation')
+        p.add_argument('-i',
+                       '--info-only',
+                       action='store_true',
+                       help='get update info only')
+        p.add_argument('--test',
+                       action='store_true',
+                       help='install a build marked as test')
 
     sp.add_parser('version', help='core version')
 
-    for c in ('cls', 'date', 'sh', 'top', 'uptime', 'w'):
-        ap.interactive_global_commands[c] = sys_cmd
+    if is_local_shell():
+        for c in ('cls', 'date', 'sh', 'top', 'uptime', 'w'):
+            ap.interactive_global_commands[c] = sys_cmd
 
-    ap.interactive_history_file = '~/.eva4_history'
+    ap.interactive_history_file = os.path.expanduser('~/.eva4_history')
     readline.set_history_length(300)
 
     ap.run = dispatcher

@@ -133,16 +133,39 @@ class ComplEdit:
     ]
 
     def __call__(self, prefix, **kwargs):
+        filemgr_svc = kwargs['parsed_args'].filemgr_svc
         yield 'xc/'
         if not prefix.startswith('x'):
             for c in self.configs:
                 yield c
         elif prefix.startswith('xc/'):
-            import glob
-            dir_eva = common.dir_eva
-            for f in glob.glob(f'{dir_eva}/{prefix}/**/*') + glob.glob(
-                    f'{dir_eva}/{prefix}*'):
-                path = f[len(dir_eva) + 1:]
-                if os.path.isdir(f):
+            p = prefix.rsplit('/', maxsplit=1)
+            pfx_dir = p[0]
+            try:
+                pmask = f'{p[1]}*'
+            except:
+                pmask = None
+            try:
+                f1 = call_rpc('list', {
+                    'path': prefix,
+                    'recursive': True
+                },
+                              target=filemgr_svc)
+            except:
+                f1 = []
+            try:
+                if pmask:
+                    f2 = call_rpc('list', {
+                        'path': pfx_dir,
+                        'masks': [pmask]
+                    },
+                                  target=filemgr_svc)
+                else:
+                    raise Exception
+            except:
+                f2 = []
+            for f in f1 + f2:
+                path = f'{pfx_dir}/{f["path"]}'
+                if f['kind'] == 'dir':
                     path += '/'
                 yield path

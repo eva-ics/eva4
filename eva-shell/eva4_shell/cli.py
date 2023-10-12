@@ -10,10 +10,11 @@ from evaics.sdk import pack
 from neotermcolor import colored
 from rapidtables import format_table, FORMAT_GENERATOR, FORMAT_GENERATOR_COLS
 
-from .tools import print_result, ok, edit_config, read_file, write_file
+from .tools import print_result, ok
+from .tools import edit_config, edit_remote_file, read_file, write_file
 from .tools import print_action_result, format_value, prepare_time, err, warn
 from .tools import get_node_svc_info, edit_file, get_term_size, exec_cmd, xc
-from .tools import get_my_ip
+from .tools import get_my_ip, check_local_shell
 from .client import call_rpc, DEFAULT_REPL_SERVICE, connect
 from .sharedobj import common, current_command
 
@@ -21,6 +22,7 @@ from . import DEFAULT_REPOSITORY_URL
 
 
 def eva_control_c(c, pfx=''):
+    check_local_shell()
     cmd = f'{pfx}{common.dir_eva}/sbin/eva-control {c}'
     os.system(cmd)
 
@@ -174,6 +176,7 @@ class CLI:
                     print()
 
     def registry_manage(self, yedb_args=None):
+        check_local_shell()
         cmd = f'{common.dir_eva}/venv/bin/yedb'
         args = '' if yedb_args is None else ' ' + yedb_args
         if not os.path.exists(cmd):
@@ -198,13 +201,37 @@ class CLI:
                 os.system(f'env YEDB_PS=registry "{cmd}"'
                           f' "{common.dir_eva}/runtime/registry"{args}')
 
-    def edit(self, fname, offline=False):
+    def edit(self, fname, filemgr_svc, offline=False):
         if fname.startswith('config'):
             self.registry_manage(yedb_args=f'edit eva/"{fname}"')
             if fname != 'config/python-venv':
                 print('restart or reload the node server to apply changes')
         else:
-            edit_file(fname)
+
+            def deploy(content):
+                call_rpc('file.put',
+                         dict(i=fname, x=0o0755, c=content),
+                         target=filemgr_svc)
+                print(f'file re-deployed: {fname}')
+                print()
+
+            initial = False
+
+            try:
+                content = call_rpc('file.get',
+                                   dict(i=fname, mode='text'),
+                                   target=filemgr_svc)['text']
+            except busrt.rpc.RpcException as e:
+                if e.rpc_error_code == -32001:
+                    initial = True
+                    content = ''
+                else:
+                    raise
+            edit_remote_file(content,
+                             fname,
+                             f'file|{fname}',
+                             deploy_fn=partial(deploy),
+                             initial=initial)
 
     def log_purge(self):
         call_rpc('log.purge')

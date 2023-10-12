@@ -13,6 +13,15 @@ from collections import OrderedDict
 from .sharedobj import current_command, common
 
 
+def check_local_shell():
+    if not common.dir_eva:
+        raise RuntimeError('not a local node shell')
+
+
+def is_local_shell():
+    return True
+
+
 def ok():
     if current_command.json:
         print('null')
@@ -64,6 +73,7 @@ def can_colorize():
 
 
 def set_file_lock(name):
+    check_local_shell()
     lock_file = f'{common.dir_eva}/var/{name}.lock'
     if os.path.exists(lock_file):
         raise RuntimeError
@@ -73,6 +83,7 @@ def set_file_lock(name):
 
 
 def remove_file_lock(name):
+    check_local_shell()
     lock_file = f'{common.dir_eva}/var/{name}.lock'
     try:
         os.unlink(lock_file)
@@ -163,6 +174,7 @@ def xc(cmd, ps='working', verbose=False):
 
 
 def exec_cmd(cmd, args, search_in='bin', search_system=True):
+    check_local_shell()
     c = f'{common.dir_eva}/{search_in}/{cmd}'
     if not os.path.isfile(c) and search_system:
         import shutil
@@ -324,6 +336,7 @@ def print_result(data, need_header=True, name_value=False, cols=None):
 
 def edit_file(fname):
     from pathlib import Path
+    check_local_shell()
     suffix = Path(fname).suffix
     fname = f'{common.dir_eva}/{fname}'
     editor = os.getenv('EDITOR', 'vi')
@@ -375,6 +388,42 @@ def edit_config(value, ss, deploy_fn, initial=False):
                 break
             try:
                 data = yaml.safe_load(tmpfile.read_text())
+            except:
+                print_tb(force=True, delay=True)
+                continue
+            if data == value and not initial:
+                break
+            else:
+                try:
+                    deploy_fn(data)
+                    break
+                except Exception as e:
+                    err(e, delay=True)
+                    continue
+    finally:
+        try:
+            tmpfile.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def edit_remote_file(value, orig_fname, ss, deploy_fn, initial=False):
+    import tempfile
+    from hashlib import sha256
+    from pathlib import Path
+    editor = os.getenv('EDITOR', 'vi')
+    fname = sha256(ss.encode()).hexdigest()
+    suffix = Path(orig_fname).suffix
+    tmpfile = Path(f'{tempfile.gettempdir()}/{fname}.tmp{suffix}')
+    tmpfile.write_text(value)
+    try:
+        while True:
+            code = os.system(f'{editor} {tmpfile}')
+            if code:
+                err(f'editor exited with code {code}')
+                break
+            try:
+                data = tmpfile.read_text()
             except:
                 print_tb(force=True, delay=True)
                 continue
@@ -448,9 +497,20 @@ def get_term_size():
 
 
 def get_node_svc_info():
-    import json
-    with os.popen(f'{common.dir_eva}/svc/eva-node --mode info') as p:
-        return json.loads(p.read())
+    if is_local_shell():
+        import json
+        with os.popen(f'{common.dir_eva}/svc/eva-node --mode info') as p:
+            return json.loads(p.read())
+    else:
+        from .client import call_rpc
+        result = call_rpc('test')
+        return {
+            'name': result['product_name'],
+            'code': result['product_code'],
+            'build': result['build'],
+            'version': result['version'],
+            'arch': result.get('system_arch', 'unknown'),
+        }
 
 
 def get_arch():
