@@ -443,11 +443,13 @@ impl RpcHandlers for Handlers {
             "list" => {
                 #[derive(Deserialize, Debug)]
                 struct Params {
+                    #[serde(alias = "i")]
                     path: Option<String>,
+                    #[serde(alias = "m")]
                     masks: Option<ValueOrList<String>>,
-                    #[serde(default)]
+                    #[serde(default, alias = "p")]
                     kind: sdkfs::Kind,
-                    #[serde(default)]
+                    #[serde(default, alias = "r")]
                     recursive: bool,
                 }
                 let params = if payload.is_empty() {
