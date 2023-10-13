@@ -1,4 +1,3 @@
-import requests
 import msgpack
 
 from functools import partial
@@ -33,6 +32,7 @@ class Client:
         Args:
             url: HMI URL (proto://host:port)
         """
+        import requests
         self.url = url
         self.user = user
         self.password = password
@@ -65,6 +65,7 @@ class Client:
         """
         Blank method, tests HTTP connection only
         """
+        import requests
         requests.get(self.url)
 
     def api_key(self, api_key: str):
