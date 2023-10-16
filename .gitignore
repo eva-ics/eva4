@@ -28,3 +28,4 @@ var/mirror
 .keys
 _build
 tests
+vendored-apps
