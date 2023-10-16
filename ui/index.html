@@ -84,9 +84,9 @@ a:visited { color: #29AAE1 }
       const vendored_apps = [
         {id:"sdash",name:"System dashboard"},
       ];
-      let va_el = document.getElementById("va");
+      const va_el = document.getElementById("va");
       vendored_apps.forEach((v) => {
-        let el = document.createElement("div");
+        const el = document.createElement("div");
         el.classList.add("vendored-app");
         va_el.appendChild(el);
         fetch("./vendored-apps/" + v.id + "/icon.svg")
