@@ -5,6 +5,13 @@ RUST_VER_REQUIRED="1.72.0"
 
 export RUST_VER_REQUIRED
 
+export NVM_DIR="$HOME/.nvm"
+
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm install v20.7.0
+nvm use v20.7.0
+npm config set fund false
+
 [ -d /build/eva4 ] && export BUILD_DIR=/build
 
 ./dev/make-vendored-apps || exit 1
