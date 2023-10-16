@@ -546,6 +546,8 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
         hmi_svc_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         system_arch: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        num_cpus: Option<usize>,
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     ParamsEmpty::deserialize(params)?;
@@ -568,6 +570,7 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
             .replace(crate::SVC_ID.get().unwrap().clone());
     } else {
         info.system_arch.take();
+        info.num_cpus.take();
     }
     to_value(info).map_err(Into::into)
 }

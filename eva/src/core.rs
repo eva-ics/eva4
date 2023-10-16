@@ -290,6 +290,8 @@ pub struct Core {
     node_checker_fut: std::sync::Mutex<Option<JoinHandle<()>>>,
     #[serde(skip)]
     state_processor_lock: Arc<tokio::sync::Mutex<()>>,
+    #[serde(skip_deserializing, default = "num_cpus::get")]
+    num_cpus: usize,
 }
 
 /// # Panics
@@ -443,6 +445,7 @@ impl Core {
             action_manager: <_>::default(),
             service_manager: <_>::default(),
             state_processor_lock: <_>::default(),
+            num_cpus: num_cpus::get(),
         };
         core.update_paths(dir_eva, pid_file);
         core
