@@ -66,6 +66,7 @@ const DESCRIPTION: &str = "Default HMI service";
 lazy_static! {
     static ref UI_PATH: OnceCell<Option<String>> = <_>::default();
     static ref PVT_PATH: OnceCell<Option<String>> = <_>::default();
+    static ref VENDORED_APPS_PATH: OnceCell<String> = <_>::default();
     static ref REG: OnceCell<Registry> = <_>::default();
     static ref MIME_TYPES: OnceCell<HashMap<String, String>> = <_>::default();
     static ref SYSTEM_NAME: OnceCell<String> = <_>::default();
@@ -173,6 +174,8 @@ struct Config {
     default_history_db_svc: String,
     #[serde(default)]
     development: bool,
+    #[serde(default = "eva_common::tools::default_true")]
+    vendored_apps: bool,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -215,6 +218,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
             ui_path
         }))
         .map_err(|_| Error::core("Unable to set UI_PATH"))?;
+    if config.vendored_apps {
+        let vendored_apps_path =
+            eva_common::tools::format_path(eva_dir, Some("vendored-apps"), None);
+        VENDORED_APPS_PATH
+            .set(vendored_apps_path)
+            .map_err(|_| Error::core("Unable to set VENDORED_APPS_PATH"))?;
+    }
     I18N.set(i18n)
         .map_err(|_| Error::core("Unable to set I18N"))?;
     DEFAULT_HISTORY_DB_SVC

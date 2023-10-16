@@ -32,6 +32,8 @@ config:
   buf_size: 16384
   # enable development mode (CORS headers etc.)
   #development: true
+  # uncomment to disable vendored apps
+  #vendored_apps: false
 user: eva
 timeout:
   default: 10

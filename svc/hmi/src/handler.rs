@@ -787,6 +787,23 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         .into_owned()
                         .collect()
                 });
+                if let Some(va_file) = uri.strip_prefix("/ui/vendored-apps/") {
+                    if let Some(va_path) = crate::VENDORED_APPS_PATH.get() {
+                        return serve::file(
+                            uri,
+                            va_path,
+                            va_file,
+                            params.as_ref(),
+                            true,
+                            &parts.headers,
+                            ip,
+                            serve::TplDirKind::No,
+                        )
+                        .await
+                        .log_err()
+                        .into_hyper_response();
+                    }
+                }
                 if let Some(ui_file) = uri.strip_prefix("/ui/") {
                     if let Some(ui_path) = crate::UI_PATH.get().unwrap() {
                         return serve::file(
