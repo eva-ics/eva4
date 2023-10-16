@@ -263,6 +263,8 @@ cp -rvf "../yml2mp/${CARGO_TARGET_DIR}/${TARGET}/release/yml2mp" bin/ || exit 1
 cp -rvf "../busrt/${CARGO_TARGET_DIR}/${TARGET}/release/busrt" sbin/bus || exit 1
 [ "$STRIP" ] && ${STRIP} sbin/bus || exit 1
 
+cp -rvf "${BUILD_DIR}/vendored-apps" . || exit 1
+
 cd ..
 
 rm -f "${DISTRO}"

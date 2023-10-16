@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+VENDORED_APPS="sdash"
+
+[ "$BUILD_DIR" ] && cd "${BUILD_DIR}"
+
+rm -rf vendored-apps vendored-apps-build
+mkdir vendored-apps vendored-apps-build
+for app in ${VENDORED_APPS}; do
+  echo "Building vendored app $app"
+  cd vendored-apps-build
+  git clone https://github.com/eva-ics/vendored-app-${app}
+  cd vendored-app-${app}
+  npm install
+  npm run build
+  cd ../..
+  mkdir vendored-apps/${app}
+  cp -rfv vendored-apps-build/vendored-app-${app}/dist/* vendored-apps/${app}/
+  echo "{}" > vendored-apps/${app}/config.json
+done
+rm -rf vendored-apps-build

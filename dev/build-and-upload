@@ -7,6 +7,8 @@ export RUST_VER_REQUIRED
 
 [ -d /build/eva4 ] && export BUILD_DIR=/build
 
+./dev/make-vendored-apps || exit 1
+
 if [ ! "$UPLOAD_ONLY" ]; then
   for arch in ${ARCHS}; do
     MASTER=$MASTER ./dev/make-dist "$arch" || exit 1
