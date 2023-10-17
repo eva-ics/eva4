@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-10-17 build 2023101701: Vendored app: node system dashboard
 * 2023-10-12 build 2023101201: TimescaleDB dedicated svc, filemgr "list" EAPI method
 * 2023-10-07 build 2023100701: ADS improvements: array fixes, strings, wstrings
 * 2023-09-28 build 2023092801: PostgreSQL optimizations in SQL databases svc
