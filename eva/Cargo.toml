@@ -59,6 +59,7 @@ eva-robots = "0.3.0"
 parking_lot = { version = "0.12.1", features = ["serde"] }
 openssl = "0.10.42"
 sysinfo = "0.29.2"
+num_cpus = "1.16.0"
 
 [features]
 std-alloc = []

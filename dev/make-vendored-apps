@@ -6,6 +6,7 @@ VENDORED_APPS="sdash"
 
 rm -rf vendored-apps vendored-apps-build
 mkdir vendored-apps vendored-apps-build
+wget https://raw.githubusercontent.com/eva-ics/eva4/main/misc/va_index.html -O vendored-apps/index.html
 for app in ${VENDORED_APPS}; do
   echo "Building vendored app $app"
   cd vendored-apps-build

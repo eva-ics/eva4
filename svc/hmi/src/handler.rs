@@ -749,6 +749,23 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         .header(hyper::header::LOCATION, "/ui/")
                         .body(Body::from(""));
                 }
+                if (uri == "/va" || uri == "/va/") && crate::VENDORED_APPS_PATH.get().is_some() {
+                    return Response::builder()
+                        .status(StatusCode::MOVED_PERMANENTLY)
+                        .header(hyper::header::LOCATION, "/ui/vendored-apps/")
+                        .body(Body::from(""));
+                }
+                if let Some(vendored_app) = uri.strip_prefix("/va/") {
+                    if crate::VENDORED_APPS_PATH.get().is_some() {
+                        return Response::builder()
+                            .status(StatusCode::MOVED_PERMANENTLY)
+                            .header(
+                                hyper::header::LOCATION,
+                                format!("/ui/vendored-apps/{}", vendored_app),
+                            )
+                            .body(Body::from(""));
+                    }
+                }
                 if uri == "/favicon.ico" {
                     if let Some(ui_path) = crate::UI_PATH.get().unwrap() {
                         return serve::file(
