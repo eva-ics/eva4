@@ -1,11 +1,25 @@
 class Client:
+    """
+    Cloud client for EVA ICS
+    """
 
     def __init__(self, client):
+        """
+        Create a new Cloud client instance
+
+        Args:
+            client: HTTP or BUS/RT client
+        """
         self.client = client
         self.node_map = None
         self.system_name = None
 
     def prepare(self):
+        """
+        Prepare the client
+
+        Load node map from the local core, required to be called at least once
+        """
         self.system_name = self.client.test().system_name
         self.node_map = {
             n['name']: n['svc']
