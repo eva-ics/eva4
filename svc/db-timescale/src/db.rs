@@ -56,9 +56,6 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     )
     .execute(&pool)
     .await?;
-    sqlx::query("CREATE INDEX IF NOT EXISTS state_history_events_t ON state_history_events(t)")
-        .execute(&pool)
-        .await?;
     sqlx::query(
         r#"CREATE OR REPLACE FUNCTION insert_state_history_events(
 t TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
