@@ -36,7 +36,7 @@ class Client:
         """
         if self.system_name is None:
             raise RuntimeError('client not prepared')
-        if node is None or node == '.local':
+        if node is None or node == '.local' or node == self.system_name:
             return self.client.bus_call(method, params, target)
         else:
             try:
