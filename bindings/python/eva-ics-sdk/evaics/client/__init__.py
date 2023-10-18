@@ -1,5 +1,6 @@
 from .http import Client as HttpClient
 from .bus import Client as BusClient
+from .cloud import Client as CloudClient
 
 
 class ServerInfo:
