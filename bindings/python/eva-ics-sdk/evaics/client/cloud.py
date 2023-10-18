@@ -41,8 +41,11 @@ class Client:
             method: API method
 
         Optional:
+
             params: API method parameters (dict)
+
             target: target service (default: eva.core)
+
             node: target node (.local can be used for the local)
 
         Returns:

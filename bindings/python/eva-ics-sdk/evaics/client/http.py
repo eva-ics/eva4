@@ -118,7 +118,9 @@ class Client:
             method: API method
 
         Optional:
+
             params: API method parameters (dict)
+
             target: target service (default: eva.core)
 
         Returns:
@@ -134,6 +136,7 @@ class Client:
             method: API method
 
         Optional:
+
             params: API method parameters (dict)
 
         Returns:
