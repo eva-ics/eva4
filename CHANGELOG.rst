@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-10-19 build 2023101902: File writer svc custom cols
 * 2023-10-19 build 2023101901: TimescaleDB hyper-table automatic setup
 * 2023-10-18 build 2023101802: TimescaleDB optimization, Python SDK 0.2.18
 * 2023-10-17 build 2023101702: Vendored app: node system dashboard
