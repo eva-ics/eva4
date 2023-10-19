@@ -116,4 +116,8 @@ source.apply:
       typ: Vec<String>
       des: target item OIDs
       req: false
-  ret:
+  ret: Apply job ID
+  exm: |
+    {
+        "job_id": "e36c624b-bac0-4a6b-b520-8dc5dedc726d"
+    }

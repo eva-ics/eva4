@@ -1393,7 +1393,7 @@ dependencies = [
  "once_cell",
  "serde",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
  "zerocopy 0.6.1",
 ]
 
@@ -1478,7 +1478,7 @@ dependencies = [
  "sqlx",
  "submap",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
  "yedb",
 ]
 
@@ -1501,7 +1501,7 @@ dependencies = [
  "serde",
  "tokio",
  "utf16string",
- "uuid 1.4.0",
+ "uuid 1.5.0",
  "zerocopy 0.6.1",
 ]
 
@@ -1523,7 +1523,7 @@ dependencies = [
  "plctag",
  "serde",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1546,7 +1546,7 @@ dependencies = [
  "serde",
  "submap",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1570,7 +1570,7 @@ dependencies = [
  "simple-pool",
  "tokio",
  "tokio-serial",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1590,7 +1590,7 @@ dependencies = [
  "rplc_opcua",
  "serde",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1646,7 +1646,7 @@ dependencies = [
  "serde",
  "tagmap",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1667,7 +1667,7 @@ dependencies = [
  "owfs",
  "serde",
  "tokio",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1816,7 +1816,7 @@ dependencies = [
  "tokio",
  "url 2.2.2",
  "urlencoding",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1859,7 +1859,7 @@ dependencies = [
  "syslog",
  "tokio",
  "triggered",
- "uuid 1.4.0",
+ "uuid 1.5.0",
  "yedb",
 ]
 
@@ -1885,7 +1885,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "triggered",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1914,7 +1914,7 @@ checksum = "f59554da43abd52639f278212811c2e652e506923166b736c2ea0369263268b3"
 dependencies = [
  "eva-common",
  "serde",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -1941,7 +1941,7 @@ dependencies = [
  "tokio",
  "tokio-fd",
  "ttl_cache",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -2036,6 +2036,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "tokio",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -3937,7 +3938,7 @@ dependencies = [
  "serde",
  "tokio",
  "triggered",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -4245,7 +4246,7 @@ dependencies = [
  "rkyv_derive",
  "seahash",
  "tinyvec",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -4330,7 +4331,7 @@ dependencies = [
  "tokio",
  "tokio-util 0.6.10",
  "url 1.7.2",
- "uuid 1.4.0",
+ "uuid 1.5.0",
 ]
 
 [[package]]
@@ -5622,9 +5623,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
+checksum = "88ad59a7560b41a70d191093a945f0b87bc1deeda46fb237479708a1d6b6cdfc"
 dependencies = [
  "getrandom 0.2.6",
  "serde",

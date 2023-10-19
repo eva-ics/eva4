@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -104,14 +105,18 @@ impl RpcHandlers for Handlers {
                         #[serde(default)]
                         targets: Vec<OID>,
                     }
+                    #[derive(Serialize)]
+                    struct ApplyResult {
+                        job_id: Uuid,
+                    }
                     let p: Payload = unpack(payload)?;
                     let t_start = p.t_start.as_timestamp()?;
                     let t_end = p.t_end.map_or_else(
                         || Ok(eva_common::time::now_ns_float()),
                         |v| v.as_timestamp(),
                     )?;
-                    p.source.apply(t_start, t_end, p.targets).await?;
-                    Ok(None)
+                    let job_id = p.source.apply(t_start, t_end, p.targets).await?;
+                    Ok(Some(pack(&ApplyResult { job_id })?))
                 }
             }
             "source.deploy" => {
@@ -329,7 +334,7 @@ impl Source {
             Ok(data)
         }
     }
-    async fn apply(&self, t_start: f64, t_end: f64, targets: Vec<OID>) -> EResult<()> {
+    async fn apply(&self, t_start: f64, t_end: f64, targets: Vec<OID>) -> EResult<Uuid> {
         let gen = self.kind.to_generator();
         gen.apply(
             self.params.clone(),

@@ -1634,13 +1634,22 @@ class CLI:
                     except:
                         pass
                 p_params[name] = value
-        call_rpc('source.apply',
-                 dict(source=payload,
-                      t_start=start,
-                      t_end=end,
-                      targets=[] if target is None else target),
-                 target=generator_svc)
-        ok()
+        result = call_rpc('source.apply',
+                          dict(source=payload,
+                               t_start=start,
+                               t_end=end,
+                               targets=[] if target is None else target),
+                          target=generator_svc)
+        if result is None:
+            ok()
+        else:
+            import uuid
+            result['job_id'] = str(uuid.UUID(bytes=result['job_id']))
+            if current_command.json:
+                print_result(result)
+            else:
+                print('apply job started:', result['job_id'])
+                print()
 
     def generator_source_export(self, i, generator_svc, output=None):
         c = 0

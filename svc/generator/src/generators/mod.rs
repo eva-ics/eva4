@@ -4,6 +4,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 pub const DEFAULT_SAMPLING: u32 = 1;
 
@@ -38,7 +39,7 @@ pub trait GeneratorSource: Send + Sync {
         _t_start: f64,
         _t_end: f64,
         _targets: Vec<OID>,
-    ) -> EResult<()> {
+    ) -> EResult<Uuid> {
         Err(Error::unsupported(
             "the generator does not support applying",
         ))

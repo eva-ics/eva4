@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 err_logger!();
 
@@ -89,13 +90,15 @@ impl GeneratorSource for GenSource {
         t_start: f64,
         t_end: f64,
         targets: Vec<OID>,
-    ) -> EResult<()> {
+    ) -> EResult<Uuid> {
         let params = Params::deserialize(params)?;
         let sampling = f64::from(sampling);
         let interval = 1.0 / sampling;
         let mut c = params.min;
         let mut now = t_start;
+        let job_id = Uuid::new_v4();
         tokio::spawn(async move {
+            info!("apply job started: {}", job_id);
             while now <= t_end {
                 let value = Value::F64(c);
                 notify_archive(&targets, now, value).await.log_ef();
@@ -105,7 +108,8 @@ impl GeneratorSource for GenSource {
                 }
                 now += interval;
             }
+            info!("apply job completed: {}", job_id);
         });
-        Ok(())
+        Ok(job_id)
     }
 }
