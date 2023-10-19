@@ -371,7 +371,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
         None
     };
     svc_start_signal_handlers();
-    eva_common::cleaner!("records", db::cleanup_events, CLEANUP_INTERVAL, keep);
+    if let Some(keep) = keep {
+        eva_common::cleaner!("records", db::cleanup_events, CLEANUP_INTERVAL, keep);
+    }
     if config.cleanup_oids {
         eva_common::cleaner!("oids", db::cleanup_oids, OID_CLEANUP_INTERVAL);
     }

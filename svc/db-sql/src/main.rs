@@ -389,13 +389,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
     };
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
-    eva_common::cleaner!(
-        "records",
-        db::cleanup,
-        CLEANUP_INTERVAL,
-        keep,
-        simple_cleaning
-    );
+    if let Some(keep) = keep {
+        eva_common::cleaner!(
+            "records",
+            db::cleanup,
+            CLEANUP_INTERVAL,
+            keep,
+            simple_cleaning
+        );
+    }
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;

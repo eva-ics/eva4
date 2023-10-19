@@ -35,7 +35,7 @@ pub struct Config {
     pub ignore_events: bool,
     #[serde(default)]
     pub simple_cleaning: bool,
-    pub keep: u64,
+    pub keep: Option<u64>,
     pub oids: OIDMaskList,
     #[serde(
         default,

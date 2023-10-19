@@ -26,7 +26,7 @@ pub struct Config {
     pub queue_size: usize,
     #[serde(default)]
     pub ignore_events: bool,
-    pub keep: f64,
+    pub keep: Option<f64>,
     #[serde(default)]
     pub cleanup_oids: bool,
     pub oids: OIDMaskList,
