@@ -20,6 +20,16 @@ config:
   dos_cr: false
   # csv or json for NDJSON
   format: csv
+  # custom fieldset/ordering
+  #fields:
+    #- oid
+    #- type
+    #- group
+    #- id
+    #- timestamp
+    #- time
+    #- status
+    #- value
   # periodically submit all item states
   interval: null
   # ignore real-time events

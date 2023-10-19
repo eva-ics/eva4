@@ -11,6 +11,7 @@ use openssl::sha::Sha256;
 use parking_lot::Mutex;
 use serde::{Deserialize, Deserializer};
 use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 use std::io::SeekFrom;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
@@ -31,16 +32,116 @@ const DESCRIPTION: &str = "File writer service";
 
 const DEDUP_CLEANER_INTERVAL: Duration = Duration::from_secs(30);
 
-const CSV_HEADER: &[&str] = &[
-    "OID",
-    "Type",
-    "Group",
-    "Id",
-    "Timestamp",
-    "Time",
-    "Status",
-    "Value",
-];
+fn default_fields(format: DataFormat) -> Vec<FieldKind> {
+    match format {
+        DataFormat::Json => vec![
+            FieldKind::OID,
+            FieldKind::Timestamp,
+            FieldKind::Status,
+            FieldKind::Value,
+        ],
+        DataFormat::Csv => vec![
+            FieldKind::OID,
+            FieldKind::Type,
+            FieldKind::Group,
+            FieldKind::Id,
+            FieldKind::Timestamp,
+            FieldKind::Time,
+            FieldKind::Status,
+            FieldKind::Value,
+        ],
+    }
+}
+
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Deserialize, Copy, Clone, Debug)]
+#[serde(rename_all = "lowercase")]
+enum FieldKind {
+    OID,
+    #[serde(alias = "kind")]
+    Type,
+    Group,
+    Id,
+    Timestamp,
+    Time,
+    Status,
+    Value,
+}
+
+impl FieldKind {
+    fn default_name(self, format: DataFormat) -> &'static str {
+        match format {
+            DataFormat::Json => match self {
+                FieldKind::OID => "oid",
+                FieldKind::Type => "type",
+                FieldKind::Group => "group",
+                FieldKind::Id => "id",
+                FieldKind::Timestamp => "t",
+                FieldKind::Time => "dt",
+                FieldKind::Status => "status",
+                FieldKind::Value => "value",
+            },
+            DataFormat::Csv => match self {
+                FieldKind::OID => "OID",
+                FieldKind::Type => "Type",
+                FieldKind::Group => "Group",
+                FieldKind::Id => "Id",
+                FieldKind::Timestamp => "Timestamp",
+                FieldKind::Time => "Time",
+                FieldKind::Status => "Status",
+                FieldKind::Value => "Value",
+            },
+        }
+    }
+    fn data_value_from(self, state: &ItemState) -> Value {
+        match self {
+            FieldKind::OID => Value::String(state.oid.as_str().to_owned()),
+            FieldKind::Type => Value::String(state.oid.kind().to_string()),
+            FieldKind::Group => state
+                .oid
+                .group()
+                .map_or(Value::Unit, |g| Value::String(g.to_owned())),
+            FieldKind::Id => Value::String(state.oid.id().to_owned()),
+            FieldKind::Timestamp => Value::F64(state.set_time),
+            FieldKind::Time => Value::String(date_str(state.set_time)),
+            FieldKind::Status => Value::I16(state.status),
+            FieldKind::Value => state.value.clone().unwrap_or_default(),
+        }
+    }
+    fn write_csv_string_from(self, s: &mut String, state: &ItemState) -> EResult<()> {
+        match self {
+            FieldKind::OID => write!(s, "{}", state.oid.as_str())?,
+            FieldKind::Type => write!(s, "{}", state.oid.kind())?,
+            FieldKind::Group => {
+                if let Some(g) = state.oid.group() {
+                    write!(s, "{}", g)?;
+                }
+            }
+            FieldKind::Id => write!(s, "{}", state.oid.id())?,
+            FieldKind::Timestamp => write!(s, "{}", state.set_time)?,
+            FieldKind::Time => write!(s, "{}", date_str(state.set_time))?,
+            FieldKind::Status => write!(s, "{}", state.status)?,
+            FieldKind::Value => {
+                if let Some(ref value) = state.value {
+                    write!(s, "{}", escape_csv(value.to_string()))?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[inline]
+fn escape_csv(mut s: String) -> String {
+    s = s.replace('"', "\"\"");
+    for c in s.chars() {
+        if CSV_ESCAPED_CHARS.contains(c) {
+            s = format!("\"{}\"", s);
+            break;
+        }
+    }
+    s
+}
 
 const CSV_ESCAPED_CHARS: &str = ",\r\n\"";
 
@@ -200,6 +301,7 @@ struct Config {
     #[serde(default)]
     ignore_events: bool,
     dedup_lines: Option<u64>,
+    fields: Option<Vec<FieldKind>>,
     oids: OIDMaskList,
 }
 
@@ -431,36 +533,54 @@ async fn file_handler(
 struct DataGen {
     format: DataFormat,
     dos_cr: bool,
+    fields: Vec<FieldKind>,
 }
 
 impl DataGen {
     #[inline]
-    fn new(format: DataFormat, dos_cr: bool) -> Self {
-        Self { format, dos_cr }
+    fn new(format: DataFormat, dos_cr: bool, fields: Option<Vec<FieldKind>>) -> Self {
+        Self {
+            format,
+            dos_cr,
+            fields: fields.unwrap_or_else(|| default_fields(format)),
+        }
     }
     #[inline]
     fn header(&self) -> Option<Vec<u8>> {
         match self.format {
             DataFormat::Json => None,
-            DataFormat::Csv => Some(self.prepare(CSV_HEADER.join(","))),
+            DataFormat::Csv => Some(
+                self.prepare(
+                    self.fields
+                        .iter()
+                        .map(|v| v.default_name(self.format))
+                        .collect::<Vec<&str>>()
+                        .join(","),
+                ),
+            ),
         }
     }
     #[inline]
     fn line(&self, state: ItemState) -> EResult<Vec<u8>> {
         match self.format {
-            DataFormat::Json => Ok(self.prepare(serde_json::to_string(&state)?)),
+            DataFormat::Json => {
+                let mut data = BTreeMap::new();
+                for field in &self.fields {
+                    data.insert(
+                        field.default_name(DataFormat::Json),
+                        field.data_value_from(&state),
+                    );
+                }
+                Ok(self.prepare(serde_json::to_string(&data)?))
+            }
             DataFormat::Csv => {
-                let s = format!(
-                    "{},{},{},{},{},{},{},{}",
-                    state.oid,
-                    state.oid.kind(),
-                    state.oid.group().unwrap_or_default(),
-                    state.oid.id(),
-                    state.set_time,
-                    date_str(state.set_time),
-                    state.status,
-                    Self::escape_csv(state.value.unwrap_or_default().to_string())
-                );
+                let mut s = String::new();
+                for field in &self.fields {
+                    if !s.is_empty() {
+                        write!(s, ",")?;
+                    }
+                    field.write_csv_string_from(&mut s, &state)?;
+                }
                 Ok(self.prepare(s))
             }
         }
@@ -472,17 +592,6 @@ impl DataGen {
         }
         s += "\n";
         s.as_bytes().to_vec()
-    }
-    #[inline]
-    fn escape_csv(mut s: String) -> String {
-        s = s.replace('"', "\"\"");
-        for c in s.chars() {
-            if CSV_ESCAPED_CHARS.contains(c) {
-                s = format!("\"{}\"", s);
-                break;
-            }
-        }
-        s
     }
 }
 
@@ -567,7 +676,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let file_path = config.file_path;
     let rotated_path = config.rotated_path;
     let auto_flush = config.auto_flush;
-    let gen = DataGen::new(config.format, config.dos_cr);
+    let gen = DataGen::new(config.format, config.dos_cr, config.fields);
     if let Some(dedup_lines) = config.dedup_lines {
         NEED_DEDUP_LINES.store(true, atomic::Ordering::Relaxed);
         let d = Duration::from_secs(dedup_lines);
