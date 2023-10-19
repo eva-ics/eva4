@@ -335,6 +335,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         })
         .await?;
     initial.drop_privileges()?;
+    let client = rpc.client().clone();
+    svc_init_logs(&initial, client.clone())?;
     db::init(
         &config.db,
         config.pool_size.unwrap_or_else(|| initial.workers() * 5),
@@ -346,7 +348,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
     });
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
-    let client = rpc.client().clone();
     if !config.ignore_events {
         eva_sdk::service::subscribe_oids(
             rpc.as_ref(),
@@ -369,7 +370,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
     } else {
         None
     };
-    svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
     eva_common::cleaner!("records", db::cleanup_events, CLEANUP_INTERVAL, keep);
     if config.cleanup_oids {

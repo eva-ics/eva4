@@ -3,6 +3,7 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
+use log::{info, warn};
 use once_cell::sync::OnceCell;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
@@ -15,6 +16,8 @@ use std::time::Duration;
 err_logger!();
 
 pub static POOL: OnceCell<PgPool> = OnceCell::new();
+
+const DEFAULT_COMPRESSION_POLICY: &str = "1d";
 
 #[allow(clippy::cast_sign_loss)]
 #[allow(clippy::cast_possible_truncation)]
@@ -87,8 +90,53 @@ $$;"#,
     )
     .execute(&pool)
     .await?;
+    let c: i64 = sqlx::query(
+        r#"SELECT COUNT(*) FROM timescaledb_information.hypertables
+        WHERE hypertable_name='state_history_events'"#,
+    )
+    .fetch_one(&pool)
+    .await?
+    .try_get(0)?;
+    if c == 0 {
+        match init_hypertable(&pool).await {
+            Ok(()) => {
+                warn!(
+                    "events hypertable initialization completed, default compression policy: {}",
+                    DEFAULT_COMPRESSION_POLICY
+                );
+            }
+            Err(e) => {
+                warn!("Can not initialize events hypertable: {}", e);
+                warn!("Read more at: https://info.bma.ai/en/actual/eva4/svc/eva-db-timescale.html");
+            }
+        }
+    } else {
+        info!("events hypertable active");
+    }
     POOL.set(pool)
         .map_err(|_| Error::core("unable to set db pool"))
+}
+
+async fn init_hypertable(pool: &PgPool) -> EResult<()> {
+    sqlx::query("SELECT create_hypertable('state_history_events', 't')")
+        .execute(pool)
+        .await?;
+    sqlx::query(
+        r#"ALTER TABLE state_history_events
+                SET (
+                    timescaledb.compress,
+                    timescaledb.compress_orderby = 't DESC',
+                    timescaledb.compress_segmentby = 'oid_id')"#,
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(&format!(
+        "SELECT add_compression_policy('state_history_events', INTERVAL '{}')",
+        DEFAULT_COMPRESSION_POLICY
+    ))
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 pub async fn submit(state: ItemState) -> EResult<()> {
