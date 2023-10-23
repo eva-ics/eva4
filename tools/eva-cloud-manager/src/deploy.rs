@@ -144,6 +144,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             tpl_context.insert(name, &val);
         }
     }
+    info!("parsing environment variables");
+    for (var_name, value) in std::env::vars() {
+        if let Some(name) = var_name.strip_prefix("ECD_") {
+            let val: Value = value.parse().unwrap();
+            debug!("{} = {}", name, val);
+            tpl_context.insert(name, &val);
+        }
+    }
     let expanded_path = expanduser::expanduser(&opts.deployment_file)?;
     let fpath = Path::new(&expanded_path);
     let s = if opts.deployment_file == "-" {
