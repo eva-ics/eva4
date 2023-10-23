@@ -12,8 +12,8 @@ for app in ${VENDORED_APPS}; do
   cd vendored-apps-build
   git clone https://github.com/eva-ics/vendored-app-${app}
   cd vendored-app-${app}
-  bun install
-  bun run build
+  ~/.bun/bin/bun install
+  ~/.bun/bin/bun run build
   cd ../..
   mkdir vendored-apps/${app}
   cp -rfv vendored-apps-build/vendored-app-${app}/dist/* vendored-apps/${app}/
