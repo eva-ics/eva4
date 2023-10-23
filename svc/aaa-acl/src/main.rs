@@ -407,6 +407,13 @@ impl RpcHandlers for Handlers {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
                 } else {
+                    macro_rules! abort_no_acl {
+                        ($acl_id: expr) => {{
+                            let msg = format!("no such ACL: {}", $acl_id);
+                            warn!("{}", msg);
+                            return Err(Error::access(msg).into());
+                        }};
+                    }
                     let p: Params = unpack(payload)?;
                     let acls = ACLS.lock().unwrap();
                     let mut acl_data: AclData = match p.i {
@@ -414,7 +421,7 @@ impl RpcHandlers for Handlers {
                             if let Some(acl) = acls.get(i) {
                                 acl.into()
                             } else if is_strict_acl_formatting() {
-                                return Err(Error::access(format!("no such ACL: {}", i)).into());
+                                abort_no_acl!(i);
                             } else {
                                 AclData::default()
                             }
@@ -425,7 +432,7 @@ impl RpcHandlers for Handlers {
                                 if let Some(acl) = acls.get(i) {
                                     srcs.push(acl);
                                 } else if is_strict_acl_formatting() {
-                                    return Err(Error::access(format!("no such ACL: {}", i)).into());
+                                    abort_no_acl!(i);
                                 }
                             }
                             srcs.into()
