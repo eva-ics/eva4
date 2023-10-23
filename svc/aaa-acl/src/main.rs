@@ -4,10 +4,10 @@ use eva_common::common_payloads::{IdOrList, ParamsId};
 use eva_common::events::AAA_ACL_TOPIC;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::Mutex;
+use std::sync::{atomic, Mutex};
 
 err_logger!();
 
@@ -20,9 +20,13 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "ACL service";
 const ACL_NONE: &str = "none";
 
-lazy_static::lazy_static! {
-    static ref ACLS: Mutex<HashMap<String, Acl>> = <_>::default();
-    static ref REG: OnceCell<Registry> = <_>::default();
+static ACLS: Lazy<Mutex<HashMap<String, Acl>>> = Lazy::new(<_>::default);
+static REG: OnceCell<Registry> = OnceCell::new();
+static STRICT_ACL_FORMATTING: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
+#[inline]
+fn is_strict_acl_formatting() -> bool {
+    STRICT_ACL_FORMATTING.load(atomic::Ordering::Relaxed)
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -409,6 +413,8 @@ impl RpcHandlers for Handlers {
                         IdOrList::Single(i) => {
                             if let Some(acl) = acls.get(i) {
                                 acl.into()
+                            } else if is_strict_acl_formatting() {
+                                return Err(Error::access(format!("no such ACL: {}", i)).into());
                             } else {
                                 AclData::default()
                             }
@@ -418,6 +424,8 @@ impl RpcHandlers for Handlers {
                             for i in ids {
                                 if let Some(acl) = acls.get(i) {
                                     srcs.push(acl);
+                                } else if is_strict_acl_formatting() {
+                                    return Err(Error::access(format!("no such ACL: {}", i)).into());
                                 }
                             }
                             srcs.into()
@@ -452,15 +460,19 @@ impl RpcHandlers for Handlers {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Config {}
+struct Config {
+    #[serde(default)]
+    strict_acl_formatting: bool,
+}
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {
-    let _config: Config = Config::deserialize(
+    let config: Config = Config::deserialize(
         initial
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    STRICT_ACL_FORMATTING.store(config.strict_acl_formatting, atomic::Ordering::Relaxed);
     let (tx, rx) = async_channel::bounded(1024);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("acl.list").description("list ACLs"));

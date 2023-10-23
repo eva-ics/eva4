@@ -2,5 +2,8 @@
 command: target/debug/eva-aaa-acl
 bus:
   path: var/bus.ipc
-config: {}
+config:
+  # set true to turn on strict ACL formatting - a user/API key won't be
+  # authenticated if any of assigned ACLs is missing
+  strict_acl_formatting: false
 user: nobody
