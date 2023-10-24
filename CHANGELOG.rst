@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-10-24 build 2023102401: Forbid empty ACLs option
 * 2023-10-23 build 2023102301: Strict ACL option, ECM env variables
 * 2023-10-19 build 2023101902: File writer svc custom cols
 * 2023-10-19 build 2023101901: TimescaleDB hyper-table automatic setup
