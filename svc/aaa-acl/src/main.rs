@@ -23,10 +23,16 @@ const ACL_NONE: &str = "none";
 static ACLS: Lazy<Mutex<HashMap<String, Acl>>> = Lazy::new(<_>::default);
 static REG: OnceCell<Registry> = OnceCell::new();
 static STRICT_ACL_FORMATTING: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static FORBID_EMPTY_ACLS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[inline]
 fn is_strict_acl_formatting() -> bool {
     STRICT_ACL_FORMATTING.load(atomic::Ordering::Relaxed)
+}
+
+#[inline]
+fn is_forbid_empty_acls() -> bool {
+    FORBID_EMPTY_ACLS.load(atomic::Ordering::Relaxed)
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -439,8 +445,13 @@ impl RpcHandlers for Handlers {
                         }
                     };
                     if acl_data.from.is_empty() {
-                        warn!("ACLs not found, using empty ACL");
-                        acl_data.id = ACL_NONE.to_owned();
+                        if is_forbid_empty_acls() {
+                            warn!("empty ACL");
+                            return Err(Error::access("empty ACL").into());
+                        } else {
+                            warn!("ACLs not found, using empty ACL");
+                            acl_data.id = ACL_NONE.to_owned();
+                        }
                     }
                     let key_id_val = p.key_id.map(|k| Value::String(k.to_owned()));
                     if let Some(ref k_val) = key_id_val {
@@ -470,6 +481,8 @@ impl RpcHandlers for Handlers {
 struct Config {
     #[serde(default)]
     strict_acl_formatting: bool,
+    #[serde(default)]
+    forbid_empty_acls: bool,
 }
 
 #[svc_main]
@@ -480,6 +493,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
     STRICT_ACL_FORMATTING.store(config.strict_acl_formatting, atomic::Ordering::Relaxed);
+    FORBID_EMPTY_ACLS.store(config.forbid_empty_acls, atomic::Ordering::Relaxed);
     let (tx, rx) = async_channel::bounded(1024);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("acl.list").description("list ACLs"));
