@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 openssl = "0.10.42"
 base64 = "0.13.0"
-eva-common = "0.3.3"
+eva-common = "0.3.7"
 nix = { version = "0.25.0", features = ["time"] }
 hex = "0.4.3"
 serde = { version = "1.0.143", features = ["derive"] }
