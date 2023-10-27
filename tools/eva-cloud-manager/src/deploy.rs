@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 
@@ -240,10 +240,22 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
         eva_client::Config::new().timeout(timeout),
     )
     .await?;
-    info!("gathering facts");
-    let info = bus_client.get_system_info().await?;
+    let mut info = bus_client.get_system_info().await?;
     if !info.active {
-        return Err(Error::failed("system is not active"));
+        let wait_until = Instant::now() + timeout;
+        ttycarousel::tokio1::spawn0("waiting for system to become active").await;
+        loop {
+            tokio::time::sleep(eva_common::SLEEP_STEP).await;
+            info = bus_client.get_system_info().await?;
+            if info.active {
+                break;
+            }
+            if wait_until <= Instant::now() {
+                ttycarousel::tokio1::stop_clear().await;
+                return Err(Error::failed("system is not active"));
+            }
+        }
+        ttycarousel::tokio1::stop_clear().await;
     }
     let system_name = info.system_name;
     info!("local node: {}", system_name);
