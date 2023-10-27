@@ -448,10 +448,9 @@ impl RpcHandlers for Handlers {
                         if is_forbid_empty_acls() {
                             warn!("empty ACL");
                             return Err(Error::access("empty ACL").into());
-                        } else {
-                            warn!("ACLs not found, using empty ACL");
-                            acl_data.id = ACL_NONE.to_owned();
                         }
+                        warn!("ACLs not found, using empty ACL");
+                        acl_data.id = ACL_NONE.to_owned();
                     }
                     let key_id_val = p.key_id.map(|k| Value::String(k.to_owned()));
                     if let Some(ref k_val) = key_id_val {
