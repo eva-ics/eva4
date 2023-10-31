@@ -9,7 +9,7 @@ config:
       listen: 0.0.0.0:7727
       ## if a front-end server or TLS terminator is used
       #real_ip_header: X-Real-IP
-  # HMI database for API log and sessions, can be shared between instances
+  # HMI database for API log, user data and sessions, can be shared between instances
   # default: runtime/svc_data/<SVC_ID>/hmi.db
   #db: sqlite:///tmp/hmi.db
   #db: postgres://USER:PASSWORD@HOST/DB
@@ -20,6 +20,9 @@ config:
     prolong: true
     stick_ip: true
     allow_list_neighbors: false
+  user_data:
+    max_records: 100
+    max_record_length: 16384
   keep_api_log: 86400
   # any user can get API log for everyone (false = admins and users with op moderator in ACLs)
   # public_api_log: true

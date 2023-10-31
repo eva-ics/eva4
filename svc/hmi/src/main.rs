@@ -176,6 +176,17 @@ struct Config {
     development: bool,
     #[serde(default = "eva_common::tools::default_true")]
     vendored_apps: bool,
+    #[serde(default)]
+    user_data: UserDataConfig,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct UserDataConfig {
+    #[serde(default)]
+    max_records: u32,
+    #[serde(default)]
+    max_record_length: u32,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -225,6 +236,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .set(vendored_apps_path)
             .map_err(|_| Error::core("Unable to set VENDORED_APPS_PATH"))?;
     }
+    db::set_max_user_data_records(config.user_data.max_records);
+    db::set_max_user_data_record_len(config.user_data.max_record_length);
     I18N.set(i18n)
         .map_err(|_| Error::core("Unable to set I18N"))?;
     DEFAULT_HISTORY_DB_SVC
@@ -257,6 +270,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("authenticate")
             .required("key")
             .optional("ip"),
+    );
+    info.add_method(
+        ServiceMethod::new("user_data.get")
+            .required("login")
+            .required("key"),
     );
     let handlers = eapi::Handlers::new(info);
     let rpc: Arc<RpcClient> = initial.init_rpc(handlers).await?;

@@ -3,7 +3,6 @@ use eva_common::err_logger;
 use eva_common::prelude::*;
 use eva_common::time::now;
 use futures::TryStreamExt;
-use lazy_static::lazy_static;
 use log::error;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -14,15 +13,36 @@ use sqlx::{
 use std::fmt::Write as _;
 //use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::atomic;
 use std::time::Duration;
 
 err_logger!();
 
 //type QueryRows = Pin<Box<dyn futures::Stream<Item = Result<AnyRow, sqlx::Error>> + Send>>;
 
-lazy_static! {
-    pub(crate) static ref DB_POOL: OnceCell<AnyPool> = <_>::default();
-    static ref DB_KIND: OnceCell<AnyKind> = <_>::default();
+pub(crate) static DB_POOL: OnceCell<AnyPool> = OnceCell::new();
+static DB_KIND: OnceCell<AnyKind> = OnceCell::new();
+static MAX_USER_DATA_RECORDS: atomic::AtomicU32 = atomic::AtomicU32::new(0);
+static MAX_USER_DATA_RECORD_LEN: atomic::AtomicU32 = atomic::AtomicU32::new(0);
+
+#[inline]
+pub fn set_max_user_data_records(max_records: u32) {
+    MAX_USER_DATA_RECORDS.store(max_records, atomic::Ordering::Relaxed);
+}
+
+#[inline]
+pub fn set_max_user_data_record_len(max_len: u32) {
+    MAX_USER_DATA_RECORD_LEN.store(max_len, atomic::Ordering::Relaxed);
+}
+
+#[inline]
+pub fn max_user_data_records() -> u32 {
+    MAX_USER_DATA_RECORDS.load(atomic::Ordering::Relaxed)
+}
+
+#[inline]
+pub fn max_user_data_record_len() -> u32 {
+    MAX_USER_DATA_RECORD_LEN.load(atomic::Ordering::Relaxed)
 }
 
 macro_rules! not_impl {
@@ -615,6 +635,92 @@ pub async fn get_ehmi_config(config_key: &str) -> EResult<Value> {
     }
 }
 
+pub async fn get_user_data(login: &str, key: &str) -> EResult<Value> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let q = match kind {
+        AnyKind::Sqlite => "SELECT v FROM user_data WHERE login = ? AND k = ?",
+        AnyKind::Postgres => "SELECT v FROM user_data WHERE login = $1 AND k = $2",
+        AnyKind::MySql => not_impl!(kind),
+    };
+    let mut rows = sqlx::query(&q).bind(login).bind(key).fetch(pool);
+    if let Some(row) = rows.try_next().await? {
+        let v: Option<String> = row.try_get(0)?;
+        Ok(v.map_or(Ok(Value::Unit), |s| serde_json::from_str(&s))?)
+    } else {
+        Err(Error::not_found("no such data record"))
+    }
+}
+
+pub async fn delete_user_data(login: &str, key: &str) -> EResult<()> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let q = match kind {
+        AnyKind::Sqlite => "DELETE FROM user_data WHERE login = ? AND k = ?",
+        AnyKind::Postgres => "DELETE FROM user_data WHERE login = $1 AND k = $2",
+        AnyKind::MySql => not_impl!(kind),
+    };
+    sqlx::query(&q).bind(login).bind(key).execute(pool).await?;
+    Ok(())
+}
+
+pub async fn set_user_data(login: &str, key: &str, value: Value) -> EResult<()> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let mut tr = pool.begin().await?;
+    match kind {
+        AnyKind::Sqlite => {
+            // no need to lock
+        }
+        AnyKind::Postgres => {
+            // lock in share update
+            sqlx::query("LOCK TABLE user_data IN SHARE UPDATE EXCLUSIVE MODE")
+                .execute(&mut tr)
+                .await?;
+        }
+        AnyKind::MySql => not_impl!(kind),
+    };
+    let q = match kind {
+        AnyKind::Sqlite => "SELECT COUNT(*) FROM user_data WHERE login = ?",
+        AnyKind::Postgres => "SELECT COUNT(*) FROM user_data WHERE login = $1",
+        AnyKind::MySql => not_impl!(kind),
+    };
+    let count: i64 = sqlx::query(q)
+        .bind(login)
+        .bind(key)
+        .fetch_one(&mut tr)
+        .await?
+        .try_get(0)?;
+    if count >= i64::from(max_user_data_records()) {
+        return Err(Error::access(format!(
+            "user data records ({count}) exceed the limit"
+        )));
+    }
+    let data_str = serde_json::to_string(&value)?;
+    if data_str.len() > usize::try_from(max_user_data_record_len()).unwrap() {
+        return Err(Error::access(format!(
+            "the record length ({}) exceeds the limit",
+            data_str.len()
+        )));
+    }
+    let q = match kind {
+        AnyKind::Sqlite => "INSERT OR REPLACE INTO user_data(login, k, v) VALUES (?, ?, ?)",
+        AnyKind::Postgres => {
+            r#"INSERT INTO user_data(login, k, v) VALUES ($1, $2, $3)
+ON CONFLICT ON CONSTRAINT user_data_pkey DO UPDATE SET v=$3"#
+        }
+        AnyKind::MySql => not_impl!(kind),
+    };
+    sqlx::query(&q)
+        .bind(login)
+        .bind(key)
+        .bind(data_str)
+        .execute(&mut tr)
+        .await?;
+    tr.commit().await?;
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
 pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> {
     let mut opts = AnyConnectOptions::from_str(conn)?;
@@ -705,7 +811,19 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             )
             .execute(&pool)
             .await?;
+            sqlx::query(
+                r#"CREATE TABLE IF NOT EXISTS
+        user_data(
+        login VARCHAR(64) NOT NULL,
+        k VARCHAR(128) NOT NULL,
+        v VARCHAR(16384) NOT NULL,
+        PRIMARY KEY(login, k)
+        )"#,
+            )
+            .execute(&pool)
+            .await?;
         }
+        // MySQL support is deprecated, do not port new features
         AnyKind::MySql => {
             sqlx::query(
                 r#"CREATE TABLE IF NOT EXISTS
@@ -828,6 +946,20 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             )
             .execute(&pool)
             .await?;
+            sqlx::query(
+                r#"CREATE TABLE IF NOT EXISTS
+        user_data(
+        login VARCHAR(64) NOT NULL,
+        k VARCHAR(128) NOT NULL,
+        v VARCHAR(16384),
+        PRIMARY KEY(login, k)
+        )"#,
+            )
+            .execute(&pool)
+            .await?;
+            sqlx::query("CREATE INDEX IF NOT EXISTS i_user_data_login ON user_data(login)")
+                .execute(&pool)
+                .await?;
         }
     }
     let _r = sqlx::query("ALTER TABLE api_log ADD params VARCHAR(4096)")

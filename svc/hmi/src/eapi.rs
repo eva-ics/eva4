@@ -131,6 +131,25 @@ impl RpcHandlers for Handlers {
                     Ok(None)
                 }
             }
+            "user_data.get" => {
+                #[derive(Deserialize)]
+                struct Params {
+                    login: String,
+                    key: String,
+                }
+                #[derive(Serialize)]
+                struct Response {
+                    value: Value,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Params = unpack(payload)?;
+                    Ok(Some(pack(&Response {
+                        value: crate::db::get_user_data(&p.login, &p.key).await?,
+                    })?))
+                }
+            }
             "authenticate" => {
                 #[derive(Deserialize)]
                 struct AuthInfo {

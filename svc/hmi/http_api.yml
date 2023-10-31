@@ -832,3 +832,33 @@ call:
       des: Call query
       req: true
   ret: The result of the target method
+user_data.get:
+  des: Get user data
+  ret: User data field value
+  par:
+    - nam: key
+      typ: String
+      des: field key
+      req: true
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+          "value": "somedata"
+        }
+    }
+user_data.set:
+  des: Set user data
+  par:
+    - nam: key
+      typ: String
+      des: field key
+      req: true
+user_data.delete:
+  des: Delete user data
+  par:
+    - nam: key
+      typ: String
+      des: field key
+      req: true

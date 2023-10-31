@@ -474,6 +474,9 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                             method_ehmi_create_config(&auth_key, params, &mut aci, &gen_source(ip))
                                 .await
                         }
+                        "user_data.get" => method_user_data_get(params, &mut aci).await,
+                        "user_data.set" => method_user_data_set(params, &mut aci).await,
+                        "user_data.delete" => method_user_data_delete(params, &mut aci).await,
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
@@ -1633,4 +1636,55 @@ async fn method_ehmi_get_config(params: Value) -> EResult<Value> {
     }
     let p = Params::deserialize(params)?;
     db::get_ehmi_config(&p.ck).await
+}
+
+async fn method_user_data_get(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        key: String,
+    }
+    #[derive(Serialize)]
+    struct Response {
+        value: Value,
+    }
+    aci.log_request(log::Level::Trace).await.log_ef();
+    let p = Params::deserialize(params)?;
+    let Some(token) = aci.token() else {
+        return Err(Error::access("not authenticated as a user"));
+    };
+    Ok(to_value(Response {
+        value: db::get_user_data(token.user(), &p.key).await?,
+    })?)
+}
+
+async fn method_user_data_set(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        key: String,
+        value: Value,
+    }
+    aci.log_request(log::Level::Trace).await.log_ef();
+    let p = Params::deserialize(params)?;
+    let Some(token) = aci.token() else {
+        return Err(Error::access("not authenticated as a user"));
+    };
+    db::set_user_data(token.user(), &p.key, p.value).await?;
+    ok!()
+}
+
+async fn method_user_data_delete(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        key: String,
+    }
+    aci.log_request(log::Level::Trace).await.log_ef();
+    let p = Params::deserialize(params)?;
+    let Some(token) = aci.token() else {
+        return Err(Error::access("not authenticated as a user"));
+    };
+    db::delete_user_data(token.user(), &p.key).await?;
+    ok!()
 }

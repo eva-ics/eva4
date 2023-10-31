@@ -168,3 +168,19 @@ authenticate:
             "items": []
         }
     }
+user_data.get:
+  des: Get user data
+  par:
+    - nam: login
+      typ: String
+      des: user login
+      req: true
+    - nam: key
+      typ: String
+      des: field key
+      req: true
+  ret: User data field value
+  exm: |
+    {
+      "value": "somedata"
+    }

@@ -146,6 +146,17 @@ impl ACI {
             t: Instant::now(),
         }
     }
+    #[inline]
+    #[allow(dead_code)]
+    pub fn user(&self) -> Option<&str> {
+        if let Auth::Token(ref token) = self.auth {
+            Some(token.user())
+        } else if let Auth::Key(_, _) = self.auth {
+            self.auth.user()
+        } else {
+            None
+        }
+    }
     /// set ACL ID for Auth::Login and Auth::LoginKey
     #[inline]
     pub fn set_acl_id(&mut self, acl_id: &str) {
