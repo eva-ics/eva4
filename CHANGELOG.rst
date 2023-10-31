@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-10-31 build 2023103101: HMI user data, deploy fixes, vendored apps fixes
 * 2023-10-26 build 2023102601: Font fixes in vendored apps
 * 2023-10-24 build 2023102401: Forbid empty ACLs option
 * 2023-10-23 build 2023102301: Strict ACL option, ECM env variables
