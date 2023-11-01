@@ -1095,6 +1095,10 @@ def append_kiosk_cli(root_sp):
 
     p = sp.add_parser('login', help='login kiosk')
     p.add_argument('i', metavar='kiosk')
+    p.add_argument('--acl',
+                   help='login with one-time user with specified ACL(s)',
+                   action='append')
+    p.add_argument('--login', help='login marker for one-time user')
     p.add_argument(
         '-a',
         '--kiosk-svc',

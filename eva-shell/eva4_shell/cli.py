@@ -1440,8 +1440,12 @@ class CLI:
         call_rpc('kiosk.destroy', dict(i=i), target=kiosk_svc)
         ok()
 
-    def kiosk_login(self, i, kiosk_svc):
-        call_rpc('kiosk.login', dict(i=i), target=kiosk_svc)
+    def kiosk_login(self, i, kiosk_svc, acl, login):
+        if acl:
+            auth = dict(acls=acl, login=login)
+        else:
+            auth = None
+        call_rpc('kiosk.login', dict(i=i, auth=auth), target=kiosk_svc)
         ok()
 
     def kiosk_logout(self, i, kiosk_svc):
