@@ -775,44 +775,47 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: ParamsAuthUser = unpack(payload)?;
-                let acls = if let Some(login) = p.login.strip_prefix(ONE_TIME_USER_PREFIX) {
-                    if let Some(one_time_user) = ONE_TIME_USERS.lock().await.get_mut(login) {
-                        one_time_user.get_acls(p.password)?
+                let (acls, one_time) =
+                    if let Some(login) = p.login.strip_prefix(ONE_TIME_USER_PREFIX) {
+                        if let Some(one_time_user) = ONE_TIME_USERS.lock().await.get_mut(login) {
+                            (one_time_user.get_acls(p.password)?, true)
+                        } else {
+                            debug!("one-time user {} authentication failed: not found", p.login);
+                            return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                        }
+                    } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
+                        if !user.password.verify(p.password)? {
+                            debug!("user {} authentication failed: invalid password", p.login);
+                            return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                        }
+                        debug!("user authenticated: {}", p.login);
+                        (user.acls.iter().cloned().collect(), false)
                     } else {
-                        debug!("one-time user {} authentication failed: not found", p.login);
+                        debug!("user {} authentication failed: not found", p.login);
                         return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
-                    }
-                } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
-                    if !user.password.verify(p.password)? {
-                        debug!("user {} authentication failed: invalid password", p.login);
-                        return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
-                    }
-                    debug!("user authenticated: {}", p.login);
-                    user.acls.iter().cloned().collect()
-                } else {
-                    debug!("user {} authentication failed: not found", p.login);
-                    return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
-                };
+                    };
                 let rpc = RPC.get().unwrap();
                 let op = Op::new(p.timeout);
-                if let Some(otp_svc) = self.otp_svc.as_ref() {
-                    safe_rpc_call(
-                        rpc,
-                        otp_svc,
-                        "otp.check",
-                        pack(&ParamsOtpCheck {
-                            login: p.login,
-                            otp: if let Some(xopts) = p.xopts.as_ref() {
-                                xopts.get("otp")
-                            } else {
-                                None
-                            },
-                        })?
-                        .into(),
-                        QoS::Processed,
-                        op.timeout()?,
-                    )
-                    .await?;
+                if !one_time {
+                    if let Some(otp_svc) = self.otp_svc.as_ref() {
+                        safe_rpc_call(
+                            rpc,
+                            otp_svc,
+                            "otp.check",
+                            pack(&ParamsOtpCheck {
+                                login: p.login,
+                                otp: if let Some(xopts) = p.xopts.as_ref() {
+                                    xopts.get("otp")
+                                } else {
+                                    None
+                                },
+                            })?
+                            .into(),
+                            QoS::Processed,
+                            op.timeout()?,
+                        )
+                        .await?;
+                    }
                 }
                 let result = safe_rpc_call(
                     rpc,
