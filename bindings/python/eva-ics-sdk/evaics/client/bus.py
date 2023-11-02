@@ -87,12 +87,15 @@ class Client:
         if self.rpc is None:
             raise RuntimeError('client not connected')
         try:
-            return unpack(
-                self.rpc.call(
-                    target,
-                    busrt.rpc.Request(
-                        method, None if params is None else
-                        msgpack.dumps(params))).wait_completed().get_payload())
+            payload = self.rpc.call(
+                target,
+                busrt.rpc.Request(
+                    method, None if params is None else
+                    msgpack.dumps(params))).wait_completed().get_payload()
+            if payload:
+                return unpack(payload)
+            else:
+                return None
         except busrt.rpc.RpcException as e:
             raise rpc_e2e(e)
 
