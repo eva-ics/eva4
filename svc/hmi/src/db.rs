@@ -643,7 +643,7 @@ pub async fn get_user_data(login: &str, key: &str) -> EResult<Value> {
         AnyKind::Postgres => "SELECT v FROM user_data WHERE login = $1 AND k = $2",
         AnyKind::MySql => not_impl!(kind),
     };
-    let mut rows = sqlx::query(&q).bind(login).bind(key).fetch(pool);
+    let mut rows = sqlx::query(q).bind(login).bind(key).fetch(pool);
     if let Some(row) = rows.try_next().await? {
         let v: Option<String> = row.try_get(0)?;
         Ok(v.map_or(Ok(Value::Unit), |s| serde_json::from_str(&s))?)
@@ -660,7 +660,7 @@ pub async fn delete_user_data(login: &str, key: &str) -> EResult<()> {
         AnyKind::Postgres => "DELETE FROM user_data WHERE login = $1 AND k = $2",
         AnyKind::MySql => not_impl!(kind),
     };
-    sqlx::query(&q).bind(login).bind(key).execute(pool).await?;
+    sqlx::query(q).bind(login).bind(key).execute(pool).await?;
     Ok(())
 }
 
@@ -711,7 +711,7 @@ ON CONFLICT ON CONSTRAINT user_data_pkey DO UPDATE SET v=$3"#
         }
         AnyKind::MySql => not_impl!(kind),
     };
-    sqlx::query(&q)
+    sqlx::query(q)
         .bind(login)
         .bind(key)
         .bind(data_str)
