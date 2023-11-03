@@ -7,14 +7,13 @@ use eva_common::time::ts_to_ns;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
-use eva_sdk::types::{Fill, ItemState, ShortItemState, State, StateProp};
-use lazy_static::lazy_static;
+use eva_sdk::types::{Fill, ItemState, ShortItemStateConnected, State, StateProp};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use simple_pool::ResourcePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
 err_logger!();
@@ -30,11 +29,10 @@ const DESCRIPTION: &str = "InfluxDB database service";
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-lazy_static! {
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref CLIENT_POOL: OnceCell<ResourcePool<influx::InfluxClient>> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-}
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static CLIENT_POOL: OnceCell<ResourcePool<influx::InfluxClient>> = OnceCell::new();
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 struct Handlers {
     tx: async_channel::Sender<Event>,
@@ -314,8 +312,11 @@ async fn collect_periodic(
                 QoS::Processed,
             )
             .await?;
-        let mut states: Vec<ShortItemState> = unpack(data.payload())?;
-        states.retain(|s| s.value.as_ref().map_or(true, Value::is_numeric));
+        let mut states: Vec<ShortItemStateConnected> = unpack(data.payload())?;
+        let skip_disconnected = SKIP_DISCONNECTED.load(atomic::Ordering::Relaxed);
+        states.retain(|s| {
+            (!skip_disconnected || s.connected) && s.value.as_ref().map_or(true, Value::is_numeric)
+        });
         if !states.is_empty() {
             let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
@@ -361,6 +362,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     CLIENT_POOL
         .set(client_pool)
         .map_err(|_| Error::core("unable to set client pool"))?;
+    SKIP_DISCONNECTED.store(config.skip_disconnected, atomic::Ordering::Relaxed);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(
         ServiceMethod::new("state_history")
