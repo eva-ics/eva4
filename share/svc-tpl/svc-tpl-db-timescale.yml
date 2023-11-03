@@ -10,7 +10,9 @@ config:
   buf_ttl_sec: null
   # periodically submit all item states
   interval: null
+  # do not submit remote disconnected items (useful for zfrepl or similar)
   # ignore real-time events
+  skip_disconnected: false
   ignore_events: false
   # keep records (seconds)
   keep: 604800

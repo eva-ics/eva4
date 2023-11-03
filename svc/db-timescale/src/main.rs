@@ -7,11 +7,11 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, StateProp};
-use eva_sdk::types::{ItemState, ShortItemState, State};
+use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
 err_logger!();
@@ -32,6 +32,7 @@ const OID_CLEANUP_INTERVAL: Duration = Duration::from_secs(3600);
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 struct Handlers {
     tx: async_channel::Sender<Event>,
@@ -277,7 +278,11 @@ async fn collect_periodic(
                 QoS::Processed,
             )
             .await?;
-        let states: Vec<ShortItemState> = unpack(data.payload())?;
+        let mut states: Vec<ShortItemStateConnected> = unpack(data.payload())?;
+        let skip_disconnected = SKIP_DISCONNECTED.load(atomic::Ordering::Relaxed);
+        states.retain(|s| {
+            (!skip_disconnected || s.connected) && s.value.as_ref().map_or(true, Value::is_numeric)
+        });
         if !states.is_empty() {
             let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
@@ -306,6 +311,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    SKIP_DISCONNECTED.store(config.skip_disconnected, atomic::Ordering::Relaxed);
     set_poc(config.panic_in);
     let timeout = initial.timeout();
     let (tx, rx) = async_channel::bounded(config.queue_size);
