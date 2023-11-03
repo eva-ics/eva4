@@ -5,7 +5,7 @@ use eva_common::common_payloads::ParamsIdListOwned;
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use eva_sdk::types::{ItemState, ShortItemState, State};
+use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::{Lazy, OnceCell};
 use openssl::sha::Sha256;
 use parking_lot::Mutex;
@@ -25,6 +25,7 @@ err_logger!();
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static NEED_DEDUP_LINES: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static LINE_CACHE: Lazy<Mutex<BTreeMap<[u8; 32], Instant>>> = Lazy::new(<_>::default);
+static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -281,6 +282,7 @@ where
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 struct Config {
     file_path: String,
     rotated_path: Option<String>,
@@ -296,6 +298,8 @@ struct Config {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     interval: Option<Duration>,
+    #[serde(default)]
+    skip_disconnected: bool,
     #[serde(default, deserialize_with = "de_opt_schedule_from_str")]
     auto_rotate: Option<Schedule>,
     #[serde(default)]
@@ -616,7 +620,9 @@ async fn collect_periodic(
                 QoS::Processed,
             )
             .await?;
-        let states: Vec<ShortItemState> = unpack(data.payload())?;
+        let mut states: Vec<ShortItemStateConnected> = unpack(data.payload())?;
+        let skip_disconnected = SKIP_DISCONNECTED.load(atomic::Ordering::Relaxed);
+        states.retain(|s| !skip_disconnected || s.connected);
         if !states.is_empty() {
             let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
@@ -672,6 +678,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    SKIP_DISCONNECTED.store(config.skip_disconnected, atomic::Ordering::Relaxed);
     let (tx, rx) = async_channel::bounded::<Event>(config.queue_size);
     let file_path = config.file_path;
     let rotated_path = config.rotated_path;
