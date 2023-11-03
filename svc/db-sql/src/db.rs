@@ -3,7 +3,6 @@ use eva_common::time::{ts_from_ns, ts_to_ns};
 use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
-use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use sqlx::{
     any::{AnyConnectOptions, AnyKind, AnyPool, AnyPoolOptions},
@@ -15,10 +14,8 @@ use std::time::Duration;
 
 err_logger!();
 
-lazy_static! {
-    pub static ref POOL: OnceCell<AnyPool> = <_>::default();
-    static ref DB_KIND: OnceCell<AnyKind> = <_>::default();
-}
+pub static POOL: OnceCell<AnyPool> = OnceCell::new();
+static DB_KIND: OnceCell<AnyKind> = OnceCell::new();
 
 fn safe_sql_string(s: &str) -> EResult<&str> {
     for ch in s.chars() {

@@ -14,6 +14,8 @@ config:
   buf_ttl_sec: null
   # periodically submit all item states
   interval: null
+  # do not submit remote disconnected items (useful for zfrepl or similar)
+  skip_disconnected: false
   # ignore real-time events
   ignore_events: false
   # false - perform smart cleaning (slower) or simple

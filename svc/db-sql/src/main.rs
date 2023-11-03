@@ -7,12 +7,11 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, StateProp};
-use eva_sdk::types::{ItemState, ShortItemState, State};
-use lazy_static::lazy_static;
+use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
 err_logger!();
@@ -33,10 +32,9 @@ const CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-lazy_static! {
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref TS_EXTENSION: OnceCell<Option<TsExtension>> = <_>::default();
-}
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static TS_EXTENSION: OnceCell<Option<TsExtension>> = OnceCell::new();
+static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 struct Handlers {
     tx: async_channel::Sender<Event>,
@@ -291,7 +289,9 @@ async fn collect_periodic(
                 QoS::Processed,
             )
             .await?;
-        let states: Vec<ShortItemState> = unpack(data.payload())?;
+        let mut states: Vec<ShortItemStateConnected> = unpack(data.payload())?;
+        let skip_disconnected = SKIP_DISCONNECTED.load(atomic::Ordering::Relaxed);
+        states.retain(|s| !skip_disconnected || s.connected);
         if !states.is_empty() {
             let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
@@ -324,6 +324,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     TS_EXTENSION
         .set(config.ts_extension)
         .map_err(|_| Error::core("unable to set TS_EXTENSION"))?;
+    SKIP_DISCONNECTED.store(config.skip_disconnected, atomic::Ordering::Relaxed);
     let timeout = initial.timeout();
     let (tx, rx) = async_channel::bounded(config.queue_size);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);

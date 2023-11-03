@@ -28,6 +28,8 @@ pub struct Config {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     pub interval: Option<Duration>,
+    #[serde(default)]
+    pub skip_disconnected: bool,
     pub pool_size: Option<u32>,
     #[serde(default = "default_queue_size")]
     pub queue_size: usize,
