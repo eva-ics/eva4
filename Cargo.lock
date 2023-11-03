@@ -1701,7 +1701,6 @@ dependencies = [
  "hyper",
  "hyper-tls",
  "jemallocator",
- "lazy_static",
  "log",
  "once_cell",
  "serde",
@@ -1918,9 +1917,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e8c61ed3311f07d60d4d13263e2da356b5c386b0b903e0b516590849497eeda"
+checksum = "3b4e2d43ae60311a4e9cbb062bd33681b965ae0f746a6ecef94ab11c4adb66f9"
 dependencies = [
  "async-channel",
  "async-recursion",
