@@ -439,10 +439,11 @@ async fn serve_websocket(
                     match method {
                         "subscribe.state" => {
                             if let Some(p) = cmd.params {
-                                let masks: OIDMaskList = OIDMaskList::deserialize(p).log_err()?;
-                                let mut map = WS_SUB.lock();
-                                for mask in masks.oid_masks() {
-                                    map.subscribe(&mask.as_path(), &ws_tx);
+                                if let Ok(masks) = OIDMaskList::deserialize(p).log_err() {
+                                    let mut map = WS_SUB.lock();
+                                    for mask in masks.oid_masks() {
+                                        map.subscribe(&mask.as_path(), &ws_tx);
+                                    }
                                 }
                             }
                         }
@@ -452,26 +453,28 @@ async fn serve_websocket(
                         }
                         "subscribe.state_initial" => {
                             if let Some(p) = cmd.params {
-                                let masks: OIDMaskList = OIDMaskList::deserialize(p).log_err()?;
-                                let mut map = WS_SUB.lock();
-                                for mask in masks.oid_masks() {
-                                    map.subscribe(&mask.as_path(), &ws_tx);
+                                if let Ok(masks) = OIDMaskList::deserialize(p).log_err() {
+                                    let mut map = WS_SUB.lock();
+                                    for mask in masks.oid_masks() {
+                                        map.subscribe(&mask.as_path(), &ws_tx);
+                                    }
+                                    let ws_tx_c = ws_tx.clone();
+                                    tokio::spawn(async move {
+                                        ws_tx_c.send_initial(Some(masks)).await.log_ef();
+                                    });
                                 }
-                                let ws_tx_c = ws_tx.clone();
-                                tokio::spawn(async move {
-                                    ws_tx_c.send_initial(Some(masks)).await.log_ef();
-                                });
                             }
                         }
                         "subscribe.log" => {
                             if let Some(p) = cmd.params {
-                                let level: u8 = u8::deserialize(p).log_err()?;
-                                let mut map = WS_SUB_LOG.lock();
-                                for t in get_log_topics(0) {
-                                    map.unsubscribe(t, &ws_tx);
-                                }
-                                for t in get_log_topics(level) {
-                                    map.subscribe(t, &ws_tx);
+                                if let Ok(level) = u8::deserialize(p).log_err() {
+                                    let mut map = WS_SUB_LOG.lock();
+                                    for t in get_log_topics(0) {
+                                        map.unsubscribe(t, &ws_tx);
+                                    }
+                                    for t in get_log_topics(level) {
+                                        map.subscribe(t, &ws_tx);
+                                    }
                                 }
                             }
                         }
