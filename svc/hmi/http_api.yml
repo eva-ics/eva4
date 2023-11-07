@@ -862,3 +862,24 @@ user_data.delete:
       typ: String
       des: field key
       req: true
+db.list:
+  des: Get available databases
+  ret: List of available databases
+  http_rpl: |
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": [
+        {
+            "default": true,
+            "id": "default"
+        },
+        {
+            "default": false,
+            "id": "i2"
+        },
+        {
+            "default": false,
+            "id": "pg"
+        }
+    }

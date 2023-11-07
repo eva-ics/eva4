@@ -477,6 +477,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "user_data.get" => method_user_data_get(params, &mut aci).await,
                         "user_data.set" => method_user_data_set(params, &mut aci).await,
                         "user_data.delete" => method_user_data_delete(params, &mut aci).await,
+                        "db.list" => method_db_list(params, &mut aci).await,
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
@@ -1687,4 +1688,52 @@ async fn method_user_data_delete(params: Value, aci: &mut ACI) -> EResult<Value>
     };
     db::delete_user_data(token.user(), &p.key).await?;
     ok!()
+}
+
+async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Serialize)]
+    struct Params {
+        filter: &'static str,
+    }
+    #[derive(Deserialize)]
+    struct SvcId {
+        id: String,
+    }
+    #[derive(Serialize)]
+    struct DbInfo<'a> {
+        id: &'a str,
+        default: bool,
+    }
+    aci.log_request(log::Level::Debug).await.log_ef();
+    ParamsEmpty::deserialize(params)?;
+    let svc_list: Vec<SvcId> = unpack(
+        safe_rpc_call(
+            RPC.get().unwrap(),
+            "eva.core",
+            "svc.list",
+            pack(&Params {
+                filter: "^eva\\.db\\..*$",
+            })?
+            .into(),
+            QoS::Processed,
+            *TIMEOUT.get().unwrap(),
+        )
+        .await?
+        .payload(),
+    )?;
+    let default_db = get_default_db();
+    let dbs: Vec<DbInfo> = svc_list
+        .iter()
+        .filter_map(|svc| {
+            if let Some(id) = svc.id.strip_prefix("eva.db.") {
+                Some(DbInfo {
+                    id,
+                    default: id == default_db,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+    to_value(dbs).map_err(Into::into)
 }
