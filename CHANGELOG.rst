@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-11-08 build 2023110801: zfrepl and InfluxDB connector fixes
 * 2023-11-07 build 2023110701: Kiosk improvements, skip_disconnected in dbs, db.list HMI method
 * 2023-10-31 build 2023103101: HMI user data, deploy fixes, vendored apps fixes
 * 2023-10-26 build 2023102601: Font fixes in vendored apps
