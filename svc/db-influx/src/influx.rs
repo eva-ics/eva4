@@ -14,7 +14,7 @@ use std::time::Duration;
 
 macro_rules! influx_err {
     ($kind: expr, $res: expr, $q: expr) => {{
-        warn!("{} query failed: {}", $kind, $q);
+        warn!("{} query failed {}", $kind, $q);
         let status = $res.status();
         if let Ok(body) = &hyper::body::to_bytes($res.into_body()).await {
             if let Ok(s) = std::str::from_utf8(body) {
@@ -184,14 +184,17 @@ impl InfluxClient {
         let mut req = Request::builder()
             .method(Method::POST)
             .uri(&self.submit_uri)
-            .body(Body::from(q.clone()))
+            .body(Body::from(q))
             .map_err(Error::failed)?;
         req.headers_mut().extend(self.submit_headers.clone());
         let res = self.client.request(req).await.map_err(Error::failed)?;
         if res.status() == StatusCode::OK || res.status() == StatusCode::NO_CONTENT {
             Ok(())
+        } else if res.status() == StatusCode::BAD_REQUEST {
+            warn!("submit query returned error {}", res.status());
+            Ok(())
         } else {
-            influx_err!("submit", res, q)
+            influx_err!("submit", res, "")
         }
     }
     #[allow(clippy::similar_names)]
