@@ -181,7 +181,7 @@ impl InfluxClient {
             Ok(())
         } else {
             Err(Error::failed(format!(
-                "influx server http error code: {}",
+                "submit influx server http error code: {}",
                 status
             )))
         }
@@ -225,7 +225,7 @@ impl InfluxClient {
                 if status == StatusCode::OK {
                 } else {
                     return Err(Error::failed(format!(
-                        "influx server http error code: {}",
+                        "query influx server http error code: {}",
                         status
                     )));
                 }
@@ -301,7 +301,7 @@ impl InfluxClient {
                 if status == StatusCode::OK {
                 } else {
                     return Err(Error::failed(format!(
-                        "influx server http error code: {}",
+                        "query influx server http error code: {}",
                         status
                     )));
                 }
