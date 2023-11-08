@@ -6,11 +6,27 @@ use hyper::{
     client::connect::HttpConnector, header::HeaderMap, Body, Client, Method, Request, StatusCode,
 };
 use hyper_tls::HttpsConnector;
-use log::{error, trace};
+use log::{error, trace, warn};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::time::Duration;
+
+macro_rules! influx_err {
+    ($kind: expr, $res: expr, $q: expr) => {{
+        warn!("{} query failed: {}", $kind, $q);
+        let status = $res.status();
+        if let Ok(body) = &hyper::body::to_bytes($res.into_body()).await {
+            if let Ok(s) = std::str::from_utf8(body) {
+                error!("server response {}: {}", status, s);
+            }
+        }
+        Err(Error::failed(format!(
+            "{} influx server http error code: {}",
+            $kind, status
+        )))
+    }};
+}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ApiVersion {
@@ -168,22 +184,14 @@ impl InfluxClient {
         let mut req = Request::builder()
             .method(Method::POST)
             .uri(&self.submit_uri)
-            .body(Body::from(q))
+            .body(Body::from(q.clone()))
             .map_err(Error::failed)?;
         req.headers_mut().extend(self.submit_headers.clone());
         let res = self.client.request(req).await.map_err(Error::failed)?;
-        let status = res.status();
-        if status == StatusCode::OK || status == StatusCode::NO_CONTENT {
+        if res.status() == StatusCode::OK || res.status() == StatusCode::NO_CONTENT {
             Ok(())
         } else {
-            let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
-            if let Ok(s) = std::str::from_utf8(body) {
-                error!("server response code {}: {}", status, s);
-            }
-            Err(Error::failed(format!(
-                "submit influx server http error code: {}",
-                status
-            )))
+            influx_err!("submit", res, q)
         }
     }
     #[allow(clippy::similar_names)]
@@ -221,17 +229,8 @@ impl InfluxClient {
                     .map_err(Error::failed)?;
                 req.headers_mut().extend(self.query_headers.clone());
                 let res = self.client.request(req).await.map_err(Error::failed)?;
-                let status = res.status();
-                if status == StatusCode::OK {
-                } else {
-                    let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
-                    if let Ok(s) = std::str::from_utf8(body) {
-                        error!("server response code {}: {}", status, s);
-                    }
-                    return Err(Error::failed(format!(
-                        "query influx server http error code: {}",
-                        status
-                    )));
+                if res.status() != StatusCode::OK {
+                    return influx_err!("query", res, q);
                 }
                 let mut result: V1Res = serde_json::from_slice(
                     &hyper::body::to_bytes(res).await.map_err(Error::failed)?,
@@ -297,21 +296,12 @@ impl InfluxClient {
                 let mut req = Request::builder()
                     .method(Method::POST)
                     .uri(&self.query_uri)
-                    .body(Body::from(q))
+                    .body(Body::from(q.clone()))
                     .map_err(Error::failed)?;
                 req.headers_mut().extend(self.query_headers.clone());
                 let res = self.client.request(req).await.map_err(Error::failed)?;
-                let status = res.status();
-                if status == StatusCode::OK {
-                } else {
-                    let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
-                    if let Ok(s) = std::str::from_utf8(body) {
-                        error!("server response code {}: {}", status, s);
-                    }
-                    return Err(Error::failed(format!(
-                        "query influx server http error code: {}",
-                        status
-                    )));
+                if res.status() != StatusCode::OK {
+                    return influx_err!("query", res, q);
                 }
                 let stream = res
                     .into_body()
