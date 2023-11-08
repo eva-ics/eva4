@@ -6,7 +6,7 @@ use hyper::{
     client::connect::HttpConnector, header::HeaderMap, Body, Client, Method, Request, StatusCode,
 };
 use hyper_tls::HttpsConnector;
-use log::trace;
+use log::{error, trace};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -171,15 +171,15 @@ impl InfluxClient {
             .body(Body::from(q))
             .map_err(Error::failed)?;
         req.headers_mut().extend(self.submit_headers.clone());
-        let status = self
-            .client
-            .request(req)
-            .await
-            .map_err(Error::failed)?
-            .status();
+        let res = self.client.request(req).await.map_err(Error::failed)?;
+        let status = res.status();
         if status == StatusCode::OK || status == StatusCode::NO_CONTENT {
             Ok(())
         } else {
+            let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
+            if let Ok(s) = std::str::from_utf8(body) {
+                error!("server response code {}: {}", status, s);
+            }
             Err(Error::failed(format!(
                 "submit influx server http error code: {}",
                 status
@@ -224,6 +224,10 @@ impl InfluxClient {
                 let status = res.status();
                 if status == StatusCode::OK {
                 } else {
+                    let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
+                    if let Ok(s) = std::str::from_utf8(body) {
+                        error!("server response code {}: {}", status, s);
+                    }
                     return Err(Error::failed(format!(
                         "query influx server http error code: {}",
                         status
@@ -300,6 +304,10 @@ impl InfluxClient {
                 let status = res.status();
                 if status == StatusCode::OK {
                 } else {
+                    let body = &hyper::body::to_bytes(res).await.map_err(Error::failed)?;
+                    if let Ok(s) = std::str::from_utf8(body) {
+                        error!("server response code {}: {}", status, s);
+                    }
                     return Err(Error::failed(format!(
                         "query influx server http error code: {}",
                         status
