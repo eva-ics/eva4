@@ -65,7 +65,7 @@ fn pull_plc(
                 }
                 match task.tp() {
                     EipType::Bit => {
-                        let bit_no = task.offset() + task.bit();
+                        let bit_no = task.offset() * 8 + task.bit();
                         if bit_no > std::i32::MAX as u32 {
                             error!("bit index overflow for {}", tag.path());
                             poc();
