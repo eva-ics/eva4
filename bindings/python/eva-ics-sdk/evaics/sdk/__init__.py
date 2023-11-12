@@ -406,8 +406,9 @@ class Service:
         os.environ['EVA_TIMEOUT'] = str(self.timeout['default'])
         if self.initial.get('fail_mode'):
             if not self.initial.get('react_to_fail'):
-                raise RuntimeError('the service is started in react-to-fail'
-                                   ' mode, but rtf disabled for the service')
+                raise RuntimeError(
+                    'the service is started in react-to-fail'
+                    ' mode, but rtf is not supported by the service')
         else:
             prepare_command = self.initial.get('prepare_command')
             if prepare_command is not None:
