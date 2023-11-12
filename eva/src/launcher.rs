@@ -10,7 +10,7 @@ use eva_common::payload::{pack, unpack};
 use eva_common::services::Initial;
 use eva_common::services::SERVICE_PAYLOAD_INITIAL;
 use eva_common::services::SERVICE_PAYLOAD_PING;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -138,7 +138,7 @@ impl Service {
                 macro_rules! terminate {
                     ($e: expr) => {
                         if a_beacon.load(atomic::Ordering::SeqCst) {
-                            debug!("service {} heartbeat error: {}", svc_id, $e);
+                            warn!("service {} heartbeat error: {}", svc_id, $e);
                         }
                         bmart::process::kill_pstree(pid, Some(shutdown_timeout), true).await;
                         break;
