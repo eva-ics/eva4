@@ -1725,14 +1725,10 @@ async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     let dbs: Vec<DbInfo> = svc_list
         .iter()
         .filter_map(|svc| {
-            if let Some(id) = svc.id.strip_prefix("eva.db.") {
-                Some(DbInfo {
-                    id,
-                    default: id == default_db,
-                })
-            } else {
-                None
-            }
+            svc.id.strip_prefix("eva.db.").map(|id| DbInfo {
+                id,
+                default: id == default_db,
+            })
         })
         .collect();
     to_value(dbs).map_err(Into::into)
