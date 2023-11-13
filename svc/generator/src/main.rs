@@ -240,6 +240,7 @@ enum SourceKind {
     Random,
     RandomFloat,
     Counter,
+    Time,
     Wave,
     UdpFloat,
 }
@@ -250,6 +251,7 @@ impl SourceKind {
             SourceKind::Random => Box::new(generators::random::GenSource {}),
             SourceKind::RandomFloat => Box::new(generators::random_float::GenSource {}),
             SourceKind::Counter => Box::new(generators::counter::GenSource {}),
+            SourceKind::Time => Box::new(generators::time::GenSource {}),
             SourceKind::Wave => Box::new(generators::wave::GenSource {}),
             SourceKind::UdpFloat => Box::new(generators::udp_float::GenSource {}),
         }

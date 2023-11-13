@@ -49,5 +49,6 @@ pub trait GeneratorSource: Send + Sync {
 pub mod counter;
 pub mod random;
 pub mod random_float;
+pub mod time;
 pub mod udp_float;
 pub mod wave;

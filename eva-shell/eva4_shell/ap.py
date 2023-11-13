@@ -894,7 +894,9 @@ def append_cloud_cli(root_sp):
 
 
 def append_generator_cli(root_sp):
-    source_types = ['random', 'random_float', 'counter', 'wave', 'udp_float']
+    source_types = [
+        'random', 'random_float', 'counter', 'time', 'wave', 'udp_float'
+    ]
     ap_generator = root_sp.add_parser('generator', help='generator commands')
     sp_generator = ap_generator.add_subparsers(dest='_subc', help='sub command')
 
