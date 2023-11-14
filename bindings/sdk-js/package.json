@@ -1,0 +1,46 @@
+{
+  "name": "@eva-ics/sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Javascript/Typescript SDK for EVA ICS v4",
+  "files": [
+    "*.js",
+    "*.ts"
+  ],
+  "main": "./sdk.umd.js",
+  "module": "./sdk.es.js",
+  "types": "./sdk.es.d.ts",
+  "exports": {
+    ".": {
+      "import": "./sdk.es.js",
+      "require": "./sdk.umd.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build && tsc src/lib.ts --declaration --emitDeclarationOnly --declarationDir dist/ && mv dist/lib.d.ts dist/sdk.es.d.ts && cp ./package.json ./dist/"
+  },
+  "author": "Bohemia Automation",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eva-ics/eva4"
+  },
+  "bugs": {
+    "url": "https://github.com/eva-ics/eva4/issues"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "busrt": "^0.2.2",
+    "get-stdin": "^9.0.0",
+    "msgpackr": "^1.9.9",
+    "sleep-promise": "^9.1.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "esbuild": "^0.19.5",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "vite-plugin-commonjs": "^0.10.0",
+    "vite-plugin-node": "^3.1.0"
+  }
+}
