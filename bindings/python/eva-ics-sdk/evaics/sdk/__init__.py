@@ -1,4 +1,4 @@
-__version__ = '0.2.19'
+__version__ = '0.2.20'
 
 import busrt
 import sys
@@ -525,7 +525,7 @@ class Service:
                     return
             except:
                 pass
-            if not wait_forever and wait_until >= time.perf_counter():
+            if not wait_forever and wait_until <= time.perf_counter():
                 raise TimeoutError
             time.sleep(self.sleep_step)
 
