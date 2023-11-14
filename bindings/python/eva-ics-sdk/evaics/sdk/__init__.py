@@ -1,4 +1,4 @@
-__version__ = '0.2.20'
+__version__ = '0.2.21'
 
 import busrt
 import sys
@@ -840,24 +840,38 @@ def path_match(path, masks):
     if '#' in masks or path in masks:
         return True
     for mask in masks:
-        p = mask.find('#')
-        if p > -1 and mask[:p] == path[:p]:
-            return True
-        if mask.find('+') > -1:
-            g1 = mask.split('/')
-            g2 = path.split('/')
-            if len(g1) == len(g2):
-                match = True
-                for i in range(0, len(g1)):
-                    if g1[i] != '+' and g1[i] != g2[i]:
-                        match = False
-                        break
-                if match:
+        g1 = mask.split('/')
+        g2 = path.split('/')
+        match = True
+        for i in range(0, len(g1)):
+            try:
+                if i >= len(g2):
+                    match = False
+                    break
+                if g1[i] == "#":
                     return True
+                if g1[i] != "+" and g1[i] != g2[i]:
+                    match = False
+                    break
+                if i == len(g1) - 1 and len(g2) > len(g1):
+                    match = False
+            except IndexError:
+                match = False
+                break
+        if match:
+            return True
     return False
 
 
 def self_test():
+    assert oid_match(OID("sensor:content/data"), ["sensor:content/#"])
+    assert not oid_match(OID("sensor:content/data"), ["sensor:+"])
+    assert oid_match(OID("sensor:content/data"), ["sensor:content/+"])
+    assert oid_match(OID("sensor:content/data"), ["sensor:+/data"])
+    assert oid_match(OID("sensor:content/data"), ["sensor:+/#"])
+    assert not oid_match(OID("sensor:content/data"), ["sensor:+/data2"])
+    assert oid_match(OID("sensor:content/data"), ["sensor:#"])
+
     assert path_match('content/data', ['#', 'content'])
     assert not path_match('content/data', ['content'])
     assert path_match('content/data', ['content/+'])
