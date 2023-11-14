@@ -1,4 +1,4 @@
-__version__ = '0.2.21'
+__version__ = '0.2.22'
 
 import busrt
 import sys
@@ -734,15 +734,19 @@ class XCall:
         """
         Get allow and deny item list from ACL
         """
-        if self.check_admin():
+        if self.is_admin():
             return (['#'], [])
         else:
             allow = set()
+            deny = set()
+
             for oid in self.acl.get('read', {}).get('items', []):
                 allow.add(OID(oid))
             for oid in self.acl.get('write', {}).get('items', []):
                 allow.add(OID(oid))
-            return (list(allow), [])
+            for oid in self.acl.get('deny_read', {}).get('items', []):
+                deny.add(OID(oid))
+            return (list(allow), list(deny))
 
     def is_writable(self):
         """
@@ -769,13 +773,13 @@ class XCall:
         """
         Check if the session ACL has rights to read an item
         """
-        return self.is_admin() or (oid_match(
-            oid,
-            self.acl.get('read', {}).get('items', [])) or oid_match(
-                oid,
-                self.acl.get('write', {}).get('items', []))) and not oid_match(
-                    oid,
-                    self.acl.get('deny_read', {}).get('items', []))
+        return self.is_admin() or (
+            (oid_match(oid,
+                       self.acl.get('read', {}).get('items', [])) or
+             oid_match(oid,
+                       self.acl.get('write', {}).get('items', []))) and
+            not oid_match(oid,
+                          self.acl.get('deny_read', {}).get('items', [])))
 
     def is_item_writable(self, oid):
         """
