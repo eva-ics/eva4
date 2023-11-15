@@ -6,7 +6,7 @@ import { stringify as uuidStringify, parse as uuidParse } from "uuid";
 
 /** EAPI action status payload */
 export interface BusActionStatus {
-  uuid: Array<number>;
+  uuid: Array<number> | Uint8Array;
   status: ActionStatusCode;
   out?: any;
   err?: any;

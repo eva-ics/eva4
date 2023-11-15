@@ -1,9 +1,10 @@
 export { ServiceMethod, ServiceInfo } from "./info";
 export { ItemKind, OID } from "./oid";
-export type { ACIData, ACLData, XCallData } from "./aaa";
+export type { ACIData, ACLData, XCallData, ACLAllowDeny } from "./aaa";
 export { ACI, ACL, XCall, oidMatch, pathMatch } from "./aaa";
 export { Service, noRpcMethod } from "./service";
 export { pack, unpack, clockMonotonic } from "./tools";
+export { Logger } from "./log";
 export {
   LogLevelCode,
   LogLevelName,

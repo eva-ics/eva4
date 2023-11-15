@@ -1,19 +1,17 @@
 {
   "compilerOptions": {
-    "compilerOptions": {
-      "target": "es2022",
-      "useDefineForClassFields": true,
-      "lib": ["es2022"],
-      "module": "commonjs",
-      "esModuleInterop": true,
-      "forceConsistentCasingInFileNames": true,
-      "strict": true,
-      "noImplicitAny": true,
-      "noEmit": true,
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "noFallthroughCasesInSwitch": true,
-      "skipLibCheck": false
-    }
+    "target": "es2022",
+    "useDefineForClassFields": true,
+    "lib": ["es2022"],
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": false
   }
 }

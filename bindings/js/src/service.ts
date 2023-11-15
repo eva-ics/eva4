@@ -1,6 +1,6 @@
 const sleep = require("sleep-promise");
 
-import { Bus, Rpc, BusErrorCode, QoS, RpcEvent } from "busrt";
+import { Bus, Rpc, QoS, RpcEvent } from "busrt";
 import { OID } from "./oid";
 import { Logger } from "./log";
 import {
@@ -14,7 +14,7 @@ import {
   InitialPayload,
   InitialTimeoutConfig
 } from "./types";
-import { ServiceInfo, ServiceMethod } from "./info";
+import { ServiceInfo } from "./info";
 import { Controller } from "./controller";
 import {
   readStdin,
@@ -57,8 +57,8 @@ export class Service {
   rpc: Rpc;
   /** a controller instance for action processing */
   controller: Controller;
-  /** RPC call handler */
-  onRpcCall: (e: RpcEvent) => Promise<Buffer | undefined>;
+  /** @ignore */
+  onRpcCall: (call: RpcEvent) => Promise<Buffer | undefined> | Buffer | undefined;
   /** @ignore */
   svcInfo: ServiceInfo;
   /** Bus logger, recommened to use instead of console.log */
@@ -73,6 +73,19 @@ export class Service {
     this.markedTerminating = false;
     this.privilegesDropped = false;
     this.loaded = false;
+    this.initial = undefined as any;
+    this.id = undefined as any;
+    this.systemName = undefined as any;
+    this.evaDir = undefined as any;
+    this.dataPath = null;
+    this.timeout = undefined as any;
+    this.bus = undefined as any;
+    this.rpc = undefined as any;
+    this.controller = undefined as any;
+    this.svcInfo = undefined as any;
+    this.logger = undefined as any;
+    this._svcInfoPacked = undefined as any;
+    this.onRpcCall = undefined as any;
   }
 
   /** Service loader, must be always called first and once */
@@ -171,7 +184,7 @@ export class Service {
       throw new Error(`bus ${busConfig.type} is not supported`);
     }
     this.bus = new Bus(this.id);
-    this.bus.timeout = busConfig.timeout;
+    this.bus.timeout = busConfig.timeout || this.initial.timeout.default;
     await this.bus.connect(busConfig.path);
     this.logger = new Logger(this.bus, this.initial.core.log_level);
     this.controller = new Controller(this.bus);
@@ -252,9 +265,9 @@ export class Service {
       const user = this.initial.user;
       if (user) {
         const i = getUserIds(user);
-        process.setgroups(i.groupIds);
-        process.setgid(i.gid);
-        process.setuid(i.uid);
+        (process as any).setgroups(i.groupIds);
+        (process as any).setgid(i.gid);
+        (process as any).setuid(i.uid);
       }
       this.privilegesDropped = true;
     }
@@ -417,7 +430,7 @@ export class Service {
   /** @ignore */
   async _handleRpcCall(e: RpcEvent, m?: Service): Promise<Buffer | undefined> {
     const me = m || this;
-    const method = e.method.toString();
+    const method = e.method?.toString();
     switch (method) {
       case "test":
         return;

@@ -1,21 +1,14 @@
 import {
-  EvaErrorCode,
-  EvaError,
-  OID,
-  Bus,
-  QoS,
   ServiceInfo,
   ServiceMethod,
-  EapiTopic,
   Service,
   pack,
   unpack,
-  EventKind,
-  ActionStatusCode,
   Action,
   XCall,
   XCallData,
-  noRpcMethod, RpcEvent
+  noRpcMethod,
+  RpcEvent
 } from "@eva-ics/sdk";
 
 const onFrame = async (e: RpcEvent): Promise<void> => {
@@ -26,7 +19,7 @@ const main = async () => {
   const service = new Service();
   await service.load();
   const onRpcCall = async (e: RpcEvent): Promise<Buffer | undefined> => {
-    const method = e.method.toString();
+    const method = e.method?.toString();
     const payload = unpack(e.getPayload());
     switch (method) {
       case "x":

@@ -85,12 +85,12 @@ export class ServiceInfo {
   addMethod(method: ServiceMethod): ServiceInfo {
     const params = {};
     for (const p of method.requiredParams) {
-      params[p] = { required: true };
+      (params as any)[p] = { required: true };
     }
     for (const p of method.optionalParams) {
-      params[p] = { required: false };
+      (params as any)[p] = { required: false };
     }
-    this.methods[method.name] = {
+    (this.methods as any)[method.name] = {
       description: method.description,
       params: params
     };

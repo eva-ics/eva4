@@ -51,7 +51,7 @@ export const getUserIds = (login: string): userIds => {
 
 export const shellCommand = (command: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(command, (error: any, stdout: any, stderr: any) => {
       if (stdout) {
         console.log(stdout);
       }
@@ -90,15 +90,19 @@ export const clockMonotonic = (): number => {
 /** Packs a payload to send via EAPI (MessagePack) */
 export const pack = msgpack.pack;
 /**
-* Unpacks a payload, received via EAPI (MessagePack), automatically returns
-* undefined if the payload is empty
-*
-* @param {Buffer|Array<number>} payload - payload to unpack
-*
-* @returns {any}
-*/
-export const unpack = (payload: Buffer | Array<number>): any => {
-  return payload.length > 0 ? msgpack.unpack(payload) : undefined;
+ * Unpacks a payload, received via EAPI (MessagePack), automatically returns
+ * undefined if the payload is empty
+ *
+ * @param {Buffer|Array<number>} payload - payload to unpack
+ *
+ * @returns {any}
+ */
+export const unpack = (payload: Buffer | Array<number> | undefined): any => {
+  return payload === undefined
+    ? undefined
+    : payload.length > 0
+    ? msgpack.unpack(payload)
+    : undefined;
 };
 
 export const assert = (cond: any): void => {

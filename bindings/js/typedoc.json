@@ -1,0 +1,8 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "name": "EVA ICS JS SDK",
+    "entryPoints": ["./src/lib.ts"],
+    "navigationLinks": {
+        "GitHub": "https://github.com/eva-ics/eva4/tree/main/bindings/js"
+    }
+}

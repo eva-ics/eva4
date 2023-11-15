@@ -23,10 +23,10 @@ export class OID {
     }
     let kind;
     [kind, this.full_id] = [s.slice(0, pos), s.slice(pos + 1)];
-    if (!Object.values(ItemKind).includes(kind)) {
+    if (!Object.values(ItemKind).includes(kind as ItemKind)) {
       throw new Error(`invalid item kind: ${kind}`);
     }
-    this.kind = kind;
+    this.kind = kind as ItemKind;
   }
 
   /**
