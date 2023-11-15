@@ -1,6 +1,6 @@
 {
   "name": "@eva-ics/sdk",
-  "version": "0.0.9",
+  "version": "0.0.11",
   "type": "module",
   "description": "Javascript/Typescript SDK for EVA ICS v4",
   "files": [

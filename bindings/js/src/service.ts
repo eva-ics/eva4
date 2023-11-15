@@ -213,8 +213,8 @@ export class Service {
    * Automatically calls inutBus, initRpc and drops service privileges
    *
    * @param {ServiceInfo} params.info - service info
-   * @param {frame: (RpcEvent) => void} [params.onFrame] - EAPI frame handler
-   * @param {(e: RpcEvent) => Promise<Buffer | undefined>} [params.onRpcCall] - RPC call handler
+   * @param {frame: (RpcEvent) => Promise <void>} [params.onFrame] - EAPI frame handler
+   * @param {(e: RpcEvent) => Promise<Buffer | undefined> | Buffer | undefined} [params.onRpcCall] - RPC call handler
    *
    * @returns {Promise<void>}
    */
@@ -224,8 +224,10 @@ export class Service {
     onRpcCall
   }: {
     info: ServiceInfo;
-    onFrame?: (frame: RpcEvent) => void;
-    onRpcCall?: (e: RpcEvent) => Promise<Buffer | undefined>;
+    onFrame?: (frame: RpcEvent) => Promise<void> | void;
+    onRpcCall?: (
+      e: RpcEvent
+    ) => Promise<Buffer | undefined> | Buffer | undefined;
   }): Promise<void> {
     await this.initBus();
     this.dropPrivileges();
@@ -456,4 +458,25 @@ export class Service {
  */
 export const noRpcMethod = (): void => {
   throw new EvaError(EvaErrorCode.MethodNotFound, "no such method");
+};
+
+/**
+ * Creates a Service class instance, automatically calls load() and init()
+ * methods (loads the initial payload, initializes the bus and RPC
+ *
+ * @returns {Service}
+ */
+export const createService = async ({
+  info,
+  onFrame,
+  onRpcCall
+}: {
+  info: ServiceInfo;
+  onFrame?: (frame: RpcEvent) => Promise<void> | void;
+  onRpcCall?: (e: RpcEvent) => Promise<Buffer | undefined> | Buffer | undefined;
+}): Promise<Service> => {
+  const service = new Service();
+  await service.load();
+  await service.init({ info, onFrame, onRpcCall });
+  return service;
 };
