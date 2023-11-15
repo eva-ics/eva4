@@ -7,6 +7,7 @@ bump:
 pub: all upload doc
 
 upload:
+	cp ./README.md ./dist/
 	cd dist && npm publish --access public
 
 doc:
