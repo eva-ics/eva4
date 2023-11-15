@@ -59,7 +59,7 @@ export const shellCommand = (command: string): Promise<void> => {
         console.error(stderr);
       }
       if (error) {
-        reject(`prepare command failed with the error: ${error}`);
+        reject(`command ${command} failed with the error: ${error}`);
       } else {
         resolve();
       }
