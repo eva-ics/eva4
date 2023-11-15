@@ -1,7 +1,7 @@
-const msgpack = require("msgpackr");
-const { exec } = require("node:child_process");
-const { hrtime } = require("node:process");
-const fs = require("fs");
+import * as msgpack from "msgpackr";
+import { exec } from "node:child_process";
+import { hrtime } from "node:process";
+import { readFileSync } from "node:fs";
 
 export interface userIds {
   uid: number;
@@ -12,7 +12,7 @@ export interface userIds {
 export const getUserIds = (login: string): userIds => {
   let uid;
   let gid;
-  for (const line of fs.readFileSync("/etc/passwd").toString().split("\n")) {
+  for (const line of readFileSync("/etc/passwd").toString().split("\n")) {
     if (line) {
       const data = line.split(":");
       if (data[0] === login) {
@@ -25,7 +25,7 @@ export const getUserIds = (login: string): userIds => {
     throw new Error(`unable to get user info for ${login}`);
   }
   let groups = [gid];
-  for (const line of fs.readFileSync("/etc/group").toString().split("\n")) {
+  for (const line of readFileSync("/etc/group").toString().split("\n")) {
     if (line) {
       const data = line.split(":");
       const groupId = data[2];
@@ -84,7 +84,7 @@ export const readStdin = (size: number): Promise<Buffer> => {
 
 /** Get monotonic clock as a float number */
 export const clockMonotonic = (): number => {
-  return parseInt(hrtime.bigint()) / 1_000_000_000;
+  return Number(hrtime.bigint()) / 1_000_000_000;
 };
 
 /** Packs a payload to send via EAPI (MessagePack) */
@@ -97,7 +97,7 @@ export const pack = msgpack.pack;
  *
  * @returns {any}
  */
-export const unpack = (payload: Buffer | Array<number> | undefined): any => {
+export const unpack = (payload: Buffer | Uint8Array | undefined): any => {
   return payload === undefined
     ? undefined
     : payload.length > 0

@@ -6,7 +6,16 @@ const lib_name = "sdk";
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ["busrt", "get-stdin", "msgpackr", "sleep-promise", "uuid"]
+      external: [
+        "busrt",
+        "get-stdin",
+        "msgpackr",
+        "sleep-promise",
+        "uuid",
+        "node:fs",
+        "node:process",
+        "node:child_process"
+      ]
     },
     lib: {
       entry: path.resolve(__dirname, "src/lib.ts"),

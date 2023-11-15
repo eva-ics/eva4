@@ -1,5 +1,4 @@
-export const sleep = require("sleep-promise");
-
+import sleep from "sleep-promise";
 import { Bus, Rpc, QoS, RpcEvent } from "busrt";
 import { OID } from "./oid";
 import { Logger } from "./log";
@@ -24,6 +23,8 @@ import {
   unpack,
   getUserIds
 } from "./tools";
+
+export { sleep };
 
 /** The primary service class */
 export class Service {

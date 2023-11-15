@@ -1,6 +1,6 @@
 {
   "name": "@eva-ics/sdk",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "description": "Javascript/Typescript SDK for EVA ICS v4",
   "files": [
@@ -25,7 +25,7 @@
     }
   },
   "scripts": {
-    "build": "vite build && tsc src/lib.ts --declaration --emitDeclarationOnly --declarationDir dist/ && mv dist/lib.d.ts dist/sdk.es.d.ts && cp ./package.json ./dist/"
+    "build": "vite build && tsc src/lib.ts --esModuleInterop --skipLibCheck --declaration --emitDeclarationOnly --declarationDir dist/ && mv dist/lib.d.ts dist/sdk.es.d.ts && cp ./package.json ./dist/"
   },
   "author": "Bohemia Automation",
   "repository": {

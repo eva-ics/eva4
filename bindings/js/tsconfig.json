@@ -12,6 +12,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": false
+    "skipLibCheck": true
   }
 }
