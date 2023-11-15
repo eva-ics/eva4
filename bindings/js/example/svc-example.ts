@@ -12,7 +12,8 @@ import {
   noRpcMethod,
   RpcEvent,
   Logger,
-  sleep
+  sleep,
+  exit
 } from "@eva-ics/sdk";
 
 let service: Service;
@@ -113,7 +114,7 @@ const main = async () => {
   // wait a bit to let tasks finish
   await sleep(500);
   // terminate the process with no error
-  process.exit(0);
+  exit();
 };
 
 main();

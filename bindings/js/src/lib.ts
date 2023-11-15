@@ -34,3 +34,23 @@ export const selfTest = (): void => {
   console.log("aaa");
   selfTestAAA();
 };
+
+declare var process: any;
+declare var Deno: any;
+
+/**
+ * Exit process with a result code
+ *
+ * @param {number} code - exit code (default: 0)
+ *
+ * @returns {void}
+ */
+export const exit = (code: number = 0): void => {
+  if (process) {
+    process.exit(code);
+  } else if (Deno) {
+    Deno.exit(code);
+  } else {
+    throw Error("unable to exit process, unknown runtime");
+  }
+};
