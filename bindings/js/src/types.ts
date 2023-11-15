@@ -1,3 +1,4 @@
+/** Log level codes */
 export enum LogLevelCode {
   Trace = 0,
   Debug = 10,
@@ -6,6 +7,7 @@ export enum LogLevelCode {
   Error = 40
 }
 
+/** Log level names */
 export enum LogLevelName {
   Trace = "trace",
   Debug = "debug",
@@ -14,6 +16,7 @@ export enum LogLevelName {
   Error = "error"
 }
 
+/** EAPI event kinds */
 export enum EventKind {
   Any = "any",
   Local = "local",
@@ -21,6 +24,7 @@ export enum EventKind {
   RemoteArchive = "remote_archive"
 }
 
+/** The standard EAPI error codes */
 export enum EvaErrorCode {
   NotFound = -32001,
   AccessDenied = -32002,
@@ -56,6 +60,7 @@ export enum EvaErrorCode {
   BusTimeout = -32120
 }
 
+/** The standard EAPI bus topics */
 export enum EapiTopic {
   RawStateTopic = "RAW/",
   LocalStateTopic = "ST/LOC/",
@@ -75,11 +80,16 @@ export enum EapiTopic {
   ActionStatus = "ACT/"
 }
 
+/** The standard EAPI error class */
 export class EvaError {
   code: number;
   message?: string;
 
-  constructor(code: number, message?: string) {
+  /**
+   * @param {EvaErrorCode} code - error code
+   * @param {string} [message] - error message
+   */
+  constructor(code: EvaErrorCode, message?: string) {
     this.code = code;
     this.message = message;
   }
@@ -95,10 +105,13 @@ export enum ServiceStatus {
   Terminating = "terminating"
 }
 
+/** The standard item status error */
 export const itemStatusError = -1;
 
+/** The default step (100ms) */
 export const sleepStep = 100;
 
+/** The service initial payload */
 export interface InitialPayload {
   version: number;
   system_name: string;
@@ -118,12 +131,14 @@ export interface InitialPayload {
   call_tracing: boolean;
 }
 
+/** The service initial payload timeout config (seconds) */
 export interface InitialTimeoutConfig {
   startup: number;
   shutdown: number;
   default: number;
 }
 
+/** The service initial payload bus config */
 export interface InitialBusConfig {
   type: string;
   path: string;
@@ -133,6 +148,7 @@ export interface InitialBusConfig {
   queue_size: number;
 }
 
+/** The service initial payload core info */
 export interface InitialCoreInfo {
   build: number;
   version: string;

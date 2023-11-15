@@ -2,6 +2,7 @@ import { OID } from "./oid";
 import { EvaErrorCode, EvaError } from "./types";
 import { assert, assertEq } from "./tools";
 
+/** ACI (API call info) data payload */
 export interface ACIData {
   acl: string;
   auth: string;
@@ -9,12 +10,16 @@ export interface ACIData {
   u: string;
 }
 
+/** ACI class */
 export class ACI {
   aclName: string;
   auth: string;
   tokenMode: string;
   user: string;
 
+  /**
+   * @param {ACIData} aciData - construct an instance from the ACI payload
+   */
   constructor(aciData: ACIData) {
     this.aclName = aciData.acl;
     this.auth = aciData.auth;
@@ -22,10 +27,21 @@ export class ACI {
     this.user = aciData.u;
   }
 
+  /**
+   * Is current sesssion writable
+   *
+   * @returns {boolean}
+   */
   isWritable(): boolean {
     return this.auth != "token" || this.tokenMode != "readonly";
   }
 
+  /**
+   * Require current sesssion writable
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requireWritable(): void {
     if (!this.isWritable()) {
       throw new EvaError(EvaErrorCode.AccessDenied, "the session is read-only");
@@ -33,12 +49,14 @@ export class ACI {
   }
 }
 
+/** ACL allow/deny block */
 export interface ACLAllowDeny {
   items: Array<string>;
   pvt: Array<string>;
   rpvt: Array<string>;
 }
 
+/** ACL data payload */
 export interface ACLData {
   admin?: boolean;
   deny_read: ACLAllowDeny;
@@ -51,6 +69,7 @@ export interface ACLData {
   meta?: any;
 }
 
+/** ACL class */
 export class ACL {
   admin?: boolean;
   denyRead: ACLAllowDeny;
@@ -62,6 +81,9 @@ export class ACL {
   write: ACLAllowDeny;
   meta?: any;
 
+  /**
+   * @param {ACLData} aclData - construct an instance from the ACL payload
+   */
   constructor(aclData: ACLData) {
     this.admin = aclData.admin;
     this.denyRead = aclData.deny_read;
@@ -74,6 +96,9 @@ export class ACL {
     this.meta = aclData.meta;
   }
 
+  /**
+   * Constructs allow/deny OID lists (strings), useful for item.state core call
+   */
   getItemsAllowDenyReading(): [Array<string>, Array<string>] {
     const allow: Set<string> = new Set();
     const deny: Set<string> = new Set();
@@ -87,14 +112,33 @@ export class ACL {
     return [Array.from(allow), Array.from(deny)];
   }
 
+  /**
+   * Is admin
+   *
+   * @returns {boolean}
+   */
   isAdmin(): boolean {
     return this.admin === true;
   }
 
+  /**
+   * Is an operation allowed
+   *
+   * @param {string} op - operation to check
+   *
+   * @returns {boolean}
+   */
   checkOp(op: string): boolean {
     return this.isAdmin() || this.ops?.includes(op);
   }
 
+  /**
+   * Is an item readable
+   *
+   * @param {OID} oid - item to check
+   *
+   * @returns {boolean}
+   */
   isItemReadable(oid: OID): boolean {
     return (
       this.isAdmin() ||
@@ -103,6 +147,13 @@ export class ACL {
     );
   }
 
+  /**
+   * Is an item writable
+   *
+   * @param {OID} oid - item to check
+   *
+   * @returns {boolean}
+   */
   isItemWritable(oid: OID): boolean {
     return (
       this.isAdmin() ||
@@ -110,6 +161,13 @@ export class ACL {
     );
   }
 
+  /**
+   * Is a pvt path readable
+   *
+   * @param {string} path - pvt path to check
+   *
+   * @returns {boolean}
+   */
   isPvtReadable(path: string): boolean {
     return (
       this.isAdmin() ||
@@ -118,6 +176,13 @@ export class ACL {
     );
   }
 
+  /**
+   * Is a pvt path writable
+   *
+   * @param {string} path - pvt path to check
+   *
+   * @returns {boolean}
+   */
   isPvtWritable(path: string): boolean {
     return (
       this.isAdmin() ||
@@ -126,12 +191,26 @@ export class ACL {
     );
   }
 
+  /**
+   * Require admin
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requireAdmin(): void {
     if (!this.admin) {
       throw new EvaError(EvaErrorCode.AccessDenied, "admin access required");
     }
   }
 
+  /**
+   * Require an operation
+   *
+   * @param {string} op - operation to check
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requireOp(op: string): void {
     if (!this.checkOp(op)) {
       throw new EvaError(
@@ -141,6 +220,14 @@ export class ACL {
     }
   }
 
+  /**
+   * Require an item to be readable
+   *
+   * @param {OID} oid - item to check
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requireItemRead(oid: OID): void {
     if (!this.isItemReadable(oid)) {
       throw new EvaError(
@@ -150,6 +237,14 @@ export class ACL {
     }
   }
 
+  /**
+   * Require an item to be writable
+   *
+   * @param {OID} oid - item to check
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requireItemWrite(oid: OID): void {
     if (!this.isItemWritable(oid)) {
       throw new EvaError(
@@ -159,6 +254,14 @@ export class ACL {
     }
   }
 
+  /**
+   * Require a pvt path to be readable
+   *
+   * @param {string} path - pvt path to check
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requirePvtRead(path: string): void {
     if (!this.isPvtReadable(path)) {
       throw new EvaError(
@@ -168,6 +271,14 @@ export class ACL {
     }
   }
 
+  /**
+   * Require a pvt path to be writable
+   *
+   * @param {string} path - pvt path to check
+   *
+   * @throws {EvaError}
+   * @returns {void}
+   */
   requirePvtWrite(path: string): void {
     if (!this.isPvtWritable(path)) {
       throw new EvaError(
@@ -178,6 +289,7 @@ export class ACL {
   }
 }
 
+/** HTTP x-call data payload */
 export interface XCallData {
   method: string;
   params?: any;
@@ -185,12 +297,16 @@ export interface XCallData {
   acl: ACLData;
 }
 
+/** HTTP x-call class */
 export class XCall {
   method: string;
   params?: any;
   aci: ACI;
   acl: ACL;
 
+  /**
+   * @param {XCallData} payload - construct an instance from the x-call payload
+   */
   constructor(payload: XCallData) {
     this.method = payload.method;
     this.params = payload.params;
@@ -199,6 +315,14 @@ export class XCall {
   }
 }
 
+/**
+ * Checks is OID matching given masks
+ *
+ * @param {OID} oid - OID to check
+ * @param {Array<string>} masks - masks to check with
+ *
+ * @returns {boolean}
+ */
 export const oidMatch = (oid: OID, masks: Array<string>): boolean => {
   return pathMatch(
     oid.asPath(),
@@ -206,6 +330,14 @@ export const oidMatch = (oid: OID, masks: Array<string>): boolean => {
   );
 };
 
+/**
+ * Checks is a path matching given masks
+ *
+ * @param {string} path - path to check
+ * @param {Array<string>} masks - masks to check with
+ *
+ * @returns {boolean}
+ */
 export const pathMatch = (path: string, masks: Array<string>): boolean => {
   if (masks.includes("#") || masks.includes(path)) {
     return true;
@@ -237,6 +369,7 @@ export const pathMatch = (path: string, masks: Array<string>): boolean => {
   return false;
 };
 
+/** @ignore */
 export const selfTest = () => {
   assert(oidMatch(new OID("sensor:content/data"), ["sensor:content/#"]));
   assert(!oidMatch(new OID("sensor:content/data"), ["sensor:+"]));

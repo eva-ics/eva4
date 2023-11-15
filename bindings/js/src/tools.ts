@@ -82,12 +82,22 @@ export const readStdin = (size: number): Promise<Buffer> => {
   });
 };
 
+/** Get monotonic clock as a float number */
 export const clockMonotonic = (): number => {
   return parseInt(hrtime.bigint()) / 1_000_000_000;
 };
 
+/** Packs a payload to send via EAPI (MessagePack) */
 export const pack = msgpack.pack;
-export const unpack = (payload: Buffer): any => {
+/**
+* Unpacks a payload, received via EAPI (MessagePack), automatically returns
+* undefined if the payload is empty
+*
+* @param {Buffer|Array<number>} payload - payload to unpack
+*
+* @returns {any}
+*/
+export const unpack = (payload: Buffer | Array<number>): any => {
   return payload.length > 0 ? msgpack.unpack(payload) : undefined;
 };
 

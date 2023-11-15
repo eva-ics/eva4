@@ -25,25 +25,45 @@ import {
   getUserIds
 } from "./tools";
 
+/** The primary service class */
 export class Service {
+  /** Service initial payload */
   initial: InitialPayload;
+  /** @ignore */
   active: boolean;
+  /** @ignore */
   loaded: boolean;
+  /** @ignore */
   privilegesDropped: boolean;
+  /** @ignore */
   shutdownRequested: boolean;
+  /** @ignore */
   markedReady: boolean;
+  /** @ignore */
   markedTerminating: boolean;
+  /** service id */
   id: string;
+  /** EVA ICS directory */
   evaDir: string;
+  /** EVA ICS node name */
   systemName: string;
+  /** service data path (if available) */
   dataPath: string | null;
+  /** service timeouts */
   timeout: InitialTimeoutConfig;
+  /** service bus client */
   bus: Bus;
+  /** service bus RPC client */
   rpc: Rpc;
+  /** a controller instance for action processing */
   controller: Controller;
+  /** RPC call handler */
   onRpcCall: (e: RpcEvent) => Promise<Buffer | undefined>;
+  /** @ignore */
   svcInfo: ServiceInfo;
+  /** Bus logger, recommened to use instead of console.log */
   logger: Logger;
+  /** @ignore */
   _svcInfoPacked: Buffer;
 
   constructor() {
@@ -55,6 +75,7 @@ export class Service {
     this.loaded = false;
   }
 
+  /** Service loader, must be always called first and once */
   async load() {
     if (this.loaded) {
       throw new Error("the service is already loaded");
@@ -68,6 +89,9 @@ export class Service {
     const initial: InitialPayload = unpack(await readStdin(payloadLen));
     this.loaded = true;
     this.initial = initial;
+    if (!this.initial.config) {
+      this.initial.config = {};
+    }
     this.id = initial.id;
     this.systemName = initial.system_name;
     this.timeout = initial.timeout;
@@ -96,25 +120,51 @@ export class Service {
     process.stdin.on("end", () => this.markTerminating(me));
   }
 
+  /**
+   * Throws RPC error if the service is not ready yet
+   *
+   * @returns {void}
+   * @throws {EvaError}
+   */
   needReady(): void {
     if (!this.active) {
       throw new EvaError(EvaErrorCode.RpcInternal, "service not ready");
     }
   }
 
+  /**
+   * Get service configuration
+   *
+   * @returns {void}
+   * @throws {EvaError}
+   */
   getConfig(): object {
-    const config = this.initial.config;
-    return config === null ? {} : config;
+    return this.initial.config;
   }
 
+  /**
+   * Is service mode normal
+   *
+   * @returns {boolean}
+   */
   isModeNormal(): boolean {
     return !this.initial.fail_mode;
   }
 
-  isModeRtf(): boolean {
+  /**
+   * Is service mode react-to-fail
+   *
+   * @returns {boolean}
+   */
+  isModeRTF(): boolean {
     return this.initial.fail_mode;
   }
 
+  /**
+   * Init bus client
+   *
+   * @returns {Promise<void>}
+   */
   async initBus(): Promise<void> {
     const busConfig = this.initial.bus;
     if (busConfig.type != "native") {
@@ -127,6 +177,13 @@ export class Service {
     this.controller = new Controller(this.bus);
   }
 
+  /**
+   * Init bus RPC client
+   *
+   * @param {ServiceInfo} svcInfo - service information
+   *
+   * @returns {Promise<void>}
+   */
   async initRpc(svcInfo: ServiceInfo): Promise<void> {
     const me = this;
     this.svcInfo = svcInfo;
@@ -136,28 +193,42 @@ export class Service {
     this.rpc.onCall = (e: RpcEvent) => this._handleRpcCall(e, me);
   }
 
+  /**
+   * Automatically calls inutBus, initRpc and drops service privileges
+   *
+   * @param {ServiceInfo} params.info - service info
+   * @param {frame: (RpcEvent) => void} [params.onFrame] - EAPI frame handler
+   * @param {(e: RpcEvent) => Promise<Buffer | undefined>} [params.onRpcCall] - RPC call handler
+   *
+   * @returns {Promise<void>}
+   */
   async init({
     info,
     onFrame,
     onRpcCall
   }: {
-    info?: ServiceInfo;
+    info: ServiceInfo;
     onFrame?: (frame: RpcEvent) => void;
     onRpcCall?: (e: RpcEvent) => Promise<Buffer | undefined>;
-  }) {
+  }): Promise<void> {
     await this.initBus();
     this.dropPrivileges();
-    if (info) {
-      this.initRpc(info);
-      if (onFrame) {
-        this.rpc.onFrame = onFrame;
-      }
-      if (onRpcCall) {
-        this.onRpcCall = onRpcCall;
-      }
+    this.initRpc(info);
+    if (onFrame) {
+      this.rpc.onFrame = onFrame;
+    }
+    if (onRpcCall) {
+      this.onRpcCall = onRpcCall;
     }
   }
 
+  /**
+   * Blocks the service while active
+   *
+   * @param {boolean} prepare - register signals and mark active (default: true)
+   *
+   * @returns {Promise<void>}
+   */
   async block(prepare: boolean = true): Promise<void> {
     if (prepare) {
       this.registerSignals();
@@ -171,6 +242,11 @@ export class Service {
     }
   }
 
+  /**
+   * Drops service privileges to a restricted user
+   *
+   * @returns {void}
+   */
   dropPrivileges(): void {
     if (!this.privilegesDropped) {
       const user = this.initial.user;
@@ -184,14 +260,27 @@ export class Service {
     }
   }
 
+  /**
+   * Registers service signal handlers (SIGINT, SIGTERM)
+   *
+   * @returns {void}
+   */
   registerSignals(): void {
     const me = this;
     process.on("SIGINT", () => (me.active = false));
     process.on("SIGTERM", () => (me.active = false));
   }
 
+  /**
+   * Subscribes bus client to item events
+   *
+   * @param {Array<string|OID>} items - items to subscribe
+   * @param {EventKind} kind - bus event kind
+   *
+   * @returns {Promise<void>}
+   */
   async subscribeOIDs(
-    sub: Array<string | OID>,
+    items: Array<string | OID>,
     kind: EventKind
   ): Promise<void> {
     let sfx;
@@ -212,7 +301,7 @@ export class Service {
         throw new Error(`invalid event kind: ${kind}`);
     }
     const topics: Array<string> = [];
-    for (const oid of sub) {
+    for (const oid of items) {
       let path;
       if (oid === "#") {
         path = oid;
@@ -226,18 +315,38 @@ export class Service {
     await this.bus.subscribe(topics);
   }
 
+  /**
+   * Is the service active
+   *
+   * @returns {boolean}
+   */
   isActive(): boolean {
     return this.active;
   }
 
+  /**
+   * Is the service shutdown requested
+   *
+   * @returns {boolean}
+   */
   isShutdownRequested(): boolean {
     return this.shutdownRequested;
   }
 
+  /**
+   * Get the service default timeout (seconds)
+   *
+   * @returns {number}
+   */
   getTimeout(): number {
     return this.timeout.default;
   }
 
+  /**
+   * Manually mark the service ready
+   *
+   * @returns {Promise<void>}
+   */
   async markReady(): Promise<void> {
     if (!this.markedReady) {
       this.markedReady = true;
@@ -250,14 +359,11 @@ export class Service {
     }
   }
 
-  _handleStdin(m?: Service) {
-    const me = m || this;
-    const buf = process.stdin.read(1);
-    if (!buf || buf[0] != ServicePayloadKind.Ping) {
-      me.markTerminating();
-    }
-  }
-
+  /**
+   * Manually mark the service terminating
+   *
+   * @returns {Promise<void>}
+   */
   async markTerminating(m?: Service): Promise<void> {
     const me = m || this;
     me.active = false;
@@ -268,7 +374,15 @@ export class Service {
     }
   }
 
-  async waitCore(wait_forever?: boolean, timeout?: number) {
+  /**
+   * Wait until the core become ready (in sub-functions)
+   *
+   * @param {boolean} wait_forever - wait forever
+   * @param {number} timeout - wait timeout
+   *
+   * @returns {Promise<void>}
+   */
+  async waitCore(wait_forever?: boolean, timeout?: number): Promise<void> {
     const t = timeout || this.timeout.startup || this.timeout.default;
     const waitUntil = clockMonotonic() + t;
     while (this.active) {
@@ -286,10 +400,21 @@ export class Service {
     }
   }
 
+  /** @ignore */
+  _handleStdin(m?: Service) {
+    const me = m || this;
+    const buf = process.stdin.read(1);
+    if (!buf || buf[0] != ServicePayloadKind.Ping) {
+      me.markTerminating();
+    }
+  }
+
+  /** @ignore */
   async _mark(status: ServiceStatus): Promise<void> {
     await this.bus.publish("SVC/ST", pack({ status: status }), QoS.No);
   }
 
+  /** @ignore */
   async _handleRpcCall(e: RpcEvent, m?: Service): Promise<Buffer | undefined> {
     const me = m || this;
     const method = e.method.toString();
@@ -307,6 +432,12 @@ export class Service {
   }
 }
 
-export const noRpcMethod = () => {
+/**
+ * Throws -32601 EAPI error (RPC method not found)
+ *
+ * @returns {void}
+ * @throws {EvaError}
+ */
+export const noRpcMethod = (): void => {
   throw new EvaError(EvaErrorCode.MethodNotFound, "no such method");
 };

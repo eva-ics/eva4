@@ -11,9 +11,7 @@ export {
   EvaErrorCode,
   EapiTopic,
   EvaError,
-  ServicePayloadKind,
   itemStatusError,
-  ActionStatusCode,
   sleepStep
 } from "./types";
 export type {
@@ -28,7 +26,10 @@ export { Action, Controller } from "./controller";
 
 import { selfTest as selfTestAAA } from "./aaa";
 
-export const selfTest = () => {
+/**
+ * A self-test function
+ */
+export const selfTest = (): void => {
   console.log("aaa");
   selfTestAAA();
 };

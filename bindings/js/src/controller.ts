@@ -4,6 +4,7 @@ import { Bus, QoS } from "busrt";
 import { pack } from "./tools";
 import { stringify as uuidStringify, parse as uuidParse } from "uuid";
 
+/** EAPI action status payload */
 export interface BusActionStatus {
   uuid: Array<number>;
   status: ActionStatusCode;
@@ -12,6 +13,7 @@ export interface BusActionStatus {
   exitcode?: number;
 }
 
+/** EAPI action call payload */
 export interface BusAction {
   uuid: Array<number> | Buffer;
   i: string;
@@ -21,12 +23,17 @@ export interface BusAction {
   config?: any;
 }
 
+/** EAPI action call params payload */
 export interface ActionParams {
+  /** for unit actions */
   value?: any;
+  /** for lmacro actions */
   args?: Array<any>;
+  /** for lmacro actions */
   kwargs?: object;
 }
 
+/** EAPI action call class */
 export class Action {
   uuid: string;
   oid: OID;
@@ -35,6 +42,9 @@ export class Action {
   params?: ActionParams;
   config?: any;
 
+  /**
+   * @param {event} BusAction - construct an instance from the bus call payload
+   */
   constructor(event: BusAction) {
     this.uuid = uuidStringify(event.uuid);
     this.oid = new OID(event.i);
@@ -45,44 +55,111 @@ export class Action {
   }
 }
 
+/** Action controller */
 export class Controller {
+  /** @ignore */
   bus: Bus;
 
+  /** @ignore */
   constructor(bus: Bus) {
     this.bus = bus;
   }
 
-  eventPending(action: Action) {
-    this._sendEvent(action, ActionStatusCode.Pending);
+  /**
+   * Notify the bus about action pending event
+   *
+   * @param {Action} action - action to notify about
+   *
+   * @returns {Promise<void>}
+   */
+  eventPending(action: Action): Promise<void> {
+    return this._sendEvent(action, ActionStatusCode.Pending);
   }
 
-  eventRunning(action: Action) {
-    this._sendEvent(action, ActionStatusCode.Running);
+  /**
+   * Notify the bus about action running event
+   *
+   * @param {Action} action - action to notify about
+   *
+   * @returns {Promise<void>}
+   */
+  eventRunning(action: Action): Promise<void> {
+    return this._sendEvent(action, ActionStatusCode.Running);
   }
 
-  eventCompleted(action: Action, out?: any) {
-    this._sendEvent(action, ActionStatusCode.Completed, out);
+  /**
+   * Notify the bus about action completed event
+   *
+   * @param {Action} action - action to notify about
+   * @param {any} [out] - output result
+   *
+   * @returns {Promise<void>}
+   */
+  eventCompleted(action: Action, out?: any): Promise<void> {
+    return this._sendEvent(
+      action,
+      ActionStatusCode.Completed,
+      out,
+      undefined,
+      0
+    );
   }
 
-  eventFailed(action: Action, out?: any, err?: any, exitcode?: number) {
-    this._sendEvent(action, ActionStatusCode.Failed, out, err, exitcode);
+  /**
+   * Notify the bus about action failed event
+   *
+   * @param {Action} action - action to notify about
+   * @param {any} [out] - output result
+   * @param {any} [err] - error message
+   * @param {number} [exitcode] - exit code (default: -1)
+   *
+   * @returns {Promise<void>}
+   */
+  eventFailed(
+    action: Action,
+    out?: any,
+    err?: any,
+    exitcode?: number
+  ): Promise<void> {
+    return this._sendEvent(
+      action,
+      ActionStatusCode.Failed,
+      out,
+      err,
+      exitcode === undefined ? -1 : exitcode
+    );
   }
 
+  /**
+   * Notify the bus about action canceled event
+   *
+   * @param {Action} action - action to notify about
+   *
+   * @returns {Promise<void>}
+   */
   eventCanceled(action: Action) {
-    this._sendEvent(action, ActionStatusCode.Canceled);
+    return this._sendEvent(action, ActionStatusCode.Canceled);
   }
 
+  /**
+   * Notify the bus about action terminated event
+   *
+   * @param {Action} action - action to notify about
+   *
+   * @returns {Promise<void>}
+   */
   eventTerminated(action: Action) {
-    this._sendEvent(action, ActionStatusCode.Terminated);
+    return this._sendEvent(action, ActionStatusCode.Terminated);
   }
 
-  _sendEvent(
+  /** @ignore */
+  async _sendEvent(
     action: Action,
     statusCode: ActionStatusCode,
     out?: any,
     err?: any,
     exitcode?: number
-  ) {
+  ): Promise<void> {
     const path = action.oid.asPath();
     const payload = this._actionEventPayload(
       action.uuid,
@@ -94,6 +171,7 @@ export class Controller {
     this.bus.publish(`${EapiTopic.ActionStatus}${path}`, payload, QoS.No);
   }
 
+  /** @ignore */
   _actionEventPayload(
     u: string,
     status: ActionStatusCode,
