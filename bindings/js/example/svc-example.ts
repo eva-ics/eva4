@@ -8,6 +8,7 @@ import {
   Action,
   XCall,
   XCallData,
+  EapiTopic,
   noRpcMethod,
   RpcEvent,
   Logger,
@@ -54,8 +55,8 @@ const onRpcCall = async (e: RpcEvent): Promise<Buffer | undefined> => {
     case "run":
       const lAction = new Action(payload);
       console.log(lAction);
-      service.controller.eventRunning(lAction);
-      service.controller.eventFailed(
+      await service.controller.eventRunning(lAction);
+      await service.controller.eventFailed(
         lAction,
         "lmacro execution",
         "execution failed: not supported",
@@ -66,8 +67,13 @@ const onRpcCall = async (e: RpcEvent): Promise<Buffer | undefined> => {
     case "action":
       const uAction = new Action(payload);
       console.log(uAction);
-      service.controller.eventRunning(uAction);
-      service.controller.eventCompleted(uAction, "all fine");
+      await service.controller.eventRunning(uAction);
+      await service.controller.eventCompleted(uAction, "all fine");
+      const path = uAction.oid.asPath();
+      await service.bus.publish(
+        `${EapiTopic.RawStateTopic}${path}`,
+        pack({ status: 1, value: uAction.params?.value })
+      );
       return;
     // example RPC method which deals with the params payload
     case "hello":

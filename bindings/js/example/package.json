@@ -1,10 +1,10 @@
 {
   "name": "eva-ics-sdk-test",
   "version": "0.0.1",
-  "main": "test.ts",
+  "main": "svc-example.ts",
   "scripts": {
-    "build": "mkdir -p dist && npx esbuild test.ts --bundle --platform=node --outfile=dist/out.js",
-    "build-release": "mkdir -p dist && npx esbuild test.ts --bundle --platform=node --minify --outfile=dist/out-release.js"
+    "build": "mkdir -p dist && npx esbuild svc-example.ts --bundle --platform=node --outfile=dist/out.js",
+    "build-release": "mkdir -p dist && npx esbuild svc-example.ts --bundle --platform=node --minify --outfile=dist/out-release.js"
   },
   "license": "MIT",
   "dependencies": {
