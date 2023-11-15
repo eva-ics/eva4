@@ -70,7 +70,9 @@ const onRpcCall = async (e: RpcEvent): Promise<Buffer | undefined> => {
     case "run":
       const lAction = new Action(payload);
       console.log(lAction);
+      // mark action running
       await service.controller.eventRunning(lAction);
+      // mark action failed
       await service.controller.eventFailed(
         lAction,
         "lmacro execution",
@@ -82,8 +84,11 @@ const onRpcCall = async (e: RpcEvent): Promise<Buffer | undefined> => {
     case "action":
       const uAction = new Action(payload);
       console.log(uAction);
+      // mark action running
       await service.controller.eventRunning(uAction);
+      // mark action completed
       await service.controller.eventCompleted(uAction, "all fine");
+      // announce new unit state
       const path = uAction.oid.asPath();
       await service.bus.publish(
         `${EapiTopic.RawStateTopic}${path}`,
