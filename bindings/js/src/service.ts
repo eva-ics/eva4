@@ -1,4 +1,4 @@
-const sleep = require("sleep-promise");
+export const sleep = require("sleep-promise");
 
 import { Bus, Rpc, QoS, RpcEvent } from "busrt";
 import { OID } from "./oid";
@@ -58,7 +58,9 @@ export class Service {
   /** a controller instance for action processing */
   controller: Controller;
   /** @ignore */
-  onRpcCall: (call: RpcEvent) => Promise<Buffer | undefined> | Buffer | undefined;
+  onRpcCall: (
+    call: RpcEvent
+  ) => Promise<Buffer | undefined> | Buffer | undefined;
   /** @ignore */
   svcInfo: ServiceInfo;
   /** Bus logger, recommened to use instead of console.log */

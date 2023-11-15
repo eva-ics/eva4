@@ -66,7 +66,11 @@ export class Logger {
   /** @ignore */
   async _log(level: LogLevelName, msgs: any[]): Promise<void> {
     const prepared: Array<string> = msgs.map((s) => {
-      return typeof s === "object" ? JSON.stringify(s) : s.toString();
+      return s === undefined || s === null
+        ? ""
+        : typeof s === "object"
+        ? JSON.stringify(s)
+        : s.toString();
     });
     await this.bus.publish(
       `${EapiTopic.LogInputTopic}${level}`,

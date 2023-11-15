@@ -1,6 +1,6 @@
 {
   "name": "@eva-ics/sdk",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "description": "Javascript/Typescript SDK for EVA ICS v4",
   "files": [
@@ -37,7 +37,7 @@
   },
   "license": "Apache-2.0",
   "peerDependencies": {
-    "busrt": "^0.2.3",
+    "busrt": "^0.2.4",
     "get-stdin": "^9.0.0",
     "msgpackr": "^1.9.9",
     "sleep-promise": "^9.1.0",
