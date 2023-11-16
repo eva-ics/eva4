@@ -855,6 +855,10 @@ user_data.set:
       typ: String
       des: field key
       req: true
+    - nam: value
+      typ: any
+      des: field value
+      req: true
 user_data.delete:
   des: Delete user data
   par:
