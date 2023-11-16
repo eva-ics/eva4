@@ -770,14 +770,14 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
         let mut sp = fill.splitn(2, ':');
         let fill_str = sp.next().unwrap();
         let f: Fill = if let Some(x) = fill_str.strip_suffix('A') {
-            let dots: u32 = x.parse()?;
-            if dots > 10_000 {
-                return Err(Error::invalid_params("too many dots (max 10k)"));
+            let points: u32 = x.parse()?;
+            if points > 10_000 {
+                return Err(Error::invalid_params("too many points (max 10k)"));
             }
-            if dots < 2 {
-                return Err(Error::invalid_params("dots can not be less than 2"));
+            if points < 2 {
+                return Err(Error::invalid_params("points can not be less than 2"));
             }
-            let mut period = (t_end - t_start) / f64::from(dots - 1);
+            let mut period = (t_end - t_start) / f64::from(points - 1);
             if period < 1.0 {
                 period = 1.0;
             }
