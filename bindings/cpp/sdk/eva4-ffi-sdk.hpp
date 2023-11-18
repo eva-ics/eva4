@@ -668,7 +668,7 @@ namespace eva {
   }
 
   struct coreStatus {
-    bool active;
+    bool active = false;
 
     MSGPACK_DEFINE_MAP(active);
   };

@@ -170,24 +170,26 @@ extern "C" {
     eva::log::info("the service is ready");
     worker_thread = thread(worker);
     // example API calls
-    {
-      auto res = eva::rpcCall("eva.core", "test");
-      if (res.hasPayload()) {
-        auto oh = res.unpack();
-        msgpack::object const& obj = oh.get();
-        cout << obj << endl << flush;
-      } else {
-        cout << res.code << endl << flush;
+    if (eva::coreActive()) {
+      {
+        auto res = eva::rpcCall("eva.core", "test");
+        if (res.hasPayload()) {
+          auto oh = res.unpack();
+          msgpack::object const& obj = oh.get();
+          cout << obj << endl << flush;
+        } else {
+          cout << res.code << endl << flush;
+        }
       }
-    }
-    {
-      auto res = eva::rpcCall("eva.core", "item.state", eva::CallParamsId { sensor1.i });
-      if (res.hasPayload()) {
-        auto oh = res.unpack();
-        msgpack::object const& obj = oh.get();
-        cout << obj << endl << flush;
-      } else {
-        cout << res.code << endl << flush;
+      {
+        auto res = eva::rpcCall("eva.core", "item.state", eva::CallParamsId { sensor1.i });
+        if (res.hasPayload()) {
+          auto oh = res.unpack();
+          msgpack::object const& obj = oh.get();
+          cout << obj << endl << flush;
+        } else {
+          cout << res.code << endl << flush;
+        }
       }
     }
     return EVA_OK;
