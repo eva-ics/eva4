@@ -173,6 +173,9 @@ namespace eva {
       void log() {
         cerr << this->msg << endl << flush;
       }
+      void log(string context) {
+        cerr << context << ": " << this->msg << endl << flush;
+      }
       int16_t code;
     private:
       string msg;
@@ -390,6 +393,12 @@ namespace eva {
       MSGPACK_DEFINE_MAP(uuid,i,timeout,priority,params)
     };
 
+    struct ActionDataOID {
+      string i;
+
+      MSGPACK_DEFINE_MAP(i)
+    };
+
     template <typename T> class Action {
       public:
         Action(ActionData<T> a) {
@@ -538,6 +547,16 @@ namespace eva {
       msgpack::object_handle unpack() {
         msgpack::object_handle oh = msgpack::unpack(this->r->payload, this->r->payload_size);
         return oh;
+      }
+      OID asUnitActionOID() {
+        if (this->hasPayload()) {
+          msgpack::object_handle oh=this->unpack();
+          msgpack::object const& obj = oh.get();
+          auto a = obj.as<controller::ActionDataOID>();
+          return OID(a.i);
+        } else {
+          throw Exception(EVA_ERR_CODE_INVALID_PARAMS);
+        }
       }
       template <typename T>controller::Action<controller::UnitActionParams<T>> asUnitAction() {
         if (this->hasPayload()) {
