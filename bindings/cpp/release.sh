@@ -13,7 +13,7 @@ fi
 
 rm -rf "${BUILD_DIR}" || exit 2
 mkdir -p "${BUILD_DIR}" || exit 2
-cp -rv ./sdk/* "${BUILD_DIR}" || exit 2
+cp -rv ./ffi-sdk/* "${BUILD_DIR}" || exit 2
 cp -rv ../common/*.h "${BUILD_DIR}" || exit 2
 cd "${BUILD_DIR}" || exit 2
 cd .. || exit 2
