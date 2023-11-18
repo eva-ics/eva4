@@ -10,7 +10,7 @@ tokio = { version = "1.20.1", features = ["full"] }
 sysinfo = "0.24.7"
 busrt = { version = "0.4", features = ["ipc", "rpc"] }
 bma-benchmark = "0.0.20"
-eva-common = { version = "0.3.8", features = ["bus-rpc", "payload", "common-payloads"] }
+eva-common = { version = "0.3.14", features = ["bus-rpc", "payload", "common-payloads"] }
 env_logger = "0.9.0"
 log = "0.4.17"
 serde = { version = "1.0.143", features = ["derive"] }
