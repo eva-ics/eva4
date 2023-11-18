@@ -22,6 +22,9 @@ namespace eva {
 
     const auto sleepStep = chrono::milliseconds(100);
 
+    /**
+     * Timeout configuration, (initial.timeout)
+     */
     struct TimeoutConfig {
       chrono::milliseconds startup;
       chrono::milliseconds shutdown;
@@ -46,6 +49,9 @@ namespace eva {
       }
     };
 
+    /**
+     * Core info, (initial.core)
+     */
     struct CoreInfo {
       uint64_t build;
       string version;
@@ -56,6 +62,11 @@ namespace eva {
       MSGPACK_DEFINE_MAP(build, version, eapi_version, path, active);
     };
 
+    /**
+     * The initial payload
+     *
+     * @tparam T Service configuration structure
+     */
     template<typename T>struct Initial {
       uint16_t version;
       string system_name;
@@ -81,6 +92,9 @@ namespace eva {
       }
     };
 
+    /**
+     * Item kinds
+     */
     enum ItemKind {
       Unit,
       Sensor,
@@ -129,6 +143,9 @@ namespace eva {
       };
     };
 
+    /**
+     * Error code to string mapping
+     */
     errorMapStr errorMap;
 
     struct itemKindMap : public map<string, ItemKind>
@@ -155,12 +172,26 @@ namespace eva {
       };
     };
 
+    /**
+     * Item kind string to ItemKind mapping
+     */
     itemKindMap itemMapK;
+    /**
+     * ItemKind item kind string mapping
+     */
     itemKindMapStr itemMapS;
   };
 
+  /**
+   * The generic exception class
+   */
   class Exception : public exception {
     public:
+      /**
+       * Constructs an exception
+       *
+       * @param code - error code
+       */
       Exception(int16_t code) {
         this->code = code;
         stringstream ss;
@@ -174,9 +205,17 @@ namespace eva {
       char * what() {
         return (char *)this->msg.c_str();
       }
+      /**
+       * Automatically logs the exception error to STDERR
+       */
       void log() {
         cerr << this->msg << endl << flush;
       }
+      /**
+       * Automatically logs the exception error to STDERR
+       *
+       * @param context - error context
+       */
       void log(string context) {
         cerr << context << ": " << this->msg << endl << flush;
       }
@@ -185,12 +224,20 @@ namespace eva {
       string msg;
   };
 
+  /**
+   * Raw item status payload
+   */
   struct RawItemStatus {
     int16_t status;
 
     MSGPACK_DEFINE_MAP(status);
   };
 
+  /**
+   * Raw item state payload
+   *
+   * @tparam T item value kind
+   */
   template <typename T>
     struct RawItemState {
       int16_t status;
@@ -199,6 +246,9 @@ namespace eva {
       MSGPACK_DEFINE_MAP(status, value);
     };
 
+  /**
+   * A typical RPC payload for ID/OID-calls
+   */
   struct CallParamsId {
     string i;
 
@@ -216,10 +266,21 @@ namespace eva {
     return ss;
   }
 
+  /**
+   * Call a service operation (low-level)
+   *
+   * @param op_code operation code
+   */
   int32_t svcOp(int16_t op_code) {
     return svc_op_fn ? svc_op_fn(op_code, nullptr) : EVA_ERR_CODE_NOT_READY;
   }
 
+  /**
+   * Call a service operation (low-level)
+   *
+   * @param op_code operation code
+   * @param ss payload string stream
+   */
   int32_t svcOpSS(int16_t op_code, stringstream& ss) {
     size_t size = ss.tellp();
     char* buf = (char *)malloc(size);
@@ -230,10 +291,21 @@ namespace eva {
     return res;
   }
 
+  /**
+   * Checks is the service active
+   *
+   * @return service active state
+   */
   bool active() {
     return svcOp(EVA_FFI_SVC_OP_IS_ACTIVE) == 1;
   }
 
+  /**
+   * Converts the operation result code into exception if error
+   * @param code operation result code
+   *
+   * @throws Exception
+   */
   void c2e(int16_t code) {
     if (code < EVA_OK)  {
       throw Exception(code);
@@ -241,6 +313,10 @@ namespace eva {
   }
 
   /**
+   * Subscribes to topics
+   *
+   * @param topics topics to subscribe
+   *
    * @throws Exception
    */
   void subscribe(vector<string>& topics) {
@@ -249,6 +325,10 @@ namespace eva {
   }
 
   /**
+   * Subscribes to a topic
+   *
+   * @param topic topic to subscribe
+   *
    * @throws Exception
    */
   void subscribe(string topic) {
@@ -258,6 +338,10 @@ namespace eva {
   }
 
   /**
+   * Unsubscribes from topics
+   *
+   * @param topics topics to unsubscribe
+   *
    * @throws Exception
    */
   void unsubscribe(vector<string>& topics) {
@@ -266,6 +350,10 @@ namespace eva {
   }
 
   /**
+   * Unsubscribes from a topic
+   *
+   * @param topic topic to unsubscribe
+   *
    * @throws Exception
    */
   void unsubscribe(string topic) {
@@ -275,6 +363,13 @@ namespace eva {
   }
 
   /**
+   * Publishes data to a topic
+   *
+   * @tparam T must be MessagePack-serializable
+   *
+   * @param topic topic to publish to
+   * @param data payload to publish
+   *
    * @throws Exception
    */
   template <typename T> void publish(string topic, T data) {
@@ -285,6 +380,9 @@ namespace eva {
     c2e(svcOpSS(EVA_FFI_SVC_OP_PUBLISH_TOPIC, ss));
   }
 
+  /**
+   * The primary OID class
+   */
   class OID {
     public:
       OID() {
@@ -293,27 +391,70 @@ namespace eva {
         this->path = string();
         this->rawTopic = string();
       }
+      /**
+       * Constructs OID from a string
+       *
+       * @param s OID string
+       *
+       * @throws Exception
+       */
       OID(string s) {
         this->parse(s, false);
       }
+      /**
+       * Constructs OID from a string or a path
+       *
+       * @param s OID string or path
+       * @param fromPath true if the string is a path
+       *
+       * @throws Exception
+       */
       OID(string s, bool fromPath) {
         this->parse(s, fromPath);
       }
+      /**
+       * Gets item full id (without a kind)
+       *
+       * @return item full id
+       */
       string fullId() {
         return this->i.substr(this->pos + 1);
       }
+      /**
+       * Sets item status to 1 (OK) for the current OID
+       *
+       * @throws Exception
+       */
       void markOk() {
         publish(this->rawTopic, RawItemStatus{ EVA_ITEM_STATUS_OK });
       }
+      /**
+       * Sets item status to -1 (ERROR) for the current OID
+       *
+       * @throws Exception
+       */
       void markError() {
         publish(this->rawTopic, RawItemStatus{ EVA_ITEM_STATUS_ERROR });
       }
+      /**
+       * Sets item state to status=1 (OK) and the specified value
+       *
+       * @tparam T item value kind
+       *
+       * @param value item value
+       *
+       * @throws Exception
+       */
       template<typename T> void setState(T value) {
         publish(this->rawTopic, RawItemState<T>{ EVA_ITEM_STATUS_OK, value });
       }
+      /** item kind */
       vars::ItemKind kind;
+      /** OID as string */
       string i;
+      /** OID as path */
       string path;
+      /** item raw state bus tipic for the current OID */
       string rawTopic;
       bool operator==(const OID& other) const {
         return this->i==other.i;
@@ -381,12 +522,22 @@ namespace eva {
       MSGPACK_DEFINE_MAP(uuid, status, err, exitcode)
     };
 
+    /**
+     * Params of unit action
+     *
+     * @tparam V value kind
+     */
     template <typename V> struct UnitActionParams {
       V value;
 
       MSGPACK_DEFINE_MAP(value)
     };
 
+    /**
+     * Action payload
+     *
+     * @tparam T action params kind (e.g. UnitActionParams)
+     */
     template <typename T> struct ActionData {
       uuidBuf uuid;
       string i;
@@ -403,8 +554,18 @@ namespace eva {
       MSGPACK_DEFINE_MAP(i)
     };
 
+    /**
+     * Action class
+     *
+     * @tparam T action parameters kind (e.g. UnitActionParams)
+     */
     template <typename T> class Action {
       public:
+        /**
+         * Constructs a class from ActionData payload
+         *
+         * @param a payload
+         */
         Action(ActionData<T> a) {
           copy(begin(a.uuid), end(a.uuid), begin(this->uuid));
           this->oid = a.i;
@@ -413,32 +574,71 @@ namespace eva {
           this->params = a.params;
           this->topic = string(EVA_ACTION_STATUS_TOPIC) + this->oid.path;
         }
+        /**
+         * Mark the action pending
+         *
+         * @throws Exception
+         */
         void markPending() {
           this->markAction(EVA_ACTION_STATUS_PENDING);
         }
+        /**
+         * Mark the action running
+         *
+         * @throws Exception
+         */
         void markRunning() {
           this->markAction(EVA_ACTION_STATUS_RUNNING);
         }
+        /**
+         * Mark the action completed
+         *
+         * @param out action output
+         *
+         * @throws Exception
+         */
         void markCompleted(string out) {
           BusActionStatusCompleted a = { EVA_ACTION_STATUS_COMPLETED, out, 0 };
           copy(begin(this->uuid), end(this->uuid), begin(a.uuid));
           publish<BusActionStatusCompleted>(this->topic, a);
         }
+        /**
+         * Mark the action failed
+         *
+         * @param err action error
+         *
+         * @throws Exception
+         */
         void markFailed(string err, int8_t exitcode) {
           BusActionStatusError a { EVA_ACTION_STATUS_FAILED, err, exitcode };
           copy(begin(this->uuid), end(this->uuid), begin(a.uuid));
           publish<BusActionStatusError>(this->topic, a);
         }
+        /**
+         * Mark the action canceled
+         *
+         * @throws Exception
+         */
         void markCanceled() {
           this->markAction(EVA_ACTION_STATUS_CANCELED);
         }
+        /**
+         * Mark the action terminated
+         *
+         * @throws Exception
+         */
         void markTerminated() {
           this->markAction(EVA_ACTION_STATUS_TERMINATED);
         }
+        /** action uuid */
         uuidBuf uuid;
+        /** action OID */
         OID oid;
+        /** action timeout */
         chrono::microseconds timeout;
+        /** action priority */
         uint8_t priority;
+        /** action parameters */
         T params;
       private:
         string topic;
@@ -464,20 +664,40 @@ namespace eva {
     MSGPACK_DEFINE_MAP(description, params);
   };
 
+  /**
+   * Service method information
+   */
   class ServiceMethod {
     public:
+      /**
+       * @param name service method name
+       */
       ServiceMethod(string name) {
         this->name = name;
         this->description= "";
       }
+      /**
+       * @param name service method name
+       * @param description service method description
+       */
       ServiceMethod(string name, string description) {
         this->name = name;
         this->description= description;
       }
+      /**
+       * Add a required parameter
+       *
+       * @param name parameter name
+       */
       ServiceMethod required(string name) {
         this->params.insert(pair<string, SvcMethodParam>(name, SvcMethodParam { required: true }));
         return *this;
       }
+      /**
+       * Add an optional parameter
+       *
+       * @param name parameter name
+       */
       ServiceMethod optional(string name) {
         this->params.insert(pair<string, SvcMethodParam>(name, SvcMethodParam { required: false }));
         return *this;
@@ -487,12 +707,26 @@ namespace eva {
       map<string, SvcMethodParam> params;
   };
 
+  /**
+   * Service info class
+   */
   struct ServiceInfo {
+    /**
+     * @param author service author
+     * @param version service version
+     * @param description service description
+     */
     ServiceInfo(string author, string version, string description) {
       this->author = author;
       this->version = version;
       this->description = description;
     }
+    /**
+     * Add a method information. The method information is optional and can be
+     * omitted for some methods.
+     *
+     * @param method service method to add
+     */
     ServiceInfo addMethod(ServiceMethod method) {
       methods.insert(pair<string, SvcMethod>(method.name, SvcMethod {method.description, method.params}));
       return *this;
@@ -505,6 +739,17 @@ namespace eva {
     MSGPACK_DEFINE_MAP(author, version, description, methods);
   };
 
+  /**
+   * Unpacks the initial payload
+   *
+   * @tparam T Service configuration structure
+   *
+   * @param buf input FFI buffer
+   *
+   * @return the payload unpacked
+   *
+   * @throws MessagePack exceptions
+   */
   template <typename T> vars::Initial<T> unpackInitial(EvaFFIBuffer *buf) {
     msgpack::object_handle oh = msgpack::unpack(buf->data, buf->len);
     msgpack::object const& obj = oh.get();
@@ -512,20 +757,40 @@ namespace eva {
     return p;
   }
 
+  /**
+   * Bus frame
+   */
   class Frame {
     public:
+      /**
+       * Constructs a frame from a raw FFI frame buffer
+       */
       Frame(EvaFFIFrame* r) {
         this->r = r;
       }
+      /**
+       * @return frame sender (primary client id)
+       */
       string primary_sender() {
         return string(this->r->primary_sender);
       }
+      /**
+       * @return frame topic (empty for non pub-sub frames)
+       */
       string topic() {
         return string(this->r->topic);
       }
+      /**
+       * @return if the frame has payload
+       */
       bool hasPayload() {
         return this->r->payload_size > 0;
       }
+      /**
+       * @return MessagePack object handle for the unpacked payload
+       *
+       * @throws MessagePack exceptions
+       */
       msgpack::object_handle unpack() {
         msgpack::object_handle oh = msgpack::unpack(this->r->payload, this->r->payload_size);
         return oh;
@@ -534,24 +799,51 @@ namespace eva {
       EvaFFIFrame* r;
   };
 
+  /**
+   * Incoming RPC event
+   */
   class RpcEvent {
     public:
+      /**
+       * Constructs an event from a raw FFI event buffer
+       */
       RpcEvent(EvaFFIRpcEvent* r) {
         this->r = r;
       }
+      /**
+       * @return event sender (primary client id)
+       */
       string primary_sender() {
         return string(this->r->primary_sender);
       }
+      /**
+       * @return event method (as string)
+       */
       string parse_method() {
         return string(this->r->method, this->r->method_size);
       }
+      /**
+       * @return if the call has parametes payload
+       */
       bool hasPayload() {
         return this->r->payload_size > 0;
       }
+      /**
+       * @return MessagePack object handle for the unpacked parameters payload
+       *
+       * @throws MessagePack exceptions
+       */
       msgpack::object_handle unpack() {
         msgpack::object_handle oh = msgpack::unpack(this->r->payload, this->r->payload_size);
         return oh;
       }
+      /**
+       * Get unit action OID (for "action" method called)
+       *
+       * @return unit OID
+       *
+       * @throws MessagePack exceptions
+       */
       OID asUnitActionOID() {
         if (this->hasPayload()) {
           msgpack::object_handle oh=this->unpack();
@@ -562,6 +854,15 @@ namespace eva {
           throw Exception(EVA_ERR_CODE_INVALID_PARAMS);
         }
       }
+      /**
+       * Get unit action (for "action" method called)
+       *
+       * @tparam T action value kind for UnitActionParams
+       *
+       * @return action object
+       *
+       * @throws MessagePack exceptions
+       */
       template <typename T>controller::Action<controller::UnitActionParams<T>> asUnitAction() {
         if (this->hasPayload()) {
           msgpack::object_handle oh=this->unpack();
@@ -576,10 +877,11 @@ namespace eva {
       EvaFFIRpcEvent* r;
   };
 
+  /**
+   * Result of an outgoing RPC call
+   */
   class RpcResult {
     public:
-      int16_t code;
-
       RpcResult(int32_t res) {
         if (res > 0) {
           size_t size = (size_t)res;
@@ -594,9 +896,17 @@ namespace eva {
           this->size = 0;
         }
       }
+      /**
+       * @return if the result has payload
+       */
       bool hasPayload() {
         return this->size > 0;
       }
+      /**
+       * @return MessagePack object handle for the unpacked payload
+       *
+       * @throws MessagePack exceptions
+       */
       msgpack::object_handle unpack() {
         msgpack::object_handle oh = msgpack::unpack(this->buf.data, this->buf.len);
         return oh;
@@ -604,6 +914,7 @@ namespace eva {
       ~RpcResult() {
         free(this->data);
       }
+      int16_t code;
       size_t size;
       EvaFFIBuffer buf;
     private:
@@ -618,6 +929,15 @@ namespace eva {
   };
 
   /**
+   * Performs an outgoing RPC call
+   *
+   * @tparam T call payload kind, must be MessagePack-serializable
+   *
+   * @param target call target
+   * @param target call method
+   *
+   * @return RpcResult
+   *
    * @throws Exception
    */
   template <typename T> RpcResult rpcCall(string target, string method, T params) {
@@ -634,6 +954,13 @@ namespace eva {
   }
 
   /**
+   * Performs an outgoing RPC call
+   *
+   * @param target call target
+   * @param target call method
+   *
+   * @return RpcResult
+   *
    * @throws Exception
    */
   RpcResult rpcCall(string target, string method) {
@@ -648,6 +975,12 @@ namespace eva {
   }
 
   /**
+   * Packs local function result into FFI buffer
+   *
+   * @tparam T call payload kind, must be MessagePack-serializable
+   *
+   * @param payload result payload
+   *
    * @throws Exception
    */
   template<typename T> int32_t result(T payload) {
@@ -656,6 +989,8 @@ namespace eva {
   }
 
   /**
+   * Asks the launcher to terminate the service
+   *
    * @throws Exception
    */
   void terminate() {
@@ -663,6 +998,9 @@ namespace eva {
   }
 
   /**
+   * Asks the launcher to panic (immediately terminate) the service on a
+   * critical error
+   *
    * @throws Exception
    */
   void poc() {
@@ -676,6 +1014,8 @@ namespace eva {
   };
 
   /**
+   * Is the node core active
+   *
    * @throws Exception
    */
   bool coreActive() {
@@ -687,6 +1027,8 @@ namespace eva {
   }
 
   /**
+   * Waits until the node core become active
+   *
    * @throws Exception
    */
   void waitCore() {
@@ -696,6 +1038,10 @@ namespace eva {
   }
 
   /**
+   * Waits until the node core become active
+   *
+   * @param timeout max wait timeout (throws exception after)
+   *
    * @throws Exception
    */
   void waitCore(chrono::milliseconds timeout) {
@@ -710,30 +1056,55 @@ namespace eva {
 
   namespace log {
 
+    /**
+     * Sends a trace-level log message
+     *
+     * @param message message to send
+     */
     void trace(string message) {
       stringstream ss;
       ss << message;
       svcOpSS(EVA_FFI_SVC_OP_LOG_TRACE, ss);
     }
 
+    /**
+     * Sends a debug-level log message
+     *
+     * @param message message to send
+     */
     void debug(string message) {
       stringstream ss;
       ss << message;
       svcOpSS(EVA_FFI_SVC_OP_LOG_DEBUG, ss);
     }
 
+    /**
+     * Sends an info-level log message
+     *
+     * @param message message to send
+     */
     void info(string message) {
       stringstream ss;
       ss << message;
       svcOpSS(EVA_FFI_SVC_OP_LOG_INFO, ss);
     }
 
+    /**
+     * Sends a warn-level log message
+     *
+     * @param message message to send
+     */
     void warn(string message) {
       stringstream ss;
       ss << message;
       svcOpSS(EVA_FFI_SVC_OP_LOG_WARN, ss);
     }
 
+    /**
+     * Sends an error-level log message
+     *
+     * @param message message to send
+     */
     void error(string message) {
       stringstream ss;
       ss << message;
