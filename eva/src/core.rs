@@ -230,6 +230,8 @@ pub struct Core {
     #[serde(skip)]
     pid_file: String,
     instant_save: bool,
+    #[serde(default)]
+    auto_create: bool,
     #[serde(
         skip_serializing,
         deserialize_with = "eva_common::tools::de_float_as_duration"
@@ -423,6 +425,7 @@ impl Core {
             inventory_db: None,
             system_name: system_name.to_owned(),
             pid_file: <_>::default(),
+            auto_create: false,
             instant_save: false,
             suicide_timeout,
             timeout,
@@ -1157,53 +1160,64 @@ impl Core {
     /// Will panic if the state mutex is poisoned
     ///
     /// Note: LVar state is not updated when the status is 0
-    pub async fn update_state_from_raw(&self, oid: &OID, raw: RawStateEventOwned) -> EResult<()> {
+    pub async fn update_state_from_raw(
+        &self,
+        oid: &OID,
+        raw: RawStateEventOwned,
+        sender: &str,
+    ) -> EResult<()> {
         let tp = oid.kind();
         if tp == ItemKind::Lmacro {
             return Err(Error::not_implemented(ERR_MSG_STATE_LMACRO));
         }
-        let item = self
-            .inventory
-            .read()
-            .await
-            .get_item(oid)
-            .ok_or_else(|| Error::not_found(oid))?;
-        if item.source().is_some() {
-            return Err(Error::busy(format!(
-                "unable to update item {} from raw event: remote",
-                oid
-            )));
-        }
-        if item.enabled() || raw.force {
-            if let Some(state) = item.state() {
-                debug!(
-                    "setting state from raw event for {}, status: {}, value: {:?}",
-                    oid, raw.status, raw.value
-                );
-                let _stp_lock = self.state_processor_lock.lock().await;
-                let (s_state, db_st) = {
-                    let mut state = state.lock();
-                    if tp == ItemKind::Lvar && state.status() == 0 && !raw.force {
-                        // lvars with status 0 are not set from RAW
-                        return Ok(());
-                    }
-                    if state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id) {
-                        prepare_state_data!(item, &*state, self.instant_save)
-                    } else {
-                        // not modified
-                        return Ok(());
-                    }
-                };
-                let rpc = self.rpc.get().unwrap();
-                self.process_new_state(item.oid(), s_state, db_st, rpc)
-                    .await?;
-            } else {
-                warn!("no state property in {}", oid);
+        let maybe_item = self.inventory.read().await.get_item(oid);
+        if let Some(item) = maybe_item {
+            if item.source().is_some() {
+                return Err(Error::busy(format!(
+                    "unable to update item {} from raw event: remote",
+                    oid
+                )));
             }
+            if item.enabled() || raw.force {
+                if let Some(state) = item.state() {
+                    debug!(
+                        "setting state from raw event for {}, status: {}, value: {:?}",
+                        oid, raw.status, raw.value
+                    );
+                    let _stp_lock = self.state_processor_lock.lock().await;
+                    let (s_state, db_st) = {
+                        let mut state = state.lock();
+                        if tp == ItemKind::Lvar && state.status() == 0 && !raw.force {
+                            // lvars with status 0 are not set from RAW
+                            return Ok(());
+                        }
+                        if state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id) {
+                            prepare_state_data!(item, &*state, self.instant_save)
+                        } else {
+                            // not modified
+                            return Ok(());
+                        }
+                    };
+                    let rpc = self.rpc.get().unwrap();
+                    self.process_new_state(item.oid(), s_state, db_st, rpc)
+                        .await?;
+                } else {
+                    warn!("no state property in {}", oid);
+                }
+            } else {
+                debug!("ignoring state from raw event for {} - disabled", oid);
+            }
+            Ok(())
+        } else if self.auto_create && sender.contains(".controller.") {
+            let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
+            info!("auto-creating local item {} source: {}", oid, sender);
+            if let Err(e) = self.deploy_local_items(vec![item_config]).await {
+                error!("auto-creation failed for {}: {}", oid, e);
+            }
+            Ok(())
         } else {
-            debug!("ignoring state from raw event for {} - disabled", oid);
+            Err(Error::not_found(oid))
         }
-        Ok(())
     }
     /// # Panics
     ///

@@ -166,7 +166,9 @@ async fn handle_raw_state_event(core: &Core, frame: pubsub::Publication) {
         match OID::from_path(frame.subtopic()) {
             Ok(oid) => match unpack::<RawStateEventOwned>(frame.payload()) {
                 Ok(raw) => {
-                    core.update_state_from_raw(&oid, raw).await.log_efd();
+                    core.update_state_from_raw(&oid, raw, frame.primary_sender())
+                        .await
+                        .log_efd();
                 }
                 Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
             },

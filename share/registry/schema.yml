@@ -115,6 +115,7 @@ config/core:
     keep_action_history: *floatpositive
     #dump: *bool
     suicide_timeout: *floatpositive
+    auto_create: *bool
     instant_save: *bool
     legacy:
       type: object

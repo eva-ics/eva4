@@ -116,7 +116,11 @@ thread_local! {
     pub static RPC_RESULT: RefCell<Option<RpcEvent>> = <_>::default();
 }
 
-#[allow(clippy::ptr_as_ptr, clippy::transmute_ptr_to_ref)]
+#[allow(
+    clippy::ptr_as_ptr,
+    clippy::transmute_ptr_to_ref,
+    clippy::too_many_lines
+)]
 unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
     macro_rules! log_message {
         ($lvl: expr) => {

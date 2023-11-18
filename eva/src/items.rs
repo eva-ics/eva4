@@ -410,7 +410,7 @@ pub struct Logic {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ActionConfig {
-    svc: String,
+    pub(crate) svc: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     timeout: Option<f64>, // zero for the default timeout
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -457,6 +457,26 @@ pub struct ItemConfigData {
 }
 
 impl ItemConfigData {
+    pub fn from_raw_event(oid: &OID, ev: RawStateEventOwned, sender: &str) -> Self {
+        let action = if oid.kind() == ItemKind::Unit {
+            Some(ActionConfig {
+                svc: sender.to_owned(),
+                timeout: None,
+                config: None,
+            })
+        } else {
+            None
+        };
+        Self {
+            oid: oid.clone(),
+            meta: None,
+            enabled: true,
+            logic: None,
+            action,
+            status: Some(ev.status),
+            value: ev.value,
+        }
+    }
     pub fn split(self) -> (ItemData, StateData) {
         let item_data: ItemData = ItemData {
             oid: self.oid,
