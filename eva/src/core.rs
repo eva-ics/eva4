@@ -1208,7 +1208,10 @@ impl Core {
                 debug!("ignoring state from raw event for {} - disabled", oid);
             }
             Ok(())
-        } else if self.auto_create && (sender.contains(".controller.") || sender.contains(".plc."))
+        } else if self.auto_create
+            && (sender.contains(".controller.")
+                || sender.contains(".plc.")
+                || sender.ends_with(".plc"))
         {
             let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
             info!("auto-creating local item {} source: {}", oid, sender);
