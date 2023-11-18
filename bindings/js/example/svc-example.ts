@@ -110,7 +110,7 @@ const main = async () => {
   // service info and RPC help
   const info = new ServiceInfo({
     author: "Bohemia Automation",
-    description: "Test JS service",
+    description: "Example JS service",
     version: "0.0.1"
   })
     .addMethod(new ServiceMethod("hello").optional("name"))
