@@ -13,9 +13,9 @@ string DESCRIPTION = "Example FFI service";
 
 struct Config {
   double a;
-  string name;
+  string b;
 
-  MSGPACK_DEFINE_MAP(a, name);
+  MSGPACK_DEFINE_MAP(a, b);
 };
 
 eva::vars::Initial<Config> initial;
@@ -146,6 +146,8 @@ extern "C" {
       cerr << e.what() << endl << flush;
       return EVA_ERR_CODE_INVALID_PARAMS;
     }
+
+    cout << "Config loaded: a = " << initial.config.a << ", b = " << initial.config.b << endl << flush;
 
     // return service info
     eva::ServiceInfo svc_info = eva::ServiceInfo(AUTHOR, VERSION, DESCRIPTION)
