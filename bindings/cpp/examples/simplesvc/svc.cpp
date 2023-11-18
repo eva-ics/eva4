@@ -12,7 +12,7 @@ string VERSION = "0.0.1";
 string DESCRIPTION = "Example FFI service";
 
 struct Config {
-  double a;
+  double a = 0;
   string b;
 
   MSGPACK_DEFINE_MAP(a, b);
