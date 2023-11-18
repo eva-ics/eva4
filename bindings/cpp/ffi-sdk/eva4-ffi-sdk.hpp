@@ -10,12 +10,18 @@
 #include "eva4-common.h"
 #include "eva4-ffi.h"
 
+/**
+ * EVA ICS SDK namespace
+ */
 namespace eva {
 
   const uint16_t ABI_VERSION = 1;
 
   using namespace std;
 
+  /**
+   * SDK variables and types
+   */
   namespace vars {
 
     using namespace std;
@@ -26,8 +32,11 @@ namespace eva {
      * Timeout configuration, (initial.timeout)
      */
     struct TimeoutConfig {
+      /** max allowed startup timeout */
       chrono::milliseconds startup;
+      /** max allowed shutdown timeout */
       chrono::milliseconds shutdown;
+      /** the default timeout */
       chrono::milliseconds _default;
 
       void msgpack_unpack(msgpack::object o) {
@@ -83,10 +92,20 @@ namespace eva {
       MSGPACK_DEFINE_MAP(version, system_name, id, data_path,
           timeout, core, config, user, fail_mode, fips, call_tracing);
 
+      /**
+       * Gets the default timeout
+       *
+       * @return default timeout
+       */
       chrono::milliseconds getTimeout() {
         return this->timeout._default;
       }
 
+      /**
+       * Gets EVA ICS directory
+       *
+       * @return EVA ICS directory
+       */
       string evaDir() {
         return this->core.path;
       }
@@ -491,6 +510,9 @@ namespace eva {
     return result_buf.tellp();
   }
 
+  /**
+   * SDK controller ("action") functions
+   */
   namespace controller {
 
     using namespace std;
@@ -606,6 +628,7 @@ namespace eva {
          * Mark the action failed
          *
          * @param err action error
+         * @param exitcode error exit code (custom)
          *
          * @throws Exception
          */
@@ -934,7 +957,8 @@ namespace eva {
    * @tparam T call payload kind, must be MessagePack-serializable
    *
    * @param target call target
-   * @param target call method
+   * @param method call method
+   * @param params call parameters
    *
    * @return RpcResult
    *
@@ -957,7 +981,7 @@ namespace eva {
    * Performs an outgoing RPC call
    *
    * @param target call target
-   * @param target call method
+   * @param method call method
    *
    * @return RpcResult
    *
@@ -1054,6 +1078,9 @@ namespace eva {
     }
   }
 
+  /**
+   * SDK bus logging
+   */
   namespace log {
 
     /**
