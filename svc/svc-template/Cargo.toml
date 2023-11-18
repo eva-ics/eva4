@@ -12,7 +12,7 @@ async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
 log = "0.4.14"
 async-channel = "1.6.1"
-jemallocator = { version = "0.3.2" }
+jemallocator = { version = "0.5.0" }
 
 [features]
 std-alloc = []
