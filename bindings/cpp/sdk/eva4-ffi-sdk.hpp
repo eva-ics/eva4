@@ -1,6 +1,8 @@
 #ifndef EVA4_FFI_SDK_HPP
 #define EVA4_FFI_SDK_HPP
 
+#define EVA4_CCP_SDK_VERSION "0.0.1"
+
 #include <iostream>
 #include <chrono>
 #include <thread>
