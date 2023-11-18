@@ -12,6 +12,8 @@ use std::ptr;
 use std::sync::{mpsc, Arc};
 use std::time::Duration;
 
+const ABI_VERSION: u16 = 1;
+
 err_logger!();
 
 macro_rules! addr {
@@ -329,7 +331,8 @@ struct EBuffer<'a> {
     _src: &'a [u8],
 }
 
-type FfiInitFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn(initial: *mut i32) -> i32>;
+type FfiInitFunc<'a> =
+    libloading::Symbol<'a, unsafe extern "C" fn(version: u16, initial: *mut i32) -> i32>;
 type FfiEmptyFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn() -> i16>;
 type FfiSetOpFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn(op_func: *mut i32) -> i16>;
 type FfiGetResult<'a> = libloading::Symbol<'a, unsafe extern "C" fn(buf: *mut i32) -> i16>;
@@ -523,7 +526,7 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     }
     let initial_buf = pack(&initial)?;
     let initial_fb = initial_buf.as_ffi_buf()?;
-    let buf = unsafe { ffi_init(addr!(initial_fb)).into_result_vec()? };
+    let buf = unsafe { ffi_init(ABI_VERSION, addr!(initial_fb)).into_result_vec()? };
     let info: ServiceInfo = buf.map_or_else(
         || Ok(ServiceInfo::new("", "", "FFI launcher dummy")),
         |b| unpack(&b),

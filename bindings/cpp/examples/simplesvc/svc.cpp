@@ -128,7 +128,10 @@ extern "C" {
   }
 
   // mandatory, no bus functions allowed
-  int32_t svc_init(struct EvaFFIBuffer *initial_buf) {
+  int32_t svc_init(uint16_t version, struct EvaFFIBuffer *initial_buf) {
+    if (version != 1) {
+      return EVA_ERR_CODE_UNSUPPORTED;
+    }
     try {
       // try to make bus op when not ready yet
       eva::subscribe("#");
