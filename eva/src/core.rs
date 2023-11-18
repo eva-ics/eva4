@@ -1208,7 +1208,8 @@ impl Core {
                 debug!("ignoring state from raw event for {} - disabled", oid);
             }
             Ok(())
-        } else if self.auto_create && sender.contains(".controller.") {
+        } else if self.auto_create && (sender.contains(".controller.") || sender.contains(".plc."))
+        {
             let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
             info!("auto-creating local item {} source: {}", oid, sender);
             if let Err(e) = self.deploy_local_items(vec![item_config]).await {
