@@ -21,54 +21,34 @@ struct Config {
 eva::vars::Initial<Config> initial;
 
 thread worker_thread;
+chrono::milliseconds timeout;
+
+eva::OID unit1 = eva::OID("unit:test");
+atomic<int16_t> unit1_value(0);
+
+eva::OID sensor1 = eva::OID("sensor:test");
 
 void worker() {
 
   try {
-    eva::waitCore(chrono::seconds(5));
+    eva::waitCore(timeout);
   } catch(eva::Exception &e) {
     e.log();
     eva::poc();
   }
 
-  eva::OID o = eva::OID("sensor:t");
-  double value = 0.0;
+  double sensor_value = 0.0;
 
   while(eva::active()) {
-    o.setState(value);
-
-    {
-      auto res = eva::rpcCall("eva.core", "test");
-      if (res.hasPayload()) {
-        auto oh = res.unpack();
-        msgpack::object const& obj = oh.get();
-        cout << obj << endl << flush;
-      } else {
-        cout << res.code << endl << flush;
-      }
-    }
-
-    {
-      auto res = eva::rpcCall("eva.core", "item.state", eva::CallParamsId { o.i });
-      if (res.hasPayload()) {
-        auto oh = res.unpack();
-        msgpack::object const& obj = oh.get();
-        cout << obj << endl << flush;
-      } else {
-        cout << res.code << endl << flush;
-      }
-    }
+    sensor1.setState(sensor_value);
+    int16_t uval = unit1_value;
+    unit1.setState(uval);
 
     eva::log::info("alive");
-
-    for (int16_t i=0;i<50;i++) {
-      this_thread::sleep_for(eva::vars::sleepStep);
-      if (!eva::active()) break;
-    }
-
-    value++;
+    this_thread::sleep_for(chrono::seconds(1));
+    sensor_value++;
   }
-  cout << "state beacon terminating\n" << flush;
+  eva::log::warn("worker terminating");
 }
 
 struct PayloadHello {
@@ -76,8 +56,6 @@ struct PayloadHello {
 
   MSGPACK_DEFINE_MAP(name);
 };
-
-const eva::OID unit1 = eva::OID("unit:test");
 
 extern "C" {
 
@@ -99,15 +77,18 @@ extern "C" {
     cout << "Got RPC call, sender: " << ev.primary_sender() << ", method: " << method << endl;
     if (method == "action") {
       // an example for unit actions
-      auto a = ev.asUnitAction<double>();
+      // get action oid first if need to select what value type to parse
+      auto oid = ev.asUnitActionOID();
+      eva::log::info(oid.i);
+      // get the full action
+      auto a = ev.asUnitAction<int16_t>();
       a.markPending();
       // process action in the same thread (in production actions are usually put into a queue)
       a.markRunning();
       if (a.oid == unit1) {
+        unit1_value = a.params.value;
         a.markCompleted("all fine");
-        // set the new unit status directly from requested (in production
-        // status should be set by a puller thread only)
-        a.oid.setState(a.params.value);
+        // the unit state will be updated by the worker
       } else {
         a.markFailed("all bad", -1);
         a.oid.markError();
@@ -153,13 +134,14 @@ extern "C" {
       eva::subscribe("#");
     } catch (eva::Exception &e) {
       // catch exception and log it
-      e.log();
+      e.log("init subscribe");
       // equal to
       //cerr << e.what() << endl << flush;
     }
     // unpack the initial payload
     try {
       initial = eva::unpackInitial<Config>(initial_buf);
+      timeout = initial.getTimeout();
     } catch (exception &e) {
       cerr << e.what() << endl << flush;
       return EVA_ERR_CODE_INVALID_PARAMS;
@@ -185,6 +167,27 @@ extern "C" {
   int16_t svc_launch() {
     eva::log::info("the service is ready");
     worker_thread = thread(worker);
+    // example API calls
+    {
+      auto res = eva::rpcCall("eva.core", "test");
+      if (res.hasPayload()) {
+        auto oh = res.unpack();
+        msgpack::object const& obj = oh.get();
+        cout << obj << endl << flush;
+      } else {
+        cout << res.code << endl << flush;
+      }
+    }
+    {
+      auto res = eva::rpcCall("eva.core", "item.state", eva::CallParamsId { sensor1.i });
+      if (res.hasPayload()) {
+        auto oh = res.unpack();
+        msgpack::object const& obj = oh.get();
+        cout << obj << endl << flush;
+      } else {
+        cout << res.code << endl << flush;
+      }
+    }
     return EVA_OK;
   }
 
