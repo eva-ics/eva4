@@ -331,10 +331,10 @@ struct EBuffer<'a> {
     _src: &'a [u8],
 }
 
-type FfiInitFunc<'a> =
-    libloading::Symbol<'a, unsafe extern "C" fn(version: u16, initial: *mut i32) -> i32>;
+type FfiSetOpFunc<'a> =
+    libloading::Symbol<'a, unsafe extern "C" fn(version: u16, op_func: *mut i32) -> i16>;
+type FfiInitFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn(initial: *mut i32) -> i32>;
 type FfiEmptyFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn() -> i16>;
-type FfiSetOpFunc<'a> = libloading::Symbol<'a, unsafe extern "C" fn(op_func: *mut i32) -> i16>;
 type FfiGetResult<'a> = libloading::Symbol<'a, unsafe extern "C" fn(buf: *mut i32) -> i16>;
 type FfiOnFrame<'a> = libloading::Symbol<'a, unsafe extern "C" fn(frame: *mut i32)>;
 type FfiOnRpcCall<'a> = libloading::Symbol<'a, unsafe extern "C" fn(ev: *mut i32) -> i32>;
@@ -509,7 +509,7 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
             .map_err(Error::failed)?
     };
     unsafe {
-        ffi_eva_set_op_fn(svc_op as *const () as *mut i32).into_result()?;
+        ffi_eva_set_op_fn(ABI_VERSION, svc_op as *const () as *mut i32).into_result()?;
     }
     let ffi_prepare: Option<FfiEmptyFunc> = unsafe { svc_ffi_lib!().get(b"svc_prepare").ok() };
     let ffi_launch: Option<FfiEmptyFunc> = unsafe { svc_ffi_lib!().get(b"svc_launch").ok() };
@@ -526,7 +526,7 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     }
     let initial_buf = pack(&initial)?;
     let initial_fb = initial_buf.as_ffi_buf()?;
-    let buf = unsafe { ffi_init(ABI_VERSION, addr!(initial_fb)).into_result_vec()? };
+    let buf = unsafe { ffi_init(addr!(initial_fb)).into_result_vec()? };
     let info: ServiceInfo = buf.map_or_else(
         || Ok(ServiceInfo::new("", "", "FFI launcher dummy")),
         |b| unpack(&b),

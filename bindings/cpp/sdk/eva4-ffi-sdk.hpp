@@ -10,6 +10,8 @@
 
 namespace eva {
 
+  const uint16_t ABI_VERSION = 1;
+
   using namespace std;
 
   namespace vars {
@@ -751,7 +753,10 @@ namespace eva {
         return EVA_OK;
       }
 
-      int16_t eva_svc_set_op_fn(int32_t (*f)(int16_t, struct EvaFFIBuffer*)) {
+      int16_t eva_svc_set_op_fn(uint16_t abi_version, int32_t (*f)(int16_t, struct EvaFFIBuffer*)) {
+        if (abi_version != ABI_VERSION) {
+          return EVA_ERR_CODE_UNSUPPORTED;
+        }
         svc_op_fn = f;
         return EVA_OK;
       }
