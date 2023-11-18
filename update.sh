@@ -90,8 +90,6 @@ fi
 
 if [ ! -f /.eva_container ]; then
   echo "- Installing new files"
-  rm -rf "_update/eva-${VERSION}/ui"
-  rm -rf "_update/eva-${VERSION}/pvt"
   rm -f "_update/eva-${VERSION}/update.sh"
   rm -f ./cli/eva-cloud-manager
   rm -rf vendored-apps
