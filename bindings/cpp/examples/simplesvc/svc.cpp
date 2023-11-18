@@ -176,8 +176,8 @@ extern "C" {
   // called before the service is marked as ready, bus connection active
   int16_t svc_prepare() {
     eva::log::info("doing preparing stuff");
+    // subscribe to item states (in this example - to all items)
     //eva::subscribe(string(EVA_ANY_STATE_TOPIC) + "#");
-    //eva::unsubscribe("ST/#");
     return EVA_OK;
   }
 
