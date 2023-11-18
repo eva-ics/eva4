@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=$(grep "^#define EVA4_CCP_SDK_VERSION" sdk/eva4-ffi-sdk.hpp|awk '{ print $3 }'|tr -d '"')
+VERSION=$(grep "^#define EVA4_CCP_SDK_VERSION" ffi-sdk/eva4-ffi-sdk.hpp|awk '{ print $3 }'|tr -d '"')
 BUILD_DIR="/tmp/eva4-ffi-sdk-cpp-${VERSION}"
 FILE="eva4-ffi-sdk-cpp-${VERSION}.zip"
 
