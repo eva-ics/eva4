@@ -553,9 +553,9 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     };
     initial.drop_privileges()?;
     svc_init_logs(&initial, client.clone())?;
-    let (tx, rx) = async_channel::bounded::<BusTask>(args.command_queue_size);
+    let (buscc_tx, rx) = async_channel::bounded::<BusTask>(args.command_queue_size);
     BUS_TX
-        .set(tx)
+        .set(buscc_tx.clone())
         .map_err(|_| Error::core("unable to set BUS_TX"))?;
     tokio::spawn(async move {
         while let Ok(task) = rx.recv().await {
@@ -598,16 +598,15 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
         }
     });
     svc_start_signal_handlers();
-    if let Some(f) = ffi_prepare {
-        unsafe {
-            f().into_result()?;
-        }
-    }
+    call_maybe_ufn!(ffi_prepare);
     svc_mark_ready(&client).await?;
     info!("{} started ({})", description, initial.id());
     call_maybe_ufn!(ffi_launch);
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
     call_maybe_ufn!(ffi_terminate);
+    while !buscc_tx.is_empty() {
+        tokio::time::sleep(eva_common::SLEEP_STEP).await;
+    }
     Ok(())
 }
