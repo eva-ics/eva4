@@ -186,7 +186,7 @@ echo "Preparing..."
 
 mkdir "../eva-${VERSION}"
 cd "../eva-${VERSION}" || exit 1
-for f in bin etc install share prepare ui pvt sbin; do
+for f in bin etc install share prepare pvt sbin; do
   cp -rvf "../eva4/${f}" . || exit 1
 done
 

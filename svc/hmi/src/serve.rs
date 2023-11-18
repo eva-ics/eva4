@@ -6,11 +6,43 @@ use eva_sdk::prelude::*;
 use hyper::header::HeaderMap;
 use hyper_static::serve::static_file;
 use log::warn;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::path::Path;
 use tokio::io::AsyncReadExt;
+
+const DEFAULT_UI_INDEX: &[u8] = include_bytes!("../default/index.html");
+const DEFAULT_UI_FAVICON: &[u8] = include_bytes!("../default/favicon.ico");
+
+const MIME_HTML: &str = "text/html";
+const MIME_ICO: &str = "image/x-icon";
+
+struct FileData {
+    content: &'static [u8],
+    mime: &'static str,
+}
+
+static DEFAULT_UI_FILES: Lazy<BTreeMap<&'static str, FileData>> = Lazy::new(|| {
+    let mut map = BTreeMap::new();
+    map.insert(
+        "index.html",
+        FileData {
+            content: DEFAULT_UI_INDEX,
+            mime: MIME_HTML,
+        },
+    );
+    map.insert(
+        "favicon.ico",
+        FileData {
+            content: DEFAULT_UI_FAVICON,
+            mime: MIME_ICO,
+        },
+    );
+    map
+});
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum TplDirKind {
@@ -25,6 +57,15 @@ impl TplDirKind {
     }
 }
 
+fn serve_ui_default(allow: bool, path: &str, file_path: &str) -> HResult {
+    if allow {
+        if let Some(f) = DEFAULT_UI_FILES.get(if path.is_empty() { "index.html" } else { path }) {
+            return Ok(HContent::Data(f.content.to_vec(), Some(f.mime), None));
+        }
+    }
+    Err(Error::not_found(file_path))
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn read_file<'a>(
     uri: &'a str,
@@ -35,12 +76,13 @@ async fn read_file<'a>(
     headers: &HeaderMap,
     ip: IpAddr,
     tpl_dir_kind: TplDirKind,
+    allow_ui_default: bool,
 ) -> HResult {
     let file_path = format!("{}/{}", base, path);
     let attr = match tokio::fs::metadata(&file_path).await {
         Ok(v) => v,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Err(Error::not_found(file_path));
+            return serve_ui_default(allow_ui_default, path, &file_path);
         }
         Err(e) => return Err(e.into()),
     };
@@ -76,6 +118,9 @@ async fn read_file<'a>(
         let t = tera.render(tpl_name, &context).map_err(Error::failed)?;
         t.as_bytes().to_vec()
     } else if convert_to.is_none() {
+        if !target_path.exists() {
+            return serve_ui_default(allow_ui_default, path, &file_path);
+        }
         return match static_file(
             target_path,
             mime.map(String::as_str),
@@ -130,6 +175,7 @@ pub async fn file<'a>(
     headers: &HeaderMap,
     ip: IpAddr,
     tpl_dir_kind: TplDirKind,
+    allow_ui_default: bool,
 ) -> HResult {
     if path.contains("/../") || path.contains("/.") {
         warn!("invalid entries in uri path: {}", path);
@@ -146,6 +192,7 @@ pub async fn file<'a>(
                 headers,
                 ip,
                 tpl_dir_kind,
+                allow_ui_default,
             )
             .await
         }
@@ -181,6 +228,7 @@ pub async fn pvt<'a>(
                         headers,
                         ip,
                         TplDirKind::Pvt,
+                        false,
                     )
                     .await;
                 }

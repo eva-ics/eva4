@@ -780,6 +780,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                             &parts.headers,
                             ip,
                             serve::TplDirKind::No,
+                            true,
                         )
                         .await
                         .log_err()
@@ -796,6 +797,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                             &parts.headers,
                             ip,
                             serve::TplDirKind::No,
+                            false,
                         )
                         .await
                         .log_err()
@@ -818,6 +820,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                             &parts.headers,
                             ip,
                             serve::TplDirKind::No,
+                            false,
                         )
                         .await
                         .log_err()
@@ -835,6 +838,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                             &parts.headers,
                             ip,
                             serve::TplDirKind::Ui,
+                            true,
                         )
                         .await
                         .log_err()
