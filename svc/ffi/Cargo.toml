@@ -1,0 +1,21 @@
+[package]
+name = "eva-ffi"
+version = "4.0.2"
+edition = "2021"
+
+[dependencies]
+busrt = { version = "0.4", features = ["rpc", "ipc"] }
+eva-common = { version = "0.3.13", features = ["events", "time"] }
+eva-sdk = { version = "0.3.5" }
+tokio = { version = "1.20.1", features = ["full"] }
+async-trait = { version = "0.1.51" }
+serde = { version = "1.0.143", features = ["derive", "rc"] }
+log = "0.4.14"
+async-channel = "1.6.1"
+jemallocator = { version = "0.5.0" }
+libloading = "0.8.1"
+once_cell = "1.18.0"
+clap = { version = "3.0.7", features = ["derive"] }
+
+[features]
+std-alloc = []

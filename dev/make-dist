@@ -213,7 +213,7 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-controller-trap \
   eva-svc-modbus-slave \
   eva-db-influx eva-db-sql eva-db-timescale eva-svc-filewriter \
-  eva-hmi eva-repl eva-svc-mirror eva-svc-generator \
+  eva-hmi eva-ffi eva-repl eva-svc-mirror eva-svc-generator \
   eva-svc-expiration eva-filemgr eva-dapp \
   eva-svc-locker eva-svc-mailer; do
   cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1

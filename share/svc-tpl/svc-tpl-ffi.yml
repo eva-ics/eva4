@@ -1,0 +1,7 @@
+# FFI service launcher
+command: target/debug/eva-ffi /path/to/lib.so
+bus:
+  path: var/bus.ipc
+config:
+  # The config is sent to the loaded module as-is
+  {}
