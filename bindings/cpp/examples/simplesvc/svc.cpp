@@ -33,8 +33,7 @@ void worker() {
   try {
     eva::waitCore(timeout);
   } catch(eva::Exception &e) {
-    e.log();
-    eva::poc();
+    eva::poc(e.what());
   }
 
   double sensor_value = 0.0;
@@ -119,7 +118,7 @@ extern "C" {
       return EVA_OK;
     } else if (method == "crash") {
       // example, stops the service with a panic on a critical event
-      eva::poc();
+      eva::poc("by request");
       return EVA_OK;
     } else {
       // return error code if no supported method found

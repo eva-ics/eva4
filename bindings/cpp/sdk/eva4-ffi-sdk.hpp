@@ -1024,11 +1024,21 @@ namespace eva {
   /**
    * Asks the launcher to panic (immediately terminate) the service on a
    * critical error
-   *
-   * @throws Exception
    */
   void poc() {
-    c2e(svcOp(EVA_FFI_SVC_OP_POC));
+    stringstream ss;
+    c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
+  }
+  /**
+   * Asks the launcher to panic (immediately terminate) the service on a
+   * critical error
+   *
+   * @param message message to send
+   */
+  void poc(string message) {
+    stringstream ss;
+    ss << message;
+    c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
   }
 
   struct coreStatus {

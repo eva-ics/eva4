@@ -147,7 +147,16 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
         x if x == SvcOp::LogWarn as i16 => log_message!(LL::Warn),
         x if x == SvcOp::LogError as i16 => log_message!(LL::Error),
         x if x == SvcOp::POC as i16 => {
-            error!("critical error, terminating");
+            let mut logged = false;
+            if let Ok(msg) = str_from_ebuf_raw(payload) {
+                if !msg.is_empty() {
+                    logged = true;
+                    eprintln!("critical: {}", msg);
+                }
+            }
+            if !(logged) {
+                eprintln!("critical");
+            }
             eva_sdk::service::poc();
             return 0;
         }
@@ -476,7 +485,7 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     TIMEOUT
         .set(timeout)
         .map_err(|_| Error::core("unable to set TIMEOUT"))?;
-    eva_sdk::service::set_poc(Some(Duration::from_secs(1)));
+    eva_sdk::service::set_poc(Some(Duration::from_secs(0)));
     macro_rules! call_maybe_ufn {
         ($f: expr) => {
             if let Some(f) = $f {
