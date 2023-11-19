@@ -32,7 +32,7 @@ void worker() {
 
   try {
     eva::waitCore(timeout);
-  } catch(eva::Exception& e) {
+  } catch(exception& e) {
     eva::poc(e, "core wait");
   }
 
@@ -47,7 +47,7 @@ void worker() {
       eva::log::info("alive");
       sensor_value++;
     } catch (exception& e) {
-      eva::log::e("worker");
+      eva::log::e(e, "worker");
     }
     this_thread::sleep_for(chrono::seconds(1));
   }
@@ -63,9 +63,9 @@ struct PayloadHello {
 extern "C" {
 
   // process bus frames
-  void svc_on_frame(struct EvaFFIFrame *r) {
+  void svc_on_frame(struct EvaFFIFrame *f) {
     try {
-      eva::Frame frame = eva::Frame(r);
+      eva::Frame frame = eva::Frame(f);
       cout << "Got frame, sender: " << frame.primary_sender() << ", topic: " << frame.topic() << endl;
       if (frame.hasPayload()) {
         auto oh = frame.unpack();
@@ -73,14 +73,14 @@ extern "C" {
         cout << "payload: " << obj << endl << flush;
       }
     } catch (exception& e) {
-      eva::log::e("frame");
+      eva::log::e(e, "frame");
     }
   }
 
   // process bus RPC calls
-  int32_t svc_on_rpc_call(struct EvaFFIRpcEvent *r) {
+  int32_t svc_on_rpc_call(struct EvaFFIRpcEvent *f) {
     try {
-      eva::RpcEvent ev = eva::RpcEvent(r);
+      eva::RpcEvent ev = eva::RpcEvent(f);
       string method = ev.parse_method();
       cout << "Got RPC call, sender: " << ev.primary_sender() << ", method: " << method << endl;
       if (method == "action") {
@@ -134,10 +134,10 @@ extern "C" {
         return EVA_ERR_CODE_METHOD_NOT_FOUND;
       }
     } catch (eva::Exception& e) {
-      eva::log::e("rpc call");
+      e.log("rpc call");
       return e.code;
     } catch (exception& e) {
-      eva::log::e("rpc call");
+      eva::log::e(e, "rpc call");
       return EVA_ERR_CODE_INTERNAL_RPC;
     }
   }
