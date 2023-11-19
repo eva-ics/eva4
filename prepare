@@ -47,8 +47,8 @@ fi
 mkdir -p runtime/xc runtime/xc/sr var log || exit 3
 if [ "$FIRST_START" ]; then
   mkdir -p ui pvt
-  chmod 700 var log pvt || exit 3
-  chmod 755 ui || exit 3
+  chmod 700 var log || exit 3
+  chmod 755 ui pvt || exit 3
 fi
 ln -sf runtime/xc || exit 3
 
