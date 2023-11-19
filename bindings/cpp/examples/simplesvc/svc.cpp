@@ -45,11 +45,11 @@ void worker() {
       unit1.setState(uval);
 
       eva::log::info("alive");
-      this_thread::sleep_for(chrono::seconds(1));
       sensor_value++;
     } catch (exception& e) {
       eva::log::e("worker");
     }
+    this_thread::sleep_for(chrono::seconds(1));
   }
   eva::log::warn("worker terminating");
 }
