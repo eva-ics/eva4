@@ -233,7 +233,7 @@ namespace eva {
       /**
        * Automatically logs the exception error to STDERR
        *
-       * @param context - error context
+       * @param context error context
        */
       void log(string context) {
         cerr << context << ": " << this->msg << endl << flush;
@@ -1029,6 +1029,7 @@ namespace eva {
     stringstream ss;
     c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
   }
+
   /**
    * Asks the launcher to panic (immediately terminate) the service on a
    * critical error
@@ -1038,6 +1039,33 @@ namespace eva {
   void poc(string message) {
     stringstream ss;
     ss << message;
+    c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
+  }
+
+  /**
+   * Asks the launcher to panic (immediately terminate) the service on a
+   * critical error
+   *
+   * @param e exception to log
+   */
+  void poc(exception& e) {
+    stringstream ss;
+    ss << e.what();
+    c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
+  }
+
+  /**
+   * Asks the launcher to panic (immediately terminate) the service on a
+   * critical error
+   *
+   * @param e exception to log
+   * @param context error context
+   */
+  void poc(exception& e, string context) {
+    stringstream ss;
+    ss << context;
+    ss << ' ';
+    ss << e.what();
     c2e(svcOpSS(EVA_FFI_SVC_OP_POC, ss));
   }
 
@@ -1146,6 +1174,43 @@ namespace eva {
       stringstream ss;
       ss << message;
       svcOpSS(EVA_FFI_SVC_OP_LOG_ERROR, ss);
+    }
+
+    /**
+     * Sends an info-level log message via STDOUT
+     *
+     * @param message message to send
+     */
+    void o(string message) {
+      cout << message << endl << flush;
+    }
+
+    /**
+     * Sends an error-level log message via STDERR
+     *
+     * @param message message to send
+     */
+    void e(string message) {
+      cerr << message << endl << flush;
+    }
+
+    /**
+     * Sends an error-level log message via STDERR
+     *
+     * @param e exception to log
+     * @param context error context
+     */
+    void e(exception& e, string context) {
+      cerr << context << ": " << e.what() << endl << flush;
+    }
+
+    /**
+     * Sends an error-level log message via STDERR
+     *
+     * @param e exception to log
+     */
+    void e(exception& e) {
+      cerr << e.what() << endl << flush;
     }
 
   }
