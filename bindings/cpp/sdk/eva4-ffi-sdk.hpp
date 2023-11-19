@@ -29,7 +29,7 @@ namespace eva {
     const auto sleepStep = chrono::milliseconds(100);
 
     /**
-     * Timeout configuration, (initial.timeout)
+     * Timeout configuration (initial.timeout)
      */
     struct TimeoutConfig {
       /** max allowed startup timeout */
@@ -59,7 +59,7 @@ namespace eva {
     };
 
     /**
-     * Core info, (initial.core)
+     * Core info (initial.core)
      */
     struct CoreInfo {
       uint64_t build;
@@ -473,7 +473,7 @@ namespace eva {
       string i;
       /** OID as path */
       string path;
-      /** item raw state bus tipic for the current OID */
+      /** item raw state bus topic for the current OID */
       string rawTopic;
       bool operator==(const OID& other) const {
         return this->i==other.i;
