@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-11-20 build 2023112001: item auto-creation, svcs ABI, C++ SDK
 * 2023-11-14 build 2023111401: various En/IP and ACL bug fixes, data generator "time"
 * 2023-11-08 build 2023110801: zfrepl and InfluxDB connector fixes
 * 2023-11-07 build 2023110701: Kiosk improvements, skip_disconnected in dbs, db.list HMI method
