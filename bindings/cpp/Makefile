@@ -1,7 +1,9 @@
 all:
 	@echo "select target"
 
-pub:
+pub: upload doc
+
+upload:
 	./release.sh
 
 doc:
