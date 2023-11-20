@@ -1,6 +1,5 @@
 #include <eva4-ffi-sdk.hpp>
 
-#include <unistd.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
