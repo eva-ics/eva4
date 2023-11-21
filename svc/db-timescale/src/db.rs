@@ -95,7 +95,7 @@ $$;"#,
         WHERE hypertable_name='state_history_events'"#,
     )
     .fetch_one(&pool)
-    .await?
+    .await.map_err(|e| Error::failed(format!("unable to get timescale hypertable information. is the timescale extension enabled? ({})", e)))?
     .try_get(0)?;
     if c == 0 {
         match init_hypertable(&pool).await {
