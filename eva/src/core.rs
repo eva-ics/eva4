@@ -14,11 +14,11 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
 use eva_common::err_logger;
 use eva_common::events::{
-    DbState, LocalStateEvent, NodeInfo, RawStateEventOwned, RemoteStateEvent,
-    ReplicationInventoryItem, ReplicationState, ReplicationStateEvent, LOCAL_STATE_TOPIC,
-    LOG_INPUT_TOPIC, RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC,
-    REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC,
-    SERVICE_STATUS_TOPIC,
+    DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
+    RemoteStateEvent, ReplicationInventoryItem, ReplicationState, ReplicationStateEvent,
+    LOCAL_STATE_TOPIC, LOG_INPUT_TOPIC, RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC,
+    REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
+    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC, SERVICE_STATUS_TOPIC,
 };
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
@@ -53,6 +53,13 @@ pub enum LvarOp {
     Toggle,
     Increment,
     Decrement,
+}
+
+// clippy, this is not a file path!
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
+#[inline]
+pub fn sender_allowed_auto_create(sender: &str) -> bool {
+    sender.contains(".controller.") || sender.contains(".plc.") || sender.ends_with(".plc")
 }
 
 pub enum ActionLaunchResult {
@@ -1160,6 +1167,97 @@ impl Core {
     /// Will panic if the state mutex is poisoned
     ///
     /// Note: LVar state is not updated when the status is 0
+    pub async fn update_state_from_raw_bulk(&self, raw: Vec<RawStateBulkEventOwned>, sender: &str) {
+        let mut item_events_to_process = Vec::with_capacity(raw.len());
+        let mut item_events_to_create = Vec::new();
+        let mut allow_auto_create = None;
+        {
+            let inv = self.inventory.read().await;
+            for r in raw {
+                let tp = r.oid.kind();
+                if tp == ItemKind::Lmacro {
+                    Err::<(), Error>(Error::not_implemented(ERR_MSG_STATE_LMACRO)).log_ef();
+                    continue;
+                }
+                if let Some(item) = inv.get_item(&r.oid) {
+                    item_events_to_process.push((item, RawStateEventOwned::from(r)));
+                } else {
+                    if allow_auto_create.is_none() {
+                        allow_auto_create.replace(sender_allowed_auto_create(sender));
+                    }
+                    if self.auto_create && allow_auto_create.unwrap() {
+                        item_events_to_create.push(r);
+                    }
+                }
+            }
+        }
+        let _stp_lock = self.state_processor_lock.lock().await;
+        for (item, r) in item_events_to_process {
+            self.process_raw_state(item, r, false).await.log_efd();
+        }
+        if !item_events_to_create.is_empty() {
+            self.auto_create_item_from_raw_bulk(item_events_to_create, sender)
+                .await;
+        }
+    }
+
+    async fn process_raw_state(
+        &self,
+        item: Item,
+        raw: RawStateEventOwned,
+        lock: bool,
+    ) -> EResult<()> {
+        if item.source().is_some() {
+            return Err(Error::busy(format!(
+                "unable to update item {} from raw event: remote",
+                item.oid()
+            )));
+        }
+        if item.enabled() || raw.force {
+            if let Some(state) = item.state() {
+                debug!(
+                    "setting state from raw event for {}, status: {}, value: {:?}",
+                    item.oid(),
+                    raw.status,
+                    raw.value
+                );
+                let _stp_lock = if lock {
+                    Some(self.state_processor_lock.lock().await)
+                } else {
+                    None
+                };
+                let (s_state, db_st) = {
+                    let mut state = state.lock();
+                    if item.oid().kind() == ItemKind::Lvar && state.status() == 0 && !raw.force {
+                        // lvars with status 0 are not set from RAW
+                        return Ok(());
+                    }
+                    if state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id) {
+                        prepare_state_data!(item, &*state, self.instant_save)
+                    } else {
+                        // not modified
+                        return Ok(());
+                    }
+                };
+                let rpc = self.rpc.get().unwrap();
+                self.process_new_state(item.oid(), s_state, db_st, rpc)
+                    .await?;
+            } else {
+                warn!("no state property in {}", item.oid());
+            }
+        } else {
+            debug!(
+                "ignoring state from raw event for {} - disabled",
+                item.oid()
+            );
+        }
+        Ok(())
+    }
+    /// # Panics
+    ///
+    /// Will panic if the state mutex is poisoned
+    ///
+    /// Note: LVar state is not updated when the status is 0
     pub async fn update_state_from_raw(
         &self,
         oid: &OID,
@@ -1172,61 +1270,41 @@ impl Core {
         }
         let maybe_item = self.inventory.read().await.get_item(oid);
         if let Some(item) = maybe_item {
-            if item.source().is_some() {
-                return Err(Error::busy(format!(
-                    "unable to update item {} from raw event: remote",
-                    oid
-                )));
-            }
-            if item.enabled() || raw.force {
-                if let Some(state) = item.state() {
-                    debug!(
-                        "setting state from raw event for {}, status: {}, value: {:?}",
-                        oid, raw.status, raw.value
-                    );
-                    let _stp_lock = self.state_processor_lock.lock().await;
-                    let (s_state, db_st) = {
-                        let mut state = state.lock();
-                        if tp == ItemKind::Lvar && state.status() == 0 && !raw.force {
-                            // lvars with status 0 are not set from RAW
-                            return Ok(());
-                        }
-                        if state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id) {
-                            prepare_state_data!(item, &*state, self.instant_save)
-                        } else {
-                            // not modified
-                            return Ok(());
-                        }
-                    };
-                    let rpc = self.rpc.get().unwrap();
-                    self.process_new_state(item.oid(), s_state, db_st, rpc)
-                        .await?;
-                } else {
-                    warn!("no state property in {}", oid);
-                }
-            } else {
-                debug!("ignoring state from raw event for {} - disabled", oid);
-            }
-            Ok(())
-        } else if self.auto_create
-            && (sender.contains(".controller.")
-                || sender.contains(".plc.")
-                || sender.ends_with(".plc"))
-        {
-            let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
-            info!("auto-creating local item {} source: {}", oid, sender);
-            if let Err(e) = self.deploy_local_items(vec![item_config]).await {
-                error!("auto-creation failed for {}: {}", oid, e);
-            }
+            self.process_raw_state(item, raw, true).await
+        } else if self.auto_create && sender_allowed_auto_create(sender) {
+            self.auto_create_item_from_raw(oid, raw, sender).await;
             Ok(())
         } else {
             Err(Error::not_found(oid))
         }
     }
+
+    async fn auto_create_item_from_raw(&self, oid: &OID, raw: RawStateEventOwned, sender: &str) {
+        let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
+        info!("auto-creating local item {} source: {}", oid, sender);
+        if let Err(e) = self.deploy_local_items(vec![item_config]).await {
+            error!("auto-creation failed for {}: {}", oid, e);
+        }
+    }
+
+    async fn auto_create_item_from_raw_bulk(&self, raw: Vec<RawStateBulkEventOwned>, sender: &str) {
+        let item_configs = raw
+            .into_iter()
+            .map(|r| {
+                let (oid, rseo) = r.split_into_oid_and_rseo();
+                info!("auto-creating local item {} source: {}", oid, sender);
+                ItemConfigData::from_raw_event(&oid, rseo, sender)
+            })
+            .collect();
+        if let Err(e) = self.deploy_local_items(item_configs).await {
+            error!("auto-creation failed for bulk bus frame: {}", e);
+        }
+    }
+
     /// # Panics
     ///
     /// Will panic if the core rpc is not set
-    // if refractoring, do not write-lock the inventory for long, as the process may take a very
+    // if refactoring, do not write-lock the inventory for long, as the process may take a very
     // long time!
     #[allow(clippy::too_many_lines)]
     pub async fn process_remote_inventory(
@@ -1830,6 +1908,7 @@ where
 {
     let lvl = crate::logs::get_min_log_level();
     let mut topics: Vec<String> = vec![
+        RAW_STATE_BULK_TOPIC.to_owned(),
         format!("{RAW_STATE_TOPIC}#"),
         format!("{}#", eva_common::actions::ACTION_TOPIC),
         format!("{REPLICATION_STATE_TOPIC}#"),

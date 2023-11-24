@@ -17,8 +17,9 @@ use eva_common::err_logger;
 use eva_common::events::LOG_INPUT_TOPIC;
 use eva_common::events::{
     FullItemStateAndInfo, ItemStateAndInfo, NodeInfo, NodeStateEvent, NodeStatus,
-    RawStateEventOwned, ReplicationInventoryItem, ReplicationStateEvent, RAW_STATE_TOPIC,
-    REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC,
+    RawStateBulkEventOwned, RawStateEventOwned, ReplicationInventoryItem, ReplicationStateEvent,
+    RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
+    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC,
 };
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
@@ -32,7 +33,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 const HANDLER_ID_RAW_STATE: usize = 1;
-const HANDLER_ID_ACTION: usize = 2;
+const HANDLER_ID_RAW_STATE_BULK: usize = 2;
+const HANDLER_ID_ACTION: usize = 10;
 
 err_logger!();
 
@@ -104,6 +106,11 @@ impl BusApi {
         self.topic_broker.register_prefix_tx_with_handler_id(
             eva_common::actions::ACTION_TOPIC,
             HANDLER_ID_ACTION,
+            tx.clone(),
+        )?;
+        self.topic_broker.register_topic_tx_with_handler_id(
+            RAW_STATE_BULK_TOPIC,
+            HANDLER_ID_RAW_STATE_BULK,
             tx,
         )?;
         let core = self.core.clone();
@@ -150,6 +157,9 @@ async fn raw_state_and_action_handler(
             HANDLER_ID_RAW_STATE => {
                 handle_raw_state_event(core, frame).await;
             }
+            HANDLER_ID_RAW_STATE_BULK => {
+                handle_raw_state_event_bulk(core, frame).await;
+            }
             HANDLER_ID_ACTION => {
                 handle_action_state(core, frame);
             }
@@ -173,6 +183,18 @@ async fn handle_raw_state_event(core: &Core, frame: pubsub::Publication) {
                 Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
             },
             Err(e) => warn!("invalid OID in raw event {}: {}", frame.topic(), e),
+        }
+    }
+}
+
+async fn handle_raw_state_event_bulk(core: &Core, frame: pubsub::Publication) {
+    if core.is_active() {
+        match unpack::<Vec<RawStateBulkEventOwned>>(frame.payload()) {
+            Ok(raw) => {
+                core.update_state_from_raw_bulk(raw, frame.primary_sender())
+                    .await;
+            }
+            Err(e) => warn!("invalid payload in raw bulk event {}: {}", frame.topic(), e),
         }
     }
 }
