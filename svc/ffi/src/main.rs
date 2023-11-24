@@ -77,7 +77,7 @@ unsafe fn str_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<&'a str> {
     check_ptr!(ebuffer);
     let buf_fb: &EBuffer = std::mem::transmute(ebuffer as *mut u8);
     let mut buf: &[u8] = std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len);
-    if buf.len() > 0 && buf[buf.len() - 1] == 0 {
+    if !buf.is_empty() && buf[buf.len() - 1] == 0 {
         buf = &buf[0..buf.len() - 1];
     }
     std::str::from_utf8(buf).map_err(Into::into)
