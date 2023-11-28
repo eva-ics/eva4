@@ -4,7 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
-* 2023-11-28 build 2023112801: raw bus events, En/IP fixes
+* 2023-11-28 build 2023112801: bulk raw bus events, En/IP fixes
 * 2023-11-20 build 2023112001: item auto-creation, svcs ABI, C++ SDK
 * 2023-11-14 build 2023111401: various En/IP and ACL bug fixes, data generator "time"
 * 2023-11-08 build 2023110801: zfrepl and InfluxDB connector fixes
