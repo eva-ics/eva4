@@ -1860,14 +1860,19 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     } else {
         vec!["*".to_owned()]
     };
-    let entries = sdkfs::list(
+    let entries = match sdkfs::list(
         &path,
         &masks.iter().map(String::as_str).collect::<Vec<&str>>(),
         p.kind,
         p.recursive,
         true,
     )
-    .await?;
+    .await
+    {
+        Ok(v) => v,
+        Err(e) if e.kind() == ErrorKind::ResourceNotFound => return Err(Error::not_found(p.path)),
+        Err(e) => return Err(e),
+    };
     let s = path.to_string_lossy();
     let result: Vec<sdkfs::Entry> = entries
         .into_iter()
