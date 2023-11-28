@@ -7,7 +7,9 @@ use base64::Engine as _;
 use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::ParamsIdOrListOwned;
+use eva_common::common_payloads::ValueOrList;
 use eva_common::prelude::*;
+use eva_sdk::fs as sdkfs;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
 use lazy_static::lazy_static;
@@ -16,8 +18,10 @@ use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{btree_map, BTreeMap, HashMap};
 use std::net::IpAddr;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -90,6 +94,39 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
             }
         }
         Err(Error::access("No authentication data provided"))
+    }
+}
+
+fn format_and_check_path(s: &str, acl: &Acl, write: bool) -> EResult<PathBuf> {
+    macro_rules! check_acl {
+        ($path: expr) => {
+            if write {
+                acl.require_pvt_write($path)?;
+            } else {
+                acl.require_pvt_read($path)?;
+            }
+        };
+    }
+    let Some(pvt_path) = crate::PVT_PATH.get().unwrap() else {
+        return Err(Error::unsupported("PVT path not set"));
+    };
+    let fpath = Path::new(s);
+    if s == "/" {
+        check_acl!("");
+        Ok(Path::new(pvt_path).to_owned())
+    } else if fpath.is_absolute() {
+        Err(Error::access(
+            "the path must be relative to the pvt directory",
+        ))
+    } else if s.contains("../") {
+        Err(Error::access("the path can not contain ../"))
+    } else if s.contains("/./") || s.starts_with("./") {
+        Err(Error::access("the path can not contain or start with ./"))
+    } else {
+        check_acl!(s);
+        let mut path = Path::new(pvt_path).to_owned();
+        path.extend(fpath);
+        Ok(path)
     }
 }
 
@@ -478,6 +515,10 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "user_data.set" => method_user_data_set(params, &mut aci).await,
                         "user_data.delete" => method_user_data_delete(params, &mut aci).await,
                         "db.list" => method_db_list(params, &mut aci).await,
+                        "pvt.put" => method_pvt_put(params, &mut aci).await,
+                        "pvt.get" => method_pvt_get(params, &mut aci).await,
+                        "pvt.unlink" => method_pvt_unlink(params, &mut aci).await,
+                        "pvt.list" => method_pvt_list(params, &mut aci).await,
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
@@ -1732,4 +1773,116 @@ async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         })
         .collect();
     to_value(dbs).map_err(Into::into)
+}
+
+async fn method_pvt_put(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        #[serde(alias = "i")]
+        path: String,
+        #[serde(alias = "c")]
+        content: String,
+    }
+    aci.log_request(log::Level::Info).await.log_ef();
+    let p = Params::deserialize(params)?;
+    aci.check_write()?;
+    let path = format_and_check_path(&p.path, aci.acl(), true)?;
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    let mut fh = tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .await?;
+    fh.write_all(p.content.as_bytes()).await?;
+    fh.flush().await?;
+    ok!()
+}
+
+async fn method_pvt_get(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        #[serde(alias = "i")]
+        path: String,
+    }
+    #[derive(Serialize)]
+    struct Payload {
+        content: String,
+    }
+    aci.log_request(log::Level::Info).await.log_ef();
+    let p = Params::deserialize(params)?;
+    let path = format_and_check_path(&p.path, aci.acl(), false)?;
+    let content = match tokio::fs::read_to_string(path).await {
+        Ok(v) => v,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(Error::not_found(p.path)),
+        Err(e) => return Err(e.into()),
+    };
+    to_value(Payload { content }).map_err(Into::into)
+}
+
+async fn method_pvt_unlink(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        #[serde(alias = "i")]
+        path: String,
+    }
+    aci.log_request(log::Level::Info).await.log_ef();
+    let p = Params::deserialize(params)?;
+    aci.check_write()?;
+    let path = format_and_check_path(&p.path, aci.acl(), true)?;
+    tokio::fs::remove_file(path).await?;
+    ok!()
+}
+
+async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Params {
+        #[serde(alias = "i")]
+        path: String,
+        #[serde(alias = "m")]
+        masks: Option<ValueOrList<String>>,
+        #[serde(default, alias = "p")]
+        kind: sdkfs::Kind,
+        #[serde(default, alias = "r")]
+        recursive: bool,
+    }
+    aci.log_request(log::Level::Info).await.log_ef();
+    let p = Params::deserialize(params)?;
+    let path = format_and_check_path(&p.path, aci.acl(), false)?;
+    let masks: Vec<String> = if let Some(m) = p.masks {
+        m.to_vec()
+    } else {
+        vec!["*".to_owned()]
+    };
+    let entries = sdkfs::list(
+        &path,
+        &masks.iter().map(String::as_str).collect::<Vec<&str>>(),
+        p.kind,
+        p.recursive,
+        true,
+    )
+    .await?;
+    let s = path.to_string_lossy();
+    let result: Vec<sdkfs::Entry> = entries
+        .into_iter()
+        .filter_map(|r| {
+            let p = r.path.to_string_lossy();
+            if s.len() + 1 < p.len() {
+                Some(sdkfs::Entry {
+                    path: Path::new(&p[s.len() + 1..]).to_owned(),
+                    meta: r.meta,
+                    kind: r.kind,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+    to_value(result).map_err(Into::into)
 }
