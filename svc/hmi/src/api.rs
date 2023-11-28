@@ -1745,6 +1745,7 @@ async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[derive(Deserialize)]
     struct SvcId {
         id: String,
+        enabled: bool,
     }
     #[derive(Serialize)]
     struct DbInfo<'a> {
@@ -1772,10 +1773,14 @@ async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     let dbs: Vec<DbInfo> = svc_list
         .iter()
         .filter_map(|svc| {
-            svc.id.strip_prefix("eva.db.").map(|id| DbInfo {
-                id,
-                default: id == default_db,
-            })
+            if svc.enabled {
+                svc.id.strip_prefix("eva.db.").map(|id| DbInfo {
+                    id,
+                    default: id == default_db,
+                })
+            } else {
+                None
+            }
         })
         .collect();
     to_value(dbs).map_err(Into::into)
