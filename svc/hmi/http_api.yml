@@ -47,6 +47,7 @@ login:
         "jsonrpc": "2.0",
         "result": {
             "acl": "admin",
+            "api_version": 4,
             "mode": "normal",
             "token": "token:1oeb5vHbLTTABBg2DfoueSHl9kT3ZPm6",
             "user": "admin"
