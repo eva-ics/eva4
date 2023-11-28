@@ -468,7 +468,7 @@ acls:
   admin: true
 - id: operator
   read: { items: [ "#" ], pvt: [ "#" ], rpvt: [ "#" ] }
-  write: { items: [ "#" ] }
+  write: { items: [ "#" ], pvt: ["vendored-apps/opcentre/#"] }
 EOF
   ) | ./bin/yml2mp | \
     ./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.acl acl.deploy - > /dev/null || exit 12
