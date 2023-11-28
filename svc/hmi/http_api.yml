@@ -459,7 +459,7 @@ action:
   ret: Current result payload
   http_req:
     i: unit:tests/door
-    status: 1
+    value: 1
     wait: 1
   http_rpl: |
     {
@@ -887,3 +887,89 @@ db.list:
             "id": "pg"
         }
     }
+pvt.list:
+  des: List entries in pvt
+  ret: List of available files and folders
+  http_req:
+    path: vendored-apps
+  par:
+    - nam: path
+      typ: String
+      des: Relative path
+      req: true
+    - nam: masks
+      typ: String/Vec<String>
+      des: file masks
+      req: false
+    - nam: kind
+      typ: String
+      des: file, dir or any
+      req: false
+    - nam: recursive
+      typ: bool
+      des: recursive listing
+      req: false
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": [
+            {
+                "kind": "dir",
+                "path": "vendored-apps/opcentre/idc"
+            },
+            {
+                "kind": "dir",
+                "path": "vendored-apps/opcentre/idc/dashboards"
+            },
+            {
+                "kind": "file",
+                "path": "vendored-apps/opcentre/idc/dashboards/test2.json"
+            },
+            {
+                "kind": "file",
+                "path": "vendored-apps/opcentre/idc/dashboards/test3.json"
+            }
+        ]
+    }
+pvt.get:
+  des: Get contents of a file in pvt (text)
+  ret: File content
+  par:
+    - nam: path
+      typ: String
+      des: Relative path
+      req: true
+  http_req:
+    path: vendored-apps/file1.json
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "content": "hello"
+        }
+    }
+pvt.put:
+  des: Puts contents of a file in pvt (text)
+  par:
+    - nam: path
+      typ: String
+      des: Relative path
+      req: true
+    - nam: content
+      typ: String
+      des: File content
+      req: true
+  http_req:
+    path: vendored-apps/file1.json
+    content: hello
+pvt.unlink:
+  des: Deletes a file in pvt
+  par:
+    - nam: path
+      typ: String
+      des: Relative path
+      req: true
+  http_req:
+    path: vendored-apps/file1.json

@@ -97,13 +97,19 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
     }
 }
 
-fn format_and_check_path(s: &str, acl: &Acl, write: bool) -> EResult<PathBuf> {
+enum PvtOp {
+    List,
+    Read,
+    Write,
+}
+
+fn format_and_check_path(s: &str, acl: &Acl, op: PvtOp) -> EResult<PathBuf> {
     macro_rules! check_acl {
         ($path: expr) => {
-            if write {
-                acl.require_pvt_write($path)?;
-            } else {
-                acl.require_pvt_read($path)?;
+            match op {
+                PvtOp::Read => acl.require_pvt_read($path)?,
+                PvtOp::Write => acl.require_pvt_write($path)?,
+                PvtOp::List => {}
             }
         };
     }
@@ -1787,7 +1793,7 @@ async fn method_pvt_put(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Info).await.log_ef();
     let p = Params::deserialize(params)?;
     aci.check_write()?;
-    let path = format_and_check_path(&p.path, aci.acl(), true)?;
+    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -1815,7 +1821,7 @@ async fn method_pvt_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     }
     aci.log_request(log::Level::Info).await.log_ef();
     let p = Params::deserialize(params)?;
-    let path = format_and_check_path(&p.path, aci.acl(), false)?;
+    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Read)?;
     let content = match tokio::fs::read_to_string(path).await {
         Ok(v) => v,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(Error::not_found(p.path)),
@@ -1834,8 +1840,13 @@ async fn method_pvt_unlink(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Info).await.log_ef();
     let p = Params::deserialize(params)?;
     aci.check_write()?;
-    let path = format_and_check_path(&p.path, aci.acl(), true)?;
-    tokio::fs::remove_file(path).await?;
+    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
+    if let Err(e) = tokio::fs::remove_file(path).await {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            return Err(Error::not_found(p.path));
+        }
+        return Err(e.into());
+    }
     ok!()
 }
 
@@ -1854,7 +1865,7 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     }
     aci.log_request(log::Level::Info).await.log_ef();
     let p = Params::deserialize(params)?;
-    let path = format_and_check_path(&p.path, aci.acl(), false)?;
+    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::List)?;
     let masks: Vec<String> = if let Some(m) = p.masks {
         m.to_vec()
     } else {
@@ -1874,19 +1885,25 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         Err(e) => return Err(e),
     };
     let s = path.to_string_lossy();
+    let plen = crate::PVT_PATH
+        .get()
+        .unwrap()
+        .as_ref()
+        .map_or(0, |v| v.len() + 1);
     let result: Vec<sdkfs::Entry> = entries
         .into_iter()
         .filter_map(|r| {
             let p = r.path.to_string_lossy();
-            if s.len() + 1 < p.len() {
-                Some(sdkfs::Entry {
-                    path: Path::new(&p[s.len() + 1..]).to_owned(),
-                    meta: r.meta,
-                    kind: r.kind,
-                })
-            } else {
-                None
+            if plen < p.len() && aci.acl().check_pvt_read(&p[plen..]) {
+                if s.len() + 1 < p.len() {
+                    return Some(sdkfs::Entry {
+                        path: Path::new(&p[s.len() + 1..]).to_owned(),
+                        meta: r.meta,
+                        kind: r.kind,
+                    });
+                }
             }
+            None
         })
         .collect();
     to_value(result).map_err(Into::into)
