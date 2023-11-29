@@ -558,10 +558,15 @@ fn get_real_ip(
     ip: IpAddr,
     headers: &hyper::header::HeaderMap,
     real_ip_header: Arc<Option<String>>,
-) -> Result<IpAddr, Box<dyn std::error::Error>> {
+) -> Result<IpAddr, Error> {
     if let Some(ref ip_header) = *real_ip_header {
-        if let Some(s) = headers.get(ip_header) {
-            return Ok(s.to_str()?.parse::<IpAddr>()?);
+        if let Some(h) = headers.get(ip_header) {
+            let s = h
+                .to_str()
+                .map_err(|e| Error::failed(format!("invalid real ip header: {}", e)))?;
+            return s.parse::<IpAddr>().map_err(|e| {
+                Error::invalid_params(format!("Unable to parse client address {}: {}", s, e))
+            });
         }
     }
     Ok(ip)
