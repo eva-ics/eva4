@@ -173,7 +173,7 @@ def xc(cmd, ps='working', verbose=False):
         raise RuntimeError(f'process exited with the code {p.returncode}')
 
 
-def exec_cmd(cmd, args, search_in='bin', search_system=True):
+def exec_cmd(cmd, args, search_in='bin', search_system=True, env=None):
     check_local_shell()
     c = f'{common.dir_eva}/{search_in}/{cmd}'
     if not os.path.isfile(c) and search_system:
@@ -181,7 +181,13 @@ def exec_cmd(cmd, args, search_in='bin', search_system=True):
         c = shutil.which(cmd)
     if not c:
         raise RuntimeError(f'{cmd} not found')
-    code = os.system(f'{c} {args}')
+    if env is None:
+        ec = ''
+    else:
+        ec = ''
+        for var, value in env.items():
+            ec += f'{var}="{value}" '
+    code = os.system(f'{ec}{c} {args}')
     if code:
         raise RuntimeError(f'{cmd} failed with code {code}')
 

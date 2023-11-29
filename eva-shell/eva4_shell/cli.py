@@ -150,7 +150,8 @@ class CLI:
             args += ' --YES'
         exec_cmd('eva-cloud-manager', args)
 
-    def update(self, download_timeout, repository_url, yes, info_only, test):
+    def update(self, download_timeout, repository_url, yes, info_only, test,
+               target_version):
         args = ''
         if current_command.debug:
             args += ' --verbose '
@@ -166,8 +167,20 @@ class CLI:
         if test:
             args += ' --test'
         old_ver = get_node_svc_info()
-        exec_cmd('eva-cloud-manager', args)
-        if not info_only:
+        if target_version:
+            env = {'EVA_UPDATE_FORCE_VERSION': target_version}
+        else:
+            env = None
+        exec_cmd('eva-cloud-manager', args, env=env)
+        if info_only:
+            print()
+            info = get_node_svc_info()
+            print('update other node to the current version:\n')
+            v = f'{info["version"]}:{info["build"]}'
+            print(colored(f'    eva update --target-version {v}',
+                          color='white'))
+            print()
+        else:
             if old_ver != get_node_svc_info():
                 print('Update completed', end='')
                 if common.interactive:

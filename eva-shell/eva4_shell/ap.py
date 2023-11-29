@@ -1387,6 +1387,9 @@ def init_ap():
         p.add_argument('--test',
                        action='store_true',
                        help='install a build marked as test')
+        p.add_argument('--target-version',
+                       metavar='VERSION:BUILD',
+                       help='update to a specific version/build')
 
     sp.add_parser('version', help='core version')
 
