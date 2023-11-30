@@ -3,9 +3,9 @@ use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use log::{debug, error, info, trace, warn};
+use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -84,16 +84,19 @@ struct Reply {
 }
 
 #[derive(Default)]
-struct Tester {
+pub struct Tester {
     data: Mutex<Option<(String, oneshot::Sender<()>)>>,
 }
 
 impl Tester {
-    fn fire(&self, topic: &str, payload: &[u8]) -> bool {
+    /// # Panics
+    ///
+    /// should not panic
+    pub fn fire(&self, topic: &str, payload: &[u8]) -> bool {
         if payload != [b'+'] {
             return false;
         }
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.lock();
         if let Some(d) = data.as_ref() {
             if d.0 == topic {
                 let _r = data.take().unwrap().1.send(());
@@ -107,7 +110,7 @@ impl Tester {
     }
     fn arm(&self, topic: &str) -> oneshot::Receiver<()> {
         let (tx, rx) = oneshot::channel();
-        self.data.lock().unwrap().replace((topic.to_owned(), tx));
+        self.data.lock().replace((topic.to_owned(), tx));
         rx
     }
 }
@@ -262,7 +265,7 @@ async fn processor<H>(
                     let call_id =
                         Uuid::from_u128(u128::from_le_bytes(payload[4..20].try_into().unwrap()));
                     trace!("RPC reply {}", call_id);
-                    if let Some(tx) = { calls.lock().unwrap().remove(&call_id) } {
+                    if let Some(tx) = { calls.lock().remove(&call_id) } {
                         let _r = tx.send(Reply {
                             kind: if op == RPC_REPLY {
                                 ReplyKind::Success
@@ -334,7 +337,7 @@ impl<'a> Config<'a> {
     }
 }
 
-async fn pstest(
+pub async fn pstest(
     tester: Arc<Tester>,
     client: Arc<dyn pubsub::Client + Send + Sync + 'static>,
     timeout: Duration,
@@ -391,7 +394,7 @@ impl RpcClient {
                     if let Some(ref tf) = test_failed {
                         tf.trigger();
                     }
-                    pfut.lock().unwrap().abort();
+                    pfut.lock().abort();
                     let _r = cl.bye().await;
                 } else {
                     debug!("PubSub server test passed");
@@ -445,13 +448,13 @@ impl RpcClient {
         }
         message.extend(opts.pack_payload(payload).await?);
         let (tx, rx) = oneshot::channel();
-        self.calls.lock().unwrap().insert(call_id, tx);
+        self.calls.lock().insert(call_id, tx);
         macro_rules! unwrap_or_cancel {
             ($result: expr) => {
                 match $result {
                     Ok(v) => v,
                     Err(e) => {
-                        self.calls.lock().unwrap().remove(&call_id);
+                        self.calls.lock().remove(&call_id);
                         return Err(Into::<Error>::into(e).into());
                     }
                 }
@@ -492,7 +495,7 @@ impl RpcClient {
 impl Drop for RpcClient {
     fn drop(&mut self) {
         self.tester_fut.abort();
-        self.processor_fut.lock().unwrap().abort();
+        self.processor_fut.lock().abort();
     }
 }
 

@@ -1,0 +1,160 @@
+# EVA ICS pub/sub controller
+command: target/debug/eva-controller-pubsub
+workers: 2
+bus:
+  path: var/bus.ipc
+config:
+  # ttl cache for input events (sec, skip non-modified)
+  input_cache_sec: 3600
+  pubsub:
+    # mqtt or psrt
+    proto: mqtt
+    # path to CA certificate file. Enables SSL if set
+    ca_certs: null
+    # single or multiple hosts
+    host:
+      - 127.0.0.1:1883
+    # if more than a single host is specified, shuffle the list before connecting
+    cluster_hosts_randomize: false
+    # user name / password auth
+    username: null
+    password: null
+    ping_interval: 10
+    # pub/sub queue size
+    queue_size: 1024
+    # pub/sub QoS (not required for PSRT)
+    qos: 1
+  # parsing/formatting values is used with a lightweight JsonPath syntax:
+  # $.some.value - value is in a structure "some", field "value"
+  # $.some[1].value[2] - work with array of structures
+  # $.[1] - top-level array of values
+  # $. - payload top-level (the path can be omitted)
+  #
+  # inputs are used to get item states from pub/sub
+  input:
+    # a pub/sub topic (or a topic mask) to watch
+    - topic: lab/equipment/sensor1
+      # no packer specified - use the topic value as-is (numbers are parsed)
+      map:
+        - path: $. # top-level (can be omitted)
+          oid: sensor:tests/s1 # item OID
+          # process as the item value
+          # variants are: status (set item status), value (default, can be
+          # omitted), action (execute a local action)
+          process: value
+          # value mapping. map "OFF" to 0, "ON" to 1
+          #value_map:
+            #"OFF": 0
+            #"ON": 1
+          #transform:
+            #- func: multiply # multiply the value by N
+              #params: [ 1000 ]
+            #- func: divide # divide the value by N
+              #params: [ 1000 ]
+            #- func: round # round the value to N digits after comma
+              #params: [ 2 ]
+            #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+              #params: [ 1 ]
+            #- func: invert # invert the value between 0/1
+            # #params: []
+    # process a complex payload
+    - topic: lab/equipment/some-light/STATE
+      # unpack from JSON. valid values are: no (default), json, msgpack
+      packer: json
+      map:
+        - path: $.Vcc
+          oid: sensor:light/vcc
+          # value_map and transform can be used
+        - path: $.Wifi.RSSI
+          oid: sensor:light/wifi/rssi
+    # action topic, allows to run EVA ICS actions from pub/sub
+    - topic: lab/equipment/door1
+      map:
+        - oid: unit:tests/door
+          process: action
+          # path, value_map and transform can be used in action topics as well
+  # outputs are used to submit data into pub/sub
+  # if no interval is specified and ignore_events is not set to false
+  # (default), events are sent in real-time
+  output:
+    - topic: out/sensor1
+      packer: json
+      map:
+        - path: $.deviceStatus
+          oid: sensor:t1/temp
+          # EVA ICS item property to set
+          #
+          # valid properties are:
+          #
+          # status - item status
+          # value - item value
+          # time - item state set time (float)
+          # time_sec - item state set time in seconds (integer)
+          # time_millis - set time in milliseconds
+          # time_micros - set time in microseconds
+          # time_nanos - set time in nanoseconds
+          prop: status
+          # value_map and transform can be used
+          value_map:
+            "1": Good
+            "-1": Error
+        - path: $.deviceState
+          oid: sensor:t1/temp
+          # value_map and transform can be used
+          transform:
+            - func: multiply
+              params: [ 100 ]
+        - path: $.time
+          oid: sensor:t1/temp
+          prop: time
+        - path: $.source
+          # fill the "source" field of the output structure to a static
+          # value. The payload can be a string or a complex one. If the
+          # string contains variables, they are automatically replaced with
+          # their values. Valid variables are:
+          #
+          # ${system_name} - EVA ICS node name
+          payload: "${system_name}"
+        - path: $.version
+          # fill the "version" field with a string with no variables
+          payload: "1.0"
+    - topic: out/sensor2
+      # send the output every 5 seconds and ignore real-time events
+      interval: 5
+      ignore_events: true
+      packer: json
+      map:
+        - path: $.deviceStatus
+          oid: sensor:t1/hum
+          prop: status
+          value_map:
+            "1": Good
+            "-1": Error
+        - path: $.deviceState
+          oid: sensor:t1/hum
+        - path: $.time
+          oid: sensor:t1/temp
+          prop: time
+        - path: $.source
+          payload: "${system_name}"
+  # action maps are used to execute EVA ICS unit actions by sending pub/sub
+  # payloads
+  action_map:
+    unit:tests/u1:
+      # the mapping format is similar to outputs with the following exception:
+      # if neither oid nor payload is specified, the value is taken from the
+      # action payload
+      #
+      # e.g. the example below sends "OFF" when action requests to set the item
+      # value to 0 and "ON" for 1
+      topic: out/control/x
+      map:
+        - path: $.
+          # value_map and transform can be used
+          value_map:
+            "0": "OFF"
+            "1": "ON"
+          # as well as outputs, action payloads can be structures with
+          # additional data (states of other items, static strings etc.
+          #
+user: nobody

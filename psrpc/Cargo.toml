@@ -21,6 +21,7 @@ log = "0.4.16"
 triggered = "0.1.2"
 openssl = "0.10.42"
 genpass-native = { path = "../genpass-native" }
+parking_lot = "0.12.1"
 
 [features]
 openssl-vendored = ["openssl/vendored"]

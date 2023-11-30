@@ -1446,9 +1446,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.15"
+version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16c739a5f63fe8c7aa78acbf759927a0785f4398b964363dd15b998df45d3b38"
+checksum = "f3293de4e85bc6f3036cf1f99d2638edf3a3fc61f1adb821b50566bd12b117b7"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1590,6 +1590,29 @@ dependencies = [
  "serde",
  "tokio",
  "uuid 1.5.0",
+]
+
+[[package]]
+name = "eva-controller-pubsub"
+version = "4.0.2"
+dependencies = [
+ "async-channel",
+ "async-recursion",
+ "async-trait",
+ "busrt",
+ "eva-common",
+ "eva-sdk",
+ "jemallocator",
+ "log",
+ "once_cell",
+ "paho-mqtt",
+ "parking_lot 0.12.1",
+ "psrpc",
+ "psrt",
+ "serde",
+ "serde_json",
+ "tokio",
+ "ttl_cache",
 ]
 
 [[package]]
@@ -1934,9 +1957,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5fc9a12816ff4a3ea1a1cb4e9aa27dd0ec88659f607723e8b8e24a897fd976a"
+checksum = "ad05d0a4ad29fcf223107d554777e5939531eca48c97bacca18616f44232086a"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -3960,6 +3983,7 @@ dependencies = [
  "log",
  "openssl",
  "paho-mqtt",
+ "parking_lot 0.12.1",
  "psrt",
  "serde",
  "tokio",
