@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-12-04 build 2023120401: Operation Centre vendored UI app
 * 2023-12-01 build 2023120101: pvt management HTTP API methods
 * 2023-11-28 build 2023112801: bulk raw bus events, En/IP fixes
 * 2023-11-20 build 2023112001: item auto-creation, svcs ABI, C++ SDK
