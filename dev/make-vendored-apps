@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-VENDORED_APPS="sdash"
+VENDORED_APPS="sdash opcentre"
 
 [ "$BUILD_DIR" ] && cd "${BUILD_DIR}"
 
