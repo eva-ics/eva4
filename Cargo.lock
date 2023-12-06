@@ -1773,24 +1773,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eva-ffi"
-version = "4.0.2"
-dependencies = [
- "async-channel",
- "async-trait",
- "busrt",
- "clap 3.1.18",
- "eva-common",
- "eva-sdk",
- "jemallocator",
- "libloading",
- "log",
- "once_cell",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "eva-filemgr"
 version = "4.0.2"
 dependencies = [
@@ -3043,16 +3025,6 @@ name = "libc"
 version = "0.2.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4668fb0ea861c1df094127ac5f1da3409a82116a4ba74fca2e58ef927159bb3"
-
-[[package]]
-name = "libloading"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c571b676ddfc9a8c12f1f3d3085a7b163966a8fd8098a90640953ce5f6170161"
-dependencies = [
- "cfg-if",
- "windows-sys 0.48.0",
-]
 
 [[package]]
 name = "libm"
