@@ -28,7 +28,6 @@ members = [
   "svc/controller-lm",
   "svc/svc-modbus-slave",
   "svc/hmi",
-  "svc/ffi",
   "svc/mirror",
   "svc/repl",
   "svc/generator",
@@ -44,7 +43,8 @@ members = [
 resolver = "1"
 
 exclude = [
-  "contrib/webinfo"
+  "contrib/webinfo",
+  "svc/ffi",
 ]
 
 [profile.release]

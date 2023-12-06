@@ -20,6 +20,7 @@ fi
 case $ARCH in
   x86_64-musl)
     TARGET=x86_64-unknown-linux-musl
+    FFI_TARGET=x86_64-unknown-linux-gnu
     STRIP=strip
     YEDB_ARCH=x86_64
     CARGO=cross
@@ -28,6 +29,7 @@ case $ARCH in
     ;;
   aarch64-musl)
     TARGET=aarch64-unknown-linux-musl
+    FFI_TARGET=aarch64-unknown-linux-gnu
     STRIP=aarch64-linux-gnu-strip
     YEDB_ARCH=aarch64
     CARGO=cross
@@ -36,6 +38,7 @@ case $ARCH in
     ;;
   x86_64-ubuntu20.04)
     TARGET=x86_64-unknown-linux-gnu
+    FFI_TARGET=${TARGET}
     STRIP=strip
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
@@ -164,6 +167,11 @@ DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp
   "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd .. || exit 1
 
+echo "Building FFI SVC..."
+cd eva4/svc/ffi || exit 1
+"${CARGO}" build --target "${FFI_TARGET}" --release ${CARGO_ARGS} || exit 1
+cd ../../.. || exit 1
+
 echo "Building Enterprise extensions..."
 if [ -d eva4-enterprise ]; then
   cd eva4-enterprise || exit 1
@@ -213,12 +221,14 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-controller-trap \
   eva-svc-modbus-slave \
   eva-db-influx eva-db-sql eva-db-timescale eva-svc-filewriter \
-  eva-hmi eva-ffi eva-repl eva-svc-mirror eva-svc-generator \
+  eva-hmi eva-repl eva-svc-mirror eva-svc-generator \
   eva-svc-expiration eva-filemgr eva-dapp \
   eva-svc-locker eva-svc-mailer; do
   cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
+
+cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${TARGET}/release/eva-ffi" svc/ || exit 1
 
 for svc in eva-aaa-msad \
   eva-kioskman \

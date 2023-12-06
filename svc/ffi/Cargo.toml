@@ -19,3 +19,9 @@ clap = { version = "3.0.7", features = ["derive"] }
 
 [features]
 std-alloc = []
+openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
