@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-12-06 build 2023120601: FFI svc fixes for non-native builds
 * 2023-12-05 build 2023120501: Operation Centre vendored UI app
 * 2023-12-01 build 2023120101: pvt management HTTP API methods
 * 2023-11-28 build 2023112801: bulk raw bus events, En/IP fixes
