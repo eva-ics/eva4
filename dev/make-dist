@@ -229,7 +229,7 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
-cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${TARGET}/release/eva-ffi" svc/ || exit 1
+cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${FFI_TARGET}/release/eva-ffi" svc/ || exit 1
 
 for svc in eva-aaa-msad \
   eva-kioskman \
