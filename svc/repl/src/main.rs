@@ -10,6 +10,7 @@ use eva_sdk::prelude::*;
 use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_ITEM_STATE_TOPIC, PS_NODE_STATE_TOPIC};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::atomic;
 use std::sync::Arc;
@@ -204,6 +205,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    let eva_dir = initial.eva_dir();
     if config.pubsub.cluster_hosts_randomize {
         config.pubsub.host.shuffle();
     }
@@ -259,7 +261,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("node.remove").required("i"));
     let handlers = eapi::Handlers::new(sender_tx, info, config.replicate_remote);
     let rpc = initial.init_rpc(handlers).await?;
-    initial.drop_privileges()?;
     let registry = initial.init_registry(&rpc);
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
@@ -332,18 +333,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     }
     svc_start_signal_handlers();
+    let mut topic_broker = psrpc::tools::TopicBroker::new();
+    let (_, rx) =
+        topic_broker.register_prefix(PS_ITEM_BULK_STATE_TOPIC, config.pubsub.queue_size)?;
     let mut pubsub_rpc_config = psrpc::Config::new(initial.system_name())
         .timeout(timeout)
         .ping_interval(config.pubsub.ping_interval)
         .queue_size(config.pubsub.queue_size)
         .qos(qos);
     let pubsub_fatal = pubsub_rpc_config.arm_failure_trigger();
-    let mut topic_broker = psrpc::tools::TopicBroker::new();
-    let (_, rx) =
-        topic_broker.register_prefix(PS_ITEM_BULK_STATE_TOPIC, config.pubsub.queue_size)?;
-    tokio::spawn(async move {
-        pubsub::ps_bulk_state_handler(rx).await.log_ef();
-    });
     if config.subscribe != SubscribeKind::BulkOnly {
         let (_, rx) =
             topic_broker.register_prefix(PS_ITEM_STATE_TOPIC, config.pubsub.queue_size)?;
@@ -372,7 +370,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
             }
             let mut client = None;
             for host in config.pubsub.host.iter() {
-                psrt_config.update_path(host);
+                let mut h = Cow::Borrowed(host);
+                if psrt::is_unix_socket(host) {
+                    if !host.starts_with('.') && !host.starts_with('/') {
+                        h = Cow::Owned(format!("{}/{}", eva_dir, host));
+                    }
+                }
+                psrt_config.update_path(&h);
                 psrt_config = psrt_config.build();
                 match psrt::client::Client::connect(&psrt_config).await {
                     Ok(v) => {
@@ -429,6 +433,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 return Err(Error::failed("Unable to find working mqtt host"));
             }
         }
+    });
+    initial.drop_privileges()?;
+    tokio::spawn(async move {
+        pubsub::ps_bulk_state_handler(rx).await.log_ef();
     });
     PUBSUB_RPC
         .set(ps_rpc.clone())
