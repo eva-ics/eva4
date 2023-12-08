@@ -1,8 +1,8 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::{ParamsId, ValueOrList};
 use eva_common::events::{
-    LocalStateEvent, RawStateEventOwned, RemoteStateEvent, LOCAL_STATE_TOPIC, RAW_STATE_TOPIC,
-    REMOTE_STATE_TOPIC,
+    LocalStateEvent, RawStateEvent, RawStateEventOwned, RemoteStateEvent, LOCAL_STATE_TOPIC,
+    RAW_STATE_TOPIC, REMOTE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::controller::{
@@ -706,6 +706,22 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    if initial.is_mode_rtf() {
+        println!("marking all mapped items as failed");
+        let payload_failed = pack(&RawStateEvent::new0(eva_common::ITEM_STATUS_ERROR))?;
+        let mut bus = initial.init_bus_client().await?;
+        for i in config.input {
+            for m in i.map {
+                bus.publish(
+                    &format!("{}{}", RAW_STATE_TOPIC, m.oid.as_path()),
+                    payload_failed.as_slice().into(),
+                    busrt::QoS::No,
+                )
+                .await?;
+            }
+        }
+        return Ok(());
+    }
     if config.pubsub.cluster_hosts_randomize {
         config.pubsub.host.shuffle();
     }

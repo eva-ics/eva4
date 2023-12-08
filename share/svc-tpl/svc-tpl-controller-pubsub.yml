@@ -158,3 +158,4 @@ config:
           # additional data (states of other items, static strings etc.
           #
 user: nobody
+react_to_fail: true

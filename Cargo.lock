@@ -1608,7 +1608,7 @@ dependencies = [
  "paho-mqtt",
  "parking_lot 0.12.1",
  "psrpc",
- "psrt 0.1.30",
+ "psrt",
  "serde",
  "serde_json",
  "tokio",
@@ -1900,7 +1900,7 @@ dependencies = [
  "openssl",
  "paho-mqtt",
  "psrpc",
- "psrt 0.2.0",
+ "psrt",
  "serde",
  "serde_json",
  "tokio",
@@ -3956,30 +3956,11 @@ dependencies = [
  "openssl",
  "paho-mqtt",
  "parking_lot 0.12.1",
- "psrt 0.2.0",
+ "psrt",
  "serde",
  "tokio",
  "triggered",
  "uuid 1.5.0",
-]
-
-[[package]]
-name = "psrt"
-version = "0.1.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d8e63b98c51d2c954c76185f1643de63fe1d3af054f71d9c399e1d93ab6aa5"
-dependencies = [
- "async-channel",
- "hex 0.4.3",
- "lazy_static",
- "log",
- "nix 0.25.0",
- "openssl",
- "parking_lot 0.12.1",
- "serde",
- "serde_yaml 0.8.26",
- "tokio",
- "tokio-native-tls",
 ]
 
 [[package]]
