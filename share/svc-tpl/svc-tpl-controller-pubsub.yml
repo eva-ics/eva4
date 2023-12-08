@@ -157,7 +157,7 @@ config:
             "0": "OFF"
             "1": "ON"
           # as well as outputs, action payloads can be structures with
-          # additional data (states of other items, static strings etc.
+          # additional data (states of other items, static strings etc.)
           #
 user: nobody
 react_to_fail: true
