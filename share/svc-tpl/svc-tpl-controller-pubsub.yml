@@ -78,6 +78,7 @@ config:
   # (default), events are sent in real-time
   output:
     - topic: out/sensor1
+      #qos: 1 # override the default QoS
       packer: json
       map:
         - path: $.deviceStatus
@@ -148,6 +149,7 @@ config:
       # e.g. the example below sends "OFF" when action requests to set the item
       # value to 0 and "ON" for 1
       topic: out/control/x
+      #qos: 1
       map:
         - path: $.
           # value_map and transform can be used
