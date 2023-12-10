@@ -410,7 +410,7 @@ impl RpcHandlers for BusApi {
         match method {
             "test" => {
                 if payload.is_empty() {
-                    match CRASH_SIMULATED.load(atomic::Ordering::SeqCst) {
+                    match CRASH_SIMULATED.load(atomic::Ordering::Relaxed) {
                         v if v == CrashSimulatedKind::Error as u8 => {
                             Err(Error::failed("simulated").into())
                         }
@@ -1200,7 +1200,7 @@ impl RpcHandlers for BusApi {
                             // failed
                             std::process::exit(-1);
                         }
-                        v => CRASH_SIMULATED.store(v as u8, atomic::Ordering::SeqCst),
+                        v => CRASH_SIMULATED.store(v as u8, atomic::Ordering::Relaxed),
                     }
                     Ok(None)
                 }
