@@ -112,6 +112,6 @@ trap _term SIGTERM
 trap _term SIGINT
 
 # block until stopped
-while [ -f ./var/eva.pid ]; do
+while [ -f ./var/eva.pid ] && kill -0 "$(/usr/bin/cat ./var/eva.pid)"; do
   sleep 1
 done
