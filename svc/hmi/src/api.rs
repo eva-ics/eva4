@@ -1899,14 +1899,12 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         .into_iter()
         .filter_map(|r| {
             let p = r.path.to_string_lossy();
-            if plen < p.len() && aci.acl().check_pvt_read(&p[plen..]) {
-                if s.len() + 1 < p.len() {
-                    return Some(sdkfs::Entry {
-                        path: Path::new(&p[s.len() + 1..]).to_owned(),
-                        meta: r.meta,
-                        kind: r.kind,
-                    });
-                }
+            if plen < p.len() && aci.acl().check_pvt_read(&p[plen..]) && s.len() + 1 < p.len() {
+                return Some(sdkfs::Entry {
+                    path: Path::new(&p[s.len() + 1..]).to_owned(),
+                    meta: r.meta,
+                    kind: r.kind,
+                });
             }
             None
         })

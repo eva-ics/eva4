@@ -575,9 +575,9 @@ checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
 name = "busrt"
-version = "0.4.6"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95093a26573509a90e80dddf81259ec5c6a0e7df937030beeeeb579d77039afa"
+checksum = "ee5f4261ec20cb308913175a3c988b2fbc885adf56a505d9b044499d5896d9f7"
 dependencies = [
  "async-channel",
  "async-io",
@@ -592,6 +592,7 @@ dependencies = [
  "serde-value",
  "submap",
  "tokio",
+ "tokio-task-pool",
  "triggered",
  "unix-named-pipe",
 ]
@@ -5305,6 +5306,15 @@ checksum = "df54d54117d6fdc4e4fea40fe1e4e566b3505700e148a6827e59b34b0d2600d9"
 dependencies = [
  "futures-core",
  "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-task-pool"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75b979d664a052ebb638f0eb4d1134bed9552a5975b82c0c61bf55ff27ff8953"
+dependencies = [
  "tokio",
 ]
 

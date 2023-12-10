@@ -371,10 +371,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
             let mut client = None;
             for host in config.pubsub.host.iter() {
                 let mut h = Cow::Borrowed(host);
-                if psrt::is_unix_socket(host) {
-                    if !host.starts_with('.') && !host.starts_with('/') {
-                        h = Cow::Owned(format!("{}/{}", eva_dir, host));
-                    }
+                if psrt::is_unix_socket(host) && !host.starts_with('.') && !host.starts_with('/') {
+                    h = Cow::Owned(format!("{}/{}", eva_dir, host));
                 }
                 psrt_config.update_path(&h);
                 psrt_config = psrt_config.build();
