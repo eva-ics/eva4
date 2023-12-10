@@ -111,7 +111,12 @@ _term() {
 trap _term SIGTERM
 trap _term SIGINT
 
+[ -f ./etc/watchdog ] && source ./etc/watchdog
+
+[ -z "${MAX_TIMEOUT}" ] && MAX_TIMEOUT=2
+
 # block until stopped
-while [ -f ./var/eva.pid ] && kill -0 "$(/usr/bin/cat ./var/eva.pid)"; do
+while ./sbin/bus ./var/bus.ipc -n watchdog-$$ \
+  --timeout "${MAX_TIMEOUT}" rpc call eva.core test >& /dev/null; do
   sleep 1
 done
