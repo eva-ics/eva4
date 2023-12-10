@@ -1192,6 +1192,12 @@ impl RpcHandlers for BusApi {
                     let p: Params = unpack(payload)?;
                     match p.kind {
                         CrashSimulatedKind::Crash => {
+                            #[allow(clippy::cast_possible_wrap)]
+                            let pid = nix::unistd::Pid::from_raw(std::process::id() as i32);
+                            let _ = nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGKILL)
+                                .map_err(Error::failed);
+                            // should exit before, but exit gacefully with error code if SIGKILL
+                            // failed
                             std::process::exit(-1);
                         }
                         v => CRASH_SIMULATED.store(v as u8, atomic::Ordering::SeqCst),
