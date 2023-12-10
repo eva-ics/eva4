@@ -45,6 +45,7 @@ enum CrashSimulatedKind {
     No = 0,
     Error = 1,
     Freeze = 2,
+    Crash = 0xFF,
 }
 
 err_logger!();
@@ -1189,7 +1190,12 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 } else {
                     let p: Params = unpack(payload)?;
-                    CRASH_SIMULATED.store(p.kind as u8, atomic::Ordering::SeqCst);
+                    match p.kind {
+                        CrashSimulatedKind::Crash => {
+                            std::process::exit(-1);
+                        }
+                        v => CRASH_SIMULATED.store(v as u8, atomic::Ordering::SeqCst),
+                    }
                     Ok(None)
                 }
             }
