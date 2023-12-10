@@ -7,7 +7,7 @@ cd "$(dirname "${D}")/.." || exit 1
 
 [ -f ./etc/watchdog ] && source ./etc/watchdog
 
-[ -z "${INTERVAL}" ] && INTERVAL=60
+[ -z "${INTERVAL}" ] && INTERVAL=30
 [ -z "${MAX_TIMEOUT}" ] && MAX_TIMEOUT=2
 
 PIDFILE="./var/watchdog.pid"
