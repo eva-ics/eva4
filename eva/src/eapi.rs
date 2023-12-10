@@ -29,12 +29,23 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
 const HANDLER_ID_RAW_STATE: usize = 1;
 const HANDLER_ID_RAW_STATE_BULK: usize = 2;
 const HANDLER_ID_ACTION: usize = 10;
+
+static CRASH_SIMULATED: atomic::AtomicU8 = atomic::AtomicU8::new(0);
+
+#[derive(Deserialize, Copy, Clone)]
+#[serde(rename_all = "lowercase")]
+#[repr(u8)]
+enum CrashSimulatedKind {
+    No = 0,
+    Error = 1,
+    Freeze = 2,
+}
 
 err_logger!();
 
@@ -398,7 +409,15 @@ impl RpcHandlers for BusApi {
         match method {
             "test" => {
                 if payload.is_empty() {
-                    Ok(Some(pack(&self.core)?))
+                    match CRASH_SIMULATED.load(atomic::Ordering::SeqCst) {
+                        v if v == CrashSimulatedKind::Error as u8 => {
+                            Err(Error::failed("simulated").into())
+                        }
+                        v if v == CrashSimulatedKind::Freeze as u8 => loop {
+                            tokio::time::sleep(eva_common::SLEEP_STEP).await;
+                        },
+                        _ => Ok(Some(pack(&self.core)?)),
+                    }
                 } else {
                     Err(RpcError::params(None))
                 }
@@ -1158,6 +1177,19 @@ impl RpcHandlers for BusApi {
                 } else {
                     let message: crate::core::BusMessage = unpack(payload)?;
                     self.core.publish_bus_messge(message).await?;
+                    Ok(None)
+                }
+            }
+            "simulate.crash" => {
+                #[derive(Deserialize)]
+                struct Params {
+                    kind: CrashSimulatedKind,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Params = unpack(payload)?;
+                    CRASH_SIMULATED.store(p.kind as u8, atomic::Ordering::SeqCst);
                     Ok(None)
                 }
             }
