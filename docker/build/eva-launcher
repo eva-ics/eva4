@@ -112,11 +112,20 @@ trap _term SIGTERM
 trap _term SIGINT
 
 [ -f ./etc/watchdog ] && source ./etc/watchdog
+[ -f ./etc/eva_config ] && source ./etc/eva_config
 
 [ -z "${MAX_TIMEOUT}" ] && MAX_TIMEOUT=2
+[ -z "${MODE}" ] && MODE=regular
 
 # block until stopped
-while ./sbin/bus ./var/bus.ipc -n watchdog-$$ \
-  --timeout "${MAX_TIMEOUT}" rpc call eva.core test >& /dev/null; do
-  sleep 1
-done
+if [ "${MODE}" = "regular" ]; then
+  while ./sbin/bus ./var/bus.ipc -n watchdog-$$ \
+    --timeout "${MAX_TIMEOUT}" rpc call eva.core test >& /dev/null; do
+    sleep 1
+  done
+else
+  # spoint
+  while [ -f ./var/eva.pid ] && kill -0 "$(/usr/bin/cat ./var/eva.pid)"; do
+    sleep 1
+  done
+fi
