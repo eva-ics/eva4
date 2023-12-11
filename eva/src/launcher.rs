@@ -137,7 +137,7 @@ impl Service {
                 sleep(startup_timeout).await;
                 macro_rules! terminate {
                     ($e: expr) => {
-                        if a_beacon.load(atomic::Ordering::SeqCst) {
+                        if a_beacon.load(atomic::Ordering::Relaxed) {
                             warn!("service {} heartbeat error: {}", svc_id, $e);
                         }
                         bmart::process::kill_pstree(pid, Some(shutdown_timeout), true).await;
@@ -174,7 +174,7 @@ impl Service {
             let svc_id = id.to_owned();
             let ready_fut = tokio::spawn(async move {
                 sleep(startup_timeout).await;
-                if b.load(atomic::Ordering::SeqCst) == 0 {
+                if b.load(atomic::Ordering::Relaxed) == 0 {
                     error!("service {} is not ready, terminating", svc_id);
                     bmart::process::kill_pstree(pid, None, true).await;
                 }
@@ -190,7 +190,7 @@ impl Service {
         let result = child.wait().await;
         service_data.lock().await.take();
         let code = result?.code().unwrap_or(-1);
-        if code == 0 || !active_beacon.load(atomic::Ordering::SeqCst) {
+        if code == 0 || !active_beacon.load(atomic::Ordering::Relaxed) {
             Ok(())
         } else {
             if initial.can_rtf() {
@@ -242,7 +242,7 @@ impl Service {
         active_beacon: Arc<atomic::AtomicBool>,
         service_data: Arc<Mutex<Option<ServiceRuntimeData>>>,
     ) -> EResult<()> {
-        while active_beacon.load(atomic::Ordering::SeqCst) {
+        while active_beacon.load(atomic::Ordering::Relaxed) {
             Self::launch(
                 id,
                 &initial,
@@ -258,7 +258,7 @@ impl Service {
         Ok(())
     }
     fn start(&mut self, initial: Initial, rpc: Arc<RwLock<Option<RpcClient>>>) {
-        self.active.store(true, atomic::Ordering::SeqCst);
+        self.active.store(true, atomic::Ordering::Relaxed);
         let id = self.id.clone();
         let active = self.active.clone();
         let data = self.data.clone();
@@ -268,7 +268,7 @@ impl Service {
         self.runner_fut.replace(fut);
     }
     async fn stop(&self) {
-        self.active.store(false, atomic::Ordering::SeqCst);
+        self.active.store(false, atomic::Ordering::Relaxed);
         let data = self.data.lock().await.take();
         if let Some(service_data) = data {
             bmart::process::kill_pstree(
@@ -318,7 +318,7 @@ impl RpcHandlers for Handlers {
                             },
                             |d| ServiceStatus {
                                 pid: Some(d.pid),
-                                status: d.status.load(atomic::Ordering::SeqCst).into(),
+                                status: d.status.load(atomic::Ordering::Relaxed).into(),
                             },
                         ),
                     );
@@ -342,7 +342,7 @@ impl RpcHandlers for Handlers {
                         },
                         |d| ServiceStatus {
                             pid: Some(d.pid),
-                            status: d.status.load(atomic::Ordering::SeqCst).into(),
+                            status: d.status.load(atomic::Ordering::Relaxed).into(),
                         },
                     );
                     Ok(Some(pack(&res)?))
@@ -441,7 +441,7 @@ async fn status_handler(
             if let Some(svc) = services.lock().await.get(frame.sender()) {
                 if let Some(data) = svc.data.lock().await.as_ref() {
                     data.status
-                        .store(status.status as u8, atomic::Ordering::SeqCst);
+                        .store(status.status as u8, atomic::Ordering::Relaxed);
                 }
             }
         }
