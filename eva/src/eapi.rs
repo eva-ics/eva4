@@ -39,12 +39,13 @@ const HANDLER_ID_ACTION: usize = 10;
 static CRASH_SIMULATED: atomic::AtomicU8 = atomic::AtomicU8::new(0);
 
 #[derive(Deserialize, Copy, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[repr(u8)]
 enum CrashSimulatedKind {
     No = 0,
     Error = 1,
     Freeze = 2,
+    MemoryOverflow = 3,
     Crash = 0xFF,
 }
 
@@ -1199,6 +1200,19 @@ impl RpcHandlers for BusApi {
                             // should exit before, but exit gacefully with error code if SIGKILL
                             // failed
                             std::process::exit(-1);
+                        }
+                        CrashSimulatedKind::MemoryOverflow => {
+                            let workers = self.core.workers();
+                            tokio::spawn(async move {
+                                for _ in 0..workers {
+                                    tokio::spawn(async move {
+                                        let mut buf = Vec::new();
+                                        loop {
+                                            buf.push(Vec::<u8>::with_capacity(1_000_000));
+                                        }
+                                    });
+                                }
+                            });
                         }
                         v => CRASH_SIMULATED.store(v as u8, atomic::Ordering::Relaxed),
                     }
