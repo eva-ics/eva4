@@ -117,6 +117,11 @@ config/core:
     suicide_timeout: *floatpositive
     auto_create: *bool
     instant_save: *bool
+    mem_warn: &intpositiveornull
+      anyOf:
+        - type: integer
+          minimum: 1
+        - type: "null"
     legacy:
       type: object
   required:
@@ -261,11 +266,7 @@ svc:
       type: object
       additionalProperties: false
       properties:
-        buf_size: &intpositiveornull
-          anyOf:
-            - type: integer
-              minimum: 1
-            - type: "null"
+        buf_size: *intpositiveornull
         buf_ttl: *intpositiveornull
         path: *str
         ping_interval: *floatornull
@@ -290,6 +291,7 @@ svc:
         shutdown: *floatornull
         startup: *floatornull
     react_to_fail: *bool
+    mem_warn: *intpositiveornull
     call_tracing: *bool
     launcher: *str
   required:

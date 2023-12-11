@@ -1,7 +1,9 @@
 use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
+use log::warn;
 use serde::Serialize;
 use std::sync::atomic;
+use std::time::Duration;
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
@@ -18,6 +20,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[allow(clippy::unreadable_literal)]
 pub const BUILD: u64 = 2023120601;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
+
+pub const MEMORY_CHECKER_INTERVAL: Duration = Duration::from_secs(10);
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize, Default)]
 #[enumstr(rename_all = "lowercase")]
@@ -64,6 +68,18 @@ fn local_node_info() -> NodeInfo {
     NodeInfo {
         build: BUILD,
         version: VERSION.to_owned(),
+    }
+}
+
+#[allow(clippy::cast_precision_loss)]
+pub fn check_memory_usage(source: &str, current: u64, warn_limit: u64) {
+    if current >= warn_limit {
+        warn!(
+            "{} memory usage: {} bytes ({:.3} GiB)",
+            source,
+            current,
+            current as f64 / 1_073_741_824.0
+        );
     }
 }
 

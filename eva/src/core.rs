@@ -34,6 +34,7 @@ use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
+use sysinfo::{ProcessExt, SystemExt};
 use tokio::io::AsyncWriteExt;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{Mutex, RwLock};
@@ -295,6 +296,7 @@ pub struct Core {
     product_name: String,
     #[serde(skip)]
     nodes: std::sync::Mutex<HashMap<String, NodeData>>,
+    mem_warn: Option<u64>,
     #[serde(skip)]
     node_checker_fut: std::sync::Mutex<Option<JoinHandle<()>>>,
     #[serde(skip)]
@@ -456,6 +458,7 @@ impl Core {
             service_manager: <_>::default(),
             state_processor_lock: <_>::default(),
             num_cpus: num_cpus::get(),
+            mem_warn: None,
         };
         core.update_paths(dir_eva, pid_file);
         core
@@ -1814,6 +1817,9 @@ impl Core {
         tokio::spawn(async move {
             handle_save(rx, &rpc).await;
         });
+        if let Some(mem_warn) = self.mem_warn {
+            spawn_mem_checker(mem_warn);
+        }
         self.action_manager.start().await
     }
     #[inline]
@@ -1942,4 +1948,21 @@ pub fn get_hostname() -> EResult<String> {
         .map_err(|e| Error::failed(format!("unable to get host name: {e}")))?
         .to_string_lossy()
         .to_string())
+}
+
+fn spawn_mem_checker(mem_warn: u64) {
+    let mut int = tokio::time::interval(crate::MEMORY_CHECKER_INTERVAL);
+    tokio::spawn(async move {
+        let mut system = sysinfo::System::new_all();
+        loop {
+            int.tick().await;
+            system.refresh_all();
+            let Some(process) = system.process(sysinfo::Pid::from(std::process::id() as usize))
+            else {
+                continue;
+            };
+            let total_memory = process.memory();
+            crate::check_memory_usage("core process", total_memory, mem_warn);
+        }
+    });
 }
