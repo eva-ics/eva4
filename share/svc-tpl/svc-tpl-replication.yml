@@ -1,6 +1,6 @@
 # EVA ICS v4-v4 replication service
 command: target/debug/eva-repl
-workers: 2
+workers: 1
 bus:
   path: var/bus.ipc
 config:

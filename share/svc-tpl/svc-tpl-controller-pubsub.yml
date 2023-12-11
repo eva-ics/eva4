@@ -1,6 +1,6 @@
 # EVA ICS pub/sub controller
 command: target/debug/eva-controller-pubsub
-workers: 2
+workers: 1
 bus:
   path: var/bus.ipc
 config:

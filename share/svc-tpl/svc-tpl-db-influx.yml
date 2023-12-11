@@ -1,6 +1,6 @@
 # Event-to-InfluxDB database service
 command: target/debug/eva-db-influx
-workers: 2
+workers: 1
 bus:
   path: var/bus.ipc
 config:

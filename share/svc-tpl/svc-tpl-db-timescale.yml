@@ -1,6 +1,5 @@
 # Event-to-TimescaleDB service
 command: target/debug/eva-db-timescale
-workers: 2
 bus:
   path: var/bus.ipc
 config:

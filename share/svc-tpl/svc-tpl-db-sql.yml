@@ -1,6 +1,6 @@
 # Event-to-SQL database service
 command: target/debug/eva-db-sql
-workers: 2
+workers: 1
 bus:
   path: var/bus.ipc
 config:
