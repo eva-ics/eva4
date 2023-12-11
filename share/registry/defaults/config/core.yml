@@ -12,7 +12,7 @@ instant_save: true
 # keep action history in memory (seconds)
 keep_action_history: 86400
 # core process memory usage warning (bytes)
-mem_warn: 128000000
+mem_warn: 134217728
 # optional inventory database (for huge projects)
 # NOTE: MySQL support is deprecated, use SQLite or PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB

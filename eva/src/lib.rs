@@ -24,7 +24,7 @@ pub const BUILD: u64 = 2023121201;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
 pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
-pub const MEMORY_WARN_DEFAULT: u64 = 128_000_000;
+pub const MEMORY_WARN_DEFAULT: u64 = 134_217_728;
 use sysinfo::{System, SystemExt};
 
 pub static SYSTEM_INFO: Lazy<RwLock<System>> = Lazy::new(|| RwLock::new(System::new_all()));
