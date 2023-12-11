@@ -121,6 +121,12 @@ if [ ! -f /.eva_container ]; then
           echo SYSTEMD_EVA4_SERVICE=eva4.service >> ./etc/eva_config
           systemctl stop eva4.service
         fi
+        if [ -f /etc/systemd/system/eva4.service ]; then
+          if grep -E "^Restart=no$" /etc/systemd/system/eva4.service > /dev/null 2>&1; then
+            sed -i 's/^Restart=no$/Restart=always\nRestartSec=5s/' /etc/systemd/system/eva4.service
+            systemctl daemon-reload
+          fi
+        fi
       fi
     fi
     ./sbin/eva-control start
