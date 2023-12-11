@@ -1203,9 +1203,9 @@ impl RpcHandlers for BusApi {
                         }
                         CrashSimulatedKind::MemoryOverflow => {
                             let workers = self.core.workers();
-                            tokio::spawn(async move {
+                            tokio::task::spawn_blocking(move || {
                                 for _ in 0..workers {
-                                    tokio::spawn(async move {
+                                    tokio::task::spawn_blocking(move || {
                                         let mut buf = Vec::new();
                                         loop {
                                             buf.push(Vec::<u8>::with_capacity(1_000_000));
