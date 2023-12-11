@@ -154,7 +154,10 @@ pub fn launch(
             core.service_manager().load(&mut db)?;
             drop(db);
             debug!("starting runtime");
-            rt.block_on(async move { run_regular(reg_db, broker, core).await })
+            rt.block_on(async move {
+                crate::launch_sysinfo();
+                run_regular(reg_db, broker, core).await
+            })
         }
         Mode::SPoint => {
             let dir_eva = get_eva_dir();
@@ -168,6 +171,7 @@ pub fn launch(
                     .enable_all()
                     .build()?;
                 rt.block_on(async move {
+                    crate::launch_sysinfo();
                     crate::spoint::run(&dir_eva, system_name, pid_file, cpath).await
                 })
             } else {

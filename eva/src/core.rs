@@ -1817,9 +1817,7 @@ impl Core {
         tokio::spawn(async move {
             handle_save(rx, &rpc).await;
         });
-        if let Some(mem_warn) = self.mem_warn {
-            spawn_mem_checker(mem_warn);
-        }
+        spawn_mem_checker(self.mem_warn.unwrap_or(crate::MEMORY_WARN_DEFAULT));
         self.action_manager.start().await
     }
     #[inline]
@@ -1951,14 +1949,13 @@ pub fn get_hostname() -> EResult<String> {
 }
 
 fn spawn_mem_checker(mem_warn: u64) {
-    let mut int = tokio::time::interval(crate::MEMORY_CHECKER_INTERVAL);
+    let mut int = tokio::time::interval(crate::SYSINFO_CHECK_INTERVAL);
     tokio::spawn(async move {
-        let mut system = sysinfo::System::new_all();
+        let pid = sysinfo::Pid::from(std::process::id() as usize);
         loop {
             int.tick().await;
-            system.refresh_all();
-            let Some(process) = system.process(sysinfo::Pid::from(std::process::id() as usize))
-            else {
+            let system = crate::SYSTEM_INFO.read().await;
+            let Some(process) = system.process(pid) else {
                 continue;
             };
             let total_memory = process.memory();

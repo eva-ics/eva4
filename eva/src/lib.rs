@@ -1,9 +1,11 @@
 use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
 use log::warn;
+use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::sync::atomic;
 use std::time::Duration;
+use tokio::sync::RwLock;
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
@@ -21,7 +23,25 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD: u64 = 2023120601;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
-pub const MEMORY_CHECKER_INTERVAL: Duration = Duration::from_secs(10);
+pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(10);
+pub const MEMORY_WARN_DEFAULT: u64 = 128_000_000;
+use sysinfo::{System, SystemExt};
+
+pub static SYSTEM_INFO: Lazy<RwLock<System>> = Lazy::new(|| RwLock::new(System::new_all()));
+
+fn launch_sysinfo() {
+    tokio::spawn(async move {
+        let mut int = tokio::time::interval(SYSINFO_CHECK_INTERVAL);
+        loop {
+            int.tick().await;
+            {
+                let mut s = SYSTEM_INFO.write().await;
+                s.refresh_processes();
+                s.refresh_disks_list();
+            }
+        }
+    });
+}
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize, Default)]
 #[enumstr(rename_all = "lowercase")]

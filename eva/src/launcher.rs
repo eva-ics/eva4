@@ -20,6 +20,7 @@ use std::process::Stdio;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
+use sysinfo::{ProcessExt, SystemExt};
 use tokio::fs;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::io::{BufReader, BufWriter};
@@ -51,15 +52,17 @@ impl Drop for ServiceRuntimeData {
 
 struct Service {
     id: String,
+    mem_warn: u64,
     data: Arc<Mutex<Option<ServiceRuntimeData>>>,
     active: Arc<atomic::AtomicBool>,
     runner_fut: Option<JoinHandle<()>>,
 }
 
 impl Service {
-    fn new(id: &str) -> Self {
+    fn new(id: &str, mem_warn: u64) -> Self {
         Self {
             id: id.to_owned(),
+            mem_warn,
             data: <_>::default(),
             active: <_>::default(),
             runner_fut: None,
@@ -358,7 +361,7 @@ impl RpcHandlers for Handlers {
                 let p: crate::svcmgr::PayloadStartStop = unpack(event.payload())?;
                 debug!("starting service {}", p.id);
                 stop_svc!(&p.id, services);
-                let mut service = Service::new(&p.id);
+                let mut service = Service::new(&p.id, p.mem_warn);
                 if let Some(dp) = p.initial.data_path() {
                     let data_path = Path::new(dp);
                     if !data_path.exists() {
@@ -422,7 +425,6 @@ impl RpcHandlers for Handlers {
             _ => Err(RpcError::method(None)),
         }
     }
-    async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
         if frame.kind() == FrameKind::Publish {
             self.topic_broker.process(frame).await.log_ef();
@@ -448,6 +450,33 @@ async fn status_handler(
     }
 }
 
+async fn mem_warn_handler(services: &Mutex<HashMap<String, Arc<Service>>>) {
+    let mut int = tokio::time::interval(crate::SYSINFO_CHECK_INTERVAL);
+    loop {
+        int.tick().await;
+        let mut to_check: Vec<(String, u32, u64)> = Vec::new();
+        for (id, svc) in &*services.lock().await {
+            if let Some(data) = svc.data.lock().await.as_ref() {
+                to_check.push((id.clone(), data.pid, svc.mem_warn));
+            }
+        }
+        for (id, pid, mem_warn) in to_check {
+            let pid = sysinfo::Pid::from(pid as usize);
+            let system = crate::SYSTEM_INFO.read().await;
+            let Some(process) = system.process(pid) else {
+                continue;
+            };
+            let mut total_memory = process.memory();
+            for process in system.processes().values() {
+                if process.parent() == Some(pid) {
+                    total_memory += process.memory();
+                }
+            }
+            crate::check_memory_usage(&id, total_memory, mem_warn);
+        }
+    }
+}
+
 pub async fn init<C>(mut client: C, client_secondary: C, channel_size: usize) -> EResult<()>
 where
     C: AsyncClient + 'static,
@@ -461,6 +490,10 @@ where
     let services = handlers.services.clone();
     tokio::spawn(async move {
         status_handler(&services, rx).await;
+    });
+    let services = handlers.services.clone();
+    tokio::spawn(async move {
+        mem_warn_handler(&services).await;
     });
     client
         .subscribe(SERVICE_STATUS_TOPIC, QoS::Processed)

@@ -31,6 +31,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::{atomic, Arc};
 use std::time::Duration;
+use sysinfo::{DiskExt, SystemExt};
 
 const HANDLER_ID_RAW_STATE: usize = 1;
 const HANDLER_ID_RAW_STATE_BULK: usize = 2;
@@ -1124,7 +1125,6 @@ impl RpcHandlers for BusApi {
             }
             #[allow(clippy::cast_precision_loss)]
             "core.sysinfo" => {
-                use sysinfo::{DiskExt, SystemExt};
                 #[derive(Serialize)]
                 struct Info {
                     ram_usage: Option<f64>,
@@ -1134,8 +1134,7 @@ impl RpcHandlers for BusApi {
                     la15: f64,
                 }
                 if payload.is_empty() {
-                    let mut system = sysinfo::System::new_all();
-                    system.refresh_disks_list();
+                    let system = crate::SYSTEM_INFO.read().await;
                     let d = eva_common::tools::get_eva_dir();
                     let eva_dir = Path::new(&d);
                     let mut disk_usage: Option<f64> = None;

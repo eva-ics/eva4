@@ -28,6 +28,11 @@ fn default_launcher() -> Arc<String> {
     Arc::new(DEFAULT_LAUNCHER.to_owned())
 }
 
+#[inline]
+fn default_mem_warn() -> u64 {
+    crate::MEMORY_WARN_DEFAULT
+}
+
 #[derive(Default)]
 pub struct Manager {
     services: Mutex<HashMap<String, Params>>,
@@ -39,6 +44,7 @@ pub struct Manager {
 pub struct PayloadStartStop {
     pub id: String,
     pub initial: Initial,
+    pub mem_warn: u64,
 }
 
 async fn start_stop_service(
@@ -46,12 +52,14 @@ async fn start_stop_service(
     method: &str,
     id: &str,
     initial: Initial,
+    mem_warn: u64,
     timeout: Duration,
     rpc: &RpcClient,
 ) -> EResult<()> {
     let payload = PayloadStartStop {
         id: id.to_owned(),
         initial,
+        mem_warn,
     };
     tokio::time::timeout(
         // give it 1 sec more to let the bus call pass
@@ -153,7 +161,7 @@ impl Manager {
         system_name: &str,
         default_timeout: Duration,
         allow_any: bool,
-    ) -> EResult<(Initial, Arc<String>)> {
+    ) -> EResult<(Initial, Arc<String>, u64)> {
         self.services.lock().unwrap().get(id).map_or_else(
             || Err(Error::not_found(format!("no such service: {}", id))),
             |c| {
@@ -161,6 +169,7 @@ impl Manager {
                     Ok((
                         c.to_initial(id, system_name, default_timeout, self.core_active()),
                         c.launcher.clone(),
+                        c.mem_warn,
                     ))
                 } else {
                     Err(Error::failed("the service is disabled"))
@@ -295,15 +304,24 @@ impl Manager {
                 (
                     config.to_initial(id, system_name, default_timeout, self.core_active()),
                     config.launcher.clone(),
+                    config.mem_warn,
                 ),
             );
         }
-        for (id, (init, launcher)) in srv {
+        for (id, (init, launcher, mem_warn)) in srv {
             let rpc = rpc.clone();
             let method = method.to_owned();
             let fut = tokio::spawn(async move {
-                if let Err(e) =
-                    start_stop_service(&launcher, &method, &id, init, default_timeout, &rpc).await
+                if let Err(e) = start_stop_service(
+                    &launcher,
+                    &method,
+                    &id,
+                    init,
+                    mem_warn,
+                    default_timeout,
+                    &rpc,
+                )
+                .await
                 {
                     if log_not_reg || e.kind() != ErrorKind::BusClientNotRegistered {
                         error!("unable to {} {} with {}: {}", method, id, launcher, e);
@@ -346,8 +364,9 @@ impl Manager {
     ) -> EResult<()> {
         trace!("restarting service {}", id);
         let rpc = self.rpc.get().unwrap();
-        let (init, launcher) = self.get_service_init(id, system_name, default_timeout, false)?;
-        start_stop_service(&launcher, "start", id, init, default_timeout, rpc)
+        let (init, launcher, mem_warn) =
+            self.get_service_init(id, system_name, default_timeout, false)?;
+        start_stop_service(&launcher, "start", id, init, mem_warn, default_timeout, rpc)
             .await
             .map_err(|e| Error::failed(format!("unable to restart {}: {}", id, e)))
             .log_err()
@@ -364,8 +383,9 @@ impl Manager {
     ) -> EResult<()> {
         trace!("stopping service {}", id);
         let rpc = self.rpc.get().unwrap();
-        let (init, launcher) = self.get_service_init(id, system_name, default_timeout, true)?;
-        start_stop_service(&launcher, "stop", id, init, default_timeout, rpc)
+        let (init, launcher, mem_warn) =
+            self.get_service_init(id, system_name, default_timeout, true)?;
+        start_stop_service(&launcher, "stop", id, init, mem_warn, default_timeout, rpc)
             .await
             .map_err(|e| Error::failed(format!("unable to stop {}: {}", id, e)))
             .log_err()
@@ -407,12 +427,13 @@ impl Manager {
         warn!("purging service {}", id);
         let rpc = self.rpc.get().unwrap();
         match self.get_service_init(id, system_name, default_timeout, true) {
-            Ok((initial, launcher)) => {
+            Ok((initial, launcher, mem_warn)) => {
                 start_stop_service(
                     &launcher,
                     "stop_and_purge",
                     id,
                     initial,
+                    mem_warn,
                     default_timeout,
                     rpc,
                 )
@@ -436,10 +457,11 @@ impl Manager {
         system_name: &str,
         default_timeout: Duration,
     ) -> EResult<()> {
-        let (init, launcher) = self.get_service_init(id, system_name, default_timeout, true)?;
+        let (init, launcher, mem_warn) =
+            self.get_service_init(id, system_name, default_timeout, true)?;
         info!("undeploying service {}", id);
         let rpc = self.rpc.get().unwrap();
-        start_stop_service(&launcher, "stop", id, init, default_timeout, rpc).await?;
+        start_stop_service(&launcher, "stop", id, init, mem_warn, default_timeout, rpc).await?;
         registry::key_delete(registry::R_SERVICE, id, rpc).await?;
         self.services.lock().unwrap().remove(id);
         Ok(())
@@ -522,6 +544,8 @@ pub struct Params {
     user: Option<String>,
     #[serde(default)]
     react_to_fail: bool,
+    #[serde(default = "default_mem_warn")]
+    mem_warn: u64,
     #[serde(default = "default_launcher")]
     launcher: Arc<String>,
     #[serde(default)]
