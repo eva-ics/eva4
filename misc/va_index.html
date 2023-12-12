@@ -30,6 +30,20 @@
   margin-left: 25px;
   margin-right: 25px;
 }
+.main-app-link {
+  text-align: center;
+  margin-top: 40px;
+}
+.main-app-link > a {
+  text-decoration: underline;
+  color: #bbb;
+}
+.main-app-link > a:visited {
+  color: #bbb;
+}
+.main-app-link > a:hover {
+  color: #fff;
+}
 .vendored-app-label {
   display: block;
   width: 120px;
@@ -39,7 +53,7 @@
   margin-top: 20px;
 }
 .vendored-app > a {
-  text-decoration: none;
+  text-decoration: underline;
   color: #bbb;
 }
 .vendored-app > a:visited {
@@ -68,6 +82,7 @@ a:visited { color: #29AAE1 }
     <div id="content">
       <div class="h">EVA ICS vendored apps</div>
       <div id="va"></div>
+      <div class="main-app-link"><a href="/">Main HMI app</a></div>
     </div>
     <div id="copyright">&copy;
       <a href="https://www.bohemia-automation.com/">Bohemia Automation</a> /
