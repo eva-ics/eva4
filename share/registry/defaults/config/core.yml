@@ -1,5 +1,5 @@
 # worker threads (max recommended = number of CPUs)
-workers: 2
+workers: 1
 # the default timeout
 timeout: 5
 # the suicide timeout, used during shutdown (the node process is forcibly
@@ -11,8 +11,8 @@ auto_create: true
 instant_save: true
 # keep action history in memory (seconds)
 keep_action_history: 86400
-# core process memory usage warning (bytes)
-mem_warn: 134217728
+# core process memory usage warning (bytes), the default is 128 MiB per worker
+#mem_warn: 134217728
 # optional inventory database (for huge projects)
 # NOTE: MySQL support is deprecated, use SQLite or PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB

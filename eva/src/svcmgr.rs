@@ -1,4 +1,5 @@
 use crate::eapi::EAPI_VERSION;
+use crate::MEMORY_WARN_DEFAULT;
 use crate::{EResult, Error};
 use crate::{BUILD, VERSION};
 use busrt::rpc::{Rpc, RpcClient};
@@ -26,11 +27,6 @@ pub const DEFAULT_LAUNCHER: &str = "eva.launcher.main";
 #[inline]
 fn default_launcher() -> Arc<String> {
     Arc::new(DEFAULT_LAUNCHER.to_owned())
-}
-
-#[inline]
-fn default_mem_warn() -> u64 {
-    crate::MEMORY_WARN_DEFAULT
 }
 
 #[derive(Default)]
@@ -140,7 +136,13 @@ impl Manager {
         for (n, v) in db.key_get_recursive(&s_key)? {
             let id = &n[s_offs..];
             debug!("loading service {}", id);
-            services.insert(id.to_owned(), serde_json::from_value(v)?);
+            let mut params: Params = serde_json::from_value(v)?;
+            if params.mem_warn.is_none() {
+                params
+                    .mem_warn
+                    .replace(MEMORY_WARN_DEFAULT * u64::from(params.workers));
+            }
+            services.insert(id.to_owned(), params);
         }
         Ok(())
     }
@@ -169,7 +171,7 @@ impl Manager {
                     Ok((
                         c.to_initial(id, system_name, default_timeout, self.core_active()),
                         c.launcher.clone(),
-                        c.mem_warn,
+                        c.mem_warn.unwrap_or(MEMORY_WARN_DEFAULT),
                     ))
                 } else {
                     Err(Error::failed("the service is disabled"))
@@ -317,7 +319,7 @@ impl Manager {
                     &method,
                     &id,
                     init,
-                    mem_warn,
+                    mem_warn.unwrap_or(MEMORY_WARN_DEFAULT),
                     default_timeout,
                     &rpc,
                 )
@@ -396,10 +398,15 @@ impl Manager {
     pub async fn deploy_service(
         &self,
         id: &str,
-        params: Params,
+        mut params: Params,
         system_name: &str,
         default_timeout: Duration,
     ) -> EResult<()> {
+        if params.mem_warn.is_none() {
+            params
+                .mem_warn
+                .replace(MEMORY_WARN_DEFAULT * u64::from(params.workers));
+        }
         info!("deploying service {}", id);
         match self.stop_service(id, system_name, default_timeout).await {
             Ok(()) => {}
@@ -544,8 +551,7 @@ pub struct Params {
     user: Option<String>,
     #[serde(default)]
     react_to_fail: bool,
-    #[serde(default = "default_mem_warn")]
-    mem_warn: u64,
+    mem_warn: Option<u64>,
     #[serde(default = "default_launcher")]
     launcher: Arc<String>,
     #[serde(default)]
