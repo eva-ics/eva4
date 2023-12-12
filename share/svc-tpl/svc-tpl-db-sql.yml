@@ -25,7 +25,7 @@ config:
   # event queue size
   queue_size: 8192
   # panic on critical errors in X seconds after happened (0 - panic immediately)
-  panic_in: null
+  panic_in: 0
   # database pool size
   #pool_size: 2 (default = workers)
   # item OIDs / OID masks
