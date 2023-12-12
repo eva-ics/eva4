@@ -13,7 +13,7 @@ banner = """     _______    _____       _______________
  /_____/  |___/_/  |_|  /___/\____//____/"""
 
 home_url = "www.eva-ics.com"
-copyright = "(c) 2022 Bohemia Automation"
+copyright = "(c) Bohemia Automation"
 
 dir_eva_default = '/opt/eva4'
 
