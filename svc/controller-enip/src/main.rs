@@ -60,9 +60,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    let payload_failed = pack(&RawStateEvent::new0(eva_common::ITEM_STATUS_ERROR))?;
     if initial.is_mode_rtf() {
         println!("marking all mapped items as failed");
-        let payload_failed = pack(&RawStateEvent::new0(eva_common::ITEM_STATUS_ERROR))?;
         let mut bus = initial.init_bus_client().await?;
         for pull in config.pull {
             for task in pull.map() {
@@ -85,10 +85,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let plc_path = config.plc.generate_path();
     let mut tags_created = HashSet::new();
     let mut tags_pending = HashSet::new();
+    let mut tag_oid_map: HashMap<&str, Vec<&OID>> = HashMap::new();
     for tag in &mut config.pull {
         tag.init(&plc_path, plc_timeout)?;
         tags_created.insert(tag.path());
         tags_pending.insert(types::PendingTag::new(tag.id(), tag.path()));
+        tag_oid_map.insert(
+            tag.path(),
+            tag.map().iter().map(common::PullTask::oid).collect(),
+        );
     }
     let mut action_oids = Vec::new();
     for (oid, map) in &mut config.action_map {
@@ -146,6 +151,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
     debug!("creating client tags");
+    let mut oids_failed = HashSet::new();
     let op = Op::new(timeout);
     {
         while !tags_pending.is_empty() {
@@ -158,6 +164,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 } else if rc != plctag::PLCTAG_STATUS_PENDING {
                     error!("Unable to create PLC tag {}, status: {}", t.path(), rc);
                     failed.push(*t);
+                    if let Some(oids) = tag_oid_map.get(t.path()) {
+                        for oid in oids {
+                            oids_failed.insert(oid);
+                        }
+                    }
                 }
             }
             {
@@ -174,6 +185,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 return Err(Error::timeout());
             }
             tokio::time::sleep(SLEEP_STEP).await;
+        }
+    }
+    {
+        let mut c = client.lock().await;
+        for oid in oids_failed {
+            c.publish(
+                &format!("{}{}", RAW_STATE_TOPIC, oid.as_path()),
+                payload_failed.as_slice().into(),
+                busrt::QoS::No,
+            )
+            .await?;
         }
     }
     debug!("client tags created successfully");
