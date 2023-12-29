@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-openssl = "0.10.42"
+openssl = "0.10.60"
 base64 = "0.13.0"
 eva-common = "0.3.18"
 nix = { version = "0.25.0", features = ["time"] }

@@ -18,7 +18,7 @@ once_cell = "1.9.0"
 jemallocator = { version = "0.5.0" }
 cron = "0.11.0"
 parking_lot = "0.12.1"
-openssl = "0.10.42"
+openssl = "0.10.60"
 
 [features]
 std-alloc = []

@@ -57,7 +57,7 @@ ipnetwork = "0.20.0"
 async-io = "1.7.0"
 eva-robots = "0.3.0"
 parking_lot = { version = "0.12.1", features = ["serde"] }
-openssl = "0.10.42"
+openssl = "0.10.60"
 sysinfo = "0.29.2"
 num_cpus = "1.16.0"
 

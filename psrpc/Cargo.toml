@@ -19,7 +19,7 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 bzip2 = "0.4.3"
 log = "0.4.16"
 triggered = "0.1.2"
-openssl = "0.10.42"
+openssl = "0.10.60"
 genpass-native = { path = "../genpass-native" }
 parking_lot = "0.12.1"
 
