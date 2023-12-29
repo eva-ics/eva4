@@ -21,7 +21,7 @@ uuid = { version = "1.1.2", features = ["serde", "v4"] }
 jemallocator = { version = "0.5.0" }
 once_cell = "1.9.0"
 lazy_static = "1.4.0"
-hyper = { version = "0.14.18", features = ["server", "http1", "http2"] }
+hyper = { version = "1.1.0", features = ["server", "http1", "http2"] }
 eva-rjrpc = { version = "0.3.1", features = ["http"] }
 bmart = { version = "0.1.14" }
 sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite", "any", "mysql", "postgres" ] }
@@ -34,7 +34,7 @@ cookie = "0.16.0"
 multer = "2.0.2"
 hex = "0.4.3"
 tera = "1.15.0"
-hyper-tungstenite = "0.6.0"
+hyper-tungstenite = "0.13.0"
 gettext = "0.4.0"
 hyper-static = "0.1.5"
 urlencoding = "2.1.0"
