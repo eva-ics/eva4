@@ -91,21 +91,28 @@ struct User {
     acls: HashSet<String>,
 }
 
+impl User {
+    fn to_info(&self, with_password: bool) -> UserInfo<'_> {
+        UserInfo {
+            login: &self.login,
+            password: if with_password {
+                Some(self.password.to_string())
+            } else {
+                None
+            },
+            acls: &self.acls,
+        }
+    }
+}
+
 /// user info object, provided on list
 #[derive(Serialize, Sorting)]
 #[sorting(id = "login")]
 struct UserInfo<'a> {
     login: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password: Option<String>,
     acls: &'a HashSet<String>,
-}
-
-impl<'a> From<&'a User> for UserInfo<'a> {
-    fn from(user: &'a User) -> UserInfo<'a> {
-        UserInfo {
-            login: &user.login,
-            acls: &user.acls,
-        }
-    }
 }
 
 /// full key object, stored in the registry
@@ -532,14 +539,22 @@ impl RpcHandlers for Handlers {
                 }
             }
             "user.list" => {
-                if payload.is_empty() {
-                    let users = USERS.lock().unwrap();
-                    let mut user_info: Vec<UserInfo> = users.values().map(Into::into).collect();
-                    user_info.sort();
-                    Ok(Some(pack(&user_info)?))
-                } else {
-                    Err(RpcError::params(None))
+                #[derive(Deserialize, Default)]
+                #[serde(deny_unknown_fields)]
+                struct Params {
+                    #[serde(default)]
+                    with_password: bool,
                 }
+                let p = if payload.is_empty() {
+                    Params::default()
+                } else {
+                    unpack(payload)?
+                };
+                let users = USERS.lock().unwrap();
+                let mut user_info: Vec<UserInfo> =
+                    users.values().map(|u| u.to_info(p.with_password)).collect();
+                user_info.sort();
+                Ok(Some(pack(&user_info)?))
             }
             "user.deploy" => {
                 if payload.is_empty() {

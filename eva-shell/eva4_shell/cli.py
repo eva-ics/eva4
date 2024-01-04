@@ -452,7 +452,9 @@ class CLI:
     def user_export(self, i, auth_svc, output=None):
         c = 0
         configs = []
-        for user in call_rpc('user.list', target=auth_svc):
+        for user in call_rpc('user.list',
+                             dict(with_password=True),
+                             target=auth_svc):
             name = user['login']
             if (i.startswith('*') and name.endswith(i[1:])) or \
                 (i.endswith('*') and name.startswith(i[:-1])) or \

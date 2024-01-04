@@ -159,6 +159,10 @@ password.hash:
 user.list:
   des: List local user accounts
   par:
+    - nam: with_password
+      typ: bool
+      des: Include user password hashses into the result
+      req: false
   ret: List of defined local user accounts, the ACLs and password hashes
   exm: |
     [
