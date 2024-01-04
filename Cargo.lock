@@ -1428,7 +1428,6 @@ dependencies = [
  "genpass-native",
  "hex 0.4.3",
  "jemallocator",
- "lazy_static",
  "log",
  "once_cell",
  "openssl",

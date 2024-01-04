@@ -6,7 +6,7 @@ use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use genpass_native::{random_string, Password};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::sync::Arc;
@@ -29,15 +29,14 @@ const ONE_TIME_USER_PREFIX: &str = "OT.";
 
 pub const ID_ALLOWED_SYMBOLS: &str = "_.()[]-\\";
 
-lazy_static::lazy_static! {
-    static ref KEYDB: Mutex<KeyDb> = <_>::default();
-    static ref USERS: Mutex<HashMap<String, User>> = <_>::default();
-    static ref ONE_TIME_USERS: tokio::sync::Mutex<HashMap<String, OneTimeUser>> = <_>::default();
-    static ref ONE_TIME_EXPIRES: OnceCell<Duration> = <_>::default();
-    static ref REG: OnceCell<Registry> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-}
+static KEYDB: Lazy<Mutex<KeyDb>> = Lazy::new(<_>::default);
+static USERS: Lazy<Mutex<HashMap<String, User>>> = Lazy::new(<_>::default);
+static ONE_TIME_USERS: Lazy<tokio::sync::Mutex<HashMap<String, OneTimeUser>>> =
+    Lazy::new(<_>::default);
+static ONE_TIME_EXPIRES: OnceCell<Duration> = OnceCell::new();
+static REG: OnceCell<Registry> = OnceCell::new();
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 
 struct OneTimeUser {
     created: Instant,
