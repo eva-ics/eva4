@@ -38,6 +38,12 @@ static REG: OnceCell<Registry> = OnceCell::new();
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 
+#[derive(Deserialize, Copy, Clone)]
+#[serde(rename_all = "snake_case")]
+enum ProfileField {
+    Email,
+}
+
 struct OneTimeUser {
     created: Instant,
     user: Option<User>,
@@ -112,6 +118,25 @@ impl User {
 #[serde(deny_unknown_fields)]
 struct UserProfile {
     email: Option<String>,
+}
+
+impl UserProfile {
+    fn get_field(&self, field: ProfileField) -> Option<Value> {
+        match field {
+            ProfileField::Email => self.email.as_ref().map(|v| Value::String(v.clone())),
+        }
+    }
+    fn set_field(&mut self, field: ProfileField, value: Value) {
+        match field {
+            ProfileField::Email => {
+                if value == Value::Unit {
+                    self.email.take();
+                } else {
+                    self.email.replace(value.to_string());
+                }
+            }
+        }
+    }
 }
 
 /// user info object, provided on list
@@ -654,6 +679,58 @@ impl RpcHandlers for Handlers {
                     Ok(None)
                 }
             }
+            "user.get_profile_field" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Params {
+                    i: String,
+                    field: ProfileField,
+                }
+                #[derive(Serialize)]
+                struct Field {
+                    value: Option<Value>,
+                    readonly: bool,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Params = unpack(payload)?;
+                    if let Some(user) = USERS.lock().unwrap().get(&p.i) {
+                        Ok(Some(pack(&Field {
+                            value: user.profile.get_field(p.field),
+                            readonly: false,
+                        })?))
+                    } else {
+                        Err(Error::not_found(format!("user {} not found", p.i)).into())
+                    }
+                }
+            }
+            "user.set_profile_field" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Params {
+                    i: String,
+                    field: ProfileField,
+                    value: Value,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: Params = unpack(payload)?;
+                    let reg = REG.get().unwrap();
+                    let val = {
+                        let mut users = USERS.lock().unwrap();
+                        if let Some(user) = users.get_mut(&p.i) {
+                            user.profile.set_field(p.field, p.value);
+                            to_value(&user)?
+                        } else {
+                            return Err(Error::not_found(format!("user {} not found", p.i)).into());
+                        }
+                    };
+                    reg.key_set(&format!("user/{}", p.i), val.clone()).await?;
+                    Ok(None)
+                }
+            }
             "user.get_config" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
@@ -924,6 +1001,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("user.get_config").required("i"));
     info.add_method(ServiceMethod::new("user.export").required("i"));
     info.add_method(ServiceMethod::new("user.destroy").required("i"));
+    info.add_method(
+        ServiceMethod::new("user.get_profile_field")
+            .required("i")
+            .required("field"),
+    );
+    info.add_method(
+        ServiceMethod::new("user.set_profile_field")
+            .required("i")
+            .required("field")
+            .required("value"),
+    );
     info.add_method(
         ServiceMethod::new("user.set_password")
             .required("i")

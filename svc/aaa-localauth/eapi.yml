@@ -201,7 +201,7 @@ user.get_config:
   par:
     - nam: i
       typ: String
-      des: API key ID
+      des: User login
       req: true
   ret: User account configuration
   exm: |
@@ -213,6 +213,39 @@ user.get_config:
         "login": "operator",
         "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
     }
+user.get_profile_field:
+  des: Get user profile field
+  par:
+    - nam: i
+      typ: String
+      des: User login
+      req: true
+    - nam: field
+      typ: String
+      des: Field name (email)
+      req: true
+  ret: Profile field
+  exm: |
+    {
+        "readonly": false,
+        "value": "admin@localhost"
+    }
+user.set_profile_field:
+  des: Set user profile field
+  par:
+    - nam: i
+      typ: String
+      des: User login
+      req: true
+    - nam: field
+      typ: String
+      des: Field name (email)
+      req: true
+    - nam: value
+      typ: Any
+      des: Field value
+      req: true
+  ret:
 user.export:
   des: Exports local user accounts as a deployment
   par:
