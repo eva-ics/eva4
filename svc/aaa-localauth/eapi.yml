@@ -166,16 +166,14 @@ user.list:
             "acls": [
                 "admin"
             ],
-            "login": "admin",
-            "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+            "login": "admin"
         },
        {
             "acls": [
                 "ui_default",
                 "ui_all"
             ],
-            "login": "operator",
-            "password": "cd2eb0837c9b4c962c22d2ff8b5441b7b45805887f051d39bf133b583baf6860"
+            "login": "operator"
         }
     ]
 user.deploy:

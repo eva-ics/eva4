@@ -96,7 +96,6 @@ struct User {
 #[sorting(id = "login")]
 struct UserInfo<'a> {
     login: &'a str,
-    password: String,
     acls: &'a HashSet<String>,
 }
 
@@ -104,7 +103,6 @@ impl<'a> From<&'a User> for UserInfo<'a> {
     fn from(user: &'a User) -> UserInfo<'a> {
         UserInfo {
             login: &user.login,
-            password: user.password.to_string(),
             acls: &user.acls,
         }
     }
