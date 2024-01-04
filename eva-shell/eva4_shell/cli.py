@@ -453,7 +453,7 @@ class CLI:
         c = 0
         configs = []
         for user in call_rpc('user.list',
-                             dict(with_password=True),
+                             dict(full=True, with_password=True),
                              target=auth_svc):
             name = user['login']
             if (i.startswith('*') and name.endswith(i[1:])) or \

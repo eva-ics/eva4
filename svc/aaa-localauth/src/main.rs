@@ -54,6 +54,7 @@ impl OneTimeUser {
                     login: login.to_owned(),
                     password: Password::new_sha256(&password_plain),
                     acls,
+                    profile: UserProfile::default(),
                 }),
             },
             password_plain,
@@ -89,10 +90,12 @@ struct User {
     password: Password,
     #[serde(default)]
     acls: HashSet<String>,
+    #[serde(default)]
+    profile: UserProfile,
 }
 
 impl User {
-    fn to_info(&self, with_password: bool) -> UserInfo<'_> {
+    fn to_info(&self, full: bool, with_password: bool) -> UserInfo<'_> {
         UserInfo {
             login: &self.login,
             password: if with_password {
@@ -101,8 +104,15 @@ impl User {
                 None
             },
             acls: &self.acls,
+            profile: if full { Some(&self.profile) } else { None },
         }
     }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UserProfile {
+    email: Option<String>,
 }
 
 /// user info object, provided on list
@@ -113,6 +123,8 @@ struct UserInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     password: Option<String>,
     acls: &'a HashSet<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<&'a UserProfile>,
 }
 
 /// full key object, stored in the registry
@@ -543,6 +555,8 @@ impl RpcHandlers for Handlers {
                 #[serde(deny_unknown_fields)]
                 struct Params {
                     #[serde(default)]
+                    full: bool,
+                    #[serde(default)]
                     with_password: bool,
                 }
                 let p = if payload.is_empty() {
@@ -551,8 +565,10 @@ impl RpcHandlers for Handlers {
                     unpack(payload)?
                 };
                 let users = USERS.lock().unwrap();
-                let mut user_info: Vec<UserInfo> =
-                    users.values().map(|u| u.to_info(p.with_password)).collect();
+                let mut user_info: Vec<UserInfo> = users
+                    .values()
+                    .map(|u| u.to_info(p.full, p.with_password))
+                    .collect();
                 user_info.sort();
                 Ok(Some(pack(&user_info)?))
             }
