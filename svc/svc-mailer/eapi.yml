@@ -3,7 +3,11 @@ send:
   par:
     - nam: rcp
       typ: String/Vec<String>
-      des: recipients
+      des: recipients (emails)
+      req: false
+    - nam: i
+      typ: String/Vec<String>
+      des: recipients (user accounts)
       req: false
     - nam: subject
       typ: String

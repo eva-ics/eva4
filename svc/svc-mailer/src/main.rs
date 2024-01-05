@@ -1,3 +1,4 @@
+use eva_common::common_payloads::ValueOrList;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use lettre::{
@@ -9,18 +10,83 @@ use lettre::{
     },
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
-use serde::Deserialize;
+use once_cell::sync::{Lazy, OnceCell};
+use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Duration;
+use ttl_cache::TtlCache;
 
 err_logger!();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Mailer service";
+const CACHE_USER_EMAILS_TTL: Duration = Duration::from_secs(10);
+const CACHE_USER_EMAILS_SIZE: usize = 10_000;
+
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
+
+static USER_EMAILS: Lazy<Mutex<TtlCache<String, String>>> =
+    Lazy::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[derive(Deserialize)]
+struct UserProfileField {
+    value: Option<String>,
+}
+
+#[derive(Serialize)]
+struct UserProfileReq<'a> {
+    i: &'a str,
+    field: &'a str,
+}
+
+async fn resolve_email(user: &str) -> EResult<Option<String>> {
+    if let Some(addr) = USER_EMAILS.lock().get(user) {
+        return Ok(Some(addr.clone()));
+    }
+    let payload = Arc::new(pack(&UserProfileReq {
+        i: user,
+        field: "email",
+    })?);
+    let rpc = RPC.get().unwrap();
+    let timeout = *TIMEOUT.get().unwrap();
+    for svc in AUTH_SVCS.get().unwrap() {
+        if let Ok(result) = safe_rpc_call(
+            rpc,
+            svc,
+            "user.get_profile_field",
+            payload.clone().into(),
+            QoS::No,
+            timeout,
+        )
+        .await
+        {
+            match unpack::<UserProfileField>(result.payload()) {
+                Ok(v) => {
+                    if let Some(addr) = v.value {
+                        USER_EMAILS.lock().insert(
+                            user.to_owned(),
+                            addr.clone(),
+                            CACHE_USER_EMAILS_TTL,
+                        );
+                        return Ok(Some(addr));
+                    }
+                }
+                Err(e) => {
+                    error!("svc {} invalid response: {}", svc, e);
+                }
+            }
+        }
+    }
+    Ok(None)
+}
 
 struct Mailer {
     mailer: AsyncSmtpTransport<Tokio1Executor>,
@@ -78,16 +144,16 @@ impl Mailer {
             from: from.parse().map_err(Error::invalid_data)?,
         })
     }
-    async fn send(&self, rcp: Option<&[&str]>, subject: Option<&str>, body: String) -> EResult<()> {
-        let rcps = if let Some(recipients) = rcp {
-            let mut rcps: Vec<Mailbox> = Vec::new();
-            for s in recipients {
+    async fn send(&self, rcp: &[&str], subject: Option<&str>, body: String) -> EResult<()> {
+        let rcps = if rcp.is_empty() {
+            self.default_rcp.clone()
+        } else {
+            let mut rcps: Vec<Mailbox> = Vec::with_capacity(rcp.len());
+            for s in rcp {
                 let m = s.parse().map_err(Error::invalid_data)?;
                 rcps.push(m);
             }
             rcps
-        } else {
-            self.default_rcp.clone()
         };
         for rcp in &rcps {
             debug!("sending mail to {}, subject: {:?}", rcp, subject);
@@ -115,25 +181,10 @@ struct Handlers {
     mailer: Mailer,
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum Recipient {
-    Single(String),
-    Multiple(Vec<String>),
-}
-
-impl Recipient {
-    fn as_vec(&self) -> Vec<&str> {
-        match self {
-            Recipient::Single(ref r) => vec![r],
-            Recipient::Multiple(ref r) => r.iter().map(String::as_str).collect(),
-        }
-    }
-}
-
 #[async_trait::async_trait]
 impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
+        svc_rpc_need_ready!();
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
@@ -145,17 +196,27 @@ impl RpcHandlers for Handlers {
                     #[serde(deny_unknown_fields)]
                     struct ParamsSend {
                         #[serde(default)]
-                        rcp: Option<Recipient>,
+                        i: ValueOrList<String>,
+                        #[serde(default)]
+                        rcp: ValueOrList<String>,
                         #[serde(default)]
                         subject: Option<String>,
                         #[serde(default)]
                         text: Option<String>,
                     }
                     let p: ParamsSend = unpack(payload)?;
-                    let rcp = p.rcp.as_ref().map(Recipient::as_vec);
+                    let mut rcp = p.rcp.into_vec();
+                    rcp.reserve(p.i.len());
+                    for i in p.i {
+                        if let Some(addr) = resolve_email(&i).await? {
+                            rcp.push(addr);
+                        } else {
+                            warn!("unable to resolve email address for {}", i);
+                        }
+                    }
                     self.mailer
                         .send(
-                            rcp.as_deref(),
+                            &rcp.iter().map(String::as_str).collect::<Vec<&str>>(),
                             p.subject.as_deref(),
                             p.text.unwrap_or_default(),
                         )
@@ -204,9 +265,11 @@ struct SmtpConfig {
 struct Config {
     smtp: SmtpConfig,
     #[serde(default)]
-    default_rcp: Vec<String>,
+    default_rcp: ValueOrList<String>,
     #[serde(default)]
     from: Option<String>,
+    #[serde(default)]
+    auth_svcs: Vec<String>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -242,6 +305,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
             )?,
         })
         .await?;
+    RPC.set(rpc.clone())
+        .map_err(|_| Error::core("Unable to set RPC"))?;
+    TIMEOUT
+        .set(initial.timeout())
+        .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
+    AUTH_SVCS
+        .set(config.auth_svcs)
+        .map_err(|_| Error::core("Unable to set AUTH_SVCS"))?;
     initial.drop_privileges()?;
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;

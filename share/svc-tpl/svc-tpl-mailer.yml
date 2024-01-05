@@ -3,6 +3,10 @@ command: target/debug/eva-svc-mailer
 bus:
   path: var/bus.ipc
 config:
+  # the svc can resolve email addresses using account names
+  auth_svcs:
+    - eva.aaa.localauth
+    #- eva.aaa.msad
   #from: eva@domain
   #default_rcp:
   # - some@domain.com
