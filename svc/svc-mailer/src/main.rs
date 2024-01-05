@@ -13,8 +13,10 @@ use lettre::{
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
+use std::collections::{hash_map, HashMap};
+use std::fmt::Write as _;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use ttl_cache::TtlCache;
 
 err_logger!();
@@ -26,6 +28,8 @@ const CACHE_USER_EMAILS_TTL: Duration = Duration::from_secs(10);
 const CACHE_USER_EMAILS_SIZE: usize = 10_000;
 
 const MAX_PARALLEL_RESOLVERS: usize = 10;
+const MAX_PARALLEL_SENDS_DELAYED: usize = 10;
+const MAX_PARALLEL_TASKS: usize = 100;
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
@@ -34,9 +38,69 @@ static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
 static USER_EMAILS: Lazy<Mutex<TtlCache<String, String>>> =
     Lazy::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
 
+static DELAYED_EMAILS: Lazy<Mutex<HashMap<(Vec<String>, Option<String>), DelayedMail>>> =
+    Lazy::new(<_>::default);
+
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+struct DelayedMail {
+    delayed_until: Instant,
+    body: String,
+}
+
+async fn send_delayed_emails(mailer: Arc<Mailer>) {
+    let mut int = tokio::time::interval(Duration::from_secs(1));
+    loop {
+        int.tick().await;
+        let Ok(_permit) = mailer.tasks_sem.acquire().await.log_err() else {
+            continue;
+        };
+        let mut emails = Vec::new();
+        {
+            let mut keys_to_remove = Vec::new();
+            let mut delayed_emails = DELAYED_EMAILS.lock();
+            let now = Instant::now();
+            for (k, v) in &*delayed_emails {
+                if v.delayed_until < now {
+                    keys_to_remove.push(k.clone());
+                }
+            }
+            for k in keys_to_remove {
+                if let Some(d) = delayed_emails.remove(&k) {
+                    emails.push((k, d.body));
+                }
+            }
+        }
+        let mut tasks = Vec::new();
+        let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_SENDS_DELAYED);
+        for email in emails {
+            let mailer_c = mailer.clone();
+            let Ok(task) = pool
+                .spawn(async move {
+                    mailer_c
+                        .send(
+                            &email.0 .0.iter().map(String::as_str).collect::<Vec<&str>>(),
+                            email.0 .1.as_deref(),
+                            email.1,
+                            None,
+                        )
+                        .await
+                        .log_ef();
+                })
+                .await
+                .log_err()
+            else {
+                continue;
+            };
+            tasks.push(task);
+        }
+        for task in tasks {
+            task.await.log_ef();
+        }
+    }
+}
 
 #[derive(Deserialize)]
 struct UserProfileField {
@@ -95,6 +159,7 @@ struct Mailer {
     timeout: Duration,
     default_rcp: Vec<Mailbox>,
     from: Mailbox,
+    tasks_sem: tokio::sync::Semaphore,
 }
 
 impl Mailer {
@@ -139,21 +204,58 @@ impl Mailer {
             ));
         }
         let mailer = b.build();
+        let tasks_sem = tokio::sync::Semaphore::new(MAX_PARALLEL_TASKS);
         Ok(Self {
             mailer,
             timeout,
             default_rcp: rcps,
             from: from.parse().map_err(Error::invalid_data)?,
+            tasks_sem,
         })
     }
-    async fn send(&self, rcp: &[&str], subject: Option<&str>, body: String) -> EResult<()> {
+    fn is_busy(&self) -> bool {
+        self.tasks_sem.available_permits() < MAX_PARALLEL_TASKS
+    }
+    async fn send(
+        &self,
+        rcp: &[&str],
+        subject: Option<&str>,
+        body: String,
+        delayed: Option<Duration>,
+    ) -> EResult<()> {
+        let _permit = self.tasks_sem.acquire().await.map_err(Error::failed)?;
+        if let Some(d) = delayed {
+            // if the email is delayed - schedule
+            let subj = subject.map(ToOwned::to_owned);
+            let rcps = rcp.iter().map(|&v| v.to_owned()).collect::<Vec<String>>();
+            match DELAYED_EMAILS.lock().entry((rcps, subj)) {
+                hash_map::Entry::Occupied(mut o) => {
+                    let d_e = o.get_mut();
+                    if !body.is_empty() {
+                        if !d_e.body.is_empty() && !d_e.body.ends_with('\n') {
+                            write!(d_e.body, "\n")?;
+                        }
+                        write!(d_e.body, "{}", body)?;
+                    }
+                }
+                hash_map::Entry::Vacant(v) => {
+                    v.insert(DelayedMail {
+                        delayed_until: Instant::now() + d,
+                        body,
+                    });
+                }
+            }
+            return Ok(());
+        }
         let rcps = if rcp.is_empty() {
             self.default_rcp.clone()
         } else {
             let mut rcps: Vec<Mailbox> = Vec::with_capacity(rcp.len());
             for s in rcp {
-                let m = s.parse().map_err(Error::invalid_data)?;
-                rcps.push(m);
+                match s.parse() {
+                    Ok(m) => rcps.push(m),
+                    Err(e) => error!("invalid email address {}: {}", s, e),
+                }
             }
             rcps
         };
@@ -180,7 +282,7 @@ impl Mailer {
 
 struct Handlers {
     info: ServiceInfo,
-    mailer: Mailer,
+    mailer: Arc<Mailer>,
 }
 
 #[async_trait::async_trait]
@@ -205,6 +307,11 @@ impl RpcHandlers for Handlers {
                         subject: Option<String>,
                         #[serde(default)]
                         text: Option<String>,
+                        #[serde(
+                            default,
+                            deserialize_with = "eva_common::tools::de_opt_float_as_duration"
+                        )]
+                        delayed: Option<Duration>,
                     }
                     let p: ParamsSend = unpack(payload)?;
                     let mut rcp_v = p.rcp.into_vec();
@@ -238,6 +345,7 @@ impl RpcHandlers for Handlers {
                                 .collect::<Vec<&str>>(),
                             p.subject.as_deref(),
                             p.text.unwrap_or_default(),
+                            p.delayed,
                         )
                         .await
                         .log_err()?;
@@ -304,24 +412,26 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("send")
             .optional("rcp")
             .optional("subject")
-            .optional("text"),
+            .optional("text")
+            .optional("delayed"),
     );
+    let mailer = Arc::new(Mailer::new(
+        &config.smtp,
+        initial.timeout(),
+        &config
+            .default_rcp
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<&str>>(),
+        config
+            .from
+            .as_deref()
+            .unwrap_or(&format!("eva@{}", initial.system_name())),
+    )?);
     let rpc = initial
         .init_rpc(Handlers {
             info,
-            mailer: Mailer::new(
-                &config.smtp,
-                initial.timeout(),
-                &config
-                    .default_rcp
-                    .iter()
-                    .map(String::as_str)
-                    .collect::<Vec<&str>>(),
-                config
-                    .from
-                    .as_deref()
-                    .unwrap_or(&format!("eva@{}", initial.system_name())),
-            )?,
+            mailer: mailer.clone(),
         })
         .await?;
     RPC.set(rpc.clone())
@@ -336,9 +446,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
+    tokio::spawn(send_delayed_emails(mailer.clone()));
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
+    while mailer.is_busy() || !DELAYED_EMAILS.lock().is_empty() {
+        tokio::time::sleep(eva_common::SLEEP_STEP).await;
+    }
     Ok(())
 }
