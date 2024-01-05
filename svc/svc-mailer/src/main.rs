@@ -25,6 +25,8 @@ const DESCRIPTION: &str = "Mailer service";
 const CACHE_USER_EMAILS_TTL: Duration = Duration::from_secs(10);
 const CACHE_USER_EMAILS_SIZE: usize = 10_000;
 
+const MAX_PARALLEL_RESOLVERS: usize = 10;
+
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
@@ -205,18 +207,35 @@ impl RpcHandlers for Handlers {
                         text: Option<String>,
                     }
                     let p: ParamsSend = unpack(payload)?;
-                    let mut rcp = p.rcp.into_vec();
-                    rcp.reserve(p.i.len());
+                    let mut rcp_v = p.rcp.into_vec();
+                    rcp_v.reserve(p.i.len());
+                    let rcp = Arc::new(tokio::sync::Mutex::new(rcp_v));
+                    let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_RESOLVERS);
+                    let mut futs = Vec::new();
                     for i in p.i {
-                        if let Some(addr) = resolve_email(&i).await? {
-                            rcp.push(addr);
-                        } else {
-                            warn!("unable to resolve email address for {}", i);
-                        }
+                        let rcp_c = rcp.clone();
+                        let fut = pool
+                            .spawn(async move {
+                                if let Ok(Some(addr)) = resolve_email(&i).await.log_err() {
+                                    rcp_c.lock().await.push(addr);
+                                } else {
+                                    warn!("unable to resolve email address for {}", i);
+                                }
+                            })
+                            .await
+                            .map_err(Error::failed)?;
+                        futs.push(fut);
+                    }
+                    for fut in futs {
+                        fut.await.log_ef();
                     }
                     self.mailer
                         .send(
-                            &rcp.iter().map(String::as_str).collect::<Vec<&str>>(),
+                            &rcp.lock()
+                                .await
+                                .iter()
+                                .map(String::as_str)
+                                .collect::<Vec<&str>>(),
                             p.subject.as_deref(),
                             p.text.unwrap_or_default(),
                         )

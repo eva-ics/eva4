@@ -2172,6 +2172,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "serde",
  "tokio",
+ "tokio-task-pool",
  "ttl_cache",
 ]
 
