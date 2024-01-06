@@ -38,8 +38,9 @@ static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
 static USER_EMAILS: Lazy<Mutex<TtlCache<String, String>>> =
     Lazy::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
 
-static DELAYED_EMAILS: Lazy<Mutex<HashMap<(Vec<String>, Option<String>), DelayedMail>>> =
-    Lazy::new(<_>::default);
+type DelayedEmailsMap = HashMap<(Vec<String>, Option<String>), DelayedMail>;
+
+static DELAYED_EMAILS: Lazy<Mutex<DelayedEmailsMap>> = Lazy::new(<_>::default);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -233,7 +234,7 @@ impl Mailer {
                     let d_e = o.get_mut();
                     if !body.is_empty() {
                         if !d_e.body.is_empty() && !d_e.body.ends_with('\n') {
-                            write!(d_e.body, "\n")?;
+                            writeln!(d_e.body)?;
                         }
                         write!(d_e.body, "{}", body)?;
                     }
@@ -314,17 +315,18 @@ impl RpcHandlers for Handlers {
                         delayed: Option<Duration>,
                     }
                     let p: ParamsSend = unpack(payload)?;
-                    let mut rcp_v = p.rcp.into_vec();
-                    rcp_v.reserve(p.i.len());
-                    let rcp = Arc::new(tokio::sync::Mutex::new(rcp_v));
+                    let mut rcp = p.rcp.into_vec();
+                    rcp.reserve(p.i.len());
                     let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_RESOLVERS);
                     let mut futs = Vec::new();
+                    let has_logins = p.i.is_empty();
+                    let (tx, rx) = async_channel::bounded(p.i.len());
                     for i in p.i {
-                        let rcp_c = rcp.clone();
+                        let tx_c = tx.clone();
                         let fut = pool
                             .spawn(async move {
                                 if let Ok(Some(addr)) = resolve_email(&i).await.log_err() {
-                                    rcp_c.lock().await.push(addr);
+                                    let _ = tx_c.send(addr).await;
                                 } else {
                                     warn!("unable to resolve email address for {}", i);
                                 }
@@ -333,16 +335,16 @@ impl RpcHandlers for Handlers {
                             .map_err(Error::failed)?;
                         futs.push(fut);
                     }
-                    for fut in futs {
-                        fut.await.log_ef();
+                    drop(tx);
+                    while let Ok(v) = rx.recv().await {
+                        rcp.push(v);
+                    }
+                    if has_logins && rcp.is_empty() {
+                        return Err(Error::failed("no addresses have been resolved").into());
                     }
                     self.mailer
                         .send(
-                            &rcp.lock()
-                                .await
-                                .iter()
-                                .map(String::as_str)
-                                .collect::<Vec<&str>>(),
+                            &rcp.iter().map(String::as_str).collect::<Vec<&str>>(),
                             p.subject.as_deref(),
                             p.text.unwrap_or_default(),
                             p.delayed,

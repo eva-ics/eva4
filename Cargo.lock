@@ -2162,6 +2162,7 @@ dependencies = [
 name = "eva-svc-mailer"
 version = "4.0.2"
 dependencies = [
+ "async-channel",
  "async-trait",
  "eva-common",
  "eva-sdk",
