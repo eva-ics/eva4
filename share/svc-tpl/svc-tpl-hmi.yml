@@ -35,6 +35,8 @@ config:
   buf_size: 16384
   # enable development mode (CORS headers etc.)
   #development: true
+  # demo mode (disable profile.set_field and set_password methods)
+  #demo: true
   # uncomment to disable vendored apps
   #vendored_apps: false
 user: eva

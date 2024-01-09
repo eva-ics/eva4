@@ -83,6 +83,7 @@ static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static DEVELOPMEPT_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static DEMO_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[inline]
 fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
@@ -109,6 +110,11 @@ fn public_api_log() -> bool {
 #[inline]
 fn development_mode() -> bool {
     DEVELOPMEPT_MODE.load(atomic::Ordering::Relaxed)
+}
+
+#[inline]
+fn demo_mode() -> bool {
+    DEMO_MODE.load(atomic::Ordering::Relaxed)
 }
 
 #[cfg(not(feature = "std-alloc"))]
@@ -174,6 +180,8 @@ struct Config {
     default_history_db_svc: String,
     #[serde(default)]
     development: bool,
+    #[serde(default)]
+    demo: bool,
     #[serde(default = "eva_common::tools::default_true")]
     vendored_apps: bool,
     #[serde(default)]
@@ -319,6 +327,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
     if config.development {
         warn!("development mode started");
         DEVELOPMEPT_MODE.store(true, atomic::Ordering::Relaxed);
+    }
+    if config.demo {
+        warn!("demo mode started");
+        DEMO_MODE.store(true, atomic::Ordering::Relaxed);
     }
     let mime_types = if let Some(mime_types_path) = config.mime_types {
         let types = tokio::fs::read_to_string(eva_common::tools::format_path(

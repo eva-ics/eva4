@@ -30,6 +30,7 @@ err_logger!();
 const ERR_NO_PARAMS: &str = "no params provided";
 const ERR_NO_METHOD: &str = "no such RPC method";
 const ERR_DF_TIMES: &str = "dataframe times mismatch";
+const ERR_DEMO_MODE: &str = "disabled in demo mode";
 
 const API_VERSION: u16 = 4;
 
@@ -151,6 +152,14 @@ impl AuthResult {
             api_version: API_VERSION,
         }
     }
+}
+
+macro_rules! demo_mode_abort {
+    () => {
+        if crate::demo_mode() {
+            return Err(Error::access(ERR_DEMO_MODE));
+        }
+    };
 }
 
 #[allow(clippy::similar_names)]
@@ -648,6 +657,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
         password: &'a str,
     }
     aci.log_request(log::Level::Warn).await.log_ef();
+    demo_mode_abort!();
     if let Some(token) = aci.token() {
         aci.check_write()?;
         let p = ParamsSetPassword::deserialize(params)?;
@@ -729,6 +739,7 @@ async fn method_set_profile_field(params: Value, aci: &mut ACI) -> EResult<Value
         value: Value,
     }
     aci.log_request(log::Level::Info).await.log_ef();
+    demo_mode_abort!();
     if let Some(token) = aci.token() {
         aci.check_write()?;
         let mut p = ParamsProfileField::deserialize(params)?;
