@@ -3,6 +3,18 @@ command: target/debug/eva-aaa-localauth
 bus:
   path: var/bus.ipc
 config:
+  # the password policy is applied on user.set_password EAPI method only if
+  # check_policy parameter is set to true.
+  #
+  # In practice, the policy is applied only if the password is changed by a
+  # user itself via HMI HTTP API.
+  #
+  # Node administrator can set a password to any value using eva-shell
+  password_policy:
+    min_length: 8 # minimal password length
+    required_letter: true # at least one letter is required
+    #required_mixed_case: true # at least one uppercase and one lowercase letter is required
+    required_number: true # at least one number is required
   # ACL service
   acl_svc: eva.aaa.acl
   # OTP service

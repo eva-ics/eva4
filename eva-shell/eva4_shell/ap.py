@@ -480,6 +480,9 @@ def append_user_cli(root_sp):
 
     p = sp.add_parser('password', help='change user\'s password')
     p.add_argument('i', metavar='user', help='user id')
+    p.add_argument('--ignore-policy',
+                   action='store_true',
+                   help='Ignore password policy')
     p.add_argument(
         '-a',
         '--auth-svc',

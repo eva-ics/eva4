@@ -510,11 +510,13 @@ class CLI:
         call_rpc('user.destroy', dict(i=i), target=auth_svc)
         ok()
 
-    def user_password(self, i, auth_svc):
+    def user_password(self, i, auth_svc, ignore_policy):
         import pwinput
         password = pwinput.pwinput()
         data = call_rpc('user.set_password',
-                        dict(i=i, password=password),
+                        dict(i=i,
+                             password=password,
+                             check_policy=not ignore_policy),
                         target=auth_svc)
         ok()
 

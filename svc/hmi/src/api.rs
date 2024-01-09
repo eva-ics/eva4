@@ -655,6 +655,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
         i: &'a str,
         #[serde(borrow)]
         password: &'a str,
+        check_policy: bool,
     }
     aci.log_request(log::Level::Warn).await.log_ef();
     demo_mode_abort!();
@@ -681,6 +682,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
         let payload = pack(&PayloadIdPass {
             i: token.user(),
             password: &p.password,
+            check_policy: true,
         })?;
         safe_rpc_call(
             rpc,

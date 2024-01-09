@@ -286,6 +286,10 @@ user.set_password:
       typ: String
       des: New password (plain text)
       req: true
+    - nam: check_policy
+      typ: bool
+      des: Check password policy
+      req: false
   ret:
 user.create_one_time:
   des: Creates an one-time temporary user account, which is auto-deleted after the first login

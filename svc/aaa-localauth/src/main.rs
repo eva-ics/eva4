@@ -38,6 +38,18 @@ static REG: OnceCell<Registry> = OnceCell::new();
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 
+#[derive(Deserialize, Default)]
+struct PasswordPolicy {
+    #[serde(default)]
+    min_length: usize,
+    #[serde(default)]
+    required_letter: bool,
+    #[serde(default)]
+    required_mixed_case: bool,
+    #[serde(default)]
+    required_number: bool,
+}
+
 #[derive(Deserialize, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 enum ProfileField {
@@ -219,6 +231,8 @@ struct ParamsIdPass<'a> {
     i: &'a str,
     #[serde(borrow)]
     password: &'a str,
+    #[serde(default)]
+    check_policy: bool,
 }
 
 #[derive(Default)]
@@ -266,6 +280,7 @@ impl KeyDb {
 
 struct Handlers {
     info: ServiceInfo,
+    password_policy: PasswordPolicy,
     acl_svc: String,
     otp_svc: Option<String>,
     tx: async_channel::Sender<(String, Option<Value>)>,
@@ -795,6 +810,9 @@ impl RpcHandlers for Handlers {
                     if p.password.is_empty() {
                         return Err(Error::invalid_data("the password can not be empty").into());
                     }
+                    if p.check_policy {
+                        self.check_password_policy(p.password)?;
+                    }
                     let reg = REG.get().unwrap();
                     let val = {
                         let mut users = USERS.lock().unwrap();
@@ -936,8 +954,67 @@ impl RpcHandlers for Handlers {
             m => svc_handle_default_rpc(m, &self.info),
         }
     }
-    async fn handle_notification(&self, _event: RpcEvent) {}
-    async fn handle_frame(&self, _frame: Frame) {}
+}
+
+impl Handlers {
+    fn check_password_policy(&self, p: &str) -> EResult<()> {
+        let mut err: Vec<String> = Vec::new();
+        if p.len() < self.password_policy.min_length {
+            err.push(format!(
+                "min. length: {} symbols",
+                self.password_policy.min_length
+            ));
+        }
+        if self.password_policy.required_letter {
+            let mut found = false;
+            for ch in p.chars() {
+                if ch.is_alphabetic() {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                err.push("must contain at least one letter".to_owned());
+            }
+        }
+        if self.password_policy.required_number {
+            let mut found = false;
+            for ch in p.chars() {
+                if ch.is_numeric() {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                err.push("must contain at least one number".to_owned());
+            }
+        }
+        if self.password_policy.required_mixed_case {
+            let mut upper_found = false;
+            let mut lower_found = false;
+            for ch in p.chars() {
+                if ch.is_uppercase() {
+                    upper_found = true;
+                } else if ch.is_lowercase() {
+                    lower_found = true;
+                }
+                if upper_found && lower_found {
+                    break;
+                }
+            }
+            if !upper_found || !lower_found {
+                err.push("must contain at least one uppercase and one lowercase letter".to_owned());
+            }
+        }
+        if err.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::invalid_params(format!(
+                "Invalid password: {}",
+                err.join(", ")
+            )))
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -946,6 +1023,8 @@ struct Config {
     acl_svc: String,
     otp_svc: Option<String>,
     one_time: Option<OneTimeConfig>,
+    #[serde(default)]
+    password_policy: PasswordPolicy,
 }
 
 #[derive(Deserialize)]
@@ -1015,7 +1094,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(
         ServiceMethod::new("user.set_password")
             .required("i")
-            .required("password"),
+            .required("password")
+            .optional("check_policy"),
     );
     info.add_method(ServiceMethod::new("user.create_one_time").required("acls"));
     info.add_method(
@@ -1026,6 +1106,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     );
     let handlers = Handlers {
         info,
+        password_policy: config.password_policy,
         acl_svc: config.acl_svc,
         otp_svc: config.otp_svc,
         tx,
