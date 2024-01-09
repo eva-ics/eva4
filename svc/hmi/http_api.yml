@@ -193,6 +193,42 @@ set_password:
       des: New user's password
       req: true
   ret: if the password has been changed, the session is dropped and the user must re-login
+profile.set_field:
+  des: Set user profile field
+  par:
+    - nam: field
+      typ: String
+      des: Field name (email)
+      req: true
+    - nam: value
+      typ: Any
+      des: Field value
+      req: true
+  http_req:
+    field: email
+    value: admin@localhost
+profile.get_field:
+  des: Set user profile field
+  par:
+    - nam: field
+      typ: String
+      des: Field name (email)
+      req: true
+    - nam: value
+      typ: Any
+      des: Field value
+      req: true
+  http_req:
+    field: email
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "readonly": false,
+            "value": "admin@localhost"
+        }
+    }
 item.state:
   des: Gets state of item(s)
   par:

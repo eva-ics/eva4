@@ -479,6 +479,8 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                     match method {
                         "test" => method_test(params, &mut aci).await,
                         "set_password" => method_set_password(params, &mut aci).await,
+                        "profile.get_field" => method_get_profile_field(params, &mut aci).await,
+                        "profile.set_field" => method_set_profile_field(params, &mut aci).await,
                         "item.state" | "state" => method_item_state(params, &mut aci).await,
                         "item.check_access" | "check_item_access" => {
                             method_item_check_access(params, &mut aci).await
@@ -674,6 +676,70 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
             rpc,
             token.auth_svc(),
             "user.set_password",
+            payload.as_slice().into(),
+            QoS::Processed,
+            timeout,
+        )
+        .await?;
+        ok!()
+    } else {
+        Err(Error::access("not authenticated with login/password"))
+    }
+}
+
+async fn method_get_profile_field(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Serialize, Deserialize)]
+    struct ParamsProfileField<'a> {
+        #[serde(skip_deserializing)]
+        i: Option<&'a str>,
+        field: String,
+    }
+    aci.log_request(log::Level::Trace).await.log_ef();
+    if let Some(token) = aci.token() {
+        aci.check_write()?;
+        let mut p = ParamsProfileField::deserialize(params)?;
+        let rpc = RPC.get().unwrap();
+        let timeout = *TIMEOUT.get().unwrap();
+        p.i.replace(token.user());
+        let payload = pack(&p)?;
+        let result: Value = unpack(
+            safe_rpc_call(
+                rpc,
+                token.auth_svc(),
+                "user.get_profile_field",
+                payload.as_slice().into(),
+                QoS::Processed,
+                timeout,
+            )
+            .await?
+            .payload(),
+        )?;
+        Ok(result)
+    } else {
+        Err(Error::access("not authenticated with login/password"))
+    }
+}
+
+async fn method_set_profile_field(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Serialize, Deserialize)]
+    struct ParamsProfileField<'a> {
+        #[serde(skip_deserializing)]
+        i: Option<&'a str>,
+        field: String,
+        value: Value,
+    }
+    aci.log_request(log::Level::Info).await.log_ef();
+    if let Some(token) = aci.token() {
+        aci.check_write()?;
+        let mut p = ParamsProfileField::deserialize(params)?;
+        let rpc = RPC.get().unwrap();
+        let timeout = *TIMEOUT.get().unwrap();
+        p.i.replace(token.user());
+        let payload = pack(&p)?;
+        safe_rpc_call(
+            rpc,
+            token.auth_svc(),
+            "user.set_profile_field",
             payload.as_slice().into(),
             QoS::Processed,
             timeout,
