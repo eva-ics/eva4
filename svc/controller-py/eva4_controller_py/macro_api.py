@@ -253,7 +253,7 @@ def unlock(lock_id):
         rpc_call('unlock', _target=locker_svc, i=lock_id)
 
 
-def mail(subject=None, text=None, rcp=None):
+def mail(subject=None, text=None, rcp=None, i=None):
     """
     Sends email message
 
@@ -262,7 +262,8 @@ def mail(subject=None, text=None, rcp=None):
     Optional:
         subject: email subject
         text: email text
-        rcp: recipient or array of the recipients
+        rcp: email recipient or array of the recipients
+        i: user login recipient or array of the recipients
 
     Raises:
         FunctionFailed: mail is not sent
@@ -274,7 +275,8 @@ def mail(subject=None, text=None, rcp=None):
                  _target=mailer_svc,
                  subject=subject,
                  text=text,
-                 rcp=rcp)
+                 rcp=rcp,
+                 i=i)
 
 
 def state(oid):
