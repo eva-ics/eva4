@@ -157,7 +157,7 @@ impl AuthResult {
 macro_rules! demo_mode_abort {
     () => {
         if crate::demo_mode() {
-            return Err(Error::access(ERR_DEMO_MODE));
+            return Err(Error::unsupported(ERR_DEMO_MODE));
         }
     };
 }
