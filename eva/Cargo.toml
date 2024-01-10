@@ -63,7 +63,7 @@ num_cpus = "1.16.0"
 
 [features]
 std-alloc = []
-openssl-vendored = ["openssl/vendored"]
+openssl-vendored = ["openssl/vendored", "eva-common/openssl-no-fips"]
 
 [build-dependencies]
 cargo_metadata = "0.15.4"
