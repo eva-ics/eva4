@@ -595,7 +595,7 @@ impl Params {
             self.workers,
             self.user.as_deref(),
             self.react_to_fail,
-            crate::FIPS.load(atomic::Ordering::SeqCst),
+            crate::FIPS.load(atomic::Ordering::Relaxed),
             self.call_tracing,
         )
     }

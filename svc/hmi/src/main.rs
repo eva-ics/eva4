@@ -159,6 +159,7 @@ fn default_buf_size() -> usize {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 struct Config {
     #[serde(default)]
     api: Vec<ApiBind>,
