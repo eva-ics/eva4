@@ -98,6 +98,13 @@ pub fn launch(
     connection_path: Option<&str>,
     fips: bool,
 ) -> EResult<()> {
+    #[cfg(feature = "openssl-vendored")]
+    if fips {
+        return Err(Error::not_implemented(
+            "no FIPS 140 support, disable FIPS or switch to native package",
+        ));
+    }
+    #[cfg(not(feature = "openssl-vendored"))]
     if fips {
         openssl::fips::enable(true)?;
         crate::FIPS.store(true, atomic::Ordering::SeqCst);
