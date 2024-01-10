@@ -300,10 +300,9 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct ParamsSend {
+                        i: Option<ValueOrList<String>>,
                         #[serde(default)]
-                        i: ValueOrList<String>,
-                        #[serde(default)]
-                        rcp: ValueOrList<String>,
+                        rcp: Option<ValueOrList<String>>,
                         #[serde(default)]
                         subject: Option<String>,
                         #[serde(default)]
@@ -315,14 +314,15 @@ impl RpcHandlers for Handlers {
                         delayed: Option<Duration>,
                     }
                     let p: ParamsSend = unpack(payload)?;
-                    let mut rcp = p.rcp.into_vec();
-                    rcp.reserve(p.i.len());
+                    let mut rcp = p.rcp.unwrap_or_default().into_vec();
+                    let logins = p.i.unwrap_or_default();
+                    rcp.reserve(logins.len());
                     let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_RESOLVERS);
                     let mut futs = Vec::new();
-                    let has_logins = !p.i.is_empty();
+                    let has_logins = !logins.is_empty();
                     if has_logins {
-                        let (tx, rx) = async_channel::bounded(p.i.len());
-                        for i in p.i {
+                        let (tx, rx) = async_channel::bounded(logins.len());
+                        for i in logins {
                             let tx_c = tx.clone();
                             let fut = pool
                                 .spawn(async move {
