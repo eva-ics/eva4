@@ -319,25 +319,27 @@ impl RpcHandlers for Handlers {
                     rcp.reserve(p.i.len());
                     let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_RESOLVERS);
                     let mut futs = Vec::new();
-                    let has_logins = p.i.is_empty();
-                    let (tx, rx) = async_channel::bounded(p.i.len());
-                    for i in p.i {
-                        let tx_c = tx.clone();
-                        let fut = pool
-                            .spawn(async move {
-                                if let Ok(Some(addr)) = resolve_email(&i).await.log_err() {
-                                    let _ = tx_c.send(addr).await;
-                                } else {
-                                    warn!("unable to resolve email address for {}", i);
-                                }
-                            })
-                            .await
-                            .map_err(Error::failed)?;
-                        futs.push(fut);
-                    }
-                    drop(tx);
-                    while let Ok(v) = rx.recv().await {
-                        rcp.push(v);
+                    let has_logins = !p.i.is_empty();
+                    if has_logins {
+                        let (tx, rx) = async_channel::bounded(p.i.len());
+                        for i in p.i {
+                            let tx_c = tx.clone();
+                            let fut = pool
+                                .spawn(async move {
+                                    if let Ok(Some(addr)) = resolve_email(&i).await.log_err() {
+                                        let _ = tx_c.send(addr).await;
+                                    } else {
+                                        warn!("unable to resolve email address for {}", i);
+                                    }
+                                })
+                                .await
+                                .map_err(Error::failed)?;
+                            futs.push(fut);
+                        }
+                        drop(tx);
+                        while let Ok(v) = rx.recv().await {
+                            rcp.push(v);
+                        }
                     }
                     if has_logins && rcp.is_empty() {
                         return Err(Error::failed("no addresses have been resolved").into());
