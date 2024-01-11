@@ -959,7 +959,7 @@ impl RpcHandlers for Handlers {
 impl Handlers {
     fn check_password_policy(&self, p: &str) -> EResult<()> {
         let mut err: Vec<String> = Vec::new();
-        if p.len() < self.password_policy.min_length {
+        if p.chars().count() < self.password_policy.min_length {
             err.push(format!(
                 "min. length: {} symbols",
                 self.password_policy.min_length
