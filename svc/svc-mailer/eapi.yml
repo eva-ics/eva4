@@ -17,4 +17,8 @@ send:
       typ: String
       des: e-mail text
       req: false
+    - nam: delayed
+      typ: float
+      des: delay and group by sender/subject
+      req: false
   ret:
