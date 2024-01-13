@@ -138,12 +138,14 @@ async fn resolve_email(user: &str) -> EResult<Option<String>> {
             match unpack::<UserProfileField>(result.payload()) {
                 Ok(v) => {
                     if let Some(addr) = v.value {
-                        USER_EMAILS.lock().insert(
-                            user.to_owned(),
-                            addr.clone(),
-                            CACHE_USER_EMAILS_TTL,
-                        );
-                        return Ok(Some(addr));
+                        if !addr.is_empty() {
+                            USER_EMAILS.lock().insert(
+                                user.to_owned(),
+                                addr.clone(),
+                                CACHE_USER_EMAILS_TTL,
+                            );
+                            return Ok(Some(addr));
+                        }
                     }
                 }
                 Err(e) => {
