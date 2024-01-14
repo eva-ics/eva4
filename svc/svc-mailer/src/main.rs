@@ -457,6 +457,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
+    let now = Instant::now();
+    for d in DELAYED_EMAILS.lock().values_mut() {
+        d.delayed_until = now;
+    }
     while mailer.is_busy() || !DELAYED_EMAILS.lock().is_empty() {
         tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }
