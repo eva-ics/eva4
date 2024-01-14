@@ -416,6 +416,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(
         ServiceMethod::new("send")
+            .optional("i")
             .optional("rcp")
             .optional("subject")
             .optional("text")
