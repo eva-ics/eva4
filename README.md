@@ -48,7 +48,8 @@ export ARCH_SFX=x86_64-musl
 cargo build --release
 ```
 
-In case of problems with FIPS 140 support in OpenSSL, enable "openssl-no-fips"
+For OpenSSL v3 FIPS 140, build with "openssl3" feature enabled. In case of
+any problems with FIPS 140 support in OpenSSL, enable "openssl-no-fips"
 feature.
 
 The following libraries must be manually downloaded, installed and/or compiled:

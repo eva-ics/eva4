@@ -33,7 +33,7 @@ glob = "0.3.0"
 hostname = "0.3.1"
 lazy_static = "1.4.0"
 chrono = "0.4.19"
-eva-common = { version = "0.3.18", features = ["full"] }
+eva-common = { version = "0.3.23", features = ["full"] }
 bmart = { version = "0.2.2" }
 multi_log = "0.1.2"
 log = "0.4.14"
@@ -64,6 +64,7 @@ num_cpus = "1.16.0"
 [features]
 std-alloc = []
 openssl-vendored = ["openssl/vendored", "eva-common/openssl-no-fips"]
+openssl3 = ["eva-common/openssl3"]
 
 [build-dependencies]
 cargo_metadata = "0.15.4"
