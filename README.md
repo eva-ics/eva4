@@ -48,6 +48,9 @@ export ARCH_SFX=x86_64-musl
 cargo build --release
 ```
 
+In case of problems with FIPS 140 support in OpenSSL, enable "openssl-no-fips"
+feature.
+
 The following libraries must be manually downloaded, installed and/or compiled:
 
 * **svc/controller-enip** requires [libplctag](https://libplctag.github.io)
