@@ -577,6 +577,11 @@ def append_item_cli(root_sp):
     p.add_argument('i', metavar='OID').completer = ComplOID()
     p.add_argument('value', metavar='VALUE')
     p.add_argument('-s', '--status', metavar='STATUS', type=int)
+    p.add_argument('-p',
+                   '--type',
+                   dest='p',
+                   metavar='TYPE',
+                   choices=['auto', 'json'])
 
     sp.add_parser('summary', help='item summary per source')
 
@@ -624,6 +629,11 @@ def append_lvar_cli(root_sp):
     p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
     p.add_argument('-s', '--status', metavar='STATUS', type=int)
     p.add_argument('-v', '--value', metavar='VALUE')
+    p.add_argument('-p',
+                   '--type',
+                   dest='p',
+                   metavar='TYPE',
+                   choices=['auto', 'json'])
 
     p = sp.add_parser('reset', help='reset lvar state')
     p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')

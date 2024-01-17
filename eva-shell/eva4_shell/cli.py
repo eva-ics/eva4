@@ -962,8 +962,8 @@ class CLI:
                 print(f'{c} item(s) exported')
                 print()
 
-    def item_set(self, i, status, value):
-        val = format_value(value)
+    def item_set(self, i, status, value, p):
+        val = format_value(value, p=p)
         payload = dict(status=1 if status is None else status,
                        value=val,
                        force=True)
@@ -1187,12 +1187,12 @@ class CLI:
             return
         pass
 
-    def lvar_set(self, i, status, value):
+    def lvar_set(self, i, status, value, p) :
         params = dict(i=i)
         if status is not None:
             params['status'] = status
         if value is not None:
-            params['value'] = format_value(value)
+            params['value'] = format_value(value, p=p)
         call_rpc('lvar.set', params)
         ok()
 

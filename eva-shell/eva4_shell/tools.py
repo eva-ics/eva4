@@ -465,7 +465,10 @@ def write_file(fname, content, mode='w'):
         fh.write(content)
 
 
-def format_value(value, advanced=False, name=''):
+def format_value(value, advanced=False, name='', p=None):
+    if p == 'json':
+        import json
+        return json.loads(value)
     if value == '<<':
         import pwinput
         value = pwinput.pwinput(prompt=f'{name}: ')
