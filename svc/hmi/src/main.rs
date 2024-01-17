@@ -76,6 +76,7 @@ lazy_static! {
     static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref SVC_ID: OnceCell<String> = <_>::default();
+    static ref API_FILTER: OnceCell<OID> = <_>::default();
 }
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
@@ -163,6 +164,7 @@ fn default_buf_size() -> usize {
 struct Config {
     #[serde(default)]
     api: Vec<ApiBind>,
+    api_filter: Option<OID>,
     db: Option<String>,
     #[serde(default)]
     auth_svcs: Vec<String>,
@@ -222,6 +224,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .map_err(|_| Error::core("Unable to set HTTP_CLIENT"))?;
     let mut i18n = lang::Converter::default();
     let eva_dir = initial.eva_dir();
+    if let Some(api_filter) = config.api_filter {
+        if api_filter.kind() != ItemKind::Lmacro {
+            return Err(Error::invalid_params("api_filter must point to lmacro"));
+        }
+        API_FILTER
+            .set(api_filter)
+            .map_err(|_| Error::core("Unable to set API_FILTER"))?;
+    }
     PVT_PATH
         .set(config.pvt_path.map(|p| {
             let pvt_path = eva_common::tools::format_path(eva_dir, Some(&p), None);
