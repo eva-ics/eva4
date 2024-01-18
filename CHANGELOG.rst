@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-01-18 build 2024011801: Security updates, HMI API call filters
 * 2024-01-10 build 2024011001: User profiles, password policies, mailer svc improvements
 * 2023-12-13 build 2023121301: Stability fixes, Vendored apps navigation
 * 2023-12-12 build 2023121203: Stability fixes, OpCentre improvements
