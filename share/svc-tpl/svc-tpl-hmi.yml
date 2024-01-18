@@ -13,6 +13,8 @@ config:
   # default: runtime/svc_data/<SVC_ID>/hmi.db
   #db: sqlite:///tmp/hmi.db
   #db: postgres://USER:PASSWORD@HOST/DB
+  # Custom API call filter lmacro
+  #api_filter: lmacro:service/api_filter
   auth_svcs:
     - eva.aaa.localauth
   session:
