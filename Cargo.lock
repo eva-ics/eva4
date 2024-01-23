@@ -2027,12 +2027,13 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.11"
+version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b4d0a8ba0c388fad639d2d8332f2b45713370243f1974c6ace7f90f0baadbe5"
+checksum = "d2e01581257473788d92038d6e086f5f30ac46c843b4860646458ba54fbdbf86"
 dependencies = [
  "async-channel",
  "async-recursion",
+ "async-trait",
  "bmart 0.2.6",
  "busrt",
  "eva-common",
@@ -2043,6 +2044,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "once_cell",
  "parking_lot 0.12.1",
  "serde",
  "simple-pool 0.0.14",

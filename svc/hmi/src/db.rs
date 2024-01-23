@@ -61,6 +61,8 @@ pub struct ApiLogFilter {
     pub(crate) user: Option<String>,
     acl: Option<String>,
     method: Option<String>,
+    oid: Option<OID>,
+    note: Option<String>,
     source: Option<String>,
     code: Option<i64>,
     success: Option<bool>,
@@ -93,6 +95,12 @@ impl ApiLogFilter {
         if let Some(ref method) = self.method {
             write!(cond, " AND method={}", quoted_sql_str(method)?)?;
         }
+        if let Some(ref oid) = self.oid {
+            write!(cond, " AND oid={}", quoted_sql_str(oid.as_str())?)?;
+        }
+        if let Some(ref note) = self.note {
+            write!(cond, " AND note={}", quoted_sql_str(note.as_str())?)?;
+        }
         if let Some(ref source) = self.source {
             write!(cond, " AND source={}", quoted_sql_str(source)?)?;
         }
@@ -113,7 +121,7 @@ impl ApiLogFilter {
 pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
     //let pool = DB_POOL.get().unwrap();
     let q = format!(
-        r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params
+        r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params, oid, note
             FROM api_log {} ORDER BY t"#,
         filter.condition()?
     );
@@ -141,23 +149,27 @@ pub async fn api_log_clear(keep: u32) -> EResult<()> {
     Ok(())
 }
 
+#[allow(clippy::similar_names)]
 pub async fn api_log_insert<T>(
     id_str: &str,
     auth: &Auth,
     source: &str,
     method: &str,
     params: Option<T>,
+    oid: Option<OID>,
+    note: Option<&str>,
 ) -> EResult<()>
 where
     T: Serialize,
 {
     let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
+    let oid_str: Option<&str> = oid.as_ref().map(OID::as_str);
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
+                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
             )
             .bind(id_str)
             .bind(i64::try_from(now()).map_err(Error::failed)?)
@@ -171,13 +183,15 @@ where
             } else {
                 None
             })
+            .bind(oid_str)
+            .bind(note)
             .execute(pool)
             .await?;
         }
         AnyKind::Postgres => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
             )
             .bind(id_str)
             .bind(i64::try_from(now()).map_err(Error::failed)?)
@@ -191,6 +205,8 @@ where
             } else {
                 None
             })
+            .bind(oid_str)
+            .bind(note)
             .execute(pool)
             .await?;
         }
@@ -759,6 +775,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             msg VARCHAR(256),
             elapsed REAL,
             params VARCHAR(4096),
+            oid VARCHAR(1024),
             PRIMARY KEY(id)
         )"#,
             )
@@ -839,6 +856,8 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             msg VARCHAR(256),
             elapsed REAL,
             params VARCHAR(4096),
+            oid VARCHAR(1024),
+            note VARCHAR(1024),
             PRIMARY KEY(id)
         )"#,
             )
@@ -894,6 +913,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             msg VARCHAR(256),
             elapsed DOUBLE PRECISION,
             params VARCHAR(4096),
+            oid VARCHAR(1024),
             PRIMARY KEY(id)
         )"#,
             )
@@ -962,7 +982,13 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .await?;
         }
     }
+    let _r = sqlx::query("ALTER TABLE api_log ADD oid VARCHAR(1024)")
+        .execute(&pool)
+        .await;
     let _r = sqlx::query("ALTER TABLE api_log ADD params VARCHAR(4096)")
+        .execute(&pool)
+        .await;
+    let _r = sqlx::query("ALTER TABLE api_log ADD note VARCHAR(1024)")
         .execute(&pool)
         .await;
     DB_POOL

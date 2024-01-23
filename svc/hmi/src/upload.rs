@@ -106,6 +106,7 @@ pub async fn process(
                         kwargs: Some(kwargs),
                         priority,
                         wait,
+                        note: None,
                     };
                     let result = crate::api::method_run(to_value(p)?, &mut aci).await?;
                     if let Some(uri) = rdr {

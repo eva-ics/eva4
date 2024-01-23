@@ -279,22 +279,13 @@ pub async fn remote_pvt<'a>(
                 if node == ".local" || node == crate::SYSTEM_NAME.get().unwrap() {
                     serve_local!(client, uri);
                 }
-                let rpc = crate::RPC.get().unwrap();
-                let timeout = *crate::TIMEOUT.get().unwrap();
-                let res = safe_rpc_call(
-                    rpc,
-                    "eva.core",
-                    "node.get",
-                    pack(&ParamsId { i: node })?.into(),
-                    QoS::Processed,
-                    timeout,
-                )
-                .await?;
+                let res =
+                    eapi_bus::call("eva.core", "node.get", pack(&ParamsId { i: node })?.into())
+                        .await?;
                 let p: NodeGetResponse = unpack(res.payload())?;
                 if let Some(ref svc) = p.svc {
                     let res: eva_sdk::http::Response = unpack(
-                        safe_rpc_call(
-                            rpc,
+                        eapi_bus::call(
                             svc,
                             "rpvt",
                             pack(&ParamsReplRpvt {
@@ -302,8 +293,6 @@ pub async fn remote_pvt<'a>(
                                 node,
                             })?
                             .into(),
-                            QoS::Processed,
-                            timeout,
                         )
                         .await?
                         .payload(),

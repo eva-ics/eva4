@@ -73,8 +73,6 @@ lazy_static! {
     static ref DEFAULT_HISTORY_DB_SVC: OnceCell<String> = <_>::default();
     static ref I18N: OnceCell<lang::Converter> = <_>::default();
     static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref SVC_ID: OnceCell<String> = <_>::default();
     static ref API_FILTER: OnceCell<OID> = <_>::default();
 }
@@ -85,18 +83,6 @@ static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static DEVELOPMEPT_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static DEMO_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
-
-#[inline]
-fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
-    RPC.set(rpc).map_err(|_| Error::core("unable to set RPC"))
-}
-
-#[inline]
-fn set_timeout(timeout: Duration) -> EResult<()> {
-    TIMEOUT
-        .set(timeout)
-        .map_err(|_| Error::core("unable to set timeout"))
-}
 
 #[inline]
 fn buf_size() -> usize {
@@ -264,7 +250,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .map_err(|_| Error::core("Unable to set DEFAULT_DB"))?;
     PUBLIC_API_LOG.store(config.public_api_log, atomic::Ordering::Relaxed);
     BUF_SIZE.store(config.buf_size, atomic::Ordering::Relaxed);
-    set_timeout(timeout)?;
     aaa::set_auth_svcs(config.auth_svcs)?;
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("tpl.reload"));
@@ -276,6 +261,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("user")
             .optional("acl")
             .optional("method")
+            .optional("oid")
+            .optional("note")
             .optional("source")
             .optional("code")
             .optional("success"),
@@ -315,8 +302,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     db::init(&db_path, workers, timeout).await?;
     aaa::start().await?;
     aci::start(config.keep_api_log).await?;
-    set_rpc(rpc.clone())?;
-    let client = rpc.client().clone();
+    eapi_bus::set(rpc.clone(), timeout)?;
+    let client = rpc.client();
     let mut topics = vec![
         format!("{AAA_ACL_TOPIC}#"),
         format!("{AAA_USER_TOPIC}#"),

@@ -2,9 +2,7 @@ use crate::aaa::{self, Auth, Token};
 use crate::aci::ACI;
 use crate::db;
 use crate::ApiKeyId;
-use crate::{RPC, TIMEOUT};
 use base64::Engine as _;
-use busrt::QoS;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::ParamsIdOrListOwned;
 use eva_common::common_payloads::ValueOrList;
@@ -204,23 +202,15 @@ async fn run_api_filter(
     kwargs.insert("aci".to_owned(), to_value(aci)?);
     kwargs.insert("acl".to_owned(), to_value(aci.acl())?);
     let params = eva_common::actions::Params::new_lmacro(None, Some(kwargs));
-    let timeout = *crate::TIMEOUT.get().unwrap();
     let payload = Payload {
         i,
         params,
-        wait: timeout,
+        wait: eapi_bus::timeout(),
     };
     let res: ActionResponse = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "run",
-            pack(&payload)?.into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "run", pack(&payload)?.into())
+            .await?
+            .payload(),
     )?;
     if let Some(code) = res.exitcode {
         if code == 0 {
@@ -288,12 +278,10 @@ async fn login(
         xopts: Option<&'a BTreeMap<String, Value>>,
     }
     let auth_svcs = aaa::auth_svcs();
-    let rpc = RPC.get().unwrap();
-    let timeout = *TIMEOUT.get().unwrap();
     let payload = pack(&AuthPayload {
         login,
         password,
-        timeout: timeout.as_secs_f64(),
+        timeout: eapi_bus::timeout().as_secs_f64(),
         xopts,
     })?;
     let mut aci = ACI::new(
@@ -302,16 +290,7 @@ async fn login(
         source.to_owned(),
     );
     for svc in auth_svcs {
-        match safe_rpc_call(
-            rpc,
-            svc,
-            "auth.user",
-            payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await
-        {
+        match eapi_bus::call(svc, "auth.user", payload.as_slice().into()).await {
             Ok(result) => {
                 if let Some(ti) = token_id {
                     let token = aaa::get_token(ti.try_into()?, ip).await?;
@@ -695,16 +674,9 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Debug).await.log_ef();
     ParamsEmpty::deserialize(params)?;
     let mut info: TestInfo = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "test",
-            busrt::empty_payload!(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "test", busrt::empty_payload!())
+            .await?
+            .payload(),
     )?;
     info.aci.replace(aci);
     info.acl.replace(aci.acl());
@@ -743,35 +715,22 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
     if let Some(token) = aci.token() {
         aci.check_write()?;
         let p = ParamsSetPassword::deserialize(params)?;
-        let rpc = RPC.get().unwrap();
-        let timeout = *TIMEOUT.get().unwrap();
         // verify old password
         let payload = pack(&AuthPayload {
             login: token.user(),
             password: &p.current_password,
-            timeout: timeout.as_secs_f64(),
+            timeout: eapi_bus::timeout().as_secs_f64(),
         })?;
-        safe_rpc_call(
-            rpc,
-            token.auth_svc(),
-            "auth.user",
-            payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await?;
+        eapi_bus::call(token.auth_svc(), "auth.user", payload.as_slice().into()).await?;
         let payload = pack(&PayloadIdPass {
             i: token.user(),
             password: &p.password,
             check_policy: true,
         })?;
-        safe_rpc_call(
-            rpc,
+        eapi_bus::call(
             token.auth_svc(),
             "user.set_password",
             payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
         )
         .await?;
         ok!()
@@ -791,18 +750,13 @@ async fn method_get_profile_field(params: Value, aci: &mut ACI) -> EResult<Value
     if let Some(token) = aci.token() {
         aci.check_write()?;
         let mut p = ParamsProfileField::deserialize(params)?;
-        let rpc = RPC.get().unwrap();
-        let timeout = *TIMEOUT.get().unwrap();
         p.i.replace(token.user());
         let payload = pack(&p)?;
         let result: Value = unpack(
-            safe_rpc_call(
-                rpc,
+            eapi_bus::call(
                 token.auth_svc(),
                 "user.get_profile_field",
                 payload.as_slice().into(),
-                QoS::Processed,
-                timeout,
             )
             .await?
             .payload(),
@@ -826,17 +780,12 @@ async fn method_set_profile_field(params: Value, aci: &mut ACI) -> EResult<Value
     if let Some(token) = aci.token() {
         aci.check_write()?;
         let mut p = ParamsProfileField::deserialize(params)?;
-        let rpc = RPC.get().unwrap();
-        let timeout = *TIMEOUT.get().unwrap();
         p.i.replace(token.user());
         let payload = pack(&p)?;
-        safe_rpc_call(
-            rpc,
+        eapi_bus::call(
             token.auth_svc(),
             "user.set_profile_field",
             payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
         )
         .await?;
         ok!()
@@ -870,16 +819,9 @@ async fn method_item_state(params: Value, aci: &mut ACI) -> EResult<Value> {
         full: p.full,
     };
     let result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "item.state",
-            pack(&payload)?.into(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "item.state", pack(&payload)?.into())
+            .await?
+            .payload(),
     )?;
     Ok(result)
 }
@@ -1018,13 +960,10 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                 compact: true,
             };
             let result: Value = unpack(
-                safe_rpc_call(
-                    RPC.get().unwrap(),
+                eapi_bus::call(
                     &format!("eva.db.{}", p.database),
                     "state_history",
                     pack(&payload)?.into(),
-                    QoS::Processed,
-                    *TIMEOUT.get().unwrap(),
                 )
                 .await?
                 .payload(),
@@ -1063,13 +1002,10 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                         compact: true,
                     };
                     let mut result: CompactStateHistory = unpack(
-                        safe_rpc_call(
-                            RPC.get().unwrap(),
+                        eapi_bus::call(
                             &format!("eva.db.{}", p.database),
                             "state_history",
                             pack(&payload)?.into(),
-                            QoS::Processed,
-                            *TIMEOUT.get().unwrap(),
                         )
                         .await?
                         .payload(),
@@ -1163,13 +1099,10 @@ async fn method_item_state_log(params: Value, aci: &mut ACI) -> EResult<Value> {
         xopts: p.xopts,
     };
     let result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
+        eapi_bus::call(
             &format!("eva.db.{}", p.database),
             "state_log",
             pack(&payload)?.into(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
         )
         .await?
         .payload(),
@@ -1225,16 +1158,9 @@ async fn method_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.acl().require_op(eva_common::acl::Op::Log)?;
     let p = LogGetParams::deserialize(params)?;
     let result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "log.get",
-            pack(&p)?.into(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "log.get", pack(&p)?.into())
+            .await?
+            .payload(),
     )?;
     Ok(result)
 }
@@ -1252,6 +1178,7 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
         priority: Option<u8>,
         #[serde(default, alias = "w")]
         wait: Option<f64>,
+        note: Option<String>,
     }
     #[derive(Serialize)]
     struct PayloadAction {
@@ -1280,22 +1207,23 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_param("i", &p.i)?;
     aci.log_param("status", p.status)?;
     aci.log_param("value", &p.value)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("action", p_f, aci);
-    let mut timeout = *TIMEOUT.get().unwrap();
+    let mut timeout = eapi_bus::timeout();
     if let Some(w) = p.wait {
         timeout += Duration::from_secs_f64(w);
     }
     let mut result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
+        eapi_bus::call(
             "eva.core",
             "action",
             pack(&Into::<PayloadAction>::into(p))?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
         )
         .await?
         .payload(),
@@ -1322,6 +1250,8 @@ pub struct ParamsRun {
     pub priority: Option<u8>,
     #[serde(default, alias = "w")]
     pub wait: Option<f64>,
+    #[serde(skip_serializing)]
+    pub note: Option<String>,
 }
 
 pub async fn method_run(params: Value, aci: &mut ACI) -> EResult<Value> {
@@ -1347,22 +1277,23 @@ pub async fn method_run(params: Value, aci: &mut ACI) -> EResult<Value> {
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsRun::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("run", p_f, aci);
-    let mut timeout = *TIMEOUT.get().unwrap();
+    let mut timeout = eapi_bus::timeout();
     if let Some(w) = p.wait {
         timeout += Duration::from_secs_f64(w);
     }
     let mut result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
+        eapi_bus::call(
             "eva.core",
             "run",
             pack(&Into::<PayloadRun>::into(p))?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
         )
         .await?
         .payload(),
@@ -1386,29 +1317,28 @@ async fn method_action_toggle(params: Value, aci: &mut ACI) -> EResult<Value> {
         priority: Option<u8>,
         #[serde(default, alias = "w")]
         wait: Option<f64>,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsAction::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("action.toggle", p_f, aci);
-    let mut timeout = *TIMEOUT.get().unwrap();
+    let mut timeout = eapi_bus::timeout();
     if let Some(w) = p.wait {
         timeout += Duration::from_secs_f64(w);
     }
     let mut result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "action.toggle",
-            pack(&p)?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "action.toggle", pack(&p)?.into())
+            .await?
+            .payload(),
     )?;
     if let Value::Map(ref mut m) = result {
         let uuid_field = Value::String("uuid".to_owned());
@@ -1434,16 +1364,9 @@ async fn method_action_result(params: Value, aci: &mut ACI) -> EResult<Value> {
     let p = ParamsResult::deserialize(params)?;
     let payload = PayloadResult { u: p.u.parse()? };
     let mut result: BTreeMap<String, Value> = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "action.result",
-            pack(&payload)?.into(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "action.result", pack(&payload)?.into())
+            .await?
+            .payload(),
     )?;
     let uuid_field = "uuid".to_owned();
     if let Some(u) = result.remove(&uuid_field) {
@@ -1467,6 +1390,7 @@ async fn method_action_terminate(params: Value, aci: &mut ACI) -> EResult<Value>
     #[serde(deny_unknown_fields)]
     struct ParamsTerminate {
         u: String,
+        note: Option<String>,
     }
     #[derive(Serialize)]
     struct PayloadTerminate {
@@ -1475,21 +1399,17 @@ async fn method_action_terminate(params: Value, aci: &mut ACI) -> EResult<Value>
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsTerminate::deserialize(params)?;
     aci.log_param("u", &p.u)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
     aci.log_request(log::Level::Warn).await.log_ef();
     aci.check_write()?;
     run_api_filter!("action.terminate", p_f, aci);
     let payload = PayloadTerminate { u: p.u.parse()? };
     let info: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "action.result",
-            pack(&payload)?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "action.result", pack(&payload)?.into())
+            .await?
+            .payload(),
     )?;
     if let Value::Map(ref m) = info {
         let oid_c = m
@@ -1502,15 +1422,7 @@ async fn method_action_terminate(params: Value, aci: &mut ACI) -> EResult<Value>
             return Err(Error::invalid_data("invalid OID in the result"));
         }
     }
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "action.terminate",
-        pack(&payload)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "action.terminate", pack(&payload)?.into()).await?;
     ok!()
 }
 
@@ -1519,23 +1431,21 @@ async fn method_action_kill(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsKill {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsKill::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Warn).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("action.kill", p_f, aci);
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "action.kill",
-        pack(&p)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "action.kill", pack(&p)?.into()).await?;
     ok!()
 }
 
@@ -1552,25 +1462,23 @@ async fn method_lvar_set(params: Value, aci: &mut ACI) -> EResult<Value> {
             skip_serializing_if = "ValueOptionOwned::is_none"
         )]
         value: ValueOptionOwned,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsSet::deserialize(params)?;
     aci.log_param("i", &p.i)?;
     aci.log_param("status", p.status)?;
     aci.log_param("value", &p.value)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("lvar.set", p_f, aci);
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "lvar.set",
-        pack(&p)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "lvar.set", pack(&p)?.into()).await?;
     ok!()
 }
 
@@ -1579,23 +1487,21 @@ async fn method_lvar_reset(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsReset {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsReset::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("lvar.reset", p_f, aci);
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "lvar.reset",
-        pack(&p)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "lvar.reset", pack(&p)?.into()).await?;
     ok!()
 }
 
@@ -1604,23 +1510,21 @@ async fn method_lvar_clear(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsClear {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsClear::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("lvar.clear", p_f, aci);
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "lvar.clear",
-        pack(&p)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "lvar.clear", pack(&p)?.into()).await?;
     ok!()
 }
 
@@ -1629,23 +1533,21 @@ async fn method_lvar_toggle(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsToggle {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsToggle::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("lvar.toggle", p_f, aci);
-    safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "lvar.toggle",
-        pack(&p)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    eapi_bus::call("eva.core", "lvar.toggle", pack(&p)?.into()).await?;
     ok!()
 }
 
@@ -1654,25 +1556,24 @@ async fn method_lvar_incr(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsIncr {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsIncr::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     aci.acl().require_item_write(&p.i)?;
     run_api_filter!("lvar.incr", p_f, aci);
     let result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "lvar.incr",
-            pack(&p)?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "lvar.incr", pack(&p)?.into())
+            .await?
+            .payload(),
     )?;
     Ok(result)
 }
@@ -1682,25 +1583,24 @@ async fn method_lvar_decr(params: Value, aci: &mut ACI) -> EResult<Value> {
     #[serde(deny_unknown_fields)]
     struct ParamsDecr {
         i: OID,
+        #[serde(skip_serializing)]
+        note: Option<String>,
     }
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsDecr::deserialize(params)?;
     aci.log_param("i", &p.i)?;
+    if let Some(n) = p.note.as_ref() {
+        aci.log_note(n);
+    }
+    aci.log_oid(p.i.clone());
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     run_api_filter!("lvar.decr", p_f, aci);
     aci.acl().require_item_write(&p.i)?;
     let result: Value = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
-            "eva.core",
-            "lvar.decr",
-            pack(&p)?.into(),
-            QoS::RealtimeProcessed,
-            *TIMEOUT.get().unwrap(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "lvar.decr", pack(&p)?.into())
+            .await?
+            .payload(),
     )?;
     Ok(result)
 }
@@ -1725,15 +1625,7 @@ async fn method_bus_call(
     } else {
         pack(&params)?.into()
     };
-    let res = safe_rpc_call(
-        RPC.get().unwrap(),
-        target,
-        method,
-        payload,
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    let res = eapi_bus::call(target, method, payload).await?;
     let payload = res.payload();
     if payload.is_empty() {
         Ok(Value::Unit)
@@ -1759,15 +1651,7 @@ async fn method_x_call(target: &str, method: &str, params: Value, aci: &mut ACI)
         aci,
         acl: aci.acl(),
     };
-    let res = safe_rpc_call(
-        RPC.get().unwrap(),
-        target,
-        "x",
-        pack(&payload)?.into(),
-        QoS::RealtimeProcessed,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    let res = eapi_bus::call(target, "x", pack(&payload)?.into()).await?;
     let payload = res.payload();
     if payload.is_empty() {
         Ok(Value::Unit)
@@ -1941,16 +1825,13 @@ async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Debug).await.log_ef();
     ParamsEmpty::deserialize(params)?;
     let svc_list: Vec<SvcId> = unpack(
-        safe_rpc_call(
-            RPC.get().unwrap(),
+        eapi_bus::call(
             "eva.core",
             "svc.list",
             pack(&Params {
                 filter: "^eva\\.db\\..*$",
             })?
             .into(),
-            QoS::Processed,
-            *TIMEOUT.get().unwrap(),
         )
         .await?
         .payload(),
@@ -2012,7 +1893,7 @@ async fn method_pvt_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     struct Payload {
         content: String,
     }
-    aci.log_request(log::Level::Info).await.log_ef();
+    aci.log_request(log::Level::Debug).await.log_ef();
     let p = Params::deserialize(params)?;
     let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Read)?;
     let content = match tokio::fs::read_to_string(path).await {

@@ -193,23 +193,12 @@ pub async fn auth_key(key: &str) -> EResult<Option<(Acl, &'static str)>> {
         timeout: f64,
     }
     let auth_svcs = auth_svcs();
-    let rpc = crate::RPC.get().unwrap();
-    let timeout = *crate::TIMEOUT.get().unwrap();
     let payload = pack(&AuthPayload {
         key,
-        timeout: timeout.as_secs_f64(),
+        timeout: eapi_bus::timeout().as_secs_f64(),
     })?;
     for svc in auth_svcs {
-        match safe_rpc_call(
-            rpc,
-            svc,
-            "auth.key",
-            payload.as_slice().into(),
-            QoS::Processed,
-            timeout,
-        )
-        .await
-        {
+        match eapi_bus::call(svc, "auth.key", payload.as_slice().into()).await {
             Ok(result) => return Ok(Some((unpack(result.payload())?, svc))),
             Err(e) => {
                 trace!("auth service returned an error: {} {}", svc, e);

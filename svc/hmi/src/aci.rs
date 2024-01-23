@@ -38,6 +38,8 @@ pub struct ApiCallInfo {
     msg: Option<String>,
     elapsed: Option<f64>,
     params: Option<Value>,
+    oid: Option<OID>,
+    note: Option<String>,
     t: i64,
 }
 
@@ -53,6 +55,7 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
             let dt_utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(t, 0), Utc);
             let dt: DateTime<Local> = DateTime::from(dt_utc);
             let params: Option<String> = row.try_get("params")?;
+            let oid_str: Option<String> = row.try_get("oid")?;
             let call_info = ApiCallInfo {
                 id: row.try_get("id")?,
                 dt: dt.to_rfc3339_opts(SecondsFormat::Secs, false),
@@ -74,6 +77,8 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
                 } else {
                     None
                 },
+                oid: oid_str.and_then(|v| v.parse().ok()),
+                note: row.try_get("note")?,
                 t,
             };
             result.push(call_info);
@@ -106,6 +111,8 @@ pub struct ACI {
     source: String,
     method: String,
     params: Option<BTreeMap<String, Value>>,
+    oid: Option<OID>,
+    note: Option<String>,
     log_level: log::Level,
     t: Instant,
 }
@@ -142,6 +149,8 @@ impl ACI {
             source,
             method: method.to_owned(),
             params: None,
+            oid: None,
+            note: None,
             log_level: log::Level::Info,
             t: Instant::now(),
         }
@@ -190,6 +199,14 @@ impl ACI {
             Err(Error::access("Session is in the read-only mode"))
         }
     }
+    #[inline]
+    pub fn log_oid(&mut self, oid: OID) {
+        self.oid.replace(oid);
+    }
+    #[inline]
+    pub fn log_note(&mut self, note: &str) {
+        self.note.replace(note.to_owned());
+    }
     pub fn log_param<T>(&mut self, name: &str, val: T) -> EResult<()>
     where
         T: Serialize,
@@ -220,6 +237,8 @@ impl ACI {
                 &self.source,
                 &self.method,
                 self.params.take(),
+                self.oid.take(),
+                self.note.as_deref(),
             )
             .await
             {
@@ -237,9 +256,12 @@ impl ACI {
             self.id,
             elapsed
         );
-        if api_log_enabled() && self.log_level <= log::Level::Info {
-            if let Err(e) = db::api_log_mark_success(&self.id_str, elapsed).await {
-                error!("db log mark success error: {}", e);
+        if self.log_level <= log::Level::Info {
+            self.do_accounting(None).await;
+            if api_log_enabled() {
+                if let Err(e) = db::api_log_mark_success(&self.id_str, elapsed).await {
+                    error!("db log mark success error: {}", e);
+                }
             }
         }
     }
@@ -247,11 +269,28 @@ impl ACI {
         #[allow(clippy::cast_precision_loss)]
         let elapsed = self.t.elapsed().as_millis() as f64 / 1000.0;
         error!("API request {} failed. {} ({} sec)", self.id, err, elapsed);
-        if api_log_enabled() && self.log_level <= log::Level::Info {
-            if let Err(e) = db::api_log_mark_error(&self.id_str, elapsed, err).await {
-                error!("db log mark err error: {}", e);
+        if self.log_level <= log::Level::Info {
+            self.do_accounting(Some(err)).await;
+            if api_log_enabled() {
+                if let Err(e) = db::api_log_mark_error(&self.id_str, elapsed, err).await {
+                    error!("db log mark err error: {}", e);
+                }
             }
         }
+    }
+    async fn do_accounting(&self, err: Option<&Error>) {
+        let mut ev = eva_sdk::eapi_bus::AccountingEvent::new();
+        ev.u = self.user();
+        ev.src = Some(&self.source);
+        ev.subj = Some(&self.method);
+        ev.oid = self.oid.clone();
+        ev.data = to_value(&self.params).unwrap_or_default();
+        ev.note = self.note.as_deref();
+        if let Some(e) = err {
+            ev.code = e.code();
+            ev.err = e.message().map(ToOwned::to_owned);
+        }
+        ev.report().await.log_ef();
     }
     #[inline]
     pub fn acl(&self) -> &Acl {

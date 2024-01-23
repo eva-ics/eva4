@@ -250,16 +250,9 @@ impl WsTx {
                 exclude: deny,
             };
             let states: Vec<FullRemoteItemState> = unpack(
-                safe_rpc_call(
-                    crate::RPC.get().unwrap(),
-                    "eva.core",
-                    "item.state",
-                    pack(&payload)?.into(),
-                    QoS::Processed,
-                    *crate::TIMEOUT.get().unwrap(),
-                )
-                .await?
-                .payload(),
+                eapi_bus::call("eva.core", "item.state", pack(&payload)?.into())
+                    .await?
+                    .payload(),
             )?;
             for state in states {
                 let ws_repl = WsRepl(Arc::new(state.oid.clone()), state.ieid);
