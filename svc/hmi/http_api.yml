@@ -493,6 +493,10 @@ action:
       typ: f64
       des: Wait max seconds to finish
       req: false
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   ret: Current result payload
   http_req:
     i: unit:tests/door
@@ -537,6 +541,10 @@ action.toggle:
     - nam: wait
       typ: f64
       des: Wait max seconds to finish
+      req: false
+    - nam: note
+      typ: String
+      des: a custom note for accounting
       req: false
   ret: Current result payload
   http_req:
@@ -609,6 +617,10 @@ action.terminate:
       typ: String
       des: Action UUID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     u: "b37f15f0-410c-4ded-93d0-2ce744c68e08"
 action.kill:
@@ -618,6 +630,10 @@ action.kill:
       typ: String
       des: Item OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     i: unit:tests/door
 run:
@@ -642,6 +658,10 @@ run:
     - nam: wait
       typ: f64
       des: Wait max seconds to finish
+      req: false
+    - nam: note
+      typ: String
+      des: a custom note for accounting
       req: false
   ret: Current result payload
   http_req:
@@ -693,6 +713,10 @@ lvar.set:
       typ: Any
       des: Desired value
       req: false
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     i: lvar:tests/v1
     status: 1
@@ -704,6 +728,10 @@ lvar.reset:
       typ: String
       des: Lvar OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     i: lvar:tests/v1
 lvar.clear:
@@ -713,6 +741,10 @@ lvar.clear:
       typ: String
       des: Lvar OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     i: lvar:tests/v1
 lvar.toggle:
@@ -722,6 +754,10 @@ lvar.toggle:
       typ: String
       des: Lvar OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   http_req:
     i: lvar:tests/v1
 lvar.incr:
@@ -731,6 +767,10 @@ lvar.incr:
       typ: String
       des: Lvar OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   ret: New lvar value
   http_req:
     i: lvar:tests/v1
@@ -747,6 +787,10 @@ lvar.decr:
       typ: String
       des: Lvar OID
       req: true
+    - nam: note
+      typ: String
+      des: a custom note for accounting
+      req: false
   ret: New lvar value
   http_req:
     i: lvar:tests/v1
