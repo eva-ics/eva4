@@ -236,8 +236,8 @@ impl ACI {
                 &self.auth,
                 &self.source,
                 &self.method,
-                self.params.take(),
-                self.oid.take(),
+                self.params.clone(),
+                self.oid.clone(),
                 self.note.as_deref(),
             )
             .await
@@ -284,7 +284,9 @@ impl ACI {
         ev.src = Some(&self.source);
         ev.subj = Some(&self.method);
         ev.oid = self.oid.clone();
-        ev.data = to_value(&self.params).unwrap_or_default();
+        if let Some(ref p) = self.params {
+            ev.data = to_value(p).unwrap_or_default();
+        }
         ev.note = self.note.as_deref();
         if let Some(e) = err {
             ev.code = e.code();

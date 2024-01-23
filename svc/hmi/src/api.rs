@@ -1205,7 +1205,9 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
         warn!("status field in actions is ignored and deprecated. remove the field from API call payloads");
     }
     aci.log_param("i", &p.i)?;
-    aci.log_param("status", p.status)?;
+    if let Some(status) = p.status {
+        aci.log_param("status", status)?;
+    }
     aci.log_param("value", &p.value)?;
     if let Some(n) = p.note.as_ref() {
         aci.log_note(n);
