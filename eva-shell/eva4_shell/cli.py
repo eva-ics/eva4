@@ -778,7 +778,7 @@ class CLI:
                     elapsed = '{:.6f}'.format(max(times) - min(times))
                 else:
                     elapsed = ''
-                t = r.get('time', {}).get('accepted')
+                t = r.get('time', {}).get('created')
                 if t:
                     t = datetime.fromtimestamp(t, common.TZ).isoformat()
                 d = OrderedDict()
