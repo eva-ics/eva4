@@ -280,7 +280,7 @@ impl ACI {
     }
     async fn do_accounting(&self, err: Option<&Error>) {
         let mut ev = eva_sdk::eapi_bus::AccountingEvent::new();
-        ev.u = self.user();
+        ev.u = self.auth.user();
         ev.src = Some(&self.source);
         ev.subj = Some(&self.method);
         ev.oid = self.oid.clone();
