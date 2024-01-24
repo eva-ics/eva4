@@ -42,8 +42,17 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Default)]
+struct AccountingEvent<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    subj: Option<&'a str>,
+    #[serde(default)]
+    data: Value,
+}
+
 err_logger!();
 
+const ACCOUNTING_TOPIC: &str = "AAA/REPORT";
 const NODE_CHECKER_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Lvar operations
@@ -275,6 +284,8 @@ pub struct Core {
     )]
     active: Arc<atomic::AtomicBool>,
     #[serde(skip)]
+    running: Arc<atomic::AtomicBool>,
+    #[serde(skip)]
     files_to_remove: Vec<String>, // pid files, sockets, etc
     #[serde(skip)]
     inventory: Arc<RwLock<Inventory>>,
@@ -342,7 +353,7 @@ pub fn start_node_checker(core: Arc<Core>) {
 }
 
 macro_rules! handle_term_signal {
-    ($kind: expr, $active: expr, $can_log: expr) => {
+    ($kind: expr, $running: expr, $can_log: expr) => {
         tokio::spawn(async move {
             trace!("starting handler for {:?}", $kind);
             loop {
@@ -360,7 +371,7 @@ macro_rules! handle_term_signal {
                 } else {
                     crate::logs::disable_console_log();
                 }
-                $active.store(false, atomic::Ordering::SeqCst);
+                $running.store(false, atomic::Ordering::Relaxed);
             }
         });
     };
@@ -444,6 +455,7 @@ impl Core {
             time: (),
             uptime: Instant::now(),
             active: Arc::new(atomic::AtomicBool::new(false)),
+            running: Arc::new(atomic::AtomicBool::new(false)),
             files_to_remove: <_>::default(),
             inventory: <_>::default(),
             product_code: crate::PRODUCT_CODE.to_owned(),
@@ -507,6 +519,52 @@ impl Core {
             }
         }
         Ok(())
+    }
+    async fn announce_startup(&self) {
+        #[derive(Serialize)]
+        struct Info<'a> {
+            version: &'a str,
+            build: u64,
+            boot_id: u64,
+            mode: Mode,
+        }
+        let Ok(data) = to_value(&Info {
+            version: &self.version,
+            build: self.build,
+            boot_id: self.boot_id,
+            mode: self.mode,
+        }) else {
+            return;
+        };
+        let rpc = self.rpc.get().unwrap();
+        let Ok(payload) = pack(&AccountingEvent {
+            subj: Some("started"),
+            data,
+        }) else {
+            return;
+        };
+        let _ = rpc
+            .client()
+            .lock()
+            .await
+            .publish(ACCOUNTING_TOPIC, payload.into(), QoS::No)
+            .await;
+    }
+    async fn announce_terminating(&self) {
+        let rpc = self.rpc.get().unwrap();
+        let Ok(payload) = pack(&AccountingEvent {
+            subj: Some("terminating"),
+            ..Default::default()
+        }) else {
+            return;
+        };
+        let _ = rpc
+            .client()
+            .lock()
+            .await
+            .publish(ACCOUNTING_TOPIC, payload.into(), QoS::Processed)
+            .await;
+        tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }
     #[inline]
     fn generate_ieid(&self) -> IEID {
@@ -1696,7 +1754,7 @@ impl Core {
     }
     #[inline]
     pub fn is_active(&self) -> bool {
-        self.active.load(atomic::Ordering::SeqCst)
+        self.active.load(atomic::Ordering::Relaxed)
     }
     pub fn set_rpc(&self, rpc: Arc<RpcClient>) -> EResult<()> {
         self.rpc
@@ -1773,17 +1831,17 @@ impl Core {
             }
         };
         if handle_cc {
-            let active = self.active.clone();
+            let running = self.running.clone();
             handle_term_signal!(
                 SignalKind::interrupt(),
-                active,
+                running,
                 atty::is(Stream::Stdout) && atty::is(Stream::Stderr)
             );
         } else {
             ignore_term_signal!(SignalKind::interrupt());
         }
-        let active = self.active.clone();
-        handle_term_signal!(SignalKind::terminate(), active, true);
+        let running = self.running.clone();
+        handle_term_signal!(SignalKind::terminate(), running, true);
     }
     #[inline]
     pub fn add_file_to_remove(&mut self, fname: &str) {
@@ -1826,10 +1884,12 @@ impl Core {
     #[inline]
     pub async fn mark_loaded(&self) {
         debug!("marking the core loaded");
-        self.active.store(true, atomic::Ordering::SeqCst);
+        self.running.store(true, atomic::Ordering::Relaxed);
+        self.active.store(true, atomic::Ordering::Relaxed);
         self.announce_core_state(&eva_common::services::ServiceStatusBroadcastEvent::ready())
             .await
             .log_ef();
+        self.announce_startup().await;
     }
     pub async fn set_reload_flag(&self) -> EResult<()> {
         let mut f = tokio::fs::OpenOptions::new()
@@ -1855,7 +1915,7 @@ impl Core {
     }
     #[inline]
     pub fn shutdown(&self) {
-        self.active.store(false, atomic::Ordering::SeqCst);
+        self.running.store(false, atomic::Ordering::Relaxed);
     }
     /// # Panics
     ///
@@ -1869,9 +1929,11 @@ impl Core {
     pub async fn block(&self, full: bool) {
         trace!("blocking until terminated");
         info!("{} ready ({} mode)", self.system_name, self.mode);
-        while self.active.load(atomic::Ordering::SeqCst) {
+        while self.running.load(atomic::Ordering::Relaxed) {
             sleep(SLEEP_STEP).await;
         }
+        self.announce_terminating().await;
+        self.active.store(false, atomic::Ordering::Relaxed);
         if let Some(fut) = self.node_checker_fut.lock().unwrap().as_ref() {
             fut.abort();
         }
