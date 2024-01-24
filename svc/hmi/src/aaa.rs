@@ -362,6 +362,18 @@ pub async fn create_token(
 
 pub async fn destroy_token(token_id: &TokenId) -> EResult<()> {
     trace!("destroying token {}", token_id);
+    if let Ok(Some(token)) = db::load_token(token_id.clone()).await {
+        let mut ev = eva_sdk::eapi_bus::AccountingEvent::new();
+        ev.u = Some(token.user());
+        let mut ip_str: Option<String> = None;
+        if let Some(ip) = token.ip() {
+            ip_str.replace(ip.to_string());
+            ev.src = ip_str.as_deref();
+        }
+        ev.subj = Some("logout");
+        ev.oid = None;
+        ev.report().await.log_ef();
+    }
     db::delete_token(token_id).await?;
     let websockets = TOKEN_WEBSOCKETS.lock().remove(token_id);
     if let Some(sockets) = websockets {
