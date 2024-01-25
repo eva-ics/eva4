@@ -13,7 +13,7 @@ async-trait = { version = "0.1.51" }
 async-channel = "1.7.1"
 submap = { version = "0.2.5" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.3.23", features = [
+eva-common = { version = "0.3.27", features = [
         "events", "workers", "acl", "dataconv", "time",
         "db", "hyper-tools", "common-payloads"] }
 log = "0.4.14"

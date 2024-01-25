@@ -1529,15 +1529,16 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.23"
+version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1dfa239f3f112934ce3b4b415ab7c5f1210957d6e961bfa70115fe492ca1fae"
+checksum = "e50ed768a210b913f5c445eaa0eaf2241f4a35320a53b4e707b218fe1b4a0262"
 dependencies = [
  "async-channel",
  "async-recursion",
  "axum",
  "bmart 0.2.6",
  "busrt",
+ "chrono",
  "dateparser",
  "hex 0.4.3",
  "hyper",

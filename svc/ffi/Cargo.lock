@@ -487,14 +487,15 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.17"
+version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3293de4e85bc6f3036cf1f99d2638edf3a3fc61f1adb821b50566bd12b117b7"
+checksum = "e50ed768a210b913f5c445eaa0eaf2241f4a35320a53b4e707b218fe1b4a0262"
 dependencies = [
  "async-channel",
  "async-recursion",
  "bmart",
  "busrt",
+ "chrono",
  "dateparser",
  "ipnetwork",
  "lazy_static",
@@ -503,6 +504,7 @@ dependencies = [
  "once_cell",
  "openssl",
  "ordered-float",
+ "parking_lot",
  "rmp-serde",
  "rust_decimal",
  "serde",
