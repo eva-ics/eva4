@@ -206,6 +206,7 @@ impl ACI {
     #[inline]
     pub fn log_note(&mut self, note: &str) {
         self.note.replace(note.to_owned());
+        let _ = self.log_param("note", note);
     }
     pub fn log_param<T>(&mut self, name: &str, val: T) -> EResult<()>
     where
