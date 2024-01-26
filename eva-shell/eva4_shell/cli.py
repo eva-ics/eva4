@@ -1084,6 +1084,43 @@ class CLI:
         ]
         print_result(data, cols=cols)
 
+    def accounting_query(self, accounting_svc, time_start, time_end, time_zone,
+                         node, user, source, svc, subject, oid, note, code, err,
+                         full):
+        payload = {}
+        if time_start is not None:
+            payload['t_start'] = time_start
+        if time_end is not None:
+            payload['t_end'] = time_end
+        if node is not None:
+            payload['node'] = node
+        if user is not None:
+            payload['u'] = user
+        if source is not None:
+            payload['src'] = source
+        if svc is not None:
+            payload['svc'] = svc
+        if subject is not None:
+            payload['subj'] = subject
+        if oid is not None:
+            payload['oid'] = oid
+        if note is not None:
+            payload['note'] = note
+        if code is not None:
+            payload['code'] = code
+        if err is not None:
+            payload['err'] = err
+        data = call_rpc('query', payload, target=accounting_svc)
+        cols = [
+            'id|n=id|f=uuid_bytes',
+            't|n=time|f=time_sec{}'.format(f':{time_zone}' if time_zone else ''),
+            'node', 'u|n=user', 'src|n=source', 'svc', 'subj|n=subject', 'oid',
+            'note', 'code', 'err'
+        ]
+        if full:
+            cols.append('data')
+        print_result(data, cols=cols)
+
     def item_watch(self, i, interval, rows, prop, chart_type):
         from . import charts
         import datetime
@@ -1187,7 +1224,7 @@ class CLI:
             return
         pass
 
-    def lvar_set(self, i, status, value, p) :
+    def lvar_set(self, i, status, value, p):
         params = dict(i=i)
         if status is not None:
             params['status'] = status

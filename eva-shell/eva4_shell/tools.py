@@ -319,12 +319,24 @@ def print_result(data, need_header=True, name_value=False, cols=None):
                                         val = datetime.fromtimestamp(
                                             val,
                                             pytz.timezone(zone)).isoformat()
+                                    if fmt == 'time_sec':
+                                        val = datetime.fromtimestamp(
+                                            round(val), common.TZ).isoformat()
+                                    elif fmt.startswith('time_sec:'):
+                                        zone = fmt.split(':', 1)[-1]
+                                        import pytz
+                                        val = datetime.fromtimestamp(
+                                            round(val),
+                                            pytz.timezone(zone)).isoformat()
                                     elif fmt.startswith('round:'):
                                         digits = int(fmt.split(':', 1)[-1])
                                         if digits > 0:
                                             val = round(val, digits)
                                         else:
                                             val = int(val)
+                                    elif fmt == 'uuid_bytes':
+                                        import uuid
+                                        val = str(uuid.UUID(bytes=val))
                             except:
                                 pass
                         if val is not None:

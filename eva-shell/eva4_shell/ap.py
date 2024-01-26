@@ -17,6 +17,7 @@ from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
 from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
+from .client import DEFAULT_ACCOUNTING_SERVICE
 
 DEFAULT_RPC_ERROR_MESSAGE = {
     -32700: 'parse error',
@@ -200,6 +201,35 @@ def append_broker_cli(root_sp):
     sp.add_parser('test', help='test broker')
     sp.add_parser('info', help='broker info')
     sp.add_parser('stats', help='broker stats')
+
+
+def append_accounting_cli(root_sp):
+    ap = root_sp.add_parser('accounting', help='accounting commands')
+    sp = ap.add_subparsers(dest='_subc', help='sub command')
+
+    p = sp.add_parser('query', help='query accounting events')
+    p.add_argument(
+        '-a',
+        '--accounting-svc',
+        help=f'accounting service (default: {DEFAULT_ACCOUNTING_SERVICE})',
+        metavar='SVC',
+        default=DEFAULT_ACCOUNTING_SERVICE).completer = ComplSvc('aaa')
+    p.add_argument('-y', '--full', action='store_true')
+    p.add_argument('-s', '--time-start', metavar='TIME', help='start time')
+    p.add_argument('-e', '--time-end', metavar='TIME', help='end time')
+    p.add_argument('-z',
+                   '--time-zone',
+                   metavar='ZONE',
+                   help='time zone (pytz, e.g. UTC or Europe/Prague)')
+    p.add_argument('--node', metavar='NODE').completer = ComplNode()
+    p.add_argument('--user', metavar='USER')
+    p.add_argument('--source', metavar='SRC')
+    p.add_argument('--svc', metavar='SVC').completer = ComplSvc()
+    p.add_argument('--subject', metavar='SUBJECT')
+    p.add_argument('--oid', metavar='OID').completer = ComplOID('state')
+    p.add_argument('--note', metavar='NOTE')
+    p.add_argument('--code', metavar='CODE', type=int)
+    p.add_argument('--err', metavar='ERR')
 
 
 def append_svc_cli(root_sp):
@@ -1297,6 +1327,7 @@ def init_ap():
 
     ap.sections = {
         'action': [],
+        'accounting': [],
         'broker': [],
         'item': [],
         'lvar': [],
@@ -1329,6 +1360,7 @@ def init_ap():
 
     append_action_cli(sp)
     append_acl_cli(sp)
+    append_accounting_cli(sp)
     append_broker_cli(sp)
     append_item_cli(sp)
     append_key_cli(sp)
