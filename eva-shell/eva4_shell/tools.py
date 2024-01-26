@@ -240,11 +240,21 @@ def print_action_result(result):
     print()
 
 
+def convert_bytes(data):
+    if isinstance(data, bytes):
+        return list(data)
+    if isinstance(data, list):
+        return [convert_bytes(item) for item in data]
+    if isinstance(data, dict):
+        return {key: convert_bytes(value) for key, value in data.items()}
+    return data
+
+
 def print_result(data, need_header=True, name_value=False, cols=None):
     if current_command.json:
         from pygments import highlight, lexers, formatters
         import json
-        j = json.dumps(data, indent=4, sort_keys=True)
+        j = json.dumps(convert_bytes(data), indent=4, sort_keys=True)
         if can_colorize():
             j = highlight(j, lexers.JsonLexer(), formatters.TerminalFormatter())
         print(j)
