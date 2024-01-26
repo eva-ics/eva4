@@ -232,7 +232,7 @@ done
 cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${FFI_TARGET}/release/eva-ffi" svc/ || exit 1
 
 for svc in eva-aaa-msad \
-  eva-kioskman \
+  eva-kioskman eva-aaa-accounting \
   eva-zfrepl; do
   cp -rvf "../eva4-enterprise/eva4-esvc/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
