@@ -97,6 +97,42 @@ def rpc_call(method=None, _target='eva.core', _timeout=None, **kwargs):
         return True
 
 
+def report_accounting_event(u=None,
+                            src=None,
+                            svc=None,
+                            subj=None,
+                            oid=None,
+                            data=None,
+                            note=None,
+                            code=None,
+                            err=None):
+    """
+    Reports an event into accounting system
+
+    Optional:
+        u: user account name (string)
+        src: source (e.g. IP address)
+        svc: service ID (default: sender)
+        subj: event subject
+        oid: affected item OID
+        data: a structure with any additional information
+        note: a custom note (string)
+        code: error code (0 = success)
+        err: error message
+    """
+    service.report_accounting_event(
+        u=u,
+        src=src,
+        svc=svc,
+        subj=subj,
+        oid=oid,
+        data=data,
+        note=note,
+        code=code,
+        err=err,
+    )
+
+
 def shared(name, default=None):
     """
     Gets value of the shared variable
@@ -860,4 +896,5 @@ api_globals = {
     'date': date,
     'ls': ls,
     'rpc_call': rpc_call,
+    'report_accounting_event': report_accounting_event
 }
