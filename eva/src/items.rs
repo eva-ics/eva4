@@ -1197,7 +1197,7 @@ fn append_item_rec(
 ) -> EResult<()> {
     if let Some(chunk) = sp.next() {
         if tree.members_wildcard.contains_key(&item.oid) && !replace {
-            return Err(Error::busy(format!(
+            return Err(Error::duplicate(format!(
                 "item {} is already registered",
                 item.oid
             )));
@@ -1219,7 +1219,7 @@ fn append_item_rec(
             Ok(())
         }
     } else if tree.members.contains_key(&item.oid) && !replace {
-        Err(Error::busy(format!(
+        Err(Error::duplicate(format!(
             "item {} is already registered",
             item.oid
         )))
