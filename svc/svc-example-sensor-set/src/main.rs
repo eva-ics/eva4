@@ -4,17 +4,13 @@ use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_sdk::hmi::XParamsOwned;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::sync::Arc;
 
 err_logger!();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Sensor state manipulations";
-
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -32,7 +28,7 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
-            // handle x-calls from HMI
+            // handle extra calls from HMI
             "x" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
@@ -41,6 +37,7 @@ impl RpcHandlers for Handlers {
                     match xp.method() {
                         "set" => {
                             #[derive(Deserialize)]
+                            #[serde(deny_unknown_fields)]
                             struct Params {
                                 i: OID,
                                 status: ItemStatus,
@@ -63,13 +60,7 @@ impl RpcHandlers for Handlers {
                             let mut event = RawStateEventOwned::new0(params.status);
                             event.value = params.value;
                             let topic = format!("{}{}", RAW_STATE_TOPIC, params.i.as_path());
-                            RPC.get()
-                                .unwrap()
-                                .client()
-                                .lock()
-                                .await
-                                .publish(&topic, pack(&event)?.into(), QoS::Processed)
-                                .await?;
+                            eapi_bus::publish(&topic, pack(&event)?.into()).await?;
                             Ok(None)
                         }
                         _ => Err(RpcError::method(None)),
@@ -79,8 +70,6 @@ impl RpcHandlers for Handlers {
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
-    async fn handle_notification(&self, _event: RpcEvent) {}
-    async fn handle_frame(&self, _frame_: Frame) {}
 }
 
 // The service configuration must be empty
@@ -97,15 +86,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
     )?;
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     let rpc = initial.init_rpc(Handlers { info }).await?;
-    RPC.set(rpc.clone())
-        .map_err(|_| Error::core("Unable to set RPC"))?;
+    let timeout = initial.timeout();
+    eapi_bus::set(rpc, timeout)?;
     initial.drop_privileges()?;
-    let client = rpc.client().clone();
-    svc_init_logs(&initial, client.clone())?;
+    eapi_bus::init_logs(&initial)?;
     svc_start_signal_handlers();
-    svc_mark_ready(&client).await?;
+    eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block(&rpc).await;
-    svc_mark_terminating(&client).await?;
+    eapi_bus::block().await;
+    eapi_bus::mark_terminating().await?;
     Ok(())
 }

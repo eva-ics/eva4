@@ -17,14 +17,13 @@ use eva_sdk::prelude::*;
 use eva_sdk::types::State;
 // it is recommended to keep EVA ICS services simple and small and make majority of shared
 // variables as static ones, so OnceCell (and/or lazy_static) is here
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
 // serde, used to process bus structures
 use serde::{Deserialize, Serialize};
 // and a few others
 use std::collections::HashMap;
 use std::sync::atomic;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::Mutex;
 
 // this macro alters Result with additional methods:
 // log_ef() - log error and forget the result
@@ -51,10 +50,6 @@ const HYSTERESIS: f64 = 2.0;
 //
 // eva svc call eva.svc.alarm_temp get_counter
 static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
-// Bus RPC, make it global
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-// Service timeout, make it global as well
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
 
 // It is recommended to use Jemalloc, which is found to provide the best functionality in
 // industrial automation tasks. But tasks may vary, so let us keep a way to switch back to the
@@ -106,8 +101,6 @@ impl RpcHandlers for Handlers {
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
-    // there are no BUS/RT notifications expected, so the method is empty
-    async fn handle_notification(&self, _event: RpcEvent) {}
     // handle BUS/RT frames
     async fn handle_frame(&self, frame: Frame) {
         // The following macro automatically makes function return if the service is not fully
@@ -172,17 +165,7 @@ impl Handlers {
         };
         if let Some(letter) = letter_c {
             COUNTER.fetch_add(1, atomic::Ordering::SeqCst);
-            // EVA ICS SDK provides "safe_rpc_call" method, which works on top of BUS/RT
-            // RpcClient::call, automatically aborting calls in case of timeouts
-            safe_rpc_call(
-                RPC.get().unwrap(),
-                &self.mailer_svc,
-                "send",
-                pack(&letter)?.into(),
-                QoS::Processed,
-                *TIMEOUT.get().unwrap(),
-            )
-            .await?;
+            eapi_bus::call(&self.mailer_svc, "send", pack(&letter)?.into()).await?;
         }
         Ok(())
     }
@@ -247,35 +230,28 @@ async fn main(mut initial: Initial) -> EResult<()> {
             threshold: config.threshold,
         })
         .await?;
-    RPC.set(rpc.clone())
-        .map_err(|_| Error::core("Unable to set RPC"))?;
-    TIMEOUT
-        .set(initial.timeout())
-        .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
+    let timeout = initial.timeout();
+    // starting from EVA ICS SDK 0.3.32 it is recommended to use high-level EAPI eva_sdk::eapi_bus
+    // interface instead of BUS/RT directly
+    eapi_bus::set(rpc, timeout)?;
     // Services are usually started under root and should drop privileges after the bus socket is
     // connected
     initial.drop_privileges()?;
     // A helper function, which subscribes BUS/RT client to all state events for OIDs maching
     // the given OIDMaskList
-    eva_sdk::service::subscribe_oids(
-        rpc.as_ref(),
-        &config.sensors,
-        eva_sdk::service::EventKind::Local,
-    )
-    .await?;
-    let client = rpc.client().clone();
+    eapi_bus::subscribe_oids(&config.sensors, eva_sdk::service::EventKind::Local).await?;
     // Init service logs (bus logger)
-    svc_init_logs(&initial, client.clone())?;
+    eapi_bus::init_logs(&initial)?;
     // Start sigterm handler
     svc_start_signal_handlers();
     // Mark the instance ready and active
-    svc_mark_ready(&client).await?;
+    eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     // The service is blocked until one of the following:
     // * RPC client is disconnected from the bus
     // * The service gets a termination signal
-    svc_block(&rpc).await;
+    eapi_bus::block().await;
     // Tell the core and other services that the service is terminating
-    svc_mark_terminating(&client).await?;
+    eapi_bus::mark_terminating().await?;
     Ok(())
 }
