@@ -1,4 +1,4 @@
-__version__ = '0.2.22'
+__version__ = '0.2.23'
 
 import busrt
 import sys
@@ -89,6 +89,7 @@ SERVICE_STATUS_TOPIC = 'SVC/ST'
 AAA_ACL_TOPIC = 'AAA/ACL/'
 AAA_KEY_TOPIC = 'AAA/KEY/'
 AAA_USER_TOPIC = 'AAA/USER/'
+AAA_ACCOUNTING_TOPIC = 'AAA/REPORT'
 
 pack = msgpack.dumps
 unpack = partial(msgpack.loads, raw=False)
@@ -653,6 +654,43 @@ class Service:
         Check is the service shutdown requested
         """
         return self.shutdown_requested
+
+    def report_accounting_event(self,
+                                u=None,
+                                src=None,
+                                svc=None,
+                                subj=None,
+                                oid=None,
+                                data=None,
+                                note=None,
+                                code=None,
+                                err=None):
+        """
+        Reports an event into accounting system
+        """
+        payload = {}
+        if u is not None:
+            payload['u'] = u
+        if src is not None:
+            payload['src'] = src
+        if svc is not None:
+            payload['svc'] = svc
+        if subj is not None:
+            payload['subj'] = subj
+        if oid is not None:
+            payload['oid'] = oid
+        if data is not None:
+            payload['data'] = data
+        if note is not None:
+            payload['note'] = note
+        if code is not None:
+            payload['code'] = code
+        if err is not None:
+            payload['err'] = err
+        self.bus.send(
+            AAA_ACCOUNTING_TOPIC,
+            busrt.client.Frame(pack(payload), tp=busrt.client.OP_PUBLISH,
+                               qos=1))
 
     def subscribe_oids(self, oids, event_kind='any'):
         """
