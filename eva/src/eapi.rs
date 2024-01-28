@@ -240,7 +240,7 @@ async fn replication_state_handler(core: &Core, rx: async_channel::Receiver<pubs
             match OID::from_path(frame.subtopic()) {
                 Ok(oid) => match unpack::<ReplicationStateEvent>(frame.payload()) {
                     Ok(rpl) => {
-                        core.update_state_from_repl(&oid, rpl, frame.sender())
+                        core.update_state_from_repl(&oid, rpl, frame.primary_sender())
                             .await
                             .log_efd();
                     }
@@ -269,9 +269,13 @@ async fn replication_inventory_handler(
                         for item in remote_items {
                             remote_inv.insert(item.oid.clone(), item);
                         }
-                        core.process_remote_inventory(remote_inv, frame.subtopic(), frame.sender())
-                            .await
-                            .log_ef();
+                        core.process_remote_inventory(
+                            remote_inv,
+                            frame.subtopic(),
+                            frame.primary_sender(),
+                        )
+                        .await
+                        .log_ef();
                     }
                     Err(e) => warn!(
                         "invalid payload in inventory event {}: {}",
@@ -295,7 +299,7 @@ async fn replication_node_state_handler(
                     NodeStatus::Online => {
                         core.mark_source_online(
                             frame.subtopic(),
-                            frame.sender(),
+                            frame.primary_sender(),
                             true,
                             nse.info,
                             nse.timeout,
@@ -305,7 +309,7 @@ async fn replication_node_state_handler(
                     NodeStatus::Offline => {
                         core.mark_source_online(
                             frame.subtopic(),
-                            frame.sender(),
+                            frame.primary_sender(),
                             false,
                             None,
                             nse.timeout,
@@ -328,7 +332,7 @@ async fn log_emit_handler(rx: async_channel::Receiver<pubsub::Publication>) {
     while let Ok(frame) = rx.recv().await {
         if let Ok(lvl) = frame.subtopic().parse::<LogLevel>() {
             if let Ok(msg) = std::str::from_utf8(frame.payload()) {
-                emit(lvl, frame.sender(), msg);
+                emit(lvl, frame.primary_sender(), msg);
             }
         }
     }
@@ -351,7 +355,7 @@ impl RpcHandlers for BusApi {
                 if !self.core.is_active() {
                     warn!(
                         "ignoring rpc call from {}: {}, the core is not ready",
-                        event.sender(),
+                        event.primary_sender(),
                         method
                     );
                     return Err(RpcError::internal(rpc_err_str("not ready")));
@@ -408,7 +412,7 @@ impl RpcHandlers for BusApi {
                 }
             }};
         }
-        trace!("rpc call from {}: {}", event.sender(), method);
+        trace!("rpc call from {}: {}", event.primary_sender(), method);
         match method {
             "test" => {
                 if payload.is_empty() {

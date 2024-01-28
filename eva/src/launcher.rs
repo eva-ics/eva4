@@ -440,7 +440,7 @@ async fn status_handler(
         if let Ok(status) =
             unpack::<eva_common::services::ServiceStatusBroadcastEvent>(frame.payload())
         {
-            if let Some(svc) = services.lock().await.get(frame.sender()) {
+            if let Some(svc) = services.lock().await.get(frame.primary_sender()) {
                 if let Some(data) = svc.data.lock().await.as_ref() {
                     data.status
                         .store(status.status as u8, atomic::Ordering::Relaxed);

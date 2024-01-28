@@ -111,9 +111,8 @@ impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_handle_default_rpc(event.parse_method()?, &self.info)
     }
-    async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish && frame.sender() != self.me {
+        if frame.kind() == busrt::FrameKind::Publish && frame.primary_sender() != self.me {
             if let Some(topic) = frame.topic() {
                 if let Some(oid_path) = topic.strip_prefix(events::RAW_STATE_TOPIC) {
                     if let Some(i) = self.watchers.get(oid_path) {

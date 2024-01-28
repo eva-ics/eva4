@@ -60,7 +60,7 @@ impl RpcHandlers for Handlers {
                         "lock {} acquired for {:?} by {}",
                         p.i,
                         p.expires,
-                        event.sender()
+                        event.primary_sender()
                     );
                     Ok(None)
                 }
@@ -74,7 +74,7 @@ impl RpcHandlers for Handlers {
                         .release(&p.i, None)
                         .await
                         .map_err(Error::core)?;
-                    debug!("lock {} released by {}", p.i, event.sender());
+                    debug!("lock {} released by {}", p.i, event.primary_sender());
                     Ok(None)
                 }
             }
