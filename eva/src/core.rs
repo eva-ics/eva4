@@ -655,7 +655,11 @@ impl Core {
                 info!("local item created: {}", item.oid());
                 Ok(item)
             }
-            v => v.log_err(),
+            Err(e) if e.kind() == ErrorKind::ResourceAlreadyExists => Err(e),
+            Err(e) => {
+                error!("{}", e);
+                Err(e)
+            }
         }
     }
     /// Proceses state for a local item
