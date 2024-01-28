@@ -85,9 +85,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
-    let rpc = initial.init_rpc(Handlers { info }).await?;
-    let timeout = initial.timeout();
-    eapi_bus::set(rpc, timeout)?;
+    eapi_bus::init(&initial, Handlers { info }).await?;
     initial.drop_privileges()?;
     eapi_bus::init_logs(&initial)?;
     svc_start_signal_handlers();

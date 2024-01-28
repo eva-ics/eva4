@@ -222,18 +222,16 @@ async fn main(mut initial: Initial) -> EResult<()> {
     // RPC to perform bus calls inside the frame handler and be sure the handler works fast enough
     // - as soon as the service bus queue is full, it is automatically disconnected by BUS/RT
     // broker.
-    let rpc = initial
-        .init_rpc(Handlers {
-            info,
-            rcpt: config.rcpt,
-            mailer_svc: config.mailer_svc,
-            threshold: config.threshold,
-        })
-        .await?;
-    let timeout = initial.timeout();
-    // starting from EVA ICS SDK 0.3.32 it is recommended to use high-level EAPI eva_sdk::eapi_bus
+    //
+    // Starting from EVA ICS SDK 0.3.33 it is recommended to use high-level EAPI eva_sdk::eapi_bus
     // interface instead of BUS/RT directly
-    eapi_bus::set(rpc, timeout)?;
+    let handlers = Handlers {
+        info,
+        rcpt: config.rcpt,
+        mailer_svc: config.mailer_svc,
+        threshold: config.threshold,
+    };
+    eapi_bus::init(&initial, handlers).await?;
     // Services are usually started under root and should drop privileges after the bus socket is
     // connected
     initial.drop_privileges()?;
