@@ -265,7 +265,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .set(action_queues)
         .map_err(|_| Error::core("Unable to set ACTION_QUEUES"))?;
     tokio::spawn(async move {
-        adsbr::ping_worker(timeout).await;
+        adsbr::ping_worker(config.ping_interval.unwrap_or_else(|| timeout / 2)).await;
     });
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());

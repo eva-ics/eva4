@@ -1183,8 +1183,8 @@ pub async fn write(
     result
 }
 
-pub async fn ping_worker(timeout: Duration) {
-    let mut int = tokio::time::interval(timeout / 2);
+pub async fn ping_worker(interval: Duration) {
+    let mut int = tokio::time::interval(interval);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     while !eva_sdk::service::svc_is_terminating() {
         int.tick().await;

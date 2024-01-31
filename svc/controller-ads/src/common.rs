@@ -79,6 +79,11 @@ pub struct Config {
         default,
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
+    pub ping_interval: Option<Duration>,
+    #[serde(
+        default,
+        deserialize_with = "eva_common::tools::de_opt_float_as_duration"
+    )]
     pub verify_delay: Option<Duration>,
     #[serde(default)]
     pub action_map: HashMap<OID, ActionMap>,

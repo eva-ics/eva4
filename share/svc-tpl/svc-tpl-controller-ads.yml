@@ -10,6 +10,8 @@ config:
     # Allow SUMUP write and write_read requests (default: true)
     # Set false for ADS servers which unsupport this feature
     #bulk_allow: true
+  # PLC ping interval, in seconds, default: timeout / 2
+  #ping_interval: 1
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: 0
   # Allows the service to restart (send "stop" RPC call to) the mapped ADS
