@@ -9,6 +9,11 @@ ping:
       typ: u16
       des: Device AMS Port
       req: true
+  ret: current ADS state
+  exm: |
+    {
+      "state": 5
+    }
 read:
   des: Call ADS read request
   par:

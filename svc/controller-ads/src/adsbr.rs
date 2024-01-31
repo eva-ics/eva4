@@ -1186,14 +1186,45 @@ pub async fn write(
 pub async fn ping_worker(timeout: Duration) {
     let mut int = tokio::time::interval(timeout / 2);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let (n, p) = get_device();
-    let params = ParamsPing { n, p };
+    int.tick().await;
     while !eva_sdk::service::svc_is_terminating() {
-        if let Err(e) = call0("ping", &params).await {
+        int.tick().await;
+        if let Err(e) = ping().await {
             error!("ADS ping error: {}", e);
             eva_sdk::service::poc();
         }
-        int.tick().await;
+    }
+}
+
+pub async fn ping() -> EResult<()> {
+    #[derive(Deserialize)]
+    struct AdsState {
+        state: u16,
+    }
+    let (n, p) = get_device();
+    let params = ParamsPing { n, p };
+    let rpc = crate::RPC.get().unwrap();
+    let svc_id = crate::BRIDGE_ID.get().unwrap();
+    let timeout = *crate::TIMEOUT.get().unwrap();
+    let result: AdsState = unpack(
+        safe_rpc_call(
+            rpc,
+            svc_id,
+            "ping",
+            pack(&params)?.into(),
+            busrt::QoS::Processed,
+            timeout,
+        )
+        .await?
+        .payload(),
+    )?;
+    if result.state == ads::AdsState::Run as u16 {
+        Ok(())
+    } else {
+        Err(Error::failed(format!(
+            "ADS state: {} (not ready)",
+            result.state
+        )))
     }
 }
 

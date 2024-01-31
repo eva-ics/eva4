@@ -233,6 +233,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 .log_ef();
         }
     });
+    adsbr::ping().await?;
     if !config.pull.is_empty() {
         if let Some(interval) = config.pull_interval {
             let symbols: Vec<common::PullSymbol> = config

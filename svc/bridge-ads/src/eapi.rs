@@ -2,7 +2,7 @@ use crate::ads::{self, ParseAmsNetId};
 use ::ads::AmsAddr;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub struct Handlers {
     info: ServiceInfo,
@@ -51,10 +51,16 @@ impl RpcHandlers for Handlers {
                         #[serde(alias = "p")]
                         port: u16,
                     }
+                    #[derive(Serialize)]
+                    struct AdsState {
+                        state: u16,
+                    }
                     let p: Params = unpack(payload)?;
                     let device_addr: AmsAddr = p.net_id.into_ams_addr(p.port)?;
-                    ads::ping(device_addr).await?;
-                    Ok(None)
+                    let state = AdsState {
+                        state: ads::ping(device_addr).await?,
+                    };
+                    Ok(Some(pack(&state)?))
                 }
             }
             "read" => {
