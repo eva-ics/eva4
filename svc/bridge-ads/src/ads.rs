@@ -2,9 +2,11 @@ use crate::get_client;
 use ::ads::AmsAddr;
 use busrt::rpc::Rpc;
 use busrt::QoS;
+use eva_common::common_payloads::ParamsOID;
 use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
 use eva_common::payload::pack;
 use eva_common::prelude::*;
+use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -113,6 +115,26 @@ pub async fn ping(addr: AmsAddr) -> EResult<u16> {
     tokio::task::spawn_blocking(move || ping_sync(addr)).await?
 }
 
+async fn create_state_sensor(oid: OID) -> EResult<()> {
+    let rpc = crate::RPC.get().unwrap();
+    let timeout = *crate::TIMEOUT.get().unwrap();
+    svc_wait_core(rpc, timeout, true).await?;
+    match safe_rpc_call(
+        rpc,
+        "eva.core",
+        "item.create",
+        pack(&ParamsOID { i: oid })?.into(),
+        QoS::Processed,
+        timeout,
+    )
+    .await
+    {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::ResourceAlreadyExists => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
 pub async fn ping_worker(
     addr: AmsAddr,
     timeout: Duration,
@@ -120,9 +142,18 @@ pub async fn ping_worker(
 ) -> EResult<()> {
     let mut int = tokio::time::interval(timeout / 2);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let ping_oid_topic = store_ads_state.map(|v| format!("{}{}", RAW_STATE_TOPIC, v.as_path()));
+    let ping_oid_topic = store_ads_state
+        .as_ref()
+        .map(|v| format!("{}{}", RAW_STATE_TOPIC, v.as_path()));
+    if let Some(oid) = store_ads_state {
+        tokio::spawn(async move {
+            if let Err(e) = create_state_sensor(oid.clone()).await {
+                error!("unable to create {}: {}", oid, e);
+            }
+        });
+    }
     let rpc = crate::RPC.get().unwrap();
-    while !eva_sdk::service::svc_is_terminating() {
+    while !svc_is_terminating() {
         match ping(addr).await {
             Ok(state) => {
                 if let Some(ref topic) = ping_oid_topic {
