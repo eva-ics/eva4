@@ -4,8 +4,8 @@ version = "4.0.2"
 edition = "2021"
 
 [dependencies]
-eva-common = { version = "0.3.32", features = ["events", "time", "hyper-tools"] }
-eva-sdk = { version = "0.3.33" }
+eva-common = { version = "0.3.34", features = ["events", "time", "hyper-tools"] }
+eva-sdk = { version = "0.3.36" }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
