@@ -1085,8 +1085,8 @@ class CLI:
         print_result(data, cols=cols)
 
     def accounting_query(self, accounting_svc, time_start, time_end, time_zone,
-                         node, user, source, svc, subject, oid, note, code, err,
-                         full):
+                         node, user, source, svc, subject, oid, note, data,
+                         code, err, full):
         payload = {}
         if time_start is not None:
             payload['t_start'] = time_start
@@ -1106,16 +1106,18 @@ class CLI:
             payload['oid'] = oid
         if note is not None:
             payload['note'] = note
+        if data is not None:
+            payload['data'] = data
         if code is not None:
             payload['code'] = code
         if err is not None:
             payload['err'] = err
         data = call_rpc('query', payload, target=accounting_svc)
         cols = [
-            'id|n=id|f=uuid_bytes',
-            't|n=time|f=time_sec{}'.format(f':{time_zone}' if time_zone else ''),
-            'node', 'u|n=user', 'src|n=source', 'svc', 'subj|n=subject', 'oid',
-            'note', 'code', 'err'
+            'id|n=id|f=uuid_bytes', 't|n=time|f=time_sec{}'.format(
+                f':{time_zone}' if time_zone else ''), 'node', 'u|n=user',
+            'src|n=source', 'svc', 'subj|n=subject', 'oid', 'note', 'code',
+            'err'
         ]
         if full:
             cols.append('data')

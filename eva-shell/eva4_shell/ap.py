@@ -228,6 +228,7 @@ def append_accounting_cli(root_sp):
     p.add_argument('--subject', metavar='SUBJECT')
     p.add_argument('--oid', metavar='OID').completer = ComplOID('state')
     p.add_argument('--note', metavar='NOTE')
+    p.add_argument('--data', metavar='DATA')
     p.add_argument('--code', metavar='CODE', type=int)
     p.add_argument('--err', metavar='ERR')
 
