@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eva-sdk = { path = "0.3.33", features = ["http", "fs"] }
+eva-sdk = { version = "0.3.35", features = ["http", "fs"] }
 busrt = { version = "0.4", features = ["rpc", "ipc"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
