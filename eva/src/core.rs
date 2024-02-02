@@ -528,7 +528,7 @@ impl Core {
             boot_id: u64,
             mode: Mode,
         }
-        let Ok(data) = to_value(&Info {
+        let Ok(data) = to_value(Info {
             version: &self.version,
             build: self.build,
             boot_id: self.boot_id,
