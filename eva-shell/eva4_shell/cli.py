@@ -1114,13 +1114,20 @@ class CLI:
             payload['err'] = err
         data = call_rpc('query', payload, target=accounting_svc)
         cols = [
-            'id|n=id|f=uuid_bytes', 't|n=time|f=time_sec{}'.format(
-                f':{time_zone}' if time_zone else ''), 'node', 'u|n=user',
-            'src|n=source', 'svc', 'subj|n=subject', 'oid', 'note', 'code',
-            'err'
+            't|n=time|f=time_sec{}'.format(
+                f':{time_zone}' if time_zone else ''),
+            'node',
+            'svc',
+            'u|n=user',
+            'src|n=source',
+            'subj|n=subject',
+            'code'
+            'oid',
+            'note',
         ]
         if full:
             cols.append('data')
+        cols.append('err')
         print_result(data, cols=cols)
 
     def item_watch(self, i, interval, rows, prop, chart_type):
