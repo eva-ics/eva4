@@ -1864,9 +1864,10 @@ async fn method_pvt_put(params: Value, aci: &mut ACI) -> EResult<Value> {
         #[serde(alias = "c")]
         content: String,
     }
-    aci.log_request(log::Level::Info).await.log_ef();
     let p_f = prepare_api_filter_params!(params);
     let p = Params::deserialize(params)?;
+    aci.log_param("path", &p.path)?;
+    aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     run_api_filter!("pvt.put", p_f, aci);
     let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
@@ -1913,9 +1914,12 @@ async fn method_pvt_unlink(params: Value, aci: &mut ACI) -> EResult<Value> {
         #[serde(alias = "i")]
         path: String,
     }
-    aci.log_request(log::Level::Info).await.log_ef();
+    let p_f = prepare_api_filter_params!(params);
     let p = Params::deserialize(params)?;
+    aci.log_param("path", &p.path)?;
+    aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
+    run_api_filter!("pvt.unlink", p_f, aci);
     let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
     if let Err(e) = tokio::fs::remove_file(path).await {
         if e.kind() == std::io::ErrorKind::NotFound {
