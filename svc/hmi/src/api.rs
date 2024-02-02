@@ -1939,7 +1939,7 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         #[serde(default, alias = "r")]
         recursive: bool,
     }
-    aci.log_request(log::Level::Info).await.log_ef();
+    aci.log_request(log::Level::Debug).await.log_ef();
     let p = Params::deserialize(params)?;
     let path = format_and_check_path(&p.path, aci.acl(), PvtOp::List)?;
     let masks: Vec<String> = if let Some(m) = p.masks {
