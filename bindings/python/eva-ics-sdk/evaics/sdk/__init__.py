@@ -1,4 +1,4 @@
-__version__ = '0.2.23'
+__version__ = '0.2.24'
 
 import busrt
 import sys
@@ -749,6 +749,7 @@ class ACI:
         self.token_mode = aci_payload.get('token_mode')
         self.user = aci_payload.get('u')
         self.acl = aci_payload.get('acl')
+        self.src = aci_payload.get('src')
 
     def is_writable(self):
         """
@@ -930,7 +931,8 @@ def self_test():
             'auth': 'token',
             'token_mode': 'normal',
             'u': 'admin',
-            'acl': 'admin'
+            'acl': 'admin',
+            'src': '127.0.0.1',
         },
         'acl': {
             'id': 'admin',
@@ -960,6 +962,7 @@ def self_test():
     assert xcall.params.get('i') == 'test'
     assert xcall.aci.auth == 'token'
     assert xcall.aci.user == 'admin'
+    assert xcall.aci.src == '127.0.0.1'
     assert xcall.aci.is_writable()
     assert xcall.is_item_readable(OID('unit:tests/t1'))
     assert not xcall.is_item_readable(OID('sensor:tests/t1'))

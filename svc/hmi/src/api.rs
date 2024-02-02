@@ -199,7 +199,7 @@ async fn run_api_filter(
         Value::String(api_call_method.to_owned()),
     );
     kwargs.insert("api_call_params".to_owned(), api_call_params);
-    kwargs.insert("aci".to_owned(), to_value(aci)?);
+    kwargs.insert("aci".to_owned(), to_value(aci.as_extended_info())?);
     kwargs.insert("acl".to_owned(), to_value(aci.acl())?);
     let params = eva_common::actions::Params::new_lmacro(None, Some(kwargs));
     let payload = Payload {
@@ -486,16 +486,14 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                 let auth_key: String = if let Value::Map(ref mut m) = params {
                     if let Some(v) = m.remove(&Value::String("k".to_owned())) {
                         String::deserialize(v)?
+                    } else if let Some(key) = meta.take_key() {
+                        key
                     } else {
-                        if let Some(key) = meta.take_key() {
-                            key
-                        } else {
-                            aci::log_unauthorized(method, source, false).await.log_ef();
-                            return Err(Error::new(
-                                ErrorKind::AccessDenied,
-                                "No token/API key specified",
-                            ));
-                        }
+                        aci::log_unauthorized(method, source, false).await.log_ef();
+                        return Err(Error::new(
+                            ErrorKind::AccessDenied,
+                            "No token/API key specified",
+                        ));
                     }
                 } else {
                     return Err(Error::new0(ErrorKind::AccessDenied));
@@ -1648,7 +1646,7 @@ async fn method_x_call(target: &str, method: &str, params: Value, aci: &mut ACI)
     struct XPayload<'a> {
         method: &'a str,
         params: Value,
-        aci: &'a ACI,
+        aci: aci::ACIExtendedInfo<'a>,
         acl: &'a Acl,
     }
     aci.log_request(log::Level::Debug).await.log_ef();
@@ -1657,7 +1655,7 @@ async fn method_x_call(target: &str, method: &str, params: Value, aci: &mut ACI)
     let payload = XPayload {
         method,
         params,
-        aci,
+        aci: aci.as_extended_info(),
         acl: aci.acl(),
     };
     let res = eapi_bus::call(target, "x", pack(&payload)?.into()).await?;

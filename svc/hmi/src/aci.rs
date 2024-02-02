@@ -114,6 +114,45 @@ pub async fn log_unauthorized(method: &str, source: String, auth_provided: bool)
     Ok(())
 }
 
+#[inline]
+fn serialize_aci<S>(serializer: S, auth: &Auth, source: Option<&str>) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut map = serializer.serialize_map(Some(if source.is_some() { 5 } else { 4 }))?;
+    map.serialize_entry("auth", auth.as_str())?;
+    if let Auth::Token(ref token) = auth {
+        map.serialize_entry("token_mode", token.mode_as_str())?;
+        map.serialize_entry("u", token.user())?;
+    } else if let Auth::Key(_, _) = auth {
+        map.serialize_entry("token_mode", &Value::Unit)?;
+        map.serialize_entry("u", &auth.user())?;
+    } else {
+        map.serialize_entry("token_mode", &Value::Unit)?;
+        map.serialize_entry("u", &Value::Unit)?;
+    }
+    map.serialize_entry("acl", auth.acl().id())?;
+    if let Some(src) = source {
+        map.serialize_entry("src", src)?;
+    }
+    map.end()
+}
+
+#[allow(clippy::upper_case_acronyms)]
+pub struct ACIExtendedInfo<'a> {
+    auth: &'a Auth,
+    source: &'a str,
+}
+
+impl<'a> Serialize for ACIExtendedInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serialize_aci(serializer, self.auth, Some(self.source))
+    }
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub struct ACI {
@@ -134,20 +173,7 @@ impl Serialize for ACI {
     where
         S: Serializer,
     {
-        let mut map = serializer.serialize_map(Some(4))?;
-        map.serialize_entry("auth", self.auth.as_str())?;
-        if let Auth::Token(ref token) = self.auth {
-            map.serialize_entry("token_mode", token.mode_as_str())?;
-            map.serialize_entry("u", token.user())?;
-        } else if let Auth::Key(_, _) = self.auth {
-            map.serialize_entry("token_mode", &Value::Unit)?;
-            map.serialize_entry("u", &self.auth.user())?;
-        } else {
-            map.serialize_entry("token_mode", &Value::Unit)?;
-            map.serialize_entry("u", &Value::Unit)?;
-        }
-        map.serialize_entry("acl", &self.auth.acl().id())?;
-        map.end()
+        serialize_aci(serializer, &self.auth, None)
     }
 }
 
@@ -165,6 +191,13 @@ impl ACI {
             note: None,
             log_level: log::Level::Info,
             t: Instant::now(),
+        }
+    }
+    #[inline]
+    pub fn as_extended_info(&self) -> ACIExtendedInfo {
+        ACIExtendedInfo {
+            auth: &self.auth,
+            source: &self.source,
         }
     }
     #[inline]
