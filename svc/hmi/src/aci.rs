@@ -102,6 +102,18 @@ pub async fn start(keep_api_log: u32) -> EResult<()> {
     Ok(())
 }
 
+pub async fn log_unauthorized(method: &str, source: String, auth_provided: bool) -> EResult<()> {
+    let mut aci = ACI::new(Auth::No, method, source);
+    aci.log_request(log::Level::Error).await?;
+    aci.log_error(&Error::access(if auth_provided {
+        "authentication failed"
+    } else {
+        "no authentication data provided"
+    }))
+    .await;
+    Ok(())
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub struct ACI {

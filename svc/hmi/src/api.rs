@@ -1,5 +1,5 @@
 use crate::aaa::{self, Auth, Token};
-use crate::aci::ACI;
+use crate::aci::{self, ACI};
 use crate::db;
 use crate::ApiKeyId;
 use base64::Engine as _;
@@ -487,9 +487,15 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                     if let Some(v) = m.remove(&Value::String("k".to_owned())) {
                         String::deserialize(v)?
                     } else {
-                        meta.take_key().ok_or_else(|| {
-                            Error::new(ErrorKind::AccessDenied, "No token/API key specified")
-                        })?
+                        if let Some(key) = meta.take_key() {
+                            key
+                        } else {
+                            aci::log_unauthorized(method, source, false).await.log_ef();
+                            return Err(Error::new(
+                                ErrorKind::AccessDenied,
+                                "No token/API key specified",
+                            ));
+                        }
                     }
                 } else {
                     return Err(Error::new0(ErrorKind::AccessDenied));
@@ -498,6 +504,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                     Ok(v) => v,
                     Err(e) => {
                         error!("API access error from {}: {}", source, e);
+                        aci::log_unauthorized(method, source, true).await.log_ef();
                         return Err(e);
                     }
                 };

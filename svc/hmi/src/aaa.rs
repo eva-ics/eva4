@@ -117,6 +117,7 @@ pub enum Auth {
     Key(String, Arc<Acl>),
     Login(String, Option<String>),
     LoginKey(Option<String>, Option<String>),
+    No,
 }
 
 impl std::fmt::Display for Auth {
@@ -128,6 +129,7 @@ impl std::fmt::Display for Auth {
             Auth::LoginKey(key_id, _) => {
                 write!(f, "key:{}", key_id.as_deref().unwrap_or_default())
             }
+            Auth::No => write!(f, "unauthorized"),
         }
     }
 }
@@ -138,7 +140,7 @@ impl Auth {
         match self {
             Auth::Token(token) => token.acl(),
             Auth::Key(_, acl) => acl,
-            Auth::Login(_, _) | Auth::LoginKey(_, _) => {
+            Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => {
                 unimplemented!("attempt to get acl for initial login ACI")
             }
         }
@@ -151,6 +153,7 @@ impl Auth {
             Auth::Login(_, ref acl_id) | Auth::LoginKey(_, ref acl_id) => {
                 acl_id.as_deref().unwrap_or_default()
             }
+            Auth::No => "",
         }
     }
     #[inline]
@@ -159,20 +162,21 @@ impl Auth {
             Auth::Token(_) => "token",
             Auth::Key(_, _) => "key",
             Auth::Login(_, _) | Auth::LoginKey(_, _) => "login",
+            Auth::No => "unauthorized",
         }
     }
     #[inline]
     pub fn token(&self) -> Option<&Token> {
         match self {
             Auth::Token(ref token) => Some(token),
-            Auth::Key(_, _) | Auth::Login(_, _) | Auth::LoginKey(_, _) => None,
+            Auth::Key(_, _) | Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => None,
         }
     }
     #[inline]
     pub fn clone_token(&self) -> Option<Arc<Token>> {
         match self {
             Auth::Token(token) => Some(token.clone()),
-            Auth::Key(_, _) | Auth::Login(_, _) | Auth::LoginKey(_, _) => None,
+            Auth::Key(_, _) | Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => None,
         }
     }
     #[inline]
@@ -182,6 +186,7 @@ impl Auth {
             Auth::Login(ref login, _) => Some(login),
             Auth::Key(ref key_id, _) => Some(key_id),
             Auth::LoginKey(key_id, _) => key_id.as_deref(),
+            Auth::No => None,
         }
     }
 }
