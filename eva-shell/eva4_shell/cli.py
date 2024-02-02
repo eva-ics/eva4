@@ -1121,7 +1121,7 @@ class CLI:
             'u|n=user',
             'src|n=source',
             'subj|n=subject',
-            'code'
+            'code',
             'oid',
             'note',
         ]

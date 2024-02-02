@@ -1,3 +1,3 @@
-__version__ = '0.2.12'
+__version__ = '0.2.13'
 
 DEFAULT_REPOSITORY_URL = 'https://pub.bma.ai/eva4'
