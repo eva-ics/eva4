@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eva-sdk = { version = "0.3.36", features = ["controller"] }
+eva-sdk = { version = "0.3.37", features = ["controller"] }
 busrt = { version = "0.4", features = ["rpc", "ipc"] }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.3.34", features = ["events", "common-payloads"] }
+eva-common = { version = "0.3.36", features = ["events", "common-payloads"] }
 log = "0.4.14"
 async-channel = "1.7.1"
 uuid = { version = "1.1.2", features = ["serde", "v4"] }
