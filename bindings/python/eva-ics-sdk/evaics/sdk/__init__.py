@@ -723,6 +723,55 @@ class Service:
                 topics.append(f'{topic_pfx}{path}')
             self.bus.subscribe(topics).wait_completed()
 
+    def create_items(self, oids):
+        """
+        Create items one-by one
+
+        Must be called after the node core is ready
+
+        Ignores errors if an item already exists
+
+        Args:
+            oids: list of item OIDs to create
+        """
+        try:
+            for oid in [oids] if isinstance(oids, str) or isinstance(
+                    oids, OID) else oids:
+                try:
+                    self.rpc.call(
+                        'eva.core',
+                        busrt.rpc.Request('item.create', pack({
+                            'i': str(oid),
+                        }))).wait_completed()
+                except busrt.rpc.RpcException as e:
+                    if e.rpc_error_code != ERR_CODE_ALREADY_EXISTS:
+                        raise
+        except Exception as e:
+            raise rpc_e2e(e)
+
+    def deploy_items(self, items):
+        """
+        Create items using deployment payloads in bulk
+
+        Must be called after the node core is ready
+
+        Payloads are equal to item.deploy eva.core EAPI call
+        See also https://info.bma.ai/en/actual/eva4/iac.html#items
+
+        Args:
+            oids: list of items to create
+        """
+        try:
+            self.rpc.call(
+                'eva.core',
+                busrt.rpc.Request(
+                    'item.deploy',
+                    pack({
+                        'items': items if isinstance(items, list) else [items],
+                    }))).wait_completed()
+        except Exception as e:
+            raise rpc_e2e(e)
+
 
 def no_rpc_method():
     """
