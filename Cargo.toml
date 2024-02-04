@@ -2,7 +2,7 @@
 
 members = [
   "eva",
-  #"svc/svc-template",
+  "svc/svc-template",
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
   "svc/dapp",
@@ -20,6 +20,7 @@ members = [
   "svc/controller-ads",
   "svc/controller-opcua",
   "svc/controller-pubsub",
+  "svc/controller-system",
   "svc/bridge-ads",
   "svc/controller-w1",
   "svc/controller-trap",

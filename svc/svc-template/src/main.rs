@@ -41,24 +41,20 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
-    // init rpc
-    let rpc = initial
-        .init_rpc(Handlers {
-            info: ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION),
-        })
-        .await?;
+    // init EAPI bus
+    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    eapi_bus::init(&initial, Handlers { info }).await?;
     // services are usually started under root and should drop privileges after the bus socket is
     // connected
     initial.drop_privileges()?;
-    let client = rpc.client().clone();
     // init logs
-    svc_init_logs(&initial, client.clone())?;
+    eapi_bus::init_logs(&initial)?;
     // start sigterm handler
     svc_start_signal_handlers();
     // mark ready and active
-    svc_mark_ready(&client).await?;
+    eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block(&rpc).await;
-    svc_mark_terminating(&client).await?;
+    eapi_bus::block().await;
+    eapi_bus::mark_terminating().await?;
     Ok(())
 }

@@ -218,6 +218,7 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-controller-w1 \
   eva-controller-sr \
   eva-controller-virtual \
+  eva-controller-system \
   eva-controller-lm \
   eva-controller-trap \
   eva-svc-modbus-slave \

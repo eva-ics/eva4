@@ -1,0 +1,7 @@
+# System controller service
+command: target/debug/eva-controller-system
+bus:
+  path: var/bus.ipc
+config:
+  report_oid_prefix: sensor:${system_name}/system
+user: eva
