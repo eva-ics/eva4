@@ -21,6 +21,18 @@ pub async fn report_worker() {
             Metric::new("network", name, "txb_total")
                 .report(i.total_transmitted())
                 .await;
+            Metric::new("network", name, "rx")
+                .report(i.packets_received())
+                .await;
+            Metric::new("network", name, "tx")
+                .report(i.packets_transmitted())
+                .await;
+            Metric::new("network", name, "rx_total")
+                .report(i.total_packets_received())
+                .await;
+            Metric::new("network", name, "tx_total")
+                .report(i.total_packets_transmitted())
+                .await;
             Metric::new("network", name, "rx_err")
                 .report(i.errors_on_received())
                 .await;
