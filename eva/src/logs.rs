@@ -62,6 +62,7 @@ pub fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
 pub struct RecordFilter<'a> {
     level: LogLevel,
     module: Option<&'a str>,
+    msg: Option<String>,
     regex_filter: Option<&'a regex::Regex>,
     not_before: Option<chrono::DateTime<chrono::Local>>,
     limit: u32,
@@ -71,6 +72,7 @@ impl<'a> RecordFilter<'a> {
     pub fn new(
         level: Option<LogLevel>,
         module: Option<&'a str>,
+        msg: Option<&'a str>,
         regex_filter: Option<&'a regex::Regex>,
         t: Option<u32>,
         limit: Option<u32>,
@@ -78,6 +80,7 @@ impl<'a> RecordFilter<'a> {
         Self {
             level: level.unwrap_or(LogLevel(eva_common::LOG_LEVEL_INFO)),
             module,
+            msg: msg.map(str::to_lowercase),
             regex_filter,
             not_before: t.map(|v| Local::now() - chrono::Duration::seconds(i64::from(v))),
             limit: limit.unwrap_or(DEFAULT_GET_RECORD_LIMIT),
@@ -100,6 +103,11 @@ impl<'a> RecordFilter<'a> {
         }
         if let Some(regex_filter) = self.regex_filter {
             if !regex_filter.is_match(&record.msg.to_lowercase()) {
+                return false;
+            }
+        }
+        if let Some(ref msg) = self.msg {
+            if !record.msg.to_lowercase().contains(msg) {
                 return false;
             }
         }

@@ -49,6 +49,10 @@ log.get:
       typ: String
       des: message filter regular expression
       req: false
+    - nam: msg
+      typ: String
+      des: message filter substring
+      req: false
   ret: memory log records (list)
   exm: |
     [

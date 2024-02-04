@@ -457,6 +457,8 @@ impl RpcHandlers for BusApi {
                     #[serde(alias = "mod")]
                     module: Option<&'a str>,
                     #[serde(borrow)]
+                    msg: Option<&'a str>,
+                    #[serde(borrow)]
                     rx: Option<&'a str>,
                 }
                 need_ready!();
@@ -482,6 +484,7 @@ impl RpcHandlers for BusApi {
                 let filter = crate::logs::RecordFilter::new(
                     log_level,
                     p.module,
+                    p.msg,
                     x.as_ref(),
                     p.time,
                     p.limit,

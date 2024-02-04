@@ -1157,6 +1157,8 @@ async fn method_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
         module: Option<String>,
         #[serde(alias = "x")]
         rx: Option<String>,
+        #[serde(alias = "msg")]
+        msg: Option<String>,
     }
     // the params are forwarded to eva.core::log_get as-is
     aci.log_request(log::Level::Debug).await.log_ef();

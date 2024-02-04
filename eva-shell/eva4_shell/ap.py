@@ -708,6 +708,7 @@ def append_log_cli(root_sp):
                    help='limit records to')
     p.add_argument('-m', '--module', metavar='MOD', help='filter by module')
     p.add_argument('-x', '--regex', metavar='REGEX', help='filter by regex')
+    p.add_argument('--msg', metavar='MSG', help='message substring')
     p.add_argument('-y',
                    '--full',
                    action='store_true',

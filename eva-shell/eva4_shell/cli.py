@@ -250,7 +250,7 @@ class CLI:
         call_rpc('log.purge')
         ok()
 
-    def log_get(self, level, time, limit, module, regex, full):
+    def log_get(self, level, time, limit, module, regex, msg, full):
 
         def log_record_color(level):
             if level == 'TRACE':
@@ -272,6 +272,8 @@ class CLI:
             'module': module,
             'rx': regex
         }
+        if msg:
+            params['msg'] = msg
         records = call_rpc('log.get', params)
         if current_command.json:
             print_result(records)
