@@ -1,14 +1,49 @@
 use crate::metric::Metric;
+use eva_common::prelude::*;
+use log::info;
+use once_cell::sync::OnceCell;
+use serde::Deserialize;
+use std::collections::HashSet;
 use sysinfo::Networks;
 
+static CONFIG: OnceCell<Config> = OnceCell::new();
+
+pub fn set_config(config: Config) -> EResult<()> {
+    CONFIG
+        .set(config)
+        .map_err(|_| Error::core("Unable to set NETWORK CONFIG"))
+}
+
+#[derive(Default, Deserialize)]
+pub struct Config {
+    #[serde(default)]
+    enabled: bool,
+    interfaces: Option<HashSet<String>>,
+}
+
 pub async fn report_worker() {
+    let config = CONFIG.get().unwrap();
+    if !config.enabled {
+        return;
+    }
+    if let Some(ref i) = config.interfaces {
+        if i.is_empty() {
+            return;
+        }
+    }
     let mut networks = Networks::new();
     let mut int = tokio::time::interval(crate::NETWORK_REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    info!("network report worker started");
     loop {
         int.tick().await;
         networks.refresh_list();
         for (name, i) in &networks {
+            if let Some(ref i) = config.interfaces {
+                if !i.contains(name) {
+                    continue;
+                }
+            }
             Metric::new("network", name, "rxb")
                 .report(i.received())
                 .await;

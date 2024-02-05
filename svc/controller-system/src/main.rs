@@ -17,11 +17,8 @@ const CPU_REFRESH: Duration = Duration::from_secs(1);
 const MEMORY_REFRESH: Duration = Duration::from_secs(1);
 const NETWORK_REFRESH: Duration = Duration::from_secs(1);
 
-mod cpu;
-mod disks;
-mod memory;
 mod metric;
-mod network;
+mod providers;
 mod tools;
 
 use metric::Metric;
@@ -44,7 +41,21 @@ impl RpcHandlers for Handlers {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
-    report_oid_prefix: String,
+    report: ReportConfig,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReportConfig {
+    oid_prefix: String,
+    #[serde(default)]
+    cpu: providers::cpu::Config,
+    #[serde(default)]
+    memory: providers::memory::Config,
+    #[serde(default)]
+    disks: providers::disks::Config,
+    #[serde(default)]
+    network: providers::network::Config,
 }
 
 async fn report_common() {
@@ -65,9 +76,9 @@ async fn report_common() {
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {
-    macro_rules! launch_worker {
+    macro_rules! launch_provider_worker {
         ($mod: ident) => {
-            tokio::spawn($mod::report_worker());
+            tokio::spawn(providers::$mod::report_worker());
         };
     }
     let config: Config = Config::deserialize(
@@ -75,9 +86,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    providers::cpu::set_config(config.report.cpu)?;
+    providers::memory::set_config(config.report.memory)?;
+    providers::disks::set_config(config.report.disks)?;
+    providers::network::set_config(config.report.network)?;
     metric::set_oid_prefix(
         config
-            .report_oid_prefix
+            .report
+            .oid_prefix
             .replace("${system_name}", initial.system_name())
             .parse()?,
     )?;
@@ -89,10 +105,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
-        launch_worker!(cpu);
-        launch_worker!(memory);
-        launch_worker!(disks);
-        launch_worker!(network);
+        launch_provider_worker!(cpu);
+        launch_provider_worker!(memory);
+        launch_provider_worker!(disks);
+        launch_provider_worker!(network);
         report_common().await;
     });
     info!("{} started ({})", DESCRIPTION, initial.id());

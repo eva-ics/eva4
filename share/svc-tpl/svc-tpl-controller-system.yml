@@ -3,5 +3,22 @@ command: target/debug/eva-controller-system
 bus:
   path: var/bus.ipc
 config:
-  report_oid_prefix: sensor:${system_name}/system
+  report:
+    oid_prefix: sensor:${system_name}/system
+    cpu:
+      enabled: true
+    memory:
+      enabled: true
+    disks:
+      enabled: true
+      # enable reports for specific partitions only
+      #partitions:
+        #- /
+        #- /var
+    network:
+      enabled: true
+      # enable reports for specific interfaces only
+      #interfaces:
+        #- eth0
+        #- eth1
 user: eva
