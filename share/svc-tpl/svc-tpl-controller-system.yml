@@ -5,6 +5,8 @@ bus:
 config:
   report:
     oid_prefix: sensor:${system_name}/system
+    # when started on a secondary point
+    #oid_prefix: sensor:${system_name}/system/host/SPOINT_NAME
     # system info and uptime
     system:
       enabled: true
