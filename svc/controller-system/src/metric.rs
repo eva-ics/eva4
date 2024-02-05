@@ -16,6 +16,7 @@ static OID_PREFIX: OnceCell<OID> = OnceCell::new();
 #[cfg(feature = "service")]
 static OIDS_CREATED: Lazy<Mutex<HashSet<OID>>> = Lazy::new(<_>::default);
 
+#[cfg(feature = "service")]
 pub fn set_oid_prefix(prefix: OID) -> EResult<()> {
     OID_PREFIX
         .set(prefix)
