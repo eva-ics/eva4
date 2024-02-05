@@ -11,13 +11,13 @@ config:
       enabled: true
     disks:
       enabled: true
-      # enable reports for specific partitions only
+      # enable specific partitions only (set partition mountpoints)
       #partitions:
         #- /
         #- /var
     network:
       enabled: true
-      # enable reports for specific interfaces only
+      # enable specific interfaces only
       #interfaces:
         #- eth0
         #- eth1
