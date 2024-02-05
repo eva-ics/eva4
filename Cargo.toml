@@ -20,7 +20,6 @@ members = [
   "svc/controller-ads",
   "svc/controller-opcua",
   "svc/controller-pubsub",
-  "svc/controller-system",
   "svc/bridge-ads",
   "svc/controller-w1",
   "svc/controller-trap",
@@ -46,6 +45,7 @@ resolver = "1"
 exclude = [
   "contrib/webinfo",
   "svc/ffi",
+  "svc/controller-system",
 ]
 
 [profile.release]

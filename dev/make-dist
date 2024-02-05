@@ -167,6 +167,11 @@ DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp
   "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
 cd .. || exit 1
 
+echo "Building controller system SVC..."
+cd eva4/svc/controller-system || exit 1
+"${CARGO}" build --target "${TARGET}" --release --features service ${CARGO_ARGS} || exit 1
+cd ../../.. || exit 1
+
 echo "Building FFI SVC..."
 cd eva4/svc/ffi || exit 1
 "${CARGO}" build --target "${FFI_TARGET}" --release ${CARGO_ARGS} || exit 1
@@ -218,7 +223,6 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   eva-controller-w1 \
   eva-controller-sr \
   eva-controller-virtual \
-  eva-controller-system \
   eva-controller-lm \
   eva-controller-trap \
   eva-svc-modbus-slave \
@@ -230,6 +234,7 @@ for svc in eva-node eva-aaa-acl eva-aaa-localauth \
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
+cp -vf "../eva4/svc/controller-system/${CARGO_TARGET_DIR}/${TARGET}/release/eva-controller-system" svc/ || exit 1
 cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${FFI_TARGET}/release/eva-ffi" svc/ || exit 1
 
 for svc in eva-aaa-msad \

@@ -4,12 +4,11 @@ use serde::Deserialize;
 
 err_logger!();
 
-const AUTHOR: &str = "Bohemia Automation";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "System service";
 
 const REPLACE_UNSUPPORTED_SYMBOLS: &str = "___";
 
+mod common;
 mod metric;
 mod providers;
 mod tools;
@@ -32,51 +31,7 @@ impl RpcHandlers for Handlers {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
-    report: ReportConfig,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ReportConfig {
-    oid_prefix: String,
-    #[serde(default)]
-    system: providers::system::Config,
-    #[serde(default)]
-    cpu: providers::cpu::Config,
-    #[serde(default)]
-    load_avg: providers::load_avg::Config,
-    #[serde(default)]
-    memory: providers::memory::Config,
-    #[serde(default)]
-    disks: providers::disks::Config,
-    #[serde(default)]
-    network: providers::network::Config,
-}
-
-impl ReportConfig {
-    fn set(self) -> EResult<()> {
-        providers::cpu::set_config(self.cpu)?;
-        providers::load_avg::set_config(self.load_avg)?;
-        providers::memory::set_config(self.memory)?;
-        providers::disks::set_config(self.disks)?;
-        providers::network::set_config(self.network)?;
-        providers::system::set_config(self.system)?;
-        Ok(())
-    }
-}
-
-fn spawn_workers() {
-    macro_rules! launch_provider_worker {
-        ($mod: ident) => {
-            tokio::spawn(providers::$mod::report_worker());
-        };
-    }
-    launch_provider_worker!(system);
-    launch_provider_worker!(cpu);
-    launch_provider_worker!(load_avg);
-    launch_provider_worker!(memory);
-    launch_provider_worker!(disks);
-    launch_provider_worker!(network);
+    report: common::ReportConfig,
 }
 
 #[svc_main]
@@ -94,7 +49,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .parse()?,
     )?;
     config.report.set()?;
-    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    let info = ServiceInfo::new(common::AUTHOR, common::VERSION, DESCRIPTION);
     eapi_bus::init(&initial, Handlers { info }).await?;
     initial.drop_privileges()?;
     eapi_bus::init_logs(&initial)?;
@@ -102,7 +57,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
-        spawn_workers();
+        common::spawn_workers();
     });
     info!("{} started ({})", DESCRIPTION, initial.id());
     eapi_bus::block().await;
