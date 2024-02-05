@@ -60,6 +60,17 @@ struct ReportConfig {
     network: providers::network::Config,
 }
 
+impl ReportConfig {
+    fn set(self) -> EResult<()> {
+        providers::cpu::set_config(self.cpu)?;
+        providers::load_avg::set_config(self.load_avg)?;
+        providers::memory::set_config(self.memory)?;
+        providers::disks::set_config(self.disks)?;
+        providers::network::set_config(self.network)?;
+        Ok(())
+    }
+}
+
 async fn report_common() {
     Metric::new0("os", "name")
         .report(System::long_os_version())
@@ -76,23 +87,27 @@ async fn report_common() {
     Metric::new0("cpu", "arch").report(System::cpu_arch()).await;
 }
 
-#[svc_main]
-async fn main(mut initial: Initial) -> EResult<()> {
+async fn spawn_workers() {
     macro_rules! launch_provider_worker {
         ($mod: ident) => {
             tokio::spawn(providers::$mod::report_worker());
         };
     }
+    launch_provider_worker!(cpu);
+    launch_provider_worker!(load_avg);
+    launch_provider_worker!(memory);
+    launch_provider_worker!(disks);
+    launch_provider_worker!(network);
+    report_common().await;
+}
+
+#[svc_main]
+async fn main(mut initial: Initial) -> EResult<()> {
     let config: Config = Config::deserialize(
         initial
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
-    providers::cpu::set_config(config.report.cpu)?;
-    providers::load_avg::set_config(config.report.load_avg)?;
-    providers::memory::set_config(config.report.memory)?;
-    providers::disks::set_config(config.report.disks)?;
-    providers::network::set_config(config.report.network)?;
     metric::set_oid_prefix(
         config
             .report
@@ -100,6 +115,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .replace("${system_name}", initial.system_name())
             .parse()?,
     )?;
+    config.report.set()?;
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     eapi_bus::init(&initial, Handlers { info }).await?;
     initial.drop_privileges()?;
@@ -108,12 +124,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
-        launch_provider_worker!(cpu);
-        launch_provider_worker!(load_avg);
-        launch_provider_worker!(memory);
-        launch_provider_worker!(disks);
-        launch_provider_worker!(network);
-        report_common().await;
+        spawn_workers().await;
     });
     info!("{} started ({})", DESCRIPTION, initial.id());
     eapi_bus::block().await;
