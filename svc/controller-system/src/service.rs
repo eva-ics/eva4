@@ -41,7 +41,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
-    metric::set_oid_prefix(
+    metric::svc::set_oid_prefix(
         config
             .report
             .oid_prefix
