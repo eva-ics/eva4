@@ -4,9 +4,12 @@ use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashSet;
+use std::time::Duration;
 use sysinfo::Networks;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
+
+const REFRESH: Duration = Duration::from_secs(1);
 
 pub fn set_config(config: Config) -> EResult<()> {
     CONFIG
@@ -33,7 +36,7 @@ pub async fn report_worker() {
         }
     }
     let mut networks = Networks::new();
-    let mut int = tokio::time::interval(crate::NETWORK_REFRESH);
+    let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("network report worker started");
     loop {

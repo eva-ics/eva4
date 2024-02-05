@@ -1,8 +1,6 @@
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::Deserialize;
-use std::time::Duration;
-use sysinfo::System;
 
 err_logger!();
 
@@ -12,16 +10,9 @@ const DESCRIPTION: &str = "System service";
 
 const REPLACE_UNSUPPORTED_SYMBOLS: &str = "___";
 
-const DISK_REFRESH: Duration = Duration::from_secs(10);
-const CPU_REFRESH: Duration = Duration::from_secs(1);
-const MEMORY_REFRESH: Duration = Duration::from_secs(1);
-const NETWORK_REFRESH: Duration = Duration::from_secs(1);
-
 mod metric;
 mod providers;
 mod tools;
-
-use metric::Metric;
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -49,6 +40,8 @@ struct Config {
 struct ReportConfig {
     oid_prefix: String,
     #[serde(default)]
+    system: providers::system::Config,
+    #[serde(default)]
     cpu: providers::cpu::Config,
     #[serde(default)]
     load_avg: providers::load_avg::Config,
@@ -67,38 +60,23 @@ impl ReportConfig {
         providers::memory::set_config(self.memory)?;
         providers::disks::set_config(self.disks)?;
         providers::network::set_config(self.network)?;
+        providers::system::set_config(self.system)?;
         Ok(())
     }
 }
 
-async fn report_common() {
-    Metric::new0("os", "name")
-        .report(System::long_os_version())
-        .await;
-    Metric::new0("os", "version")
-        .report(System::os_version())
-        .await;
-    Metric::new0("os", "kernel")
-        .report(System::kernel_version())
-        .await;
-    Metric::new0("os", "distribution_id")
-        .report(System::distribution_id())
-        .await;
-    Metric::new0("cpu", "arch").report(System::cpu_arch()).await;
-}
-
-async fn spawn_workers() {
+fn spawn_workers() {
     macro_rules! launch_provider_worker {
         ($mod: ident) => {
             tokio::spawn(providers::$mod::report_worker());
         };
     }
+    launch_provider_worker!(system);
     launch_provider_worker!(cpu);
     launch_provider_worker!(load_avg);
     launch_provider_worker!(memory);
     launch_provider_worker!(disks);
     launch_provider_worker!(network);
-    report_common().await;
 }
 
 #[svc_main]
@@ -124,7 +102,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
-        spawn_workers().await;
+        spawn_workers();
     });
     info!("{} started ({})", DESCRIPTION, initial.id());
     eapi_bus::block().await;

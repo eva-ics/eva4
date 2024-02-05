@@ -1,10 +1,12 @@
 use crate::metric::Metric;
-use crate::CPU_REFRESH;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::time::Duration;
 use sysinfo::{CpuRefreshKind, System};
+
+const REFRESH: Duration = Duration::from_secs(1);
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
@@ -26,7 +28,7 @@ pub async fn report_worker() {
         return;
     }
     let mut sys = System::new();
-    let mut int = tokio::time::interval(CPU_REFRESH);
+    let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("cpu report worker started");
     loop {

@@ -3,3 +3,4 @@ pub mod disks;
 pub mod load_avg;
 pub mod memory;
 pub mod network;
+pub mod system;

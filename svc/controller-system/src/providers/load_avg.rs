@@ -1,12 +1,14 @@
 use crate::metric::Metric;
-use crate::CPU_REFRESH;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::time::Duration;
 use sysinfo::System;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
+
+const REFRESH: Duration = Duration::from_secs(1);
 
 pub fn set_config(config: Config) -> EResult<()> {
     CONFIG
@@ -25,7 +27,7 @@ pub async fn report_worker() {
     if !CONFIG.get().unwrap().enabled {
         return;
     }
-    let mut int = tokio::time::interval(CPU_REFRESH);
+    let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("load average report worker started");
     loop {

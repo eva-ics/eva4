@@ -5,12 +5,19 @@ bus:
 config:
   report:
     oid_prefix: sensor:${system_name}/system
+    # system info and uptime
+    system:
+      enabled: true
+    # cpu info
     cpu:
       enabled: true
+    # system load average
     load_avg:
       enabled: true
+    # memory info
     memory:
       enabled: true
+    # disk info
     disks:
       enabled: true
       # enable specific mount points only
@@ -18,6 +25,7 @@ config:
       #mount_points:
         #- /
         #- /var
+    # network info
     network:
       enabled: true
       # enable specific interfaces only
