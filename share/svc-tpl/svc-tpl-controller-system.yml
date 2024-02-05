@@ -14,12 +14,14 @@ config:
     disks:
       enabled: true
       # enable specific mount points only
+      # note: for automatic mountpoint list reporting unavailable is not supported
       #mount_points:
         #- /
         #- /var
     network:
       enabled: true
       # enable specific interfaces only
+      # note: for automatic interface list reporting unavailable is not supported
       #interfaces:
         #- eth0
         #- eth1
