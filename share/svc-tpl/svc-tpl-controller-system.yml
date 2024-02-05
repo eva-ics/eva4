@@ -3,6 +3,19 @@ command: target/debug/eva-controller-system
 bus:
   path: var/bus.ipc
 config:
+  # accept remote agents
+  #api:
+    #client_oid_prefix: sensor:${system_name}/system/host
+    #listen: 0.0.0.0:7555
+    #max_clients: 128
+    # if a front-end server or TLS terminator is used
+    #real_ip_header: X-Real-IP
+    # host map (name/key)
+    # note: the service has got an own key database
+    # the keys are not related with EVA ICS API keys
+    #hosts:
+      #- name: host1
+        #key: "secret"
   report:
     oid_prefix: sensor:${system_name}/system
     # when started on a secondary point

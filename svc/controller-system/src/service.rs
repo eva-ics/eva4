@@ -1,13 +1,16 @@
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::Deserialize;
+use std::time::Duration;
 
 err_logger!();
 
 const DESCRIPTION: &str = "System service";
+const SLEEP_STEP_ERR: Duration = Duration::from_secs(1);
 
 const REPLACE_UNSUPPORTED_SYMBOLS: &str = "___";
 
+mod api;
 mod common;
 mod metric;
 mod providers;
@@ -32,6 +35,7 @@ impl RpcHandlers for Handlers {
 #[serde(deny_unknown_fields)]
 struct Config {
     report: common::ReportConfig,
+    api: Option<api::Config>,
 }
 
 #[svc_main]
@@ -45,8 +49,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config
             .report
             .oid_prefix
-            .replace("${system_name}", initial.system_name())
-            .parse()?,
+            .replace("${system_name}", initial.system_name()),
     )?;
     config.report.set()?;
     let info = ServiceInfo::new(common::AUTHOR, common::VERSION, DESCRIPTION);
@@ -54,6 +57,22 @@ async fn main(mut initial: Initial) -> EResult<()> {
     initial.drop_privileges()?;
     eapi_bus::init_logs(&initial)?;
     svc_start_signal_handlers();
+    let timeout = initial.timeout();
+    if let Some(api_config) = config.api {
+        api::set_oid_prefix(
+            api_config
+                .client_oid_prefix
+                .replace("${system_name}", initial.system_name()),
+        )?;
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = api::launch_server(api_config.clone(), timeout).await {
+                    error!("unable to launch API server: {}", e);
+                }
+                tokio::time::sleep(SLEEP_STEP_ERR).await;
+            }
+        });
+    }
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
