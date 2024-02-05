@@ -1,15 +1,19 @@
 use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_common::ITEM_STATUS_ERROR;
+#[cfg(feature = "service")]
 use eva_sdk::prelude::*;
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashSet;
 
+#[cfg(feature = "service")]
 err_logger!();
 
+#[cfg(feature = "service")]
 static OID_PREFIX: OnceCell<OID> = OnceCell::new();
+#[cfg(feature = "service")]
 static OIDS_CREATED: Lazy<Mutex<HashSet<OID>>> = Lazy::new(<_>::default);
 
 pub fn set_oid_prefix(prefix: OID) -> EResult<()> {
@@ -53,6 +57,7 @@ impl<'a> Metric<'a> {
     pub async fn report<S: Serialize>(&self, value: S) {
         self.send_report(value).await.log_ef();
     }
+    #[cfg(feature = "service")]
     async fn send_report<S: Serialize>(&self, value: S) -> EResult<()> {
         let oid = if let Some(n) = &self.subgroup {
             format!(
