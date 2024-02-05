@@ -1,4 +1,7 @@
-use eva_common::{ItemStatus, ITEM_STATUS_ERROR};
+use eva_common::{err_logger, ItemStatus, ITEM_STATUS_ERROR};
+use serde::Serialize;
+
+err_logger!();
 
 #[cfg(feature = "service")]
 pub mod svc;
@@ -33,5 +36,9 @@ impl<'a> Metric<'a> {
     pub fn failed(mut self) -> Self {
         self.status = ITEM_STATUS_ERROR;
         self
+    }
+    #[inline]
+    pub async fn report<S: Serialize>(&self, value: S) {
+        self.send_report(value).await.log_ef();
     }
 }

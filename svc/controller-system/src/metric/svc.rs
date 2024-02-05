@@ -8,8 +8,6 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashSet;
 
-err_logger!();
-
 static OID_PREFIX: OnceCell<OID> = OnceCell::new();
 static OIDS_CREATED: Lazy<Mutex<HashSet<OID>>> = Lazy::new(<_>::default);
 
@@ -20,11 +18,7 @@ pub fn set_oid_prefix(prefix: OID) -> EResult<()> {
 }
 
 impl<'a> Metric<'a> {
-    #[inline]
-    pub async fn report<S: Serialize>(&self, value: S) {
-        self.send_report(value).await.log_ef();
-    }
-    async fn send_report<S: Serialize>(&self, value: S) -> EResult<()> {
+    pub(super) async fn send_report<S: Serialize>(&self, value: S) -> EResult<()> {
         let oid = if let Some(n) = &self.subgroup {
             format!(
                 "{}/{}/{}/{}",
