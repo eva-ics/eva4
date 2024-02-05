@@ -1,5 +1,6 @@
 use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
 use eva_common::prelude::*;
+use eva_common::ITEM_STATUS_ERROR;
 use eva_sdk::prelude::*;
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
@@ -21,23 +22,34 @@ pub struct Metric<'a> {
     group: &'a str,
     subgroup: Option<&'a str>,
     resource: &'a str,
+    status: ItemStatus,
 }
 
 impl<'a> Metric<'a> {
+    #[inline]
     pub fn new0(group: &'a str, resource: &'a str) -> Self {
         Self {
             group,
             subgroup: None,
             resource,
+            status: 1,
         }
     }
+    #[inline]
     pub fn new(group: &'a str, subgroup: &'a str, resource: &'a str) -> Self {
         Self {
             group,
             subgroup: Some(subgroup),
             resource,
+            status: 1,
         }
     }
+    #[inline]
+    pub fn failed(mut self) -> Self {
+        self.status = ITEM_STATUS_ERROR;
+        self
+    }
+    #[inline]
     pub async fn report<S: Serialize>(&self, value: S) {
         self.send_report(value).await.log_ef();
     }
@@ -63,9 +75,14 @@ impl<'a> Metric<'a> {
             eapi_bus::create_items(&[&oid]).await?;
             OIDS_CREATED.lock().insert(oid.clone());
         }
+        let ev = if self.status == ITEM_STATUS_ERROR {
+            RawStateEventOwned::new0(self.status)
+        } else {
+            RawStateEventOwned::new(self.status, to_value(value)?)
+        };
         eapi_bus::publish(
             &format!("{}{}", RAW_STATE_TOPIC, oid.as_path()),
-            pack(&RawStateEventOwned::new(1, to_value(value)?))?.into(),
+            pack(&ev)?.into(),
         )
         .await?;
         Ok(())

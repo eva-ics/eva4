@@ -51,6 +51,8 @@ struct ReportConfig {
     #[serde(default)]
     cpu: providers::cpu::Config,
     #[serde(default)]
+    load_avg: providers::load_avg::Config,
+    #[serde(default)]
     memory: providers::memory::Config,
     #[serde(default)]
     disks: providers::disks::Config,
@@ -87,6 +89,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
     providers::cpu::set_config(config.report.cpu)?;
+    providers::load_avg::set_config(config.report.load_avg)?;
     providers::memory::set_config(config.report.memory)?;
     providers::disks::set_config(config.report.disks)?;
     providers::network::set_config(config.report.network)?;
@@ -106,6 +109,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
         launch_provider_worker!(cpu);
+        launch_provider_worker!(load_avg);
         launch_provider_worker!(memory);
         launch_provider_worker!(disks);
         launch_provider_worker!(network);

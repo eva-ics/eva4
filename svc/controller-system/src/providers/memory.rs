@@ -15,6 +15,7 @@ pub fn set_config(config: Config) -> EResult<()> {
 }
 
 #[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     enabled: bool,

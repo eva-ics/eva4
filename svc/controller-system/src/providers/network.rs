@@ -15,6 +15,7 @@ pub fn set_config(config: Config) -> EResult<()> {
 }
 
 #[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     enabled: bool,
@@ -38,6 +39,11 @@ pub async fn report_worker() {
     loop {
         int.tick().await;
         networks.refresh_list();
+        let mut reported = if config.interfaces.is_some() {
+            Some(HashSet::<&str>::new())
+        } else {
+            None
+        };
         for (name, i) in &networks {
             if let Some(ref i) = config.interfaces {
                 if !i.contains(name) {
@@ -80,6 +86,31 @@ pub async fn report_worker() {
             Metric::new("network", name, "tx_err_total")
                 .report(i.total_errors_on_transmitted())
                 .await;
+            if let Some(r) = reported.as_mut() {
+                r.insert(name);
+            }
+        }
+        if let Some(r) = reported {
+            for c in config.interfaces.as_ref().unwrap() {
+                if !r.contains(c.as_str()) {
+                    for res in [
+                        "rxb",
+                        "txb",
+                        "rxb_total",
+                        "txb_total",
+                        "rx",
+                        "tx",
+                        "rx_total",
+                        "tx_total",
+                        "rx_err",
+                        "tx_err",
+                        "rx_err_total",
+                        "tx_err_total",
+                    ] {
+                        Metric::new("network", c, res).failed().report(-1).await;
+                    }
+                }
+            }
         }
     }
 }

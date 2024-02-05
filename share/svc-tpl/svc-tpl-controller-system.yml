@@ -7,12 +7,14 @@ config:
     oid_prefix: sensor:${system_name}/system
     cpu:
       enabled: true
+    load_avg:
+      enabled: true
     memory:
       enabled: true
     disks:
       enabled: true
-      # enable specific partitions only (set partition mountpoints)
-      #partitions:
+      # enable specific mount points only
+      #mount_points:
         #- /
         #- /var
     network:
