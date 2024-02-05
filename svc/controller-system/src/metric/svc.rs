@@ -8,10 +8,11 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashSet;
 
-static OID_PREFIX: OnceCell<OID> = OnceCell::new();
+static OID_PREFIX: OnceCell<String> = OnceCell::new();
 static OIDS_CREATED: Lazy<Mutex<HashSet<OID>>> = Lazy::new(<_>::default);
 
-pub fn set_oid_prefix(prefix: OID) -> EResult<()> {
+pub fn set_oid_prefix(prefix: String) -> EResult<()> {
+    format!("{}/id", prefix).parse::<OID>()?;
     OID_PREFIX
         .set(prefix)
         .map_err(|_| Error::core("Unable to set OID_PREFIX"))
