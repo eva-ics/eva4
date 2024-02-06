@@ -14,6 +14,8 @@ use std::time::Duration;
 pub struct Config {
     server_url: String,
     timeout: Option<f64>,
+    #[serde(default)]
+    pub fips: bool,
     auth: Auth,
 }
 

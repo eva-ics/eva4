@@ -1,5 +1,6 @@
 client:
   server_url: http://localhost:7555/
+  #fips: true
   auth:
     name: test
     key: xxx

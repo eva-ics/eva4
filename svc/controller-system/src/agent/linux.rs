@@ -37,7 +37,6 @@ async fn main() -> EResult<()> {
             .map_err(|e| Error::io(format!("unable to load {}: {}", CONFIG_PATH, e)))?,
     )
     .map_err(Error::invalid_params)?;
-    config.report.set()?;
     let log_level_filter = log::LevelFilter::Info;
     if std::io::stdout().is_terminal() {
         env_logger::Builder::new()
@@ -56,6 +55,11 @@ async fn main() -> EResult<()> {
             .map(|()| log::set_max_level(log_level_filter))
             .map_err(Error::failed)?;
     }
+    if config.client.fips {
+        eva_common::services::enable_fips()?;
+        info!("FIPS: enabled");
+    }
+    config.report.set()?;
     common::spawn_workers();
     client::spawn_worker(config.client);
     info!("{} {} started", DESCRIPTION, VERSION);

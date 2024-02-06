@@ -1,5 +1,7 @@
 client:
   server_url: http://server-host:7555/
+  # enable FIPS-140 mode
+  fips: false
   auth:
     name: test
     key: xxx
