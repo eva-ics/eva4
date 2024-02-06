@@ -14,7 +14,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "System service Linux agent";
 
 #[cfg(debug_assertions)]
-const CONFIG_PATH: &str = "agent-config.yml";
+const CONFIG_PATH: &str = "./dev/agent-config.yml";
 #[cfg(not(debug_assertions))]
 const CONFIG_PATH: &str = "/etc/eva-cs-agent/config.yml";
 
