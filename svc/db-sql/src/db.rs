@@ -136,7 +136,11 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
             write!(oids, "'{}'", safe_sql_string(s.oid.as_str())?)?;
             write!(statuses, "{}", s.status)?;
             if let Some(v) = s.value {
-                write!(values, "'{}'", safe_sql_string(&v.to_string_or_pack()?)?)?;
+                write!(
+                    values,
+                    "'{}'",
+                    safe_sql_string(&v.to_string_or_pack().unwrap_or_default())?
+                )?;
             } else {
                 write!(values, "NULL")?;
             }
