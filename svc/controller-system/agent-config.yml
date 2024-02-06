@@ -1,0 +1,33 @@
+client:
+  server_url: http://localhost:7555/
+  auth:
+    name: test
+    key: xxx
+report:
+  system:
+    enabled: true
+  # cpu info
+  cpu:
+    enabled: false
+  # system load average
+  load_avg:
+    enabled: true
+  # memory info
+  memory:
+    enabled: false
+  # disk info
+  disks:
+    enabled: true
+    # enable specific mount points only
+    # note: for automatic mountpoint list reporting unavailable is not supported
+    mount_points:
+      - /
+      #- /var
+  # network info
+  network:
+    enabled: false
+    # enable specific interfaces only
+    # note: for automatic interface list reporting unavailable is not supported
+    #interfaces:
+      #- eth0
+      #- eth1
