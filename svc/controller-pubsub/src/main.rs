@@ -780,19 +780,23 @@ async fn main(mut initial: Initial) -> EResult<()> {
         handle_input(pubsub_input_rx, config.input, raw_state_cache, tester_c).await;
         poc();
     });
-    spawn_pubsub_worker(pubsub_client.clone(), pubsub_rx);
-    spawn_pubsub_tester(pubsub_client, tester, config.pubsub.ping_interval, timeout);
     let masks: OIDMaskList =
         OIDMaskList::new(bus_oids.into_iter().cloned().map(Into::into).collect());
     eva_sdk::service::subscribe_oids(rpc.as_ref(), &masks, eva_sdk::service::EventKind::Local)
         .await?;
     eva_sdk::service::subscribe_oids(rpc.as_ref(), &masks, eva_sdk::service::EventKind::Remote)
         .await?;
-    for o in config.output {
-        if let Some(interval) = o.interval {
-            spawn_interval_output(o, interval);
+    let rpc_c = rpc.clone();
+    tokio::spawn(async move {
+        spawn_pubsub_worker(pubsub_client.clone(), pubsub_rx);
+        spawn_pubsub_tester(pubsub_client, tester, config.pubsub.ping_interval, timeout);
+        let _ = svc_wait_core(&rpc_c, timeout, true).await;
+        for o in config.output {
+            if let Some(interval) = o.interval {
+                spawn_interval_output(o, interval);
+            }
         }
-    }
+    });
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
