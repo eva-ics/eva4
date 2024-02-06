@@ -21,6 +21,9 @@ pub fn set_oid_prefix(prefix: String) -> EResult<()> {
 }
 
 impl Metric {
+    /// # Panics
+    ///
+    /// will panic if oid prefix is not set
     #[inline]
     pub fn new0(group: &str, resource: &str) -> Self {
         let oid = format!("{}/{}/{}", OID_PREFIX.get().unwrap(), group, resource)
@@ -29,6 +32,9 @@ impl Metric {
             .ok();
         Self { oid, status: 1 }
     }
+    /// # Panics
+    ///
+    /// will panic if oid prefix is not set
     #[inline]
     pub fn new(group: &str, subgroup: &str, resource: &str) -> Self {
         let oid = format!(
@@ -72,7 +78,7 @@ impl Metric {
             Err(Error::failed("OID mapping error"))
         }
     }
-    pub(crate) async fn send_event(&self, ev: RawStateEvent<'_>) -> EResult<()> {
+    pub async fn send_bus_event(&self, ev: RawStateEvent<'_>) -> EResult<()> {
         if let Some(ref oid) = self.oid {
             if !OIDS_CREATED.lock().contains(oid) {
                 eapi_bus::create_items(&[oid]).await?;

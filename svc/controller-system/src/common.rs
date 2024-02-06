@@ -1,10 +1,19 @@
+#[cfg(any(feature = "service", feature = "agent"))]
 use crate::providers;
 use eva_common::prelude::*;
 use serde::Deserialize;
 
-pub const AUTHOR: &str = "Bohemia Automation";
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ClientMetric {
+    pub i: String,
+    #[serde(alias = "s")]
+    pub status: ItemStatus,
+    #[serde(default, alias = "v")]
+    pub value: ValueOptionOwned,
+}
 
+#[cfg(any(feature = "service", feature = "agent"))]
 pub fn spawn_workers() {
     macro_rules! launch_provider_worker {
         ($mod: ident) => {
@@ -19,6 +28,7 @@ pub fn spawn_workers() {
     launch_provider_worker!(network);
 }
 
+#[cfg(any(feature = "service", feature = "agent"))]
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReportConfig {
@@ -38,6 +48,7 @@ pub struct ReportConfig {
     network: providers::network::Config,
 }
 
+#[cfg(any(feature = "service", feature = "agent"))]
 impl ReportConfig {
     pub fn set(self) -> EResult<()> {
         providers::cpu::set_config(self.cpu)?;

@@ -25,6 +25,9 @@ pub struct Config {
     interfaces: Option<HashSet<String>>,
 }
 
+/// # Panics
+///
+/// will panic if config is not set
 pub async fn report_worker() {
     let config = CONFIG.get().unwrap();
     if !config.enabled {

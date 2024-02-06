@@ -1,3 +1,4 @@
+use crate::common::ClientMetric;
 use crate::metric::Metric;
 use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
@@ -54,16 +55,6 @@ struct Host {
     key: String,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct ClientMetric {
-    i: String,
-    #[serde(alias = "s")]
-    status: ItemStatus,
-    #[serde(default, alias = "v")]
-    value: ValueOptionOwned,
-}
-
 fn get_real_ip(headers: &HeaderMap, remote_ip: IpAddr) -> EResult<IpAddr> {
     if let Some(real_ip_header) = REAL_IP_HEADER.get() {
         if let Some(val) = headers.get(real_ip_header) {
@@ -103,7 +94,7 @@ async fn handle_request(request: Request<hyper::body::Incoming>, host: &str) -> 
             RawStateEvent::new0(client_metric.status)
         };
         metric
-            .send_event(ev)
+            .send_bus_event(ev)
             .await
             .log_ef_with("unable to send metric event");
     }
@@ -141,9 +132,9 @@ async fn serve(
                 }
                 Err(e) => {
                     error!("client {} API access denied: {}", ip, e);
-                    return Response::builder()
+                    Response::builder()
                         .status(StatusCode::FORBIDDEN)
-                        .body(Full::new(Bytes::from(e.to_string())));
+                        .body(Full::new(Bytes::from(e.to_string())))
                 }
             }
         } else {

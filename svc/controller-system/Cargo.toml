@@ -20,16 +20,29 @@ hyper = { version = "1.1.0", features = ["server", "http1"], optional = true }
 hyper-util = { version = "0.1.3", features = ["http1", "server", "tokio"], optional = true }
 serde_json = "1.0.96"
 tokio-task-pool = { version = "0.1.5", features = ["log"] }
+serde_yaml = { version = "0.9.31", optional = true }
+is-terminal = { version = "0.4.10", optional = true }
+env_logger = { version = "0.11.1", optional = true }
+syslog = { version = "6.1.0", optional = true }
 
 [profile.release]
 strip = true
 lto = true
 codegen-units = 1
 
+[lib]
+name = "eva_system_common"
+path = "src/lib.rs"
+
 [[bin]]
 name = "eva-controller-system"
 path = "src/service.rs"
 required-features = ["service"]
+
+[[bin]]
+name = "eva-cs-agent"
+path = "src/agent.rs"
+required-features = ["agent"]
 
 [features]
 std-alloc = []
@@ -37,5 +50,7 @@ openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
 openssl3 = ["eva-common/openssl3"]
 
 service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util"]
+agent = ["serde_yaml", "env_logger", "syslog", "is-terminal"]
 
-default = ["service"]
+#default = ["service"]
+default = ["agent"]

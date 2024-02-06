@@ -1,20 +1,20 @@
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_system_common::{
+    common::{self, spawn_workers, ReportConfig},
+    metric,
+};
 use serde::Deserialize;
 use std::time::Duration;
 
 err_logger!();
 
+const AUTHOR: &str = "Bohemia Automation";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "System service";
 const SLEEP_STEP_ERR: Duration = Duration::from_secs(1);
 
-const REPLACE_UNSUPPORTED_SYMBOLS: &str = "___";
-
 mod api;
-mod common;
-mod metric;
-mod providers;
-mod tools;
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -34,7 +34,7 @@ impl RpcHandlers for Handlers {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
-    report: common::ReportConfig,
+    report: ReportConfig,
     api: Option<api::Config>,
 }
 
@@ -52,7 +52,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .replace("${system_name}", initial.system_name()),
     )?;
     config.report.set()?;
-    let info = ServiceInfo::new(common::AUTHOR, common::VERSION, DESCRIPTION);
+    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     eapi_bus::init(&initial, Handlers { info }).await?;
     initial.drop_privileges()?;
     eapi_bus::init_logs(&initial)?;
@@ -76,7 +76,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     eapi_bus::mark_ready().await?;
     tokio::spawn(async move {
         let _ = eapi_bus::wait_core(true).await;
-        common::spawn_workers();
+        spawn_workers();
     });
     info!("{} started ({})", DESCRIPTION, initial.id());
     eapi_bus::block().await;

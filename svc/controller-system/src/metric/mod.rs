@@ -29,16 +29,19 @@ impl Metric {
     }
 }
 
-#[cfg(not(feature = "service"))]
+#[cfg(feature = "agent")]
 impl Metric {
     #[inline]
-    pub fn new0(group: &str, resource: &str) -> EResult<Self> {
+    pub fn new0(group: &str, resource: &str) -> Self {
         let i = format!("{}/{}", group, resource);
-        Ok(Self { i, status: 1 })
+        Self { i, status: 1 }
     }
     #[inline]
-    pub fn new(group: &str, subgroup: &str, resource: &str) -> EResult<Self> {
+    pub fn new(group: &str, subgroup: &str, resource: &str) -> Self {
         let i = format!("{}/{}/{}", group, subgroup, resource);
-        Ok(Self { i, status: 1 })
+        Self { i, status: 1 }
+    }
+    async fn send_report<S: Serialize>(&self, value: S) -> EResult<()> {
+        Ok(())
     }
 }
