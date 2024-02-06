@@ -7,6 +7,7 @@ use eva_common::prelude::*;
 use eva_common::ITEM_STATUS_ERROR;
 use eva_sdk::controller::{format_raw_state_topic, RawStateCache, RawStateEventPreparedOwned};
 use eva_sdk::service::poc;
+use eva_sdk::prelude::*;
 use log::{error, trace, warn};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -44,6 +45,9 @@ async fn pull(
         let modbus_client = crate::MODBUS_CLIENT.get().unwrap();
         macro_rules! mark_failed {
             ($err: expr) => {{
+                if svc_is_terminating() {
+                    return Ok(())
+                }
                 error!(
                     "block pull failed for {} / {}: {}",
                     pull_reg.reg, pull_reg.count, $err
