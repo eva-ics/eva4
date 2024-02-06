@@ -1482,6 +1482,9 @@ impl Core {
                                             online,
                                         ))
                                     } else {
+                                        if rs.ieid.boot_id() < state.ieid().boot_id() {
+                                            warn!("fatal replication problem for {}, node {} boot_id went backward", ex.oid(), source_id);
+                                        }
                                         None
                                     }
                                 } {
