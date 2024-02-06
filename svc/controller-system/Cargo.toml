@@ -42,9 +42,9 @@ path = "src/service.rs"
 required-features = ["service"]
 
 [[bin]]
-name = "eva-cs-agent"
-path = "src/agent.rs"
-required-features = ["agent"]
+name = "eva-cs-agent-linux"
+path = "src/agent/linux.rs"
+required-features = ["agent-linux"]
 
 [features]
 std-alloc = []
@@ -52,7 +52,8 @@ openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
 openssl3 = ["eva-common/openssl3"]
 
 service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util"]
-agent = ["serde_yaml", "env_logger", "syslog", "is-terminal", "reqwest"]
+agent = ["serde_yaml", "env_logger", "is-terminal", "reqwest"]
+agent-linux = ["agent", "syslog"]
 
 #default = ["service"]
 #default = ["agent"]
