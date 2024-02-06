@@ -20,6 +20,7 @@ if [ $? -ne 0 ]; then
   exit 2
 fi
 
+make clean || exit 3
 make compile-musl-x86_64 || exit 3
 make compile-musl-aarch64 || exit 3
 make debian-pkg || exit 3
