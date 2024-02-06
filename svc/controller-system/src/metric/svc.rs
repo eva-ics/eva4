@@ -50,12 +50,27 @@ impl Metric {
         Self { oid, status: 1 }
     }
     #[inline]
-    pub fn new_for_host(oid_prefix: &str, host: &str, full_id: &str) -> Self {
-        let oid = format!("{}/{}/{}", oid_prefix, host, full_id)
-            .parse::<OID>()
-            .log_err_with("OID mapping error")
-            .ok();
+    pub fn new_for_host(
+        oid_prefix: &str,
+        host: &str,
+        full_id: &str,
+        prefix_contains_host: bool,
+    ) -> Self {
+        let oid = if prefix_contains_host {
+            format!("{}/{}", oid_prefix.replace(crate::VAR_HOST, host), full_id)
+        } else {
+            format!("{}/{}/{}", oid_prefix, host, full_id)
+        }
+        .parse::<OID>()
+        .log_err_with("OID mapping error")
+        .ok();
         Self { oid, status: 1 }
+    }
+    #[inline]
+    pub async fn report<S: Serialize>(&self, value: S) {
+        self.send_report(value)
+            .await
+            .log_ef_with("unable to send metric event");
     }
     pub(super) async fn send_report<S: Serialize>(&self, value: S) -> EResult<()> {
         if let Some(ref oid) = self.oid {

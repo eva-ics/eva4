@@ -1,5 +1,6 @@
 use crate::common::ClientMetric;
 use crate::metric::Metric;
+use crate::{HEADER_API_AUTH_KEY, HEADER_API_SYSTEM_NAME, VAR_HOST};
 use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -16,6 +17,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::net::SocketAddr;
+use std::sync::atomic;
 use std::time::Duration;
 use tokio::net::TcpListener;
 
@@ -23,6 +25,7 @@ err_logger!();
 
 static HOSTS: OnceCell<BTreeMap<String, String>> = OnceCell::new();
 static OID_PREFIX: OnceCell<String> = OnceCell::new();
+static PREFIX_CONTAINS_HOST: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static REAL_IP_HEADER: OnceCell<String> = OnceCell::new();
 
 fn default_max_clients() -> usize {
@@ -30,7 +33,8 @@ fn default_max_clients() -> usize {
 }
 
 pub fn set_oid_prefix(prefix: String) -> EResult<()> {
-    format!("{}/id", prefix).parse::<OID>()?;
+    format!("{}/id", prefix.replace(VAR_HOST, "localhost")).parse::<OID>()?;
+    PREFIX_CONTAINS_HOST.store(prefix.contains(VAR_HOST), atomic::Ordering::Relaxed);
     OID_PREFIX
         .set(prefix)
         .map_err(|_| Error::core("Unable to set OID_PREFIX"))
@@ -69,11 +73,11 @@ fn get_real_ip(headers: &HeaderMap, remote_ip: IpAddr) -> EResult<IpAddr> {
 }
 
 fn authorize_request(headers: &HeaderMap) -> EResult<String> {
-    let Some(host_header) = headers.get("x-system-name") else {
-        return Err(Error::access("X-System-Name not set"));
+    let Some(host_header) = headers.get(HEADER_API_SYSTEM_NAME) else {
+        return Err(Error::access(format!("{} not set", HEADER_API_SYSTEM_NAME)));
     };
-    let Some(key) = headers.get("x-auth-key") else {
-        return Err(Error::access("X-Auth-Key not set"));
+    let Some(key) = headers.get(HEADER_API_AUTH_KEY) else {
+        return Err(Error::access(format!("{} not set", HEADER_API_AUTH_KEY)));
     };
     let host = host_header.to_str().map_err(Error::invalid_data)?;
     if HOSTS.get().unwrap().get(host).map_or(false, |v| v == key) {
@@ -87,7 +91,12 @@ async fn handle_request(request: Request<hyper::body::Incoming>, host: &str) -> 
     let body = request.collect().await.map_err(Error::failed)?.to_bytes();
     let client_metrics: Vec<ClientMetric> = serde_json::from_slice(&body)?;
     for client_metric in client_metrics {
-        let metric = Metric::new_for_host(OID_PREFIX.get().unwrap(), host, &client_metric.i);
+        let metric = Metric::new_for_host(
+            OID_PREFIX.get().unwrap(),
+            host,
+            &client_metric.i,
+            PREFIX_CONTAINS_HOST.load(atomic::Ordering::Relaxed),
+        );
         let ev = if let ValueOptionOwned::Value(ref v) = client_metric.value {
             RawStateEvent::new(client_metric.status, v)
         } else {

@@ -1,9 +1,9 @@
 #[cfg(any(feature = "service", feature = "agent"))]
 use crate::providers;
 use eva_common::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ClientMetric {
     pub i: String,

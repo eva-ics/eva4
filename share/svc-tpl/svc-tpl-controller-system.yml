@@ -5,6 +5,8 @@ bus:
 config:
   # accept remote agents
   #api:
+    # client OID prefix. may contain ${host} variable
+    # if no host variable exist, the host name is automatically added at the end
     #client_oid_prefix: sensor:${system_name}/system/host
     #listen: 0.0.0.0:7555
     #max_clients: 128

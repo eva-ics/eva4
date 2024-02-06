@@ -2,7 +2,7 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_system_common::{
     common::{self, spawn_workers, ReportConfig},
-    metric,
+    metric, HEADER_API_AUTH_KEY, HEADER_API_SYSTEM_NAME, VAR_HOST, VAR_SYSTEM_NAME,
 };
 use serde::Deserialize;
 use std::time::Duration;
@@ -49,7 +49,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config
             .report
             .oid_prefix
-            .replace("${system_name}", initial.system_name()),
+            .replace(VAR_SYSTEM_NAME, initial.system_name()),
     )?;
     config.report.set()?;
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
@@ -62,7 +62,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         api::set_oid_prefix(
             api_config
                 .client_oid_prefix
-                .replace("${system_name}", initial.system_name()),
+                .replace(VAR_SYSTEM_NAME, initial.system_name()),
         )?;
         tokio::spawn(async move {
             loop {
