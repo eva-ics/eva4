@@ -6,8 +6,8 @@ use eva_common::payload::pack;
 use eva_common::prelude::*;
 use eva_common::ITEM_STATUS_ERROR;
 use eva_sdk::controller::{format_raw_state_topic, RawStateCache, RawStateEventPreparedOwned};
-use eva_sdk::service::poc;
 use eva_sdk::prelude::*;
+use eva_sdk::service::poc;
 use log::{error, trace, warn};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -46,7 +46,7 @@ async fn pull(
         macro_rules! mark_failed {
             ($err: expr) => {{
                 if svc_is_terminating() {
-                    return Ok(())
+                    return Ok(());
                 }
                 error!(
                     "block pull failed for {} / {}: {}",

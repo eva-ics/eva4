@@ -10,6 +10,9 @@ const SLEEP_STEP_ERR: Duration = Duration::from_secs(1);
 
 const REPLACE_UNSUPPORTED_SYMBOLS: &str = "___";
 
+const VAR_SYSTEM_NAME: &str = "${system_name}";
+const VAR_HOST: &str = "${host}";
+
 mod api;
 mod common;
 mod metric;
@@ -49,7 +52,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config
             .report
             .oid_prefix
-            .replace("${system_name}", initial.system_name()),
+            .replace(VAR_SYSTEM_NAME, initial.system_name()),
     )?;
     config.report.set()?;
     let info = ServiceInfo::new(common::AUTHOR, common::VERSION, DESCRIPTION);
@@ -62,7 +65,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         api::set_oid_prefix(
             api_config
                 .client_oid_prefix
-                .replace("${system_name}", initial.system_name()),
+                .replace(VAR_SYSTEM_NAME, initial.system_name()),
         )?;
         tokio::spawn(async move {
             loop {
