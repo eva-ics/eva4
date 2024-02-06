@@ -11,7 +11,7 @@ path = "src/lib.rs"
 psrt = "0.2"
 paho-mqtt = "0.10.0"
 async-trait = "0.1.53"
-eva-common = { version = "0.3.37", features = ["workers", "payload"] }
+eva-common = { version = "0.3.39", features = ["workers", "payload"] }
 async-channel = "1.7.1"
 tokio = { version = "1.20.1", features = [] }
 serde = { version = "1.0.143", features = ["derive"] }
