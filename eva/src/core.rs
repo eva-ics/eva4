@@ -182,7 +182,9 @@ async fn save_item_state(oid: &OID, state: DbState, rpc: &RpcClient) -> EResult<
 
 async fn handle_save(rx: async_channel::Receiver<(OID, DbState)>, rpc: &RpcClient) {
     while let Ok((oid, db_state)) = rx.recv().await {
-        save_item_state(&oid, db_state, rpc).await.log_ef();
+        save_item_state(&oid, db_state, rpc)
+            .await
+            .log_ef_with("item state save");
     }
 }
 
@@ -616,7 +618,9 @@ impl Core {
             for oid in oids {
                 let r = self.inventory.read().await.get_item(&oid);
                 if let Some(s_state) = r.and_then(|item| item.db_state()) {
-                    inventory_db::save_state_tx(&oid, s_state, &mut tx).await?;
+                    if let Err(e) = inventory_db::save_state_tx(&oid, s_state, &mut tx).await {
+                        error!("unable to save state for {}: {}", oid, e);
+                    }
                 }
             }
             tx.commit().await?;
@@ -624,7 +628,9 @@ impl Core {
             for oid in oids {
                 let r = self.inventory.read().await.get_item(&oid);
                 if let Some(s_state) = r.and_then(|item| item.db_state()) {
-                    save_item_state(&oid, s_state, rpc).await.log_err()?;
+                    if let Err(e) = save_item_state(&oid, s_state, rpc).await {
+                        error!("unable to save state for {}: {}", oid, e);
+                    }
                 }
             }
         }
@@ -1952,7 +1958,7 @@ impl Core {
                     &eva_common::services::ServiceStatusBroadcastEvent::terminating(),
                 )
                 .await;
-            self.save().await.log_ef();
+            self.save().await.log_ef_with("save");
             self.service_manager
                 .stop(&self.system_name, self.timeout, false)
                 .await;
