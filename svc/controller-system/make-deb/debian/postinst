@@ -1,0 +1,24 @@
+#!/bin/sh
+
+DIR_ETC=/etc/eva-cs-agent
+
+( useradd -r eva-cs-agent -s /usr/sbin/nologin -d / || exit 0 )
+for f in config.yml; do
+  if [ ! -f ${DIR_ETC}/$f ]; then
+    cp -prvf ${DIR_ETC}/$f-dist ${DIR_ETC}/$f
+    echo ""
+    echo "Installing new configuration file ${DIR_ETC}/${f}"
+    echo "Edit the file before starting the service"
+    echo ""
+  fi
+done
+chmod 600 ${DIR_ETC}/*.yml*
+chown eva-cs-agent ${DIR_ETC}/*.yml*
+systemctl enable eva-cs-agent
+cat << EOF
+Service eva-cs-agent enabled
+
+To start the agent, execute
+
+  systemctl start eva-cs-agent
+EOF

@@ -1,0 +1,17 @@
+[Unit]
+Description=EVA ICS Controller System Agent for Linux
+After=network.target
+
+[Service]
+PermissionsStartOnly=True
+Type=simple
+User=eva-cs-agent
+RuntimeDirectory=eva-cs-agent
+RuntimeDirectoryMode=0775
+WorkingDirectory=/
+ExecStart=/usr/sbin/eva-cs-agent
+Restart=always
+TimeoutStartSec=5
+
+[Install]
+WantedBy=multi-user.target
