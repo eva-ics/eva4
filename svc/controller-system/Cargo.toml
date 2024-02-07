@@ -54,7 +54,7 @@ openssl3 = ["eva-common/openssl3"]
 
 service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator"]
 agent = ["serde_yaml", "env_logger", "is-terminal", "reqwest"]
-agent-linux = ["agent", "syslog", "openssl", "jemallocator"]
+agent-linux = ["agent", "syslog", "openssl", "jemallocator", "eva-common/services"]
 
 #default = ["service"]
 #default = ["agent"]
