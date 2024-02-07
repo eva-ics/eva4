@@ -56,14 +56,19 @@ impl Metric {
         full_id: &str,
         prefix_contains_host: bool,
     ) -> Self {
-        let oid = if prefix_contains_host {
+        let oid = match if prefix_contains_host {
             format!("{}/{}", oid_prefix.replace(crate::VAR_HOST, host), full_id)
         } else {
             format!("{}/{}/{}", oid_prefix, host, full_id)
         }
         .parse::<OID>()
-        .log_err_with("OID mapping error")
-        .ok();
+        {
+            Ok(v) => Some(v),
+            Err(e) => {
+                error!("host: {} i: {} OID mapping error: {}", host, full_id, e);
+                None
+            }
+        };
         Self { oid, status: 1 }
     }
     #[inline]
