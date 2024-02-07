@@ -21,7 +21,7 @@ use windows_service::{define_windows_service, service_dispatcher};
 
 const AUTHOR: &str = "Bohemia Automation";
 //const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "EVA ICS Controller System Windows agent";
+const DESCRIPTION: &str = "EVA ICS Controller System Agent";
 const LONG_VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " build ",
@@ -31,7 +31,6 @@ const LONG_VERSION: &str = concat!(
 const ERR_NO_FIPS: &str = "FIPS mode not supported";
 
 const SVC_NAME: &str = "EvaCSAgent";
-const SVC_DISPLAY_NAME: &str = "EVA ICS Controller System Agent";
 const SVC_ID: &str = "EVA.cs-agent";
 
 #[cfg(debug_assertions)]
@@ -197,7 +196,7 @@ fn register_service() -> windows_service::Result<()> {
 
     let my_service_info = ServiceInfo {
         name: OsString::from(SVC_NAME),
-        display_name: OsString::from(SVC_DISPLAY_NAME),
+        display_name: OsString::from(DESCRIPTION),
         service_type: ServiceType::OWN_PROCESS,
         start_type: ServiceStartType::AutoStart,
         error_control: ServiceErrorControl::Normal,

@@ -12,7 +12,7 @@ use tokio::fs;
 
 const AUTHOR: &str = "Bohemia Automation";
 //const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "EVA ICS Controller System Linux agent";
+const DESCRIPTION: &str = "EVA ICS System Controller Linux agent";
 
 const LONG_VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),

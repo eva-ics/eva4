@@ -1,5 +1,5 @@
 [Unit]
-Description=EVA ICS Controller System Agent for Linux
+Description=EVA ICS System Controller Agent for Linux
 After=network.target
 
 [Service]
