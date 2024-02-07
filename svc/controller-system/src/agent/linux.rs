@@ -11,7 +11,7 @@ use tokio::fs;
 
 //const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "System service Linux agent";
+const DESCRIPTION: &str = "EVA ICS Controller System Linux agent";
 
 #[cfg(debug_assertions)]
 const CONFIG_PATH: &str = "./dev/agent-config.yml";

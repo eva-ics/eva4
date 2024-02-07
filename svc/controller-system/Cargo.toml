@@ -27,6 +27,9 @@ syslog = { version = "6.1.0", optional = true }
 bmart = "0.2.6"
 reqwest = { version = "0.11.24", optional = true, features = ["json"] }
 openssl = { version = "0.10.63", optional = true }
+clap = { version = "4.4.18", optional = true, features = ["derive"] }
+eventlog = { version = "0.2.2", optional = true }
+windows-service = { version = "0.6.0", optional = true }
 
 [profile.release]
 strip = true
@@ -47,14 +50,20 @@ name = "eva-cs-agent-linux"
 path = "src/agent/linux.rs"
 required-features = ["agent-linux"]
 
+[[bin]]
+name = "eva-cs-agent-windows"
+path = "src/agent/windows.rs"
+required-features = ["agent-windows"]
+
 [features]
 std-alloc = []
 openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 
 service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator"]
-agent = ["serde_yaml", "env_logger", "is-terminal", "reqwest"]
-agent-linux = ["agent", "syslog", "openssl", "jemallocator", "eva-common/services"]
+agent = ["serde_yaml", "env_logger", "reqwest"]
+agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services"]
+agent-windows = ["agent", "openssl", "clap", "eventlog", "windows-service", "openssl/vendored"]
 
 #default = ["service"]
-#default = ["agent"]
+#default = ["agent-windows"]
