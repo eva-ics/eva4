@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-02-07 build 2024020701: System Controller service, sdash audit trail, bug fixes
 * 2024-02-01 build 2024020103: HMI, TwinCAT fixes, data search in accounting
 * 2024-01-30 build 2024013001: ZF-replication self-repair, Cloud-wide accounting
 * 2024-01-18 build 2024011801: Security updates, HMI API call filters
