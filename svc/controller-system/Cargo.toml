@@ -61,9 +61,9 @@ openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 
 service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator"]
-agent = ["serde_yaml", "env_logger", "reqwest"]
+agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
 agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services"]
-agent-windows = ["agent", "openssl", "clap", "eventlog", "windows-service", "openssl/vendored"]
+agent-windows = ["agent", "openssl", "eventlog", "windows-service", "openssl/vendored"]
 
 #default = ["service"]
 #default = ["agent-windows"]

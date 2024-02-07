@@ -19,9 +19,14 @@ use windows_service::service_control_handler::{self, ServiceControlHandlerResult
 use windows_service::service_manager::{ServiceManager, ServiceManagerAccess};
 use windows_service::{define_windows_service, service_dispatcher};
 
-//const AUTHOR: &str = "Bohemia Automation";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AUTHOR: &str = "Bohemia Automation";
+//const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "EVA ICS Controller System Windows agent";
+const LONG_VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " build ",
+    include_str!("../../build.number")
+);
 
 const ERR_NO_FIPS: &str = "FIPS mode not supported";
 
@@ -46,6 +51,7 @@ static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
 static ACTIVE: atomic::AtomicBool = atomic::AtomicBool::new(true);
 
 #[derive(Parser)]
+#[command(author = AUTHOR, version = LONG_VERSION, about = DESCRIPTION, long_about = None)]
 struct Args {
     #[clap(subcommand)]
     command: Option<Command>,
@@ -177,7 +183,7 @@ async fn launch_agent(config: Config) -> EResult<()> {
     config.report.set()?;
     common::spawn_workers();
     client::spawn_worker(config.client);
-    info!("{} {} started", DESCRIPTION, VERSION);
+    info!("{} {} started", DESCRIPTION, LONG_VERSION);
     while ACTIVE.load(atomic::Ordering::Relaxed) {
         tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }

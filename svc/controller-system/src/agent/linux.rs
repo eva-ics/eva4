@@ -1,3 +1,4 @@
+use clap::Parser;
 use eva_common::prelude::*;
 use eva_system_common::{
     common::{self, ReportConfig},
@@ -9,9 +10,15 @@ use serde::Deserialize;
 use syslog::{BasicLogger, Facility, Formatter3164};
 use tokio::fs;
 
-//const AUTHOR: &str = "Bohemia Automation";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AUTHOR: &str = "Bohemia Automation";
+//const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "EVA ICS Controller System Linux agent";
+
+const LONG_VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " build ",
+    include_str!("../../build.number")
+);
 
 #[cfg(debug_assertions)]
 const CONFIG_PATH: &str = "./dev/agent-config.yml";
@@ -29,8 +36,13 @@ struct Config {
     client: client::Config,
 }
 
+#[derive(Parser)]
+#[command(author = AUTHOR, version = LONG_VERSION, about = DESCRIPTION, long_about = None)]
+struct Args {}
+
 #[tokio::main(worker_threads = 1)]
 async fn main() -> EResult<()> {
+    let _ = Args::parse();
     let config: Config = serde_yaml::from_str(
         &fs::read_to_string(CONFIG_PATH)
             .await
@@ -62,7 +74,7 @@ async fn main() -> EResult<()> {
     config.report.set()?;
     common::spawn_workers();
     client::spawn_worker(config.client);
-    info!("{} {} started", DESCRIPTION, VERSION);
+    info!("{} {} started", DESCRIPTION, LONG_VERSION);
     loop {
         tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }
