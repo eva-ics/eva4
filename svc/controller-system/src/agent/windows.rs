@@ -55,7 +55,9 @@ struct Args {
 enum Command {
     #[clap(about = "run in the system console with logging")]
     Run,
+    #[clap(about = "register Windows service")]
     Register,
+    #[clap(about = "unregister Windows service")]
     Unregister,
 }
 
