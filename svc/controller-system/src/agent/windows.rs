@@ -21,7 +21,7 @@ use windows_service::{define_windows_service, service_dispatcher};
 
 const AUTHOR: &str = "Bohemia Automation";
 //const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DESCRIPTION: &str = "EVA ICS Controller System Agent";
+const DESCRIPTION: &str = "EVA ICS System Controller Agent";
 const LONG_VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " build ",
