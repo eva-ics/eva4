@@ -7,6 +7,7 @@ use std::time::Duration;
 use sysinfo::System;
 
 const REFRESH: Duration = Duration::from_secs(1);
+const REPORT_OS_INFO_EVERY: usize = 10;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
@@ -34,21 +35,26 @@ pub async fn report_worker() {
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("system report worker started");
-    Metric::new0("os", "name")
-        .report(System::long_os_version())
-        .await;
-    Metric::new0("os", "version")
-        .report(System::os_version())
-        .await;
-    Metric::new0("os", "kernel")
-        .report(System::kernel_version())
-        .await;
-    Metric::new0("os", "distribution_id")
-        .report(System::distribution_id())
-        .await;
-    Metric::new0("os", "arch").report(System::cpu_arch()).await;
+    let mut c = 0;
     loop {
         int.tick().await;
         Metric::new0("os", "uptime").report(System::uptime()).await;
+        if c == 0 {
+            Metric::new0("os", "name")
+                .report(System::long_os_version())
+                .await;
+            Metric::new0("os", "version")
+                .report(System::os_version())
+                .await;
+            Metric::new0("os", "kernel")
+                .report(System::kernel_version())
+                .await;
+            Metric::new0("os", "distribution_id")
+                .report(System::distribution_id())
+                .await;
+            Metric::new0("os", "arch").report(System::cpu_arch()).await;
+            c = REPORT_OS_INFO_EVERY;
+        }
+        c -= 1;
     }
 }
