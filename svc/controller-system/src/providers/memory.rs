@@ -38,13 +38,24 @@ pub async fn report_worker() {
     loop {
         int.tick().await;
         sys.refresh_memory();
-        for (total, free, id) in &[
-            (sys.total_memory(), sys.free_memory(), "ram"),
-            (sys.total_swap(), sys.free_swap(), "swap"),
+        for (total, free, avail, id) in &[
+            (
+                sys.total_memory(),
+                sys.free_memory(),
+                Some(sys.available_memory()),
+                "ram",
+            ),
+            (sys.total_swap(), sys.free_swap(), None, "swap"),
         ] {
             Metric::new0(id, "total").report(total).await;
+            if let Some(a) = avail {
+                Metric::new0(id, "avail").report(a).await;
+                Metric::new0(id, "usage")
+                    .report(calc_usage(*total, *a))
+                    .await;
+            }
             Metric::new0(id, "free").report(free).await;
-            Metric::new0(id, "usage")
+            Metric::new0(id, "usage_alloc")
                 .report(calc_usage(*total, *free))
                 .await;
         }
