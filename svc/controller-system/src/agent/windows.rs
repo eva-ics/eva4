@@ -205,8 +205,10 @@ fn register_service() -> windows_service::Result<()> {
 
 fn unregister_service() -> windows_service::Result<()> {
     let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)?;
+    if let Ok(service) = manager.open_service(SVC_NAME, ServiceAccess::STOP) {
+        let _ = service.stop();
+    }
     let service = manager.open_service(SVC_NAME, ServiceAccess::DELETE)?;
-    let _ = service.stop();
     service.delete()?;
     Ok(())
 }
