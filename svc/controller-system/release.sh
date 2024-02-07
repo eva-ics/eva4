@@ -11,7 +11,7 @@ URI=pub.bma.ai/eva-cs-agent
 
 LINUX_BINARY_X86_64=eva-cs-agent-linux-${VERSION}-${BUILD}-x86_64
 LINUX_BINARY_AARCH64=eva-cs-agent-linux-${VERSION}-${BUILD}-aarch64
-DEBIAN_PACKAGE_X86_64=eva-cs-agent-4.0.2-1-amd64.deb
+DEBIAN_PACKAGE_X86_64=eva-cs-agent-${VERSION}-${BUILD}-amd64.deb
 WINDOWS_PACKAGE_X86_64=eva-cs-agent-windows-x86_64-${VERSION}-${BUILD}.zip
 
 ( curl -sI "https://${URI}/${LINUX_BINARY_X86_64}" 2>&1|head -1|grep " 404 " ) > /dev/null 2>&1
