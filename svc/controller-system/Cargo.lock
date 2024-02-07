@@ -612,7 +612,6 @@ name = "eva-controller-system"
 version = "4.0.2"
 dependencies = [
  "async-trait",
- "bmart",
  "busrt",
  "clap",
  "env_logger",

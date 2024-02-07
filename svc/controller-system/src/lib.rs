@@ -19,7 +19,7 @@ pub const VAR_HOST: &str = "${host}";
 pub const HEADER_API_SYSTEM_NAME: &str = "X-System-Name";
 pub const HEADER_API_AUTH_KEY: &str = "X-Auth-Key";
 
-pub fn abort() {
-    bmart::process::suicide(Duration::from_secs(0), false);
-    std::process::exit(1);
-}
+//pub fn abort() {
+//bmart::process::suicide(Duration::from_secs(0), false);
+//std::process::exit(1);
+//}

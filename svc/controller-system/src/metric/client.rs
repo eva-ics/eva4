@@ -3,8 +3,7 @@ use crate::common::ClientMetric;
 use eva_common::err_logger;
 use eva_common::events::EventBuffer;
 use eva_common::prelude::*;
-use log::error;
-use log::info;
+use log::{error, info, warn};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -52,7 +51,8 @@ impl Metric {
     pub async fn report<S: Serialize>(&self, value: S) {
         if let Err(e) = self.send_report(value).await {
             error!("unable to bufferize metric event for {}: {}", self.i, e);
-            crate::abort();
+            warn!("clearing the event buffer");
+            EVENT_BUFFER.take();
         }
     }
     #[allow(clippy::unused_async)]
