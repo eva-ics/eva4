@@ -546,6 +546,7 @@ dependencies = [
  "jemallocator",
  "log",
  "once_cell",
+ "openssl",
  "parking_lot",
  "reqwest",
  "serde",

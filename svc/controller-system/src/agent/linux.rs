@@ -29,11 +29,25 @@ struct Config {
     client: client::Config,
 }
 
-#[cfg(not(feature = "openssl-vendored"))]
+#[cfg(feature = "openssl-vendored")]
 pub fn enable_fips() -> EResult<()> {
     Err(Error::failed(
         "FIPS can not be enabled, consider using a native OS distribution",
     ))
+}
+
+#[cfg(not(feature = "openssl-vendored"))]
+pub fn enable_fips() -> EResult<()> {
+    #[cfg(feature = "openssl3")]
+    {
+        FIPS_LOADED
+            .set(())
+            .map_err(|_| Error::core("FIPS provided already loaded"))?;
+        std::mem::forget(openssl::provider::Provider::load(None, "fips").map_err(Error::failed)?);
+    }
+    #[cfg(not(feature = "openssl3"))]
+    openssl::fips::enable(true).map_err(Error::failed)?;
+    Ok(())
 }
 
 #[tokio::main(worker_threads = 1)]
