@@ -1,4 +1,5 @@
 use crate::metric::Metric;
+use crate::tools::format_name;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
@@ -50,50 +51,51 @@ pub async fn report_worker() {
         } else {
             None
         };
-        for (name, i) in &networks {
+        for (interface, i) in &networks {
             if let Some(ref i) = config.interfaces {
-                if !i.contains(name) {
+                if !i.contains(interface) {
                     continue;
                 }
             }
-            Metric::new("network", name, "rxb")
+            let name = format_name(interface);
+            Metric::new("network", &name, "rxb")
                 .report(i.received())
                 .await;
-            Metric::new("network", name, "txb")
+            Metric::new("network", &name, "txb")
                 .report(i.transmitted())
                 .await;
-            Metric::new("network", name, "rxb_total")
+            Metric::new("network", &name, "rxb_total")
                 .report(i.total_received())
                 .await;
-            Metric::new("network", name, "txb_total")
+            Metric::new("network", &name, "txb_total")
                 .report(i.total_transmitted())
                 .await;
-            Metric::new("network", name, "rx")
+            Metric::new("network", &name, "rx")
                 .report(i.packets_received())
                 .await;
-            Metric::new("network", name, "tx")
+            Metric::new("network", &name, "tx")
                 .report(i.packets_transmitted())
                 .await;
-            Metric::new("network", name, "rx_total")
+            Metric::new("network", &name, "rx_total")
                 .report(i.total_packets_received())
                 .await;
-            Metric::new("network", name, "tx_total")
+            Metric::new("network", &name, "tx_total")
                 .report(i.total_packets_transmitted())
                 .await;
-            Metric::new("network", name, "rx_err")
+            Metric::new("network", &name, "rx_err")
                 .report(i.errors_on_received())
                 .await;
-            Metric::new("network", name, "tx_err")
+            Metric::new("network", &name, "tx_err")
                 .report(i.errors_on_transmitted())
                 .await;
-            Metric::new("network", name, "rx_err_total")
+            Metric::new("network", &name, "rx_err_total")
                 .report(i.total_errors_on_received())
                 .await;
-            Metric::new("network", name, "tx_err_total")
+            Metric::new("network", &name, "tx_err_total")
                 .report(i.total_errors_on_transmitted())
                 .await;
             if let Some(r) = reported.as_mut() {
-                r.insert(name);
+                r.insert(interface);
             }
         }
         if let Some(r) = reported {

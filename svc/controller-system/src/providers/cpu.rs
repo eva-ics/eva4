@@ -1,4 +1,5 @@
 use crate::metric::Metric;
+use crate::tools::format_name;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
@@ -38,14 +39,17 @@ pub async fn report_worker() {
         int.tick().await;
         sys.refresh_cpu_specifics(CpuRefreshKind::everything());
         for cpu in sys.cpus() {
-            let mut name = cpu.name();
-            if let Some(n) = name.strip_prefix("cpu") {
-                name = n;
+            let mut cpu_name = cpu.name();
+            if let Some(n) = cpu_name.strip_prefix("cpu") {
+                cpu_name = n;
+            } else if let Some(n) = cpu_name.strip_prefix("CPU ") {
+                cpu_name = n;
             }
-            Metric::new("cpu/core", name, "usage")
+            let name = format_name(cpu_name);
+            Metric::new("cpu/core", &name, "usage")
                 .report(cpu.cpu_usage())
                 .await;
-            Metric::new("cpu/core", name, "freq")
+            Metric::new("cpu/core", &name, "freq")
                 .report(cpu.frequency())
                 .await;
         }
