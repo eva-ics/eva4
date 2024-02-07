@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct ClientMetric {
     pub i: String,
-    #[serde(alias = "s")]
+    #[serde(alias = "s", rename(serialize = "s"))]
     pub status: ItemStatus,
-    #[serde(default, alias = "v")]
+    #[serde(default, alias = "v", rename(serialize = "v"))]
     pub value: ValueOptionOwned,
 }
 
