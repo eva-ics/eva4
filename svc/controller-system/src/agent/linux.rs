@@ -29,6 +29,13 @@ struct Config {
     client: client::Config,
 }
 
+#[cfg(not(feature = "openssl-vendored"))]
+pub fn enable_fips() -> EResult<()> {
+    Err(Error::failed(
+        "FIPS can not be enabled, consider using a native OS distribution",
+    ))
+}
+
 #[tokio::main(worker_threads = 1)]
 async fn main() -> EResult<()> {
     let config: Config = serde_yaml::from_str(
@@ -56,7 +63,7 @@ async fn main() -> EResult<()> {
             .map_err(Error::failed)?;
     }
     if config.client.fips {
-        eva_common::services::enable_fips()?;
+        enable_fips()?;
         info!("FIPS: enabled");
     }
     config.report.set()?;

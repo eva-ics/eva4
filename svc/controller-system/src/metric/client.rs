@@ -115,7 +115,8 @@ async fn submit_worker(config: &Config) -> EResult<()> {
                 .json(&data)
                 .send(),
         )
-        .await?
+        .await
+        .map_err(|_| Error::timeout())?
         .map_err(Error::failed)?;
         if !response.status().is_success() {
             return Err(Error::failed(format!(
