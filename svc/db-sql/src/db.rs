@@ -102,7 +102,7 @@ macro_rules! insert {
             .bind($state.oid.as_str())
             .bind($state.status as i32)
             .bind(if let Some(v) = $state.value {
-                Some(v.to_string_or_pack()?)
+                Some(v.to_string_or_pack().unwrap_or_default())
             } else {
                 None
             })
