@@ -36,6 +36,7 @@ fn launch_sysinfo() {
             int.tick().await;
             {
                 let mut s = SYSTEM_INFO.write().await;
+                s.refresh_memory();
                 s.refresh_processes();
                 s.refresh_disks_list();
             }
