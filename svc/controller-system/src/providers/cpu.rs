@@ -8,6 +8,7 @@ use std::time::Duration;
 use sysinfo::{CpuRefreshKind, System};
 
 const REFRESH: Duration = Duration::from_secs(1);
+const REPORT_CPU_INFO_EVERY: usize = 10;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
@@ -35,6 +36,7 @@ pub async fn report_worker() {
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("cpu report worker started");
+    let mut c = 0;
     loop {
         int.tick().await;
         sys.refresh_cpu_specifics(CpuRefreshKind::everything());
@@ -53,5 +55,10 @@ pub async fn report_worker() {
                 .report(cpu.frequency())
                 .await;
         }
+        if c == 0 {
+            Metric::new0("cpu", "avail").report(num_cpus::get()).await;
+            c = REPORT_CPU_INFO_EVERY;
+        }
+        c -= 1;
     }
 }

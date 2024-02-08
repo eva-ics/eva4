@@ -624,6 +624,7 @@ dependencies = [
  "is-terminal",
  "jemallocator",
  "log",
+ "num_cpus",
  "once_cell",
  "openssl",
  "parking_lot",
