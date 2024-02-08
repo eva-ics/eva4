@@ -75,8 +75,9 @@ fn get_sector_size(dev: &str) -> Option<u64> {
         .and_then(|v| v.trim_end().parse().ok())
 }
 
+#[allow(clippy::cast_precision_loss)]
 async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
-    if let Some(sector_size) = get_sector_size(&name) {
+    if let Some(sector_size) = get_sector_size(name) {
         let read_bytes = current.sectors_read.counter_diff(prev.sectors_read) * sector_size;
         let written_bytes =
             current.sectors_written.counter_diff(prev.sectors_written) * sector_size;
@@ -161,7 +162,7 @@ pub async fn report_worker() {
             if let Some(ref prev_stats) = prev {
                 for (name, device_stats) in &stats {
                     if let Some(prev_drive_stats) = prev_stats.get(name) {
-                        if report_device(&name, device_stats, prev_drive_stats).await {
+                        if report_device(name, device_stats, prev_drive_stats).await {
                             mark_reported!(name);
                         }
                     } else {

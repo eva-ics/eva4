@@ -55,7 +55,7 @@ fn format_mountpoint_name(path: &Path) -> Arc<String> {
     if let Some(name) = cache.get(path) {
         name.clone()
     } else {
-        let name = format_metric_mountpoint_name(path).to_owned();
+        let name = format_metric_mountpoint_name(path);
         cache.insert(path.to_owned(), name.clone());
         name
     }
