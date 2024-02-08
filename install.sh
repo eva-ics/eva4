@@ -377,9 +377,6 @@ rmdir "eva-${VERSION}"
 chgrp eva pvt
 chmod 750 pvt
 
-mkdir -p ./pvt/vendored-apps/opcentre/idc/dashboards
-chown -R eva ./pvt/vendored-apps
-
 if [ "$AUTOSTART" ]; then
   if [ "$ID_LIKE" = "alpine" ]; then
     sed "s|/opt/eva4|${PREFIX}|g" ./etc/openrc/eva4 > /etc/init.d/eva4
@@ -454,6 +451,8 @@ fi
 
 if [ "$HMI" ]; then
   echo "Deploying HMI services..."
+  mkdir -p ./pvt/vendored-apps/opcentre/idc/dashboards || exit 12
+  chown -R eva ./pvt/vendored-apps || exit 12
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$ADMINPASSWD" ] || ADMINPASSWD=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c16) 2>/dev/null)
