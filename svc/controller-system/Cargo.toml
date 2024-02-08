@@ -31,6 +31,7 @@ clap = { version = "4.4.18", optional = true, features = ["derive"] }
 eventlog = { version = "0.2.2", optional = true }
 windows-service = { version = "0.6.0", optional = true }
 num_cpus = "1.16.0"
+procfs = { version = "0.16.0", optional = true }
 
 [profile.release]
 strip = true
@@ -61,9 +62,9 @@ std-alloc = []
 openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 
-service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator"]
+service = ["busrt", "eva-sdk", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator", "procfs"]
 agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
-agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services"]
+agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services", "procfs"]
 agent-windows = ["agent", "openssl", "eventlog", "windows-service", "openssl/vendored"]
 
 #default = ["service"]

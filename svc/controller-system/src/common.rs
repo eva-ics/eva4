@@ -25,6 +25,7 @@ pub fn spawn_workers() {
     launch_provider_worker!(load_avg);
     launch_provider_worker!(memory);
     launch_provider_worker!(disks);
+    launch_provider_worker!(blk);
     launch_provider_worker!(network);
 }
 
@@ -45,6 +46,8 @@ pub struct ReportConfig {
     #[serde(default)]
     disks: providers::disks::Config,
     #[serde(default)]
+    blk: providers::blk::Config,
+    #[serde(default)]
     network: providers::network::Config,
 }
 
@@ -55,6 +58,7 @@ impl ReportConfig {
         providers::load_avg::set_config(self.load_avg)?;
         providers::memory::set_config(self.memory)?;
         providers::disks::set_config(self.disks)?;
+        providers::blk::set_config(self.blk)?;
         providers::network::set_config(self.network)?;
         providers::system::set_config(self.system)?;
         Ok(())

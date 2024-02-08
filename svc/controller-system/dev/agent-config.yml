@@ -24,6 +24,12 @@ report:
     mount_points:
       - /
       #- /var
+  blk:
+    enabled: true
+    # enable specific mount points only
+    # note: for automatic mountpoint list reporting unavailable is not supported
+    devices:
+      - nvme1n1
   # network info
   network:
     enabled: false

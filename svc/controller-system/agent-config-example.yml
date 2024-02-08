@@ -25,6 +25,17 @@ report:
     #mount_points:
       #- /
       #- /var
+  # block device info (Linux only)
+  blk:
+    enabled: true
+    # enable specific devices only
+    # note: for automatic device list reporting unavailable is not supported,
+    # loop devices in auto-list are omitted
+    #devices:
+      #- nvme0n1
+      #- nvme1n1
+      #- sda
+      #- sdb
   # network info
   network:
     enabled: true
