@@ -2,15 +2,19 @@ use crate::metric::Metric;
 use crate::tools::{calc_usage, format_name};
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
+use parking_lot::Mutex;
 use serde::Deserialize;
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::Disks;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
+static MOUNTPOINT_NAME_CACHE: Lazy<Mutex<BTreeMap<PathBuf, Arc<String>>>> = Lazy::new(<_>::default);
 
 const REFRESH: Duration = Duration::from_secs(10);
 
@@ -28,7 +32,7 @@ pub struct Config {
     mount_points: Option<HashSet<PathBuf>>,
 }
 
-fn format_mountpoint_name(path: &Path) -> Cow<str> {
+fn format_metric_mountpoint_name(path: &Path) -> Arc<String> {
     let mount_point_absolute = path.to_string_lossy();
     let mount_point: Cow<str> = if let Some(m) = mount_point_absolute.strip_prefix('/') {
         m.into()
@@ -40,9 +44,20 @@ fn format_mountpoint_name(path: &Path) -> Cow<str> {
         mount_point_absolute
     };
     if mount_point.is_empty() {
-        "SYSTEM_ROOT".into()
+        "SYSTEM_ROOT".to_owned().into()
     } else {
-        format_name(&mount_point).into()
+        format_name(&mount_point)
+    }
+}
+
+fn format_mountpoint_name(path: &Path) -> Arc<String> {
+    let mut cache = MOUNTPOINT_NAME_CACHE.lock();
+    if let Some(name) = cache.get(path) {
+        name.clone()
+    } else {
+        let name = format_metric_mountpoint_name(path).to_owned();
+        cache.insert(path.to_owned(), name.clone());
+        name
     }
 }
 
