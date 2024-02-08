@@ -377,6 +377,9 @@ rmdir "eva-${VERSION}"
 chgrp eva pvt
 chmod 750 pvt
 
+mkdir -p ./pvt/vendored-apps/opcentre/idc/dashboards
+chown -R eva ./pvt/vendored-apps
+
 if [ "$AUTOSTART" ]; then
   if [ "$ID_LIKE" = "alpine" ]; then
     sed "s|/opt/eva4|${PREFIX}|g" ./etc/openrc/eva4 > /etc/init.d/eva4
