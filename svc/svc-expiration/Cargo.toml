@@ -14,7 +14,7 @@ eva-common = { version = "0.3.39", features = ["events", "time"] }
 log = "0.4.14"
 lazy_static = "1.4.0"
 async-channel = "1.7.1"
-eva-sdk = { version = "0.3.39" }
+eva-sdk = { version = "0.3.41" }
 jemallocator = { version = "0.5.0" }
 async-io = "1.7.0"
 

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.29.1", features = ["full"] }
 eva-common = { version = "0.3.39", features = ["events", "common-payloads", "payload", "acl", "time"] }
-eva-sdk = { version = "0.3.39" }
+eva-sdk = { version = "0.3.41" }
 async-trait = { version = "0.1.51" }
 serde = { version = "1.0.133", features = ["derive", "rc"] }
 log = "0.4.14"
