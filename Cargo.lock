@@ -621,9 +621,9 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busrt"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee5f4261ec20cb308913175a3c988b2fbc885adf56a505d9b044499d5896d9f7"
+checksum = "ea0c23e690f9b54914925fc2fad286ed03f48ef490c893eee9d22955b604d929"
 dependencies = [
  "async-channel",
  "async-io",
