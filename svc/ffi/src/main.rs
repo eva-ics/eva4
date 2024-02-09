@@ -1,6 +1,7 @@
 use clap::Parser;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use eva_sdk::service::svc_block2;
 use log::{log, Level as LL};
 use once_cell::sync::{Lazy, OnceCell};
 use std::cell::RefCell;
@@ -550,21 +551,21 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
         };
     }
     let description = info.description.clone();
-    let (rpc, client, client_bw) = if args.blocking_fp {
+    let (rpc, secondary, client, client_bw) = if args.blocking_fp {
         let (rpc, secondary) = initial
             .init_rpc_blocking_with_secondary(Handlers { info })
             .await?;
         let client_secondary = secondary.client().clone();
         let client = rpc.client().clone();
         let client_bw = client_secondary.clone();
-        set_rpc!(secondary);
-        (rpc, client, client_bw) // bus worker client uses an additional RPC channel
+        set_rpc!(secondary.clone());
+        (rpc, Some(secondary), client, client_bw) // bus worker client uses an additional RPC channel
     } else {
         let rpc = initial.init_rpc(Handlers { info }).await?;
         let client = rpc.client().clone();
         let client_bw = client.clone();
         set_rpc!(rpc.clone());
-        (rpc, client, client_bw) // bus worker client is the same as the primary one
+        (rpc, None, client, client_bw) // bus worker client is the same as the primary one
     };
     initial.drop_privileges()?;
     svc_init_logs(&initial, client.clone())?;
@@ -617,7 +618,11 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     svc_mark_ready(&client).await?;
     info!("{} started ({})", description, initial.id());
     call_maybe_ufn!(ffi_launch);
-    svc_block(&rpc).await;
+    if let Some(sec) = secondary {
+        svc_block2(&rpc, &sec).await;
+    } else {
+        svc_block(&rpc).await;
+    }
     svc_mark_terminating(&client).await?;
     call_maybe_ufn!(ffi_terminate);
     while !buscc_tx.is_empty() {

@@ -9,7 +9,7 @@ use eva_sdk::controller::{
     format_action_topic, transform, Action, RawStateCache, RawStateEventPreparedOwned,
 };
 use eva_sdk::prelude::*;
-use eva_sdk::service::poc;
+use eva_sdk::service::{poc, svc_block2};
 use eva_sdk::types::State;
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
@@ -751,7 +751,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             action_map: config.action_map,
         })
         .await?;
-    RPC.set(rpc_secondary)
+    RPC.set(rpc_secondary.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
     initial.drop_privileges()?;
     let client = rpc.client().clone();
@@ -799,7 +799,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     });
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block(&rpc).await;
+    svc_block2(&rpc, &rpc_secondary).await;
     svc_mark_terminating(&client).await?;
     Ok(())
 }

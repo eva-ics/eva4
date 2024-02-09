@@ -5,6 +5,7 @@ use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::controller::{actt::Actt, format_action_topic, Action};
 use eva_sdk::prelude::*;
+use eva_sdk::service::svc_block2;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
@@ -370,7 +371,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         eva_sdk::service::EventKind::Actual,
     )
     .await?;
-    RPC.set(rpc_secondary)
+    RPC.set(rpc_secondary.clone())
         .map_err(|_| Error::core("Unable to set RPC"))?;
     initial.drop_privileges()?;
     let client = rpc.client().clone();
@@ -413,7 +414,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             });
         }
     });
-    svc_block(&rpc).await;
+    svc_block2(&rpc, &rpc_secondary).await;
     svc_mark_terminating(&client).await?;
     Ok(())
 }

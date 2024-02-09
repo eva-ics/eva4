@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 busrt = { version = "0.4", features = ["rpc", "ipc"], optional = true }
 eva-common = { version = "0.3.38", features = ["events"] }
-eva-sdk = { version = "0.3", optional = true }
+eva-sdk = { version = "0.3.39", optional = true }
 tokio = { version = "1.20.1", features = ["full"] }
 async-trait = { version = "0.1.51", optional = true }
 serde = { version = "1.0.143", features = ["derive", "rc"] }
