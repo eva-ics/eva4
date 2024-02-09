@@ -44,11 +44,13 @@ pub async fn report_worker() {
         Metric::new0("ram", "avail")
             .report(sys.available_memory())
             .await;
+        Metric::new0("ram", "used").report(sys.used_memory()).await;
         Metric::new0("ram", "usage")
             .report(calc_usage(sys.total_memory(), sys.available_memory()))
             .await;
         Metric::new0("swap", "total").report(sys.total_swap()).await;
         Metric::new0("swap", "avail").report(sys.free_swap()).await;
+        Metric::new0("swap", "used").report(sys.used_swap()).await;
         Metric::new0("swap", "usage")
             .report(calc_usage(sys.total_swap(), sys.free_swap()))
             .await;

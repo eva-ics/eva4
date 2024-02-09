@@ -100,6 +100,9 @@ pub async fn report_worker() {
             Metric::new("disk", &name, "avail")
                 .report(disk.available_space())
                 .await;
+            Metric::new("disk", &name, "used")
+                .report(disk.total_space() - disk.available_space())
+                .await;
             Metric::new("disk", &name, "usage")
                 .report(calc_usage(disk.total_space(), disk.available_space()))
                 .await;
