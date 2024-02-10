@@ -1,3 +1,4 @@
+use eva_common::err_logger;
 use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
 use log::warn;
@@ -6,6 +7,8 @@ use serde::Serialize;
 use std::sync::atomic;
 use std::time::Duration;
 use tokio::sync::RwLock;
+
+err_logger!();
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
@@ -36,9 +39,13 @@ fn launch_sysinfo() {
             int.tick().await;
             {
                 let mut s = SYSTEM_INFO.write().await;
-                s.refresh_memory();
-                s.refresh_processes();
-                s.refresh_disks_list();
+                tokio::task::spawn_blocking(move || {
+                    s.refresh_memory();
+                    s.refresh_processes();
+                    s.refresh_disks_list();
+                })
+                .await
+                .log_ef_with("sysinfo update");
             }
         }
     });

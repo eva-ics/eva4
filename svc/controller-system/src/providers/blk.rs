@@ -7,6 +7,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::time::Duration;
+use tokio::fs;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
 
@@ -69,15 +70,16 @@ pub async fn report_worker() {
     warn!("blk worker exited, platform not supported");
 }
 
-fn get_sector_size(dev: &str) -> Option<u64> {
-    std::fs::read_to_string(format!("/sys/block/{}/queue/hw_sector_size", dev))
+async fn get_sector_size(dev: &str) -> Option<u64> {
+    fs::read_to_string(format!("/sys/block/{}/queue/hw_sector_size", dev))
+        .await
         .ok()
         .and_then(|v| v.trim_end().parse().ok())
 }
 
 #[allow(clippy::cast_precision_loss)]
 async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
-    if let Some(sector_size) = get_sector_size(name) {
+    if let Some(sector_size) = get_sector_size(name).await {
         let read_bytes = current.sectors_read.counter_diff(prev.sectors_read) * sector_size;
         let written_bytes =
             current.sectors_written.counter_diff(prev.sectors_written) * sector_size;
@@ -107,6 +109,16 @@ async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
     } else {
         false
     }
+}
+
+async fn diskstats() -> EResult<Vec<procfs::DiskStat>> {
+    let mut result = Vec::new();
+    for line in fs::read_to_string("/proc/diskstats").await?.split('\n') {
+        if !line.is_empty() {
+            result.push(procfs::DiskStat::from_line(line).map_err(Error::invalid_data)?);
+        }
+    }
+    Ok(result)
 }
 
 /// # Panics
@@ -142,7 +154,7 @@ pub async fn report_worker() {
                 }
             };
         }
-        if let Ok(stats_vec) = procfs::diskstats() {
+        if let Ok(stats_vec) = diskstats().await {
             let stats: BTreeMap<String, Stat> = stats_vec
                 .into_iter()
                 .filter_map(|v| {

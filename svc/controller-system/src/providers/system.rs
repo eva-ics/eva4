@@ -1,10 +1,13 @@
 use crate::metric::Metric;
+use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::time::Duration;
 use sysinfo::System;
+
+err_logger!();
 
 const REFRESH: Duration = Duration::from_secs(1);
 const REPORT_OS_INFO_EVERY: usize = 10;
@@ -24,6 +27,14 @@ pub struct Config {
     enabled: bool,
 }
 
+struct OsInfo {
+    long_os_version: Option<String>,
+    os_version: Option<String>,
+    kernel_version: Option<String>,
+    distribution_id: String,
+    arch: Option<String>,
+}
+
 /// # Panics
 ///
 /// will panic if config is not set
@@ -40,19 +51,28 @@ pub async fn report_worker() {
         int.tick().await;
         Metric::new0("os", "uptime").report(System::uptime()).await;
         if c == 0 {
-            Metric::new0("os", "name")
-                .report(System::long_os_version())
-                .await;
-            Metric::new0("os", "version")
-                .report(System::os_version())
-                .await;
-            Metric::new0("os", "kernel")
-                .report(System::kernel_version())
-                .await;
-            Metric::new0("os", "distribution_id")
-                .report(System::distribution_id())
-                .await;
-            Metric::new0("os", "arch").report(System::cpu_arch()).await;
+            if let Ok(info) = tokio::task::spawn_blocking(move || OsInfo {
+                long_os_version: System::long_os_version(),
+                os_version: System::os_version(),
+                kernel_version: System::kernel_version(),
+                distribution_id: System::distribution_id(),
+                arch: System::cpu_arch(),
+            })
+            .await
+            .log_err_with("os info")
+            {
+                Metric::new0("os", "name")
+                    .report(info.long_os_version)
+                    .await;
+                Metric::new0("os", "version").report(info.os_version).await;
+                Metric::new0("os", "kernel")
+                    .report(info.kernel_version)
+                    .await;
+                Metric::new0("os", "distribution_id")
+                    .report(info.distribution_id)
+                    .await;
+                Metric::new0("os", "arch").report(info.arch).await;
+            }
             c = REPORT_OS_INFO_EVERY;
         }
         c -= 1;

@@ -1,11 +1,14 @@
 use crate::metric::Metric;
 use crate::tools::calc_usage;
+use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::time::Duration;
 use sysinfo::System;
+
+err_logger!();
 
 const REFRESH: Duration = Duration::from_secs(1);
 
@@ -31,13 +34,20 @@ pub async fn report_worker() {
     if !CONFIG.get().unwrap().enabled {
         return;
     }
-    let mut sys = System::new();
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("memory report worker started");
     loop {
         int.tick().await;
-        sys.refresh_memory();
+        let Ok(sys) = tokio::task::spawn_blocking(move || {
+            let mut sys = System::new();
+            sys.refresh_memory();
+            sys
+        })
+        .await
+        .log_err_with("memory") else {
+            continue;
+        };
         Metric::new0("ram", "total")
             .report(sys.total_memory())
             .await;

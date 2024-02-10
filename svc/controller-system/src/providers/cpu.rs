@@ -1,11 +1,14 @@
 use crate::metric::Metric;
 use crate::tools::format_name;
+use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::time::Duration;
 use sysinfo::{CpuRefreshKind, System};
+
+err_logger!();
 
 const REFRESH: Duration = Duration::from_secs(1);
 const REPORT_CPU_INFO_EVERY: usize = 10;
@@ -32,14 +35,21 @@ pub async fn report_worker() {
     if !CONFIG.get().unwrap().enabled {
         return;
     }
-    let mut sys = System::new();
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("cpu report worker started");
     let mut c = 0;
     loop {
         int.tick().await;
-        sys.refresh_cpu_specifics(CpuRefreshKind::everything());
+        let Ok(sys) = tokio::task::spawn_blocking(move || {
+            let mut sys = System::new();
+            sys.refresh_cpu_specifics(CpuRefreshKind::everything());
+            sys
+        })
+        .await
+        .log_err_with("cpu stats") else {
+            continue;
+        };
         for cpu in sys.cpus() {
             let mut cpu_name = cpu.name();
             if let Some(n) = cpu_name.strip_prefix("cpu") {
