@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, BTreeMap, HashMap};
 use std::sync::{atomic, Arc};
 use std::time::Duration;
+use tokio::sync::oneshot;
 use ttl_cache::TtlCache;
 
 err_logger!();
@@ -29,7 +30,12 @@ const DESCRIPTION: &str = "PubSub controller gateway service";
 const CACHE_SIZE: usize = 100_000;
 const CACHE_TTL: Duration = Duration::from_secs(60);
 
-type PubSubTask = (Arc<String>, Vec<u8>, i32);
+struct PubSubTask {
+    topic: Arc<String>,
+    payload: Vec<u8>,
+    qos: i32,
+    processed: Option<oneshot::Sender<()>>,
+}
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
@@ -134,12 +140,14 @@ async fn send_output(o: &OutputMapping, mut unit_action: Option<(OID, Value)>) -
     PUBSUB_TX
         .get()
         .unwrap()
-        .send((
-            o.topic.clone(),
+        .send(PubSubTask {
+            topic: o.topic.clone(),
             payload,
-            o.qos
+            qos: o
+                .qos
                 .unwrap_or_else(|| DEFAULT_QOS.load(atomic::Ordering::Relaxed)),
-        ))
+            processed: None,
+        })
         .await
         .map_err(Error::failed)?;
     Ok(())
@@ -152,33 +160,76 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
+            "pubsub.publish" => {
+                #[derive(Deserialize)]
+                struct Task {
+                    topic: String,
+                    payload: Value,
+                    qos: Option<i32>,
+                    #[serde(default)]
+                    packer: Packer,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let task: Task = unpack(payload)?;
+                    let qos = task
+                        .qos
+                        .unwrap_or_else(|| DEFAULT_QOS.load(atomic::Ordering::Relaxed));
+                    let (tx, rx) = if qos > 0 {
+                        let (t, r) = oneshot::channel();
+                        (Some(t), Some(r))
+                    } else {
+                        (None, None)
+                    };
+                    PUBSUB_TX
+                        .get()
+                        .unwrap()
+                        .send(PubSubTask {
+                            topic: Arc::new(task.topic),
+                            payload: task.packer.pack(task.payload)?,
+                            qos,
+                            processed: tx,
+                        })
+                        .await
+                        .map_err(Error::failed)?;
+                    if let Some(r) = rx {
+                        tokio::time::timeout(*TIMEOUT.get().unwrap(), r)
+                            .await
+                            .map_err(|_| Error::timeout())?
+                            .map_err(Error::failed)?;
+                    }
+                    Ok(None)
+                }
+            }
             "action" => {
                 if payload.is_empty() {
-                    return Err(RpcError::params(None));
-                }
-                let mut action: Action = unpack(payload)?;
-                let action_topic = format_action_topic(action.oid());
-                if let Some(o) = self.action_map.get(action.oid()) {
-                    // TODO run in background and move to task pool
-                    let params = action.take_unit_params()?;
-                    let payload_pending = pack(&action.event_pending())?;
-                    BUS_TX
-                        .get()
-                        .unwrap()
-                        .send((action_topic.clone(), payload_pending))
-                        .await
-                        .map_err(Error::failed)?;
-                    send_output(o, Some((action.oid().clone(), params.value))).await?;
-                    let payload_completed = pack(&action.event_completed(None))?;
-                    BUS_TX
-                        .get()
-                        .unwrap()
-                        .send((action_topic.clone(), payload_completed))
-                        .await
-                        .map_err(Error::failed)?;
-                    Ok(None)
+                    Err(RpcError::params(None))
                 } else {
-                    Err(Error::not_found(format!("{} has no action map", action.oid())).into())
+                    let mut action: Action = unpack(payload)?;
+                    let action_topic = format_action_topic(action.oid());
+                    if let Some(o) = self.action_map.get(action.oid()) {
+                        // TODO run in background and move to task pool
+                        let params = action.take_unit_params()?;
+                        let payload_pending = pack(&action.event_pending())?;
+                        BUS_TX
+                            .get()
+                            .unwrap()
+                            .send((action_topic.clone(), payload_pending))
+                            .await
+                            .map_err(Error::failed)?;
+                        send_output(o, Some((action.oid().clone(), params.value))).await?;
+                        let payload_completed = pack(&action.event_completed(None))?;
+                        BUS_TX
+                            .get()
+                            .unwrap()
+                            .send((action_topic.clone(), payload_completed))
+                            .await
+                            .map_err(Error::failed)?;
+                        Ok(None)
+                    } else {
+                        Err(Error::not_found(format!("{} has no action map", action.oid())).into())
+                    }
                 }
             }
             _ => svc_handle_default_rpc(method, &self.info),
@@ -573,8 +624,14 @@ fn spawn_pubsub_worker(
     pubsub_rx: async_channel::Receiver<PubSubTask>,
 ) {
     tokio::spawn(async move {
-        while let Ok((topic, payload, qos)) = pubsub_rx.recv().await {
-            pubsub_client.publish(&topic, payload, qos).await.log_ef();
+        while let Ok(task) = pubsub_rx.recv().await {
+            pubsub_client
+                .publish(&task.topic, task.payload, task.qos)
+                .await
+                .log_ef();
+            if let Some(t) = task.processed {
+                let _ = t.send(());
+            }
         }
     });
 }
@@ -722,6 +779,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
         return Ok(());
     }
+    eva_sdk::service::set_bus_error_suicide_timeout(initial.shutdown_timeout())?;
     if config.pubsub.cluster_hosts_randomize {
         config.pubsub.host.shuffle();
     }
@@ -744,9 +802,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
             }
         }
     }
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(
+        ServiceMethod::new("pubsub.publish")
+            .required("topic")
+            .required("payload")
+            .optional("qos")
+            .optional("packer"),
+    );
     let (rpc, rpc_secondary) = initial
         .init_rpc_blocking_with_secondary(Handlers {
-            info: ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION),
+            info,
             output: omap,
             action_map: config.action_map,
         })
@@ -801,5 +867,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block2(&rpc, &rpc_secondary).await;
     svc_mark_terminating(&client).await?;
+    while !PUBSUB_TX.get().unwrap().is_empty() {
+        tokio::time::sleep(eva_common::SLEEP_STEP).await;
+    }
     Ok(())
 }

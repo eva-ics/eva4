@@ -1,0 +1,19 @@
+pubsub.publish:
+  des: Publish data to a pub/sub server topic
+  par:
+    - nam: topic
+      typ: String
+      des: Server topic
+      req: true
+    - nam: payload
+      typ: Any
+      des: Data payload
+      req: true
+    - nam: qos
+      typ: i32
+      des: Operation QoS
+      req: false
+    - nam: packer
+      typ: String
+      des: Data packer: no, json, msgpack (default: no, send data as-is)
+  ret:
