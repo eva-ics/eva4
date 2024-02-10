@@ -1,9 +1,55 @@
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
-static NAME_CACHE: Lazy<Mutex<BTreeMap<String, Arc<String>>>> = Lazy::new(<_>::default);
+const NAME_CACHE_SIZE: usize = 16384;
+
+static NAME_CACHE: Lazy<Mutex<FIFOCache<String, Arc<String>>>> =
+    Lazy::new(|| Mutex::new(FIFOCache::bounded(NAME_CACHE_SIZE)));
+
+struct FIFOCache<K, V>
+where
+    K: Ord,
+{
+    limit: usize,
+    keys: VecDeque<K>,
+    map: BTreeMap<K, V>,
+}
+
+impl<K, V> FIFOCache<K, V>
+where
+    K: Ord,
+{
+    fn bounded(limit: usize) -> Self {
+        Self {
+            limit,
+            keys: <_>::default(),
+            map: <_>::default(),
+        }
+    }
+    fn insert(&mut self, key: K, value: V)
+    where
+        K: Clone,
+    {
+        if self.keys.len() >= self.limit {
+            if let Some(k) = self.keys.pop_front() {
+                self.map.remove(&k);
+            }
+        }
+        self.keys.push_back(key.clone());
+        self.map.insert(key, value);
+    }
+    fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + ?Sized,
+    {
+        self.map.get(key)
+    }
+}
 
 #[allow(clippy::cast_precision_loss)]
 pub fn calc_usage<N: Into<u64>>(total: N, free: N) -> f64 {
