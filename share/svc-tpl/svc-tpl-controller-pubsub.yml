@@ -24,7 +24,7 @@ config:
     queue_size: 1024
     # pub/sub QoS (not required for PSRT)
     qos: 1
-  # parsing/formatting values is used with a lightweight JsonPath syntax:
+  # parsing/formatting values is performed with a lightweight JsonPath syntax:
   # $.some.value - value is in a structure "some", field "value"
   # $.some[1].value[2] - work with array of structures
   # $.[1] - top-level array of values

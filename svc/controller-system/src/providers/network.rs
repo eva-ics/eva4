@@ -32,6 +32,7 @@ pub struct Config {
 /// # Panics
 ///
 /// will panic if config is not set
+#[allow(clippy::too_many_lines)]
 pub async fn report_worker() {
     let config = CONFIG.get().unwrap();
     if !config.enabled {

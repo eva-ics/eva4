@@ -294,19 +294,14 @@ dependencies = [
  "async-channel",
  "async-io",
  "async-trait",
- "ipnetwork",
  "log",
- "nix 0.25.1",
  "parking_lot",
  "regex",
  "rmp-serde",
  "serde",
  "serde-value",
- "submap",
  "tokio",
  "tokio-task-pool",
- "triggered",
- "unix-named-pipe",
 ]
 
 [[package]]
@@ -575,33 +570,12 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "errno"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f639046355ee4f37944e44f60642c6f3a7efa3cf6b78c78a0d989a8ce6c396a1"
-dependencies = [
- "errno-dragonfly",
- "libc",
- "winapi",
-]
-
-[[package]]
-name = "errno"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "errno-dragonfly"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
-dependencies = [
- "cc",
- "libc",
 ]
 
 [[package]]
@@ -615,9 +589,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.39"
+version = "0.3.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e5e602121c570906fa610d4397db537696274aa26ddbe04de8adbf382282fdc"
+checksum = "73205cfde31a5ab9e2713b0ac0f5c9b2525c186ea72e63f926a7055b2e5b9bf1"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -648,6 +622,7 @@ name = "eva-controller-system"
 version = "4.0.2"
 dependencies = [
  "async-trait",
+ "bmart",
  "busrt",
  "clap",
  "env_logger",
@@ -678,9 +653,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.39"
+version = "0.3.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e2accf5595da52926e45b78313f6aed7ffaa113d2624361ceff39a68c3a2d58"
+checksum = "7732f8510b80708bd952133e953cac7ee7902eecce32cf2ab0c3c1a36409d571"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1898,7 +1873,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea8ca367a3a01fe35e6943c400addf443c0f57670e6ec51196f71a4b8762dd2"
 dependencies = [
  "bitflags 1.3.2",
- "errno 0.3.8",
+ "errno",
  "io-lifetimes",
  "libc",
  "linux-raw-sys 0.3.8",
@@ -1912,7 +1887,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ea3e1a662af26cd7a3ba09c0297a31af215563ecf42817c98df621387f4e949"
 dependencies = [
  "bitflags 2.4.2",
- "errno 0.3.8",
+ "errno",
  "libc",
  "linux-raw-sys 0.4.13",
  "windows-sys 0.52.0",
@@ -2138,9 +2113,6 @@ name = "submap"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d1364afaada75e69be273c829d32be651781e68ecdd75417a459d9c94394153"
-dependencies = [
- "openssl",
-]
 
 [[package]]
 name = "syn"
@@ -2494,16 +2466,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c5713f0fc4b5db668a2ac63cdb7bb4469d8c9fed047b1d0292cc7b0ce2ba921"
 dependencies = [
  "tinyvec",
-]
-
-[[package]]
-name = "unix-named-pipe"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ad653da8f36ac5825ba06642b5a3cce14a4e52c6a5fab4a8928d53f4426dae2"
-dependencies = [
- "errno 0.2.8",
- "libc",
 ]
 
 [[package]]

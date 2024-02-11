@@ -27,6 +27,7 @@ pub fn spawn_workers() {
     launch_provider_worker!(disks);
     launch_provider_worker!(blk);
     launch_provider_worker!(network);
+    launch_provider_worker!(exe);
 }
 
 #[cfg(any(feature = "service", feature = "agent"))]
@@ -49,6 +50,8 @@ pub struct ReportConfig {
     blk: providers::blk::Config,
     #[serde(default)]
     network: providers::network::Config,
+    #[serde(default)]
+    exe: providers::exe::Config,
 }
 
 #[cfg(any(feature = "service", feature = "agent"))]
@@ -61,6 +64,7 @@ impl ReportConfig {
         providers::blk::set_config(self.blk)?;
         providers::network::set_config(self.network)?;
         providers::system::set_config(self.system)?;
+        providers::exe::set_config(self.exe)?;
         Ok(())
     }
 }

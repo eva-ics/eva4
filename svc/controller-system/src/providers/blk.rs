@@ -1,10 +1,8 @@
 use crate::metric::Metric;
 use crate::tools::format_name;
 use eva_common::prelude::*;
-use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::time::Duration;
 use tokio::fs;
@@ -22,6 +20,7 @@ struct Stat {
 }
 
 impl Stat {
+    #[cfg(target_os = "linux")]
     fn from_procfs_diskstat(d: procfs::DiskStat) -> (String, Self) {
         (
             d.name,
@@ -67,7 +66,7 @@ pub struct Config {
 #[allow(clippy::unused_async)]
 #[cfg(not(target_os = "linux"))]
 pub async fn report_worker() {
-    warn!("blk worker exited, platform not supported");
+    log::warn!("blk worker exited, platform not supported");
 }
 
 async fn get_sector_size(dev: &str) -> Option<u64> {
@@ -111,6 +110,7 @@ async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
     }
 }
 
+#[cfg(target_os = "linux")]
 async fn diskstats() -> EResult<Vec<procfs::DiskStat>> {
     let mut result = Vec::new();
     for line in fs::read_to_string("/proc/diskstats").await?.split('\n') {
@@ -127,6 +127,7 @@ async fn diskstats() -> EResult<Vec<procfs::DiskStat>> {
 #[allow(clippy::unused_async)]
 #[cfg(target_os = "linux")]
 pub async fn report_worker() {
+    use std::collections::BTreeMap;
     let config = CONFIG.get().unwrap();
     if !config.enabled {
         return;
@@ -138,7 +139,7 @@ pub async fn report_worker() {
     }
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    info!("blk report worker started");
+    log::info!("blk report worker started");
     let mut prev: Option<BTreeMap<String, Stat>> = None;
     loop {
         int.tick().await;

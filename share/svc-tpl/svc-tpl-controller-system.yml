@@ -61,4 +61,41 @@ config:
       #interfaces:
         #- eth0
         #- eth1
+    # custom tasks with external executables
+    # the executable must return either a value or JSON payload
+    exe:
+      tasks:
+        - command: "echo OK"
+          name: test
+          enabled: true
+          interval: 1
+          # put the result as-is
+          map:
+            - name: result
+        - command: "sensors -j"
+          name: sensors
+          enabled: true
+          interval: 1
+          # parsing JSON values is performed with a lightweight JsonPath syntax:
+          # $.some.value - value is in a structure "some", field "value"
+          # $.some[1].value[2] - work with array of structures
+          # $.[1] - top-level array of values
+          # $. - payload top-level (the path can be omitted)
+          map:
+            - name: fan1
+              path: $.bus.fan1.fan1_input
+              # an optional value transforming section
+              transform:
+                - func: multiply # multiply the value by N
+                  params: [ 1000 ]
+                - func: divide # divide the value by N
+                  params: [ 1000 ]
+                - func: round # round the value to N digits after comma
+                  params: [ 2 ]
+                - func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+                  params: [ 1 ]
+                - func: invert # invert the value between 0/1
+                 #params: []
+            - name: fan2
+              path: $.bus.fan2.fan2_input
 user: eva
