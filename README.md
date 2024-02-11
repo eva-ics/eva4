@@ -65,7 +65,7 @@ binary, as it dynamically loads service libraries in runtime.
 
 The controller-system service (svc/controller-system) must be built separately
 with a feature to set required mode (to build as EVA ICS service set "service"
-feature").
+feature).
 
 The following services are not open-sourced (the source can be provided for
 mission-critical projects under an additional agreement):
@@ -75,6 +75,8 @@ mission-critical projects under an additional agreement):
 * **eva-zfrepl** Zero-failure replication service
 
 * **eva-kioskman** HMI Kiosk manager service
+
+* **eva-aaa-accounting** Event accounting and audit
 
 ## About the authors
 
