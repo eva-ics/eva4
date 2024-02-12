@@ -15,5 +15,6 @@ pubsub.publish:
       req: false
     - nam: packer
       typ: String
-      des: Data packer: no, json, msgpack (default: no, send data as-is)
+      des: "Data packer: no, json, msgpack (default: no, send data as-is)"
+      req: false
   ret:
