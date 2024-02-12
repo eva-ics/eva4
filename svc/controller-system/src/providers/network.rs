@@ -6,8 +6,10 @@ use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::Networks;
+use tokio::sync::Mutex;
 
 err_logger!();
 
@@ -46,24 +48,23 @@ pub async fn report_worker() {
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("network report worker started");
+    let networks = Arc::new(Mutex::new(Networks::new()));
     loop {
         int.tick().await;
         let mut reported = if config.interfaces.is_some() {
-            Some(HashSet::<&str>::new())
+            Some(HashSet::<String>::new())
         } else {
             None
         };
-        let mut networks_s = None;
-        if let Ok(networks) = tokio::task::spawn_blocking(move || {
-            let mut networks = Networks::new();
-            networks.refresh_list();
-            networks
+        let nets = networks.clone();
+        if tokio::task::spawn_blocking(move || {
+            let _ = nets.try_lock().map(|mut n| n.refresh_list());
         })
         .await
         .log_err_with("networks")
+        .is_ok()
         {
-            networks_s.replace(networks);
-            for (interface, i) in networks_s.as_ref().unwrap() {
+            for (interface, i) in networks.lock().await.iter() {
                 if let Some(ref i) = config.interfaces {
                     if !i.contains(interface) {
                         continue;
@@ -107,7 +108,7 @@ pub async fn report_worker() {
                     .report(i.total_errors_on_transmitted())
                     .await;
                 if let Some(r) = reported.as_mut() {
-                    r.insert(interface);
+                    r.insert(interface.clone());
                 }
             }
         }

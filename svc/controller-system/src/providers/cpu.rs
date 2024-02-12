@@ -5,8 +5,10 @@ use eva_common::prelude::*;
 use log::info;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::time::Duration;
 use sysinfo::{CpuRefreshKind, System};
+use tokio::sync::Mutex;
 
 err_logger!();
 
@@ -39,36 +41,39 @@ pub async fn report_worker() {
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     info!("cpu report worker started");
     let mut c = 0;
+    let sys = Arc::new(Mutex::new(System::new()));
     loop {
         int.tick().await;
-        let Ok(sys) = tokio::task::spawn_blocking(move || {
-            let mut sys = System::new();
-            sys.refresh_cpu_specifics(CpuRefreshKind::everything());
-            sys
+        let s = sys.clone();
+        if tokio::task::spawn_blocking(move || {
+            let _ = s
+                .try_lock()
+                .map(|mut s| s.refresh_cpu_specifics(CpuRefreshKind::everything()));
         })
         .await
-        .log_err_with("cpu stats") else {
-            continue;
-        };
-        for cpu in sys.cpus() {
-            let mut cpu_name = cpu.name();
-            if let Some(n) = cpu_name.strip_prefix("cpu") {
-                cpu_name = n;
-            } else if let Some(n) = cpu_name.strip_prefix("CPU ") {
-                cpu_name = n;
+        .log_err_with("cpu stats")
+        .is_ok()
+        {
+            for cpu in sys.lock().await.cpus() {
+                let mut cpu_name = cpu.name();
+                if let Some(n) = cpu_name.strip_prefix("cpu") {
+                    cpu_name = n;
+                } else if let Some(n) = cpu_name.strip_prefix("CPU ") {
+                    cpu_name = n;
+                }
+                let name = format_name(cpu_name);
+                Metric::new("cpu/core", &name, "usage")
+                    .report(cpu.cpu_usage())
+                    .await;
+                Metric::new("cpu/core", &name, "freq")
+                    .report(cpu.frequency())
+                    .await;
             }
-            let name = format_name(cpu_name);
-            Metric::new("cpu/core", &name, "usage")
-                .report(cpu.cpu_usage())
-                .await;
-            Metric::new("cpu/core", &name, "freq")
-                .report(cpu.frequency())
-                .await;
+            if c == 0 {
+                Metric::new0("cpu", "avail").report(num_cpus::get()).await;
+                c = REPORT_CPU_INFO_EVERY;
+            }
+            c -= 1;
         }
-        if c == 0 {
-            Metric::new0("cpu", "avail").report(num_cpus::get()).await;
-            c = REPORT_CPU_INFO_EVERY;
-        }
-        c -= 1;
     }
 }
