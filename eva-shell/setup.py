@@ -1,4 +1,4 @@
-__version__ = '0.2.14'
+__version__ = '0.2.15'
 
 import setuptools
 
@@ -19,7 +19,7 @@ setuptools.setup(name='eva-shell',
                      'busrt>=0.1.0', 'evaics>=0.0.32', 'yedb[cli]>=0.2.25',
                      'argcomplete>=2.0.0', 'python-dateutil>=2.7.3',
                      'neotermcolor>=2.0.10', 'pyyaml>=6.0', 'pygments>=2.11.2',
-                     'pytz>=2021.3', 'pwinput>=1.0.2'
+                     'pytz>=2024.1', 'pwinput>=1.0.2', 'tzlocal>=5.2'
                  ],
                  classifiers=('Programming Language :: Python :: 3',
                               'License :: OSI Approved :: MIT License',

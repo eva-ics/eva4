@@ -3,6 +3,7 @@ import socket
 import os
 import stat
 import time
+import pytz
 import neotermcolor
 from neotermcolor import colored, cprint
 from datetime import datetime
@@ -315,7 +316,6 @@ def print_result(data, need_header=True, name_value=False, cols=None):
                                             val, common.TZ).isoformat()
                                     elif fmt.startswith('time:'):
                                         zone = fmt.split(':', 1)[-1]
-                                        import pytz
                                         val = datetime.fromtimestamp(
                                             val,
                                             pytz.timezone(zone)).isoformat()
@@ -324,7 +324,6 @@ def print_result(data, need_header=True, name_value=False, cols=None):
                                             round(val), common.TZ).isoformat()
                                     elif fmt.startswith('time_sec:'):
                                         zone = fmt.split(':', 1)[-1]
-                                        import pytz
                                         val = datetime.fromtimestamp(
                                             round(val),
                                             pytz.timezone(zone)).isoformat()
