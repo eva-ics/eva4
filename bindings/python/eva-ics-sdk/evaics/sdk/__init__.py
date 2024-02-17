@@ -1,4 +1,4 @@
-__version__ = '0.2.24'
+__version__ = '0.2.25'
 
 import busrt
 import sys
@@ -122,7 +122,6 @@ class LocalProxy(threading.local):
     """
     Simple proxy for threading.local namespace
     """
-
     def get(self, attr, default=None):
         """
         Get thread-local attribute
@@ -186,7 +185,6 @@ class OID:
     """
     Base item OID class
     """
-
     def __init__(self, s, from_path=False):
         """
         Constructs a new OID from string
@@ -194,7 +192,8 @@ class OID:
         Args:
             from_path: construct OID from a path (kind/group(s)/id)
         """
-        self.kind, self.full_id = s.split('/' if from_path else ':', maxsplit=1)
+        self.kind, self.full_id = s.split('/' if from_path else ':',
+                                          maxsplit=1)
         self.oid = f'{self.kind}:{self.full_id}'
         self.id = s.rsplit('/', 1)[-1] if '/' in s else self.full_id
 
@@ -221,7 +220,6 @@ class ServiceInfo:
     """
     Service info helper class
     """
-
     def __init__(self, author='', description='', version=''):
         """
         Args:
@@ -267,7 +265,6 @@ class Action:
     """
     Item action from bus event
     """
-
     def __init__(self, event):
         a = unpack(event.get_payload())
         self.uuid = uuid.UUID(bytes=a['uuid'])
@@ -281,7 +278,6 @@ class Controller:
     """
     Action handler helper class for controllers
     """
-
     def __init__(self, bus):
         self.bus = bus
 
@@ -314,11 +310,12 @@ class Controller:
     def event_failed(self, action, out=None, err=None, exitcode=None):
         self.bus.send(
             f'ACT/{action.i.to_path()}',
-            busrt.client.Frame(payload=_action_event_payload(action.uuid,
-                                                             ACTION_FAILED,
-                                                             out=out,
-                                                             err=err,
-                                                             exitcode=exitcode),
+            busrt.client.Frame(payload=_action_event_payload(
+                action.uuid,
+                ACTION_FAILED,
+                out=out,
+                err=err,
+                exitcode=exitcode),
                                tp=busrt.client.OP_PUBLISH,
                                qos=0))
 
@@ -340,7 +337,6 @@ class Controller:
 
 
 class EvaLogHandler(logging.Handler):
-
     def __init__(self, bus):
         self.bus = bus
         super().__init__()
@@ -362,14 +358,14 @@ class EvaLogHandler(logging.Handler):
             msg = f'CRITICAL: {msg}'
         self.bus.send(
             topic,
-            busrt.client.Frame(msg.encode(), tp=busrt.client.OP_PUBLISH, qos=0))
+            busrt.client.Frame(msg.encode(), tp=busrt.client.OP_PUBLISH,
+                               qos=0))
 
 
 class Service:
     """
     The primary service class
     """
-
     def __init__(self):
         self.svc_info = None
         self.logger = None
@@ -689,7 +685,8 @@ class Service:
             payload['err'] = err
         self.bus.send(
             AAA_ACCOUNTING_TOPIC,
-            busrt.client.Frame(pack(payload), tp=busrt.client.OP_PUBLISH,
+            busrt.client.Frame(pack(payload),
+                               tp=busrt.client.OP_PUBLISH,
                                qos=1))
 
     def subscribe_oids(self, oids, event_kind='any'):
@@ -768,7 +765,8 @@ class Service:
                 busrt.rpc.Request(
                     'item.deploy',
                     pack({
-                        'items': items if isinstance(items, list) else [items],
+                        'items':
+                        items if isinstance(items, list) else [items],
                     }))).wait_completed()
         except Exception as e:
             raise rpc_e2e(e)
@@ -793,7 +791,6 @@ class ACI:
     """
     ACI (API Call Info) helper class
     """
-
     def __init__(self, aci_payload):
         self.auth = aci_payload.get('auth')
         self.token_mode = aci_payload.get('token_mode')
@@ -812,7 +809,6 @@ class XCall:
     """
     HMI X calls helper class
     """
-
     def __init__(self, payload):
         self.method = payload.get('method')
         self.params = payload.get('params', {})
@@ -864,11 +860,11 @@ class XCall:
         """
         return self.is_admin() or (
             (oid_match(oid,
-                       self.acl.get('read', {}).get('items', [])) or
-             oid_match(oid,
-                       self.acl.get('write', {}).get('items', []))) and
-            not oid_match(oid,
-                          self.acl.get('deny_read', {}).get('items', [])))
+                       self.acl.get('read', {}).get('items', []))
+             or oid_match(oid,
+                          self.acl.get('write', {}).get('items', [])))
+            and not oid_match(oid,
+                              self.acl.get('deny_read', {}).get('items', [])))
 
     def is_item_writable(self, oid):
         """
@@ -876,13 +872,13 @@ class XCall:
         """
         return self.is_admin() or (
             oid_match(oid,
-                      self.acl.get('write', {}).get('items', [])) and
-            not oid_match(oid,
-                          self.acl.get('deny_read', {}).get('items', [])) and
-            not oid_match(oid,
-                          self.acl.get('deny_write', {}).get('items', [])) and
-            not oid_match(oid,
-                          self.acl.get('deny', {}).get('items', [])))
+                      self.acl.get('write', {}).get('items', []))
+            and not oid_match(oid,
+                              self.acl.get('deny_read', {}).get('items', []))
+            and not oid_match(oid,
+                              self.acl.get('deny_write', {}).get('items', []))
+            and not oid_match(oid,
+                              self.acl.get('deny', {}).get('items', [])))
 
     def is_pvt_readable(self, path):
         """
@@ -890,9 +886,9 @@ class XCall:
         """
         return self.is_admin() or (
             path_match(path,
-                       self.acl.get('read', {}).get('pvt', [])) and
-            not path_match(path,
-                           self.acl.get('deny_read', {}).get('pvt', [])))
+                       self.acl.get('read', {}).get('pvt', []))
+            and not path_match(path,
+                               self.acl.get('deny_read', {}).get('pvt', [])))
 
     def require_writable(self):
         if not self.is_writable():
@@ -923,6 +919,56 @@ class XCall:
         if not self.is_pvt_readable(path):
             raise busrt.rpc.RpcException(f'read access required for: {path}',
                                          ERR_CODE_ACCESS_DENIED)
+
+
+class XCallDefault:
+    """
+    HMI X calls mocker for no ACI/ACL
+    """
+    def __init__(self):
+        self.aci = {}
+        self.acl = {}
+        self.method = None
+        self.params = {}
+
+    def get_items_allow_deny_reading(self):
+        return (['#'], [])
+
+    def is_writable(self):
+        return True
+
+    def is_admin(self):
+        return True
+
+    def check_op(self, op):
+        return True
+
+    def is_item_readable(self, oid):
+        return True
+
+    def is_item_writable(self, oid):
+        return True
+
+    def is_pvt_readable(self, path):
+        return True
+
+    def require_writable(self):
+        pass
+
+    def require_admin(self):
+        pass
+
+    def require_op(self, op):
+        pass
+
+    def require_item_read(self, oid):
+        pass
+
+    def require_item_write(self, oid):
+        pass
+
+    def require_pvt_read(self, path):
+        pass
 
 
 def oid_match(oid, oid_masks):
