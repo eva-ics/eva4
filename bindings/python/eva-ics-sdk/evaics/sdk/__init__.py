@@ -1,4 +1,4 @@
-__version__ = '0.2.26'
+__version__ = '0.2.27'
 
 import busrt
 import sys
@@ -926,7 +926,7 @@ class XCallDefault:
     HMI X calls mocker for no ACI/ACL
     """
     def __init__(self, aci=None, acl=None):
-        self.aci = acl if aci else {}
+        self.aci = ACI(aci if aci else {})
         self.acl = acl if acl else {}
         self.method = None
         self.params = {}
