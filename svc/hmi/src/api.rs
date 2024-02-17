@@ -1251,10 +1251,10 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
 #[serde(deny_unknown_fields)]
 pub struct ParamsRun {
     pub i: OID,
-    #[serde(alias = "a")]
-    pub args: Option<Vec<Value>>,
-    #[serde(alias = "kw")]
-    pub kwargs: Option<HashMap<String, Value>>,
+    #[serde(default, alias = "a")]
+    pub args: Vec<Value>,
+    #[serde(default, alias = "kw")]
+    pub kwargs: HashMap<String, Value>,
     #[serde(alias = "p")]
     pub priority: Option<u8>,
     #[serde(default, alias = "w")]
@@ -1277,14 +1277,17 @@ pub async fn method_run(params: Value, aci: &mut ACI) -> EResult<Value> {
         fn from(p: ParamsRun) -> Self {
             Self {
                 i: p.i,
-                params: eva_common::actions::Params::new_lmacro(p.args, p.kwargs),
+                params: eva_common::actions::Params::new_lmacro(Some(p.args), Some(p.kwargs)),
                 priority: p.priority,
                 wait: p.wait,
             }
         }
     }
     let p_f = prepare_api_filter_params!(params);
-    let p = ParamsRun::deserialize(params)?;
+    let mut p = ParamsRun::deserialize(params)?;
+    p.kwargs
+        .insert("aci".to_owned(), to_value(aci.as_extended_info())?);
+    p.kwargs.insert("acl".to_owned(), to_value(aci.acl())?);
     aci.log_param("i", &p.i)?;
     if let Some(n) = p.note.as_ref() {
         aci.log_note(n);
@@ -1299,13 +1302,9 @@ pub async fn method_run(params: Value, aci: &mut ACI) -> EResult<Value> {
         timeout += Duration::from_secs_f64(w);
     }
     let mut result: Value = unpack(
-        eapi_bus::call(
-            "eva.core",
-            "run",
-            pack(&Into::<PayloadRun>::into(p))?.into(),
-        )
-        .await?
-        .payload(),
+        eapi_bus::call("eva.core", "run", pack(&PayloadRun::from(p))?.into())
+            .await?
+            .payload(),
     )?;
     if let Value::Map(ref mut m) = result {
         let uuid_field = Value::String("uuid".to_owned());

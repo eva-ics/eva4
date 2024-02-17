@@ -102,8 +102,8 @@ pub async fn process(
                     kwargs.insert("data".to_owned(), to_value(upload_data)?);
                     let p = crate::api::ParamsRun {
                         i: macro_id,
-                        args: None,
-                        kwargs: Some(kwargs),
+                        args: vec![],
+                        kwargs,
                         priority,
                         wait,
                         note: None,

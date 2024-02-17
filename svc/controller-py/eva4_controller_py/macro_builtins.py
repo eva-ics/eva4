@@ -46,3 +46,14 @@ def alias(alias_obj, src_obj):
         return True
     except:
         return False
+
+
+def get_xcall():
+    """
+    Returns SDK XCall object (if called via HMI) or XCallDefault mocker object
+    """
+    import evaics.sdk as sdk
+    if aci is None:
+        return sdk.XCallDefault()
+    else:
+        return sdk.XCall({'aci': aci, 'acl': acl})

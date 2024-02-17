@@ -34,7 +34,6 @@ with open(bfname) as fh:
 
 
 class Compiler:
-
     def __init__(self):
         self.cache = {}
         self.cache_lock = threading.Lock()
@@ -73,6 +72,10 @@ def prepare_env(i, args, kwargs):
             break
     for k, v in kwargs.items():
         env[k] = v
+    if 'aci' not in kwargs:
+        env['aci'] = None
+    if 'acl' not in kwargs:
+        env['acl'] = None
     return env
 
 

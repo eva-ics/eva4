@@ -771,7 +771,9 @@ def ls(mask, recursive=False):
         dict with fields 'name' 'file', 'size' and 'time' { 'c': created,
         'm': modified }
     """
-    fls = [x for x in glob.glob(mask, recursive=recursive) if os.path.isfile(x)]
+    fls = [
+        x for x in glob.glob(mask, recursive=recursive) if os.path.isfile(x)
+    ]
     l = []
     for x in fls:
         l.append({
