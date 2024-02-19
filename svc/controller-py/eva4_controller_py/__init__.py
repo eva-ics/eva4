@@ -1,4 +1,4 @@
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 from evaics.sdk import Service, Controller, Action, no_rpc_method, ServiceInfo
 from evaics.sdk import OID
@@ -165,7 +165,8 @@ def run():
     macro_api.eva_dir = eva_dir
     macro_api.svc_data_dir = service.data_path
     macro_dir = config.get('macro_dir', 'xc/py')
-    dir_xcpy = f'{eva_dir}/runtime/{macro_dir}'
+    dir_xcpy = macro_dir if macro_dir.startswith(
+        '/') else f'{eva_dir}/runtime/{macro_dir}'
     try:
         Path(dir_xcpy).mkdir(parents=True, exist_ok=True)
     except:

@@ -9,7 +9,7 @@ config:
   #locker_svc: eva.svc.locker
   # required for mail functions
   #mailer_svc: eva.svc.mailer
-  # override macros directory (runtime-relative)
+  # override macros directory (runtime-relative or absolute)
   #macro_dir: xc/py
   # custom global variables (available in all lmacros)
   #cvars:
