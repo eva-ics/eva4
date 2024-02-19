@@ -159,5 +159,15 @@ config:
           # as well as outputs, action payloads can be structures with
           # additional data (states of other items, static strings etc.)
           #
+  # extra topics to be manually processed with lmacro
+  extra:
+    topics:
+      - some/topic/#
+      - some/other/topic
+    # the target lmacro gets the following kwargs:
+    # pubsub_topic - message topic
+    # pubsub_payload - message payload (as-is, serialized data e.g. JSON must
+    # be deserialized manually)
+    process: lmacro:process
 user: nobody
 react_to_fail: true

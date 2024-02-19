@@ -9,7 +9,7 @@ use eva_sdk::controller::{
     format_action_topic, transform, Action, RawStateCache, RawStateEventPreparedOwned,
 };
 use eva_sdk::prelude::*;
-use eva_sdk::service::{poc, svc_block2};
+use eva_sdk::service::poc;
 use eva_sdk::types::State;
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
@@ -20,6 +20,10 @@ use std::sync::{atomic, Arc};
 use std::time::Duration;
 use tokio::sync::oneshot;
 use ttl_cache::TtlCache;
+
+mod common;
+
+use common::safe_run_macro;
 
 err_logger!();
 
@@ -37,7 +41,6 @@ struct PubSubTask {
     processed: Option<oneshot::Sender<()>>,
 }
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
 static BUS_TX: OnceCell<async_channel::Sender<(String, Vec<u8>)>> = OnceCell::new();
 static PUBSUB_TX: OnceCell<async_channel::Sender<PubSubTask>> = OnceCell::new();
@@ -65,15 +68,7 @@ async fn get_state(oid: &OID) -> EResult<Arc<State>> {
         return Ok(state.clone());
     }
     let payload = ParamsId { i: oid.as_str() };
-    let res = safe_rpc_call(
-        RPC.get().unwrap(),
-        "eva.core",
-        "item.state",
-        pack(&payload)?.into(),
-        QoS::No,
-        *TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    let res = eapi_bus::call("eva.core", "item.state", pack(&payload)?.into()).await?;
     let state = Arc::new(
         unpack::<Vec<State>>(res.payload())?
             .into_iter()
@@ -317,12 +312,20 @@ struct Config {
     )]
     input_cache_sec: Option<Duration>,
     pubsub: PubSubConfig,
+    extra: Option<ConfigExtra>,
     #[serde(default)]
     input: Vec<InputMapping>,
     #[serde(default)]
     output: Vec<Arc<OutputMapping>>,
     #[serde(default)]
     action_map: BTreeMap<OID, OutputMapping>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConfigExtra {
+    topics: Vec<String>,
+    process: OID,
 }
 
 fn default_jp() -> String {
@@ -461,15 +464,12 @@ async fn execute_action(oid: &OID, value: &Value) -> EResult<()> {
         i: oid,
         params: ActionParams { value },
     };
-    RPC.get()
-        .unwrap()
-        .call0(
-            "eva.core",
-            "action",
-            eva_common::payload::pack(&action_payload)?.into(),
-            QoS::Processed,
-        )
-        .await?;
+    eapi_bus::call(
+        "eva.core",
+        "action",
+        eva_common::payload::pack(&action_payload)?.into(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -587,6 +587,7 @@ async fn handle_input(
     mapping_vec: Vec<InputMapping>,
     cache: RawStateCache,
     tester: Arc<psrpc::Tester>,
+    process_extra: Option<OID>,
 ) {
     let mapping: BTreeMap<String, InputMapping> = mapping_vec
         .into_iter()
@@ -598,6 +599,21 @@ async fn handle_input(
         if !tester.fire(topic, payload) {
             if let Some(m) = mapping.get(topic) {
                 process_input_payload(topic, payload, m, &cache).await;
+            } else if let Some(ref oid) = process_extra {
+                let pubsub_payload = std::str::from_utf8(payload).map_or_else(
+                    |_| Value::Bytes(payload.to_vec()),
+                    |v| Value::String(v.to_owned()),
+                );
+                let kwargs = common::PubSubData {
+                    pubsub_topic: topic.to_owned(),
+                    pubsub_payload,
+                };
+                let params = common::ParamsRun {
+                    i: oid,
+                    params: common::LParams { kwargs },
+                    wait: eapi_bus::timeout(),
+                };
+                safe_run_macro(params).await.log_ef();
             }
         }
     }
@@ -810,17 +826,16 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("qos")
             .optional("packer"),
     );
-    let (rpc, rpc_secondary) = initial
-        .init_rpc_blocking_with_secondary(Handlers {
+    eapi_bus::init_blocking(
+        &initial,
+        Handlers {
             info,
             output: omap,
             action_map: config.action_map,
-        })
-        .await?;
-    RPC.set(rpc_secondary.clone())
-        .map_err(|_| Error::core("unable to set RPC"))?;
+        },
+    )
+    .await?;
     initial.drop_privileges()?;
-    let client = rpc.client().clone();
     let (tx, rx) = async_channel::bounded::<(String, Vec<u8>)>(initial.bus_queue_size());
     BUS_TX
         .set(tx)
@@ -829,8 +844,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     PUBSUB_TX
         .set(pubsub_tx)
         .map_err(|_| Error::core("unable to set PUBSUB_TX"))?;
-    spawn_bus_client_worker(client.clone(), rx);
-    svc_init_logs(&initial, client.clone())?;
+    spawn_bus_client_worker(eapi_bus::client(), rx);
+    eapi_bus::init_logs(&initial)?;
     svc_start_signal_handlers();
     let (pubsub_client, pubsub_input_rx) = connect(&config.pubsub, timeout).await?;
     let topics: Vec<&str> = config.input.iter().map(|v| v.topic.as_str()).collect();
@@ -840,33 +855,54 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .subscribe_bulk(&topics, config.pubsub.qos)
             .await?;
     }
+    let process_extra = if let Some(extra) = config.extra {
+        if !extra.topics.is_empty() {
+            pubsub_client
+                .subscribe_bulk(
+                    &extra
+                        .topics
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<&str>>(),
+                    config.pubsub.qos,
+                )
+                .await?;
+        }
+        Some(extra.process)
+    } else {
+        None
+    };
     let raw_state_cache = RawStateCache::new(config.input_cache_sec);
     let tester_c = tester.clone();
     tokio::spawn(async move {
-        handle_input(pubsub_input_rx, config.input, raw_state_cache, tester_c).await;
+        handle_input(
+            pubsub_input_rx,
+            config.input,
+            raw_state_cache,
+            tester_c,
+            process_extra,
+        )
+        .await;
         poc();
     });
     let masks: OIDMaskList =
         OIDMaskList::new(bus_oids.into_iter().cloned().map(Into::into).collect());
-    eva_sdk::service::subscribe_oids(rpc.as_ref(), &masks, eva_sdk::service::EventKind::Local)
-        .await?;
-    eva_sdk::service::subscribe_oids(rpc.as_ref(), &masks, eva_sdk::service::EventKind::Remote)
-        .await?;
-    let rpc_c = rpc.clone();
+    eapi_bus::subscribe_oids(&masks, eva_sdk::service::EventKind::Local).await?;
+    eapi_bus::subscribe_oids(&masks, eva_sdk::service::EventKind::Remote).await?;
     tokio::spawn(async move {
         spawn_pubsub_worker(pubsub_client.clone(), pubsub_rx);
         spawn_pubsub_tester(pubsub_client, tester, config.pubsub.ping_interval, timeout);
-        let _ = svc_wait_core(&rpc_c, timeout, true).await;
+        eapi_bus::wait_core(true).await.log_ef();
         for o in config.output {
             if let Some(interval) = o.interval {
                 spawn_interval_output(o, interval);
             }
         }
     });
-    svc_mark_ready(&client).await?;
+    eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block2(&rpc, &rpc_secondary).await;
-    svc_mark_terminating(&client).await?;
+    eapi_bus::block().await;
+    eapi_bus::mark_terminating().await?;
     while !PUBSUB_TX.get().unwrap().is_empty() {
         tokio::time::sleep(eva_common::SLEEP_STEP).await;
     }
