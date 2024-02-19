@@ -1,6 +1,6 @@
 [package]
 name = "genpass-native"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -10,6 +10,8 @@ eva-common = "0.3.39"
 nix = { version = "0.25.0", features = ["time"] }
 hex = "0.4.3"
 serde = { version = "1.0.143", features = ["derive"] }
+tokio = { version = "1.36.0", features = ["time", "test-util", "rt", "macros"] }
+once_cell = "1.9.0"
 
 [features]
 openssl-vendored = ["openssl/vendored"]

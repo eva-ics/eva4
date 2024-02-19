@@ -30,7 +30,7 @@ const ONE_TIME_USER_PREFIX: &str = "OT.";
 pub const ID_ALLOWED_SYMBOLS: &str = "_.()[]-\\";
 
 static KEYDB: Lazy<Mutex<KeyDb>> = Lazy::new(<_>::default);
-static USERS: Lazy<Mutex<HashMap<String, User>>> = Lazy::new(<_>::default);
+static USERS: Lazy<tokio::sync::Mutex<HashMap<String, User>>> = Lazy::new(<_>::default);
 static ONE_TIME_USERS: Lazy<tokio::sync::Mutex<HashMap<String, OneTimeUser>>> =
     Lazy::new(<_>::default);
 static ONE_TIME_EXPIRES: OnceCell<Duration> = OnceCell::new();
@@ -62,14 +62,14 @@ struct OneTimeUser {
 }
 
 impl OneTimeUser {
-    fn create(login: &str, acls: HashSet<String>) -> EResult<(Self, String)> {
+    async fn create(login: &str, acls: HashSet<String>) -> EResult<(Self, String)> {
         let password_plain = random_string(16)?;
         Ok((
             Self {
                 created: Instant::now(),
                 user: Some(User {
                     login: login.to_owned(),
-                    password: Password::new_sha256(&password_plain),
+                    password: Password::new_sha256(&password_plain).await,
                     acls,
                     profile: UserProfile::default(),
                 }),
@@ -77,9 +77,9 @@ impl OneTimeUser {
             password_plain,
         ))
     }
-    fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
+    async fn get_acls(&mut self, password: &str) -> EResult<Vec<String>> {
         if let Some(user) = self.user.take() {
-            if user.password.verify(password)? {
+            if user.password.verify(password).await? {
                 Ok(user.acls.into_iter().collect())
             } else {
                 debug!(
@@ -580,9 +580,9 @@ impl RpcHandlers for Handlers {
                     let p: ParamsPasswordHash = unpack(payload)?;
                     let plain_password = p.password.to_string();
                     let password = match p.algo {
-                        HashAlgo::Sha256 => Password::new_sha256(&plain_password),
-                        HashAlgo::Sha512 => Password::new_sha512(&plain_password),
-                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(&plain_password)?,
+                        HashAlgo::Sha256 => Password::new_sha256(&plain_password).await,
+                        HashAlgo::Sha512 => Password::new_sha512(&plain_password).await,
+                        HashAlgo::Pbkdf2 => Password::new_pbkdf2(&plain_password).await?,
                     };
                     Ok(Some(pack(&PayloadPasswordHash {
                         hash: password.to_string(),
@@ -603,7 +603,7 @@ impl RpcHandlers for Handlers {
                 } else {
                     unpack(payload)?
                 };
-                let users = USERS.lock().unwrap();
+                let users = USERS.lock().await;
                 let mut user_info: Vec<UserInfo> = users
                     .values()
                     .map(|u| u.to_info(p.full, p.with_password))
@@ -624,7 +624,7 @@ impl RpcHandlers for Handlers {
                     let reg = REG.get().unwrap();
                     let mut reg_users = Vec::new();
                     {
-                        let mut users = USERS.lock().unwrap();
+                        let mut users = USERS.lock().await;
                         for user in &new_users.users {
                             if user.login.starts_with('.') {
                                 return Err(Error::invalid_data(format!(
@@ -676,7 +676,7 @@ impl RpcHandlers for Handlers {
                     let reg = REG.get().unwrap();
                     let mut ids = Vec::new();
                     {
-                        let mut users = USERS.lock().unwrap();
+                        let mut users = USERS.lock().await;
                         for user in u_users.users {
                             if let Some(user) = users.remove(user.as_str()) {
                                 warn!("user destroyed: {}", user.login);
@@ -710,7 +710,7 @@ impl RpcHandlers for Handlers {
                     Err(RpcError::params(None))
                 } else {
                     let p: Params = unpack(payload)?;
-                    if let Some(user) = USERS.lock().unwrap().get(&p.i) {
+                    if let Some(user) = USERS.lock().await.get(&p.i) {
                         Ok(Some(pack(&Field {
                             value: user.profile.get_field(p.field),
                             readonly: false,
@@ -734,7 +734,7 @@ impl RpcHandlers for Handlers {
                     let p: Params = unpack(payload)?;
                     let reg = REG.get().unwrap();
                     let val = {
-                        let mut users = USERS.lock().unwrap();
+                        let mut users = USERS.lock().await;
                         if let Some(user) = users.get_mut(&p.i) {
                             user.profile.set_field(p.field, p.value);
                             to_value(&user)?
@@ -751,7 +751,7 @@ impl RpcHandlers for Handlers {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsId = unpack(payload)?;
-                    if let Some(user) = USERS.lock().unwrap().get(p.i) {
+                    if let Some(user) = USERS.lock().await.get(p.i) {
                         Ok(Some(pack(user)?))
                     } else {
                         Err(Error::not_found(format!("user {} not found", p.i)).into())
@@ -769,7 +769,7 @@ impl RpcHandlers for Handlers {
                 } else {
                     let p: ParamsId = unpack(payload)?;
                     let mut configs = Vec::new();
-                    let users = USERS.lock().unwrap();
+                    let users = USERS.lock().await;
                     if p.i == "#" || p.i == "*" {
                         for user in users.values() {
                             configs.push(user);
@@ -789,7 +789,7 @@ impl RpcHandlers for Handlers {
                 } else {
                     let p: ParamsId = unpack(payload)?;
                     let reg = REG.get().unwrap();
-                    if USERS.lock().unwrap().remove(p.i).is_some() {
+                    if USERS.lock().await.remove(p.i).is_some() {
                         reg.key_delete(&format!("user/{}", p.i)).await?;
                         warn!("user destroyed: {}", p.i);
                         self.tx
@@ -815,9 +815,9 @@ impl RpcHandlers for Handlers {
                     }
                     let reg = REG.get().unwrap();
                     let val = {
-                        let mut users = USERS.lock().unwrap();
+                        let mut users = USERS.lock().await;
                         if let Some(user) = users.get_mut(p.i) {
-                            user.password = Password::new_pbkdf2(p.password)?;
+                            user.password = Password::new_pbkdf2(p.password).await?;
                             to_value(&user)?
                         } else {
                             return Err(Error::not_found(format!("user {} not found", p.i)).into());
@@ -861,7 +861,8 @@ impl RpcHandlers for Handlers {
                                 break (entry, login);
                             }
                         };
-                        let (one_time_user, password_plain) = OneTimeUser::create(&login, p.acls)?;
+                        let (one_time_user, password_plain) =
+                            OneTimeUser::create(&login, p.acls).await?;
                         let u = one_time_user.user.as_ref().unwrap();
                         let ot_user_info = PayloadOneTimeUser {
                             login: format!("{}{}", ONE_TIME_USER_PREFIX, u.login),
@@ -901,13 +902,13 @@ impl RpcHandlers for Handlers {
                 let (acls, one_time) =
                     if let Some(login) = p.login.strip_prefix(ONE_TIME_USER_PREFIX) {
                         if let Some(one_time_user) = ONE_TIME_USERS.lock().await.get_mut(login) {
-                            (one_time_user.get_acls(p.password)?, true)
+                            (one_time_user.get_acls(p.password).await?, true)
                         } else {
                             debug!("one-time user {} authentication failed: not found", p.login);
                             return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                         }
-                    } else if let Some(user) = USERS.lock().unwrap().get(p.login) {
-                        if !user.password.verify(p.password)? {
+                    } else if let Some(user) = USERS.lock().await.get(p.login) {
+                        if !user.password.verify(p.password).await? {
                             debug!("user {} authentication failed: invalid password", p.login);
                             return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                         }
@@ -1145,7 +1146,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     }
     let reg_users = registry.key_get_recursive("user").await?;
     {
-        let mut u = USERS.lock().unwrap();
+        let mut u = USERS.lock().await;
         for (k, v) in reg_users {
             debug!("user loaded: {}", k);
             let user: User = User::deserialize(v)?;

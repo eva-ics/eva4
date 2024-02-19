@@ -1,11 +1,28 @@
 use base64::{decode, encode};
 use eva_common::prelude::*;
+use once_cell::sync::OnceCell;
 use openssl::pkcs5;
 use openssl::rand::rand_bytes;
 use openssl::sha::{Sha256, Sha512};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{self, Write as _};
 use std::str::FromStr;
+use std::time::{Duration, Instant};
+
+const DEFAULT_MIN_CTIME: Duration = Duration::from_millis(200);
+
+static MIN_CTIME: OnceCell<Duration> = OnceCell::new();
+
+/// Must be called only once
+pub fn set_min_ctime(duration: Duration) -> EResult<()> {
+    MIN_CTIME
+        .set(duration)
+        .map_err(|_| Error::failed("unable to set MIN_CTIME"))
+}
+
+pub fn get_min_ctime() -> Duration {
+    MIN_CTIME.get().map_or(DEFAULT_MIN_CTIME, |v| *v)
+}
 
 const BUF_SIZE: usize = 16;
 const PBKDF2_ITERS: usize = 100_000;
@@ -108,18 +125,32 @@ impl FromStr for Password {
     }
 }
 
+macro_rules! op_delay {
+    ($start: expr, $result: expr) => {{
+        let elapsed = $start.elapsed();
+        let min_c_time = get_min_ctime();
+        if elapsed < min_c_time {
+            tokio::time::sleep(min_c_time - elapsed).await;
+        }
+        $result
+    }};
+}
+
 impl Password {
-    pub fn new_sha256(password: &str) -> Self {
+    pub async fn new_sha256(password: &str) -> Self {
+        let op_start = Instant::now();
         let mut hasher = Sha256::new();
         hasher.update(password.as_bytes());
-        Self::Sha256(hasher.finish())
+        op_delay!(op_start, Self::Sha256(hasher.finish()))
     }
-    pub fn new_sha512(password: &str) -> Self {
+    pub async fn new_sha512(password: &str) -> Self {
+        let op_start = Instant::now();
         let mut hasher = Sha512::new();
         hasher.update(password.as_bytes());
-        Self::Sha512(hasher.finish())
+        op_delay!(op_start, Self::Sha512(hasher.finish()))
     }
-    pub fn new_pbkdf2(password: &str) -> EResult<Self> {
+    pub async fn new_pbkdf2(password: &str) -> EResult<Self> {
+        let op_start = Instant::now();
         let mut salt = [0; 16];
         let mut hash = [0; 32];
         rand_bytes(&mut salt).map_err(Error::core)?;
@@ -131,33 +162,37 @@ impl Password {
             &mut hash,
         )
         .map_err(Error::core)?;
-        Ok(Self::Pbkdf2(salt, hash))
+        op_delay!(op_start, Ok(Self::Pbkdf2(salt, hash)))
     }
-    pub fn verify(&self, password: &str) -> EResult<bool> {
-        Ok(match self {
-            Password::Sha256(hash) => {
-                let mut hasher = Sha256::new();
-                hasher.update(password.as_bytes());
-                &hasher.finish() == hash
-            }
-            Password::Sha512(hash) => {
-                let mut hasher = Sha512::new();
-                hasher.update(password.as_bytes());
-                &hasher.finish() == hash
-            }
-            Password::Pbkdf2(salt, hash) => {
-                let mut password_hash = [0; 32];
-                pkcs5::pbkdf2_hmac(
-                    password.as_bytes(),
-                    salt,
-                    PBKDF2_ITERS,
-                    openssl::hash::MessageDigest::sha256(),
-                    &mut password_hash,
-                )
-                .map_err(Error::core)?;
-                &password_hash == hash
-            }
-        })
+    pub async fn verify(&self, password: &str) -> EResult<bool> {
+        let op_start = Instant::now();
+        op_delay!(
+            op_start,
+            Ok(match self {
+                Password::Sha256(hash) => {
+                    let mut hasher = Sha256::new();
+                    hasher.update(password.as_bytes());
+                    &hasher.finish() == hash
+                }
+                Password::Sha512(hash) => {
+                    let mut hasher = Sha512::new();
+                    hasher.update(password.as_bytes());
+                    &hasher.finish() == hash
+                }
+                Password::Pbkdf2(salt, hash) => {
+                    let mut password_hash = [0; 32];
+                    pkcs5::pbkdf2_hmac(
+                        password.as_bytes(),
+                        salt,
+                        PBKDF2_ITERS,
+                        openssl::hash::MessageDigest::sha256(),
+                        &mut password_hash,
+                    )
+                    .map_err(Error::core)?;
+                    &password_hash == hash
+                }
+            })
+        )
     }
 }
 
@@ -197,18 +232,19 @@ mod test {
         let n = aes_gcm_nonce().unwrap();
         assert_eq!(n.len(), 12);
     }
-    #[test]
-    fn test_password() {
+    #[tokio::test]
+    async fn test_password() {
         let p = "letmein";
-        let password: Password = Password::new_sha256(p).to_string().parse().unwrap();
-        assert!(password.verify(p).unwrap());
-        let password: Password = Password::new_sha512(p).to_string().parse().unwrap();
-        assert!(password.verify(p).unwrap());
+        let password: Password = Password::new_sha256(p).await.to_string().parse().unwrap();
+        assert!(password.verify(p).await.unwrap());
+        let password: Password = Password::new_sha512(p).await.to_string().parse().unwrap();
+        assert!(password.verify(p).await.unwrap());
         let password: Password = Password::new_pbkdf2(p)
+            .await
             .unwrap()
             .to_string()
             .parse()
             .unwrap();
-        assert!(password.verify(p).unwrap());
+        assert!(password.verify(p).await.unwrap());
     }
 }
