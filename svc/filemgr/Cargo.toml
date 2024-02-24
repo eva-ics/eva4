@@ -1,25 +1,27 @@
 [package]
 name = "eva-filemgr"
-version = "4.0.2"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
 
 [dependencies]
-eva-common = { version = "0.3.43", features = ["events", "time"] }
-eva-sdk = { version = "0.3.41", features = ["http", "fs"] }
-tokio = { version = "1.20.1", features = ["full"] }
-async-trait = { version = "0.1.51" }
-serde = { version = "1.0.143", features = ["derive", "rc"] }
-log = "0.4.14"
-lazy_static = "1.4.0"
-once_cell = "1.13.0"
-async-channel = "1.7.1"
-serde_yaml = "0.8.26"
-hex = "0.4.3"
+eva-common = { features = ["events", "time"] , workspace = true }
+eva-sdk = { features = ["http", "fs"] , workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { workspace = true }
+serde = { features = ["derive", "rc"] , workspace = true }
+log = { workspace = true }
+lazy_static = { workspace = true }
+once_cell = { workspace = true }
+async-channel = { workspace = true }
+serde_yaml = { workspace = true }
+hex = { workspace = true }
 parse_int = "0.6.0"
-jemallocator = { version = "0.5.0" }
-tempfile = "3.3.0"
-bmart = "0.2.4"
-openssl = "0.10.60"
+jemallocator = { workspace = true }
+tempfile = "3.10.0"
+bmart = { workspace = true }
+openssl = { workspace = true }
 glob-match = "0.2.1"
 async-recursion = "1.0.5"
 

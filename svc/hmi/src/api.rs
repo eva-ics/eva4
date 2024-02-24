@@ -2,7 +2,6 @@ use crate::aaa::{self, Auth, Token};
 use crate::aci::{self, ACI};
 use crate::db;
 use crate::ApiKeyId;
-use base64::Engine as _;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::ParamsIdOrListOwned;
 use eva_common::common_payloads::ValueOrList;
@@ -34,10 +33,6 @@ const API_VERSION: u16 = 4;
 
 lazy_static! {
     static ref EHMI_LOCK: Mutex<()> = <_>::default();
-    static ref BASE64: base64::engine::general_purpose::GeneralPurpose = {
-        let config = base64::engine::GeneralPurposeConfig::new().with_encode_padding(false);
-        base64::engine::GeneralPurpose::new(&base64::alphabet::URL_SAFE, config)
-    };
 }
 
 macro_rules! parse_ts {
@@ -1700,7 +1695,7 @@ async fn method_ehmi_create_config(
     hasher.update(source.as_bytes());
     hasher.update(key.as_bytes());
     hasher.update(&pack(&params)?);
-    let config_key = BASE64.encode(hasher.finish());
+    let config_key = base64::encode(hasher.finish());
     let mut config: BTreeMap<String, Value> = BTreeMap::deserialize(params)?;
     let app_id = config
         .remove("app")
@@ -1741,7 +1736,7 @@ async fn method_ehmi_create_config(
     }
     let mut hasher = openssl::sha::Sha256::new();
     hasher.update(token_short_id.unwrap().as_bytes());
-    let uid = BASE64.encode(hasher.finish());
+    let uid = base64::encode(hasher.finish());
     let app = App {
         ehmi_app_url: format!(
             "{}/ui/ehmi/{}/?ck={}&uid={}",

@@ -2,32 +2,33 @@
 name = "eva-controller-system"
 version = "4.0.2"
 edition = "2021"
+publish = false
 
 [dependencies]
 busrt = { version = "0.4", features = ["rpc", "ipc"], optional = true }
-eva-common = { version = "0.3.41", features = ["events", "console-logger"] }
-eva-sdk = { version = "0.3.45", features = ["controller"] }
-tokio = { version = "1.20.1", features = ["full"] }
-async-trait = { version = "0.1.51", optional = true }
-serde = { version = "1.0.143", features = ["derive", "rc"] }
-log = "0.4.14"
-jemallocator = { version = "0.5.0", optional = true }
+eva-common = { version = "0.3.39", features = ["events", "console-logger"] }
+eva-sdk = { version = "0.3.41", features = ["controller"] }
+tokio = { version = "1.36.0", features = ["full"] }
+async-trait = { version = "0.1.77", optional = true }
+serde = { version = "1.0.196", features = ["derive", "rc"] }
+log = "0.4.20"
+jemallocator = { version = "0.5.4", optional = true }
 once_cell = "1.19.0"
 sysinfo = "0.30.5"
 parking_lot = "0.12.1"
 http-body-util = { version = "0.1.0", optional = true }
 hyper = { version = "1.1.0", features = ["server", "http1"], optional = true }
 hyper-util = { version = "0.1.3", features = ["http1", "server", "tokio"], optional = true }
-serde_json = "1.0.96"
+serde_json = "1.0.113"
 tokio-task-pool = { version = "0.1.5", features = ["log"] }
 serde_yaml = { version = "0.9.31", optional = true }
-is-terminal = { version = "0.4.10", optional = true }
+is-terminal = { version = "0.4.11", optional = true }
 env_logger = { version = "0.11.1", optional = true }
 syslog = { version = "6.1.0", optional = true }
 bmart = "0.2.6"
 reqwest = { version = "0.11.24", optional = true, features = ["json"] }
 openssl = { version = "0.10.63", optional = true }
-clap = { version = "4.4.18", optional = true, features = ["derive"] }
+clap = { version = "4.5.0", optional = true, features = ["derive"] }
 eventlog = { version = "0.2.2", optional = true }
 windows-service = { version = "0.6.0", optional = true }
 num_cpus = "1.16.0"

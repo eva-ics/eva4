@@ -1,27 +1,29 @@
 [package]
 name = "psrpc"
-version = "0.1.1"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
 
 [lib]
 name = "psrpc"
 path = "src/lib.rs"
 
 [dependencies]
-psrt = "0.2"
-paho-mqtt = "0.10.0"
-async-trait = "0.1.53"
-eva-common = { version = "0.3.43", features = ["workers", "payload"] }
-async-channel = "1.7.1"
-tokio = { version = "1.20.1", features = [] }
-serde = { version = "1.0.143", features = ["derive"] }
-uuid = { version = "1.1.2", features = ["serde", "v4"] }
+psrt = { workspace = true }
+paho-mqtt = { workspace = true }
+async-trait = { workspace = true }
+eva-common = { features = ["workers", "payload"] , workspace = true }
+async-channel = { workspace = true }
+tokio = { features = [] , workspace = true }
+serde = { features = ["derive"] , workspace = true }
+uuid = { features = ["serde", "v4"] , workspace = true }
 bzip2 = "0.4.4"
-log = "0.4.16"
-triggered = "0.1.2"
-openssl = "0.10.60"
-genpass-native = { path = "../genpass-native" }
-parking_lot = "0.12.1"
+log = { workspace = true }
+triggered = { workspace = true }
+openssl = { workspace = true }
+genpass-native = { workspace = true }
+parking_lot = { workspace = true }
 
 [features]
 openssl-vendored = ["openssl/vendored"]

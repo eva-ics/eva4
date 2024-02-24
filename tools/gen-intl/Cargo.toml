@@ -1,13 +1,12 @@
 [package]
 name = "gen-intl"
-version = "4.0.2"
-edition = "2021"
-authors = ["Bohemia Automation / Altertech <div@altertech.com>"]
-license = "Apache-2.0"
-description = ".po generator for UI structured data"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
 
 [dependencies]
-serde_yaml = "0.8.26"
-eva-common = "0.3.43"
-clap = { version = "3.0.7", features = ["derive"] }
-colored = "2.0.0"
+serde_yaml = { workspace = true }
+eva-common = { workspace = true }
+clap = { features = ["derive"] , workspace = true }
+colored = { workspace = true }

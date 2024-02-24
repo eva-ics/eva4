@@ -65,6 +65,7 @@ ver: build-increase update-version
 update-version:
 	find eva svc tools /opt/eva4-enterprise/eva4-esvc -name Cargo.toml -exec sed -i "s/^version = .*/version = \"${VERSION}\"/g" {} \;
 	sed -i "s/^VERSION=.*/VERSION=${VERSION}/g" update.sh
+	sed -i "s/^version = .*/version = \"${VERSION}\"/g" Cargo.toml
 
 repo-cleanup:
 	@./dev/repo-cleanup.sh

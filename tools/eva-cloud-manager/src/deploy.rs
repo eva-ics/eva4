@@ -81,8 +81,13 @@ async fn execute_extra(
                     if let Some(args) = f.args.get(0) {
                         let a = args.to_string();
                         info!("system({})", a);
-                        let result =
-                            bmart::process::command("sh", ["-c", &a], timeout, None, None).await;
+                        let result = bmart::process::command(
+                            "sh",
+                            ["-c", &a],
+                            timeout,
+                            bmart::process::Options::default(),
+                        )
+                        .await;
                         if !f._pass {
                             let res = result?;
                             if res.ok() {

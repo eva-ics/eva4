@@ -1,17 +1,18 @@
 [package]
 name = "eva-svc-example-temp"
-version = "4.0.2"
+version = "0.0.1"
 edition = "2021"
+publish = false
 
 [dependencies]
-eva-common = { version = "0.3.43", features = ["events", "common-payloads", "payload", "acl"] }
-eva-sdk = { version = "0.3.41" }
-tokio = { version = "1.20.1", features = ["full"] }
-async-trait = { version = "0.1.51" }
-serde = { version = "1.0.133", features = ["derive", "rc"] }
-log = "0.4.14"
-jemallocator = { version = "0.5.0" }
-once_cell = "1.13.1"
+eva-common = { version = "0.3", features = ["events", "common-payloads", "payload", "acl"] }
+eva-sdk = { version = "0.3" }
+tokio = { version = "1.36.0", features = ["full"] }
+async-trait = { version = "0.1.77" }
+serde = { version = "1.0.196", features = ["derive", "rc"] }
+log = "0.4.20"
+jemallocator = { version = "0.5.4" }
+once_cell = "1.19.0"
 
 [features]
 std-alloc = []

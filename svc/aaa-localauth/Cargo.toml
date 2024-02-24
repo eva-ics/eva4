@@ -1,24 +1,24 @@
 [package]
 name = "eva-aaa-localauth"
-version = "4.0.2"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
 
 [dependencies]
-busrt = { version = "0.4", features = ["rpc", "ipc"] }
-tokio = { version = "1.20.1", features = ["full"] }
-async-trait = { version = "0.1.51" }
-serde = { version = "1.0.143", features = ["derive", "rc"] }
-eva-common = { version = "0.3.43", features = ["events", "common-payloads"] }
-log = "0.4.14"
-async-channel = "1.7.1"
-eva-sdk = { version = "0.3.41" }
-jemallocator = { version = "0.5.0" }
+busrt = { features = ["rpc", "ipc"] , workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { version = "0.1.77" }
+serde = { features = ["derive", "rc"] , workspace = true }
+eva-common = { features = ["events", "common-payloads"] , workspace = true }
+log = { workspace = true }
+async-channel = "1.7"
+eva-sdk = { version = "0.3.45" }
+jemallocator = { version = "0.5.4" }
 hex = "0.4.3"
-once_cell = "1.9.0"
-bmart = "0.1.14"
-openssl = "0.10.60"
+once_cell = "1.19.0"
+bmart = { workspace = true }
+openssl = "0.10.63"
 genpass-native = { path = "../../genpass-native" }
 
 [features]

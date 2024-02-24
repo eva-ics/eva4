@@ -1,25 +1,27 @@
 [package]
 name = "eva-bridge-ads"
-version = "4.0.2"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
 
 [dependencies]
-busrt = { version = "0.4", features = ["rpc", "ipc"] }
-tokio = { version = "1.20.1", features = ["full"] }
-async-trait = { version = "0.1.51" }
-serde = { version = "1.0.143", features = ["derive", "rc"] }
-log = "0.4.14"
+busrt = { features = ["rpc", "ipc"] , workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { workspace = true }
+serde = { features = ["derive", "rc"] , workspace = true }
+log = { workspace = true }
 lazy_static = "1.4.0"
-async-channel = "1.7.1"
-eva-sdk = { version = "0.3.41" }
-eva-common = { version = "0.3.43", features = ["events", "time", "common-payloads"] }
-once_cell = "1.9.0"
-jemallocator = { version = "0.5.0" }
-bmart = "0.1.15"
-uuid = { version = "1.1.2", features = ["v4"] }
-itertools = "0.10.3"
-ads = "0.4.1"
-zerocopy = "0.6.6"
+async-channel = { workspace = true }
+eva-sdk = { workspace = true }
+eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
+once_cell = { workspace = true }
+jemallocator = { workspace = true }
+bmart = { workspace = true }
+uuid = { version = "1.7.0", features = ["v4"] }
+itertools = "0.12.1"
+ads = "0.4.3"
+zerocopy = "0.7.32"
 
 [features]
 std-alloc = []

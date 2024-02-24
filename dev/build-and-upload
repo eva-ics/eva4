@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ARCHS="aarch64-musl x86_64-musl x86_64-ubuntu20.04"
-RUST_VER_REQUIRED="1.72.0"
+RUST_VER_REQUIRED="1.76.0"
 
 export RUST_VER_REQUIRED
 
