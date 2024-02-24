@@ -334,9 +334,10 @@ macro_rules! req {
 }
 
 pub struct Client {
-    client: Box<dyn ModbusClient + Send + Sync>,
+    inner: Box<dyn ModbusClient + Send + Sync>,
     tr_id: std::sync::Mutex<TrId>,
     proto: rmodbus::ModbusProto,
+    fc16_supported: bool,
 }
 
 fn parse_host_port(path: &str) -> EResult<(&str, u16)> {
@@ -357,6 +358,7 @@ impl Client {
         pool_size: usize,
         kind: ProtocolKind,
         frame_delay: Option<Duration>,
+        fc16_supported: bool,
     ) -> EResult<Self> {
         let (client, proto) = match kind {
             ProtocolKind::Tcp => {
@@ -384,9 +386,10 @@ impl Client {
             }
         };
         Ok(Self {
-            client,
+            inner: client,
             tr_id: <_>::default(),
             proto,
+            fc16_supported,
         })
     }
     pub async fn safe_get_u16(
@@ -414,7 +417,7 @@ impl Client {
             }
             _ => panic!("u16 req for coils"),
         };
-        let response = self.client.process_request(request).await?;
+        let response = self.inner.process_request(request).await?;
         let mut result = Vec::new();
         mreq.parse_u16(&response, &mut result)
             .map_err(Error::failed)?;
@@ -430,22 +433,42 @@ impl Client {
             }
             _ => panic!("bool set req for read/only or u16 regs"),
         };
-        let response = self.client.process_request(request).await?;
+        let response = self.inner.process_request(request).await?;
         mreq.parse_ok(&response).map_err(Error::failed)?;
         Ok(())
     }
     pub async fn set_u16_bulk(&self, unit_id: u8, reg: Register, value: &[u16]) -> EResult<()> {
-        let mut mreq = req!(self, unit_id);
-        let mut request = Vec::new();
-        match reg.kind() {
-            RegisterKind::Holding => {
-                mreq.generate_set_holdings_bulk(reg.number(), value, &mut request)
-                    .map_err(Error::failed)?;
-            }
-            _ => panic!("u16 set req for read/only or u16 regs"),
-        };
-        let response = self.client.process_request(request).await?;
-        mreq.parse_ok(&response).map_err(Error::failed)?;
+        if value.is_empty() {
+            return Ok(());
+        }
+        if self.fc16_supported {
+            let mut mreq = req!(self, unit_id);
+            let mut request = Vec::new();
+            match reg.kind() {
+                RegisterKind::Holding => {
+                    mreq.generate_set_holdings_bulk(reg.number(), value, &mut request)
+                        .map_err(Error::failed)?;
+                }
+                _ => panic!("u16 set req for read/only or u16 regs"),
+            };
+            let response = self.inner.process_request(request).await?;
+            mreq.parse_ok(&response).map_err(Error::failed)?;
+        } else {
+            match reg.kind() {
+                RegisterKind::Holding => {
+                    for (i, v) in value.iter().enumerate() {
+                        let mut mreq = req!(self, unit_id);
+                        let mut request = Vec::new();
+                        let n: usize = usize::from(reg.number()) + i;
+                        mreq.generate_set_holding(u16::try_from(n)?, *v, &mut request)
+                            .map_err(Error::failed)?;
+                        let response = self.inner.process_request(request).await?;
+                        mreq.parse_ok(&response).map_err(Error::failed)?;
+                    }
+                }
+                _ => panic!("u16 set req for read/only or u16 regs"),
+            };
+        }
         Ok(())
     }
     pub async fn safe_get_bool(
@@ -473,7 +496,7 @@ impl Client {
             }
             _ => panic!("bool req for u16 regs"),
         };
-        let response = self.client.process_request(request).await?;
+        let response = self.inner.process_request(request).await?;
         let mut result = Vec::new();
         mreq.parse_bool(&response, &mut result)
             .map_err(Error::failed)?;

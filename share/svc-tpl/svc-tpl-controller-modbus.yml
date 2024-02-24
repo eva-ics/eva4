@@ -10,6 +10,9 @@ config:
     #  for the local bus: service name
     unit: 1 # default modbus unit
     # frame_delay: 0.1 # optional serial frame delay (sec), default: 0.1 (100ms)
+    # set to false if the target device is unable to process FC16 (bulk set,
+    # default: true)
+    #fc16_supported: false
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: null
   # default retry attempts for all operations (0 - no retries, give up if the

@@ -26,6 +26,8 @@ pub struct ModBusConfig {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     pub frame_delay: Option<Duration>,
+    #[serde(default = "eva_common::tools::default_true")]
+    pub fc16_supported: bool,
 }
 
 #[derive(Deserialize)]

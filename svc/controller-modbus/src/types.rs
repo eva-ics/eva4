@@ -210,6 +210,7 @@ impl<'de> Deserialize<'de> for Register {
 }
 
 #[derive(Clone)]
+#[allow(clippy::struct_field_names)]
 pub struct Offset {
     offset: u16,
     bit: Option<u8>,

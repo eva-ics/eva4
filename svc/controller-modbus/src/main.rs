@@ -123,6 +123,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         pool_size as usize,
         config.modbus.protocol,
         config.modbus.frame_delay,
+        config.modbus.fc16_supported,
     )
     .await?;
     initial.drop_privileges()?;
