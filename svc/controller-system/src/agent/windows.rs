@@ -111,10 +111,7 @@ fn main() -> EResult<()> {
     if let Some(cmd) = args.command {
         match cmd {
             Command::Run => {
-                env_logger::Builder::new()
-                    .target(env_logger::Target::Stdout)
-                    .filter_level(log::LevelFilter::Info)
-                    .init();
+                eva_common::console_logger::configure_env_logger(false);
                 launch()?;
             }
             Command::Register => {

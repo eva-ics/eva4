@@ -75,14 +75,7 @@ async fn main() {
     handle_signal!(SignalKind::hangup());
     handle_signal!(SignalKind::interrupt());
     let args = args::Args::parse_args();
-    env_logger::Builder::new()
-        .target(env_logger::Target::Stdout)
-        .filter_level(if args.verbose {
-            log::LevelFilter::Trace
-        } else {
-            log::LevelFilter::Info
-        })
-        .init();
+    eva_common::console_logger::configure_env_logger(args.verbose);
     let mut quiet = false;
     let exit_code = if let Err(e) = match args.command {
         args::Command::Cloud(cloud_command) => match cloud_command {

@@ -116,9 +116,9 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.5"
+version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d664a92ecae85fd0a7392615844904654d1d5f5514837f471ddef4a057aba1b6"
+checksum = "96b09b5178381e0874812a9b157f7fe84982617e48f71f4e3235482775e5b540"
 dependencies = [
  "anstyle",
  "anstyle-parse",
@@ -130,9 +130,9 @@ dependencies = [
 
 [[package]]
 name = "anstyle"
-version = "1.0.4"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7079075b41f533b8c61d2a4d073c4676e1f8b249ff94a393b0595db304e0dd87"
+checksum = "8901269c6307e8d93993578286ac0edf7f195079ffff5ebdeea6a59ffb7e36bc"
 
 [[package]]
 name = "anstyle-parse"
@@ -467,7 +467,7 @@ dependencies = [
  "bmart 0.2.6",
  "busrt",
  "clap 3.1.18",
- "env_logger",
+ "env_logger 0.9.0",
  "eva-common",
  "log",
  "serde",
@@ -1350,6 +1350,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_filter"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
+dependencies = [
+ "log",
+ "regex",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1360,6 +1370,19 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "env_filter",
+ "humantime",
+ "log",
 ]
 
 [[package]]
@@ -1506,7 +1529,7 @@ dependencies = [
  "chrono",
  "clap 3.1.18",
  "colored",
- "env_logger",
+ "env_logger 0.9.0",
  "eva-client",
  "eva-common",
  "expanduser",
@@ -1529,9 +1552,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.39"
+version = "0.3.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e5e602121c570906fa610d4397db537696274aa26ddbe04de8adbf382282fdc"
+checksum = "086be2345500d80b4cfaa5246fdce560a7d66360721575e4ca5ecf8bc0645f8c"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1540,6 +1563,7 @@ dependencies = [
  "busrt",
  "chrono",
  "dateparser",
+ "env_logger 0.11.2",
  "hex 0.4.3",
  "hyper",
  "hyper-static",

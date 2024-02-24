@@ -13,6 +13,7 @@ use log::{Level, LevelFilter, Log, Metadata, Record};
 use once_cell::sync::OnceCell;
 use serde::{ser::SerializeMap, Serialize, Serializer};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::io::stdout;
 use std::io::Write;
 use std::str::FromStr;
@@ -26,6 +27,7 @@ const DEFAULT_GET_RECORD_LIMIT: u32 = 50;
 
 static CAN_LOG_CONSOLE: atomic::AtomicBool = atomic::AtomicBool::new(true);
 static MIN_LOG_LEVEL: atomic::AtomicU8 = atomic::AtomicU8::new(eva_common::LOG_LEVEL_ERROR);
+static CONSOLE_LOG_TIMESTAMP: atomic::AtomicBool = atomic::AtomicBool::new(true);
 
 pub fn disable_console_log() {
     CAN_LOG_CONSOLE.store(false, atomic::Ordering::SeqCst);
@@ -289,6 +291,33 @@ impl ConsoleLogger {
     }
 }
 
+macro_rules! format_console_log_string {
+    ($record: expr, $system_name: expr, $format: expr) => {
+        match $format {
+            LogFormat::Regular => {
+                let mut log_string = String::new();
+                if CONSOLE_LOG_TIMESTAMP.load(atomic::Ordering::Relaxed) {
+                    let _ = write!(
+                        log_string,
+                        "{} ",
+                        Local::now().to_rfc3339_opts(SecondsFormat::Secs, false)
+                    );
+                }
+                let _ = write!(
+                    log_string,
+                    "{}  {} {} {}",
+                    $system_name,
+                    $record.level(),
+                    $record.target(),
+                    $record.args()
+                );
+                log_string
+            }
+            LogFormat::Json => $record.as_json(&$system_name),
+        }
+    };
+}
+
 macro_rules! format_log_string {
     ($record: expr, $system_name: expr, $format: expr) => {
         match $format {
@@ -314,7 +343,7 @@ impl Log for ConsoleLogger {
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) && CAN_LOG_CONSOLE.load(atomic::Ordering::SeqCst) {
-            let log_string = format_log_string!(record, self.system_name, self.format);
+            let log_string = format_console_log_string!(record, self.system_name, self.format);
             let _console = CONSOLE_LOCK.lock().unwrap();
             match record.level() {
                 Level::Trace => println!("{}", log_string.bright_black().dimmed()),
@@ -631,6 +660,10 @@ pub fn init(
     dir_eva: &str,
     enable_bus: bool,
 ) {
+    CONSOLE_LOG_TIMESTAMP.store(
+        eva_common::console_logger::console_log_with_timestamp(),
+        atomic::Ordering::Relaxed,
+    );
     let mut loggers: Vec<Box<(dyn Log + 'static)>> = Vec::new();
     let mut max_filter = LevelFilter::Error;
     let mut keep_mem: Option<chrono::Duration> = None;

@@ -218,10 +218,7 @@ fn get_mem_kb(sys: &mut System, pid: Pid) -> u64 {
 
 #[tokio::main]
 async fn main() -> EResult<()> {
-    env_logger::Builder::new()
-        .target(env_logger::Target::Stdout)
-        .filter_level(log::LevelFilter::Info)
-        .init();
+    eva_common::console_logger::configure_env_logger(false);
     if let Err(e) = benchmark().await {
         error!("{}", e);
         Err(e)

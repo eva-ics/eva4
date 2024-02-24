@@ -51,10 +51,7 @@ async fn main() -> EResult<()> {
     .map_err(Error::invalid_params)?;
     let log_level_filter = log::LevelFilter::Info;
     if std::io::stdout().is_terminal() {
-        env_logger::Builder::new()
-            .target(env_logger::Target::Stdout)
-            .filter_level(log_level_filter)
-            .init();
+        eva_common::console_logger::configure_env_logger(false);
     } else {
         let formatter = Formatter3164 {
             facility: Facility::LOG_USER,
