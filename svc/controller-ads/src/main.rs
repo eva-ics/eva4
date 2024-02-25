@@ -177,7 +177,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         let mut ads_vars = ADS_VARS.lock().unwrap();
         for var in vars {
             match var.check() {
-                Ok(_) => {
+                Ok(()) => {
                     ads_vars.insert(var.name().to_owned(), Arc::new(var));
                 }
                 Err(e) => {

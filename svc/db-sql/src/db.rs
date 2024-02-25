@@ -50,12 +50,12 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     match kind {
         AnyKind::Sqlite => {
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS state_history
+                r"CREATE TABLE IF NOT EXISTS state_history
                 (t INTEGER NOT NULL,
                 oid VARCHAR(256) NOT NULL,
                 status INTEGER,
                 value VARCHAR(8192),
-                PRIMARY KEY (t, oid))"#,
+                PRIMARY KEY (t, oid))",
             )
             .execute(&pool)
             .await?;
@@ -65,12 +65,12 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         }
         AnyKind::MySql | AnyKind::Postgres => {
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS state_history
+                r"CREATE TABLE IF NOT EXISTS state_history
                 (t BIGINT NOT NULL,
                 oid VARCHAR(256) NOT NULL,
                 status INTEGER,
                 value VARCHAR(8192),
-                PRIMARY KEY (t, oid))"#,
+                PRIMARY KEY (t, oid))",
             )
             .execute(&pool)
             .await?;
@@ -152,13 +152,13 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
             }
         }
         let q = format!(
-            r#"INSERT INTO state_history(t,oid,status,value)
+            r"INSERT INTO state_history(t,oid,status,value)
             VALUES(
                 UNNEST(ARRAY[{}]),
                 UNNEST(ARRAY[{}]),
                 UNNEST(ARRAY[{}]),
                 UNNEST(ARRAY[{}])
-                ) ON CONFLICT DO NOTHING;"#,
+                ) ON CONFLICT DO NOTHING",
             ts, oids, statuses, values
         );
         sqlx::query(&q).execute(pool).await?;

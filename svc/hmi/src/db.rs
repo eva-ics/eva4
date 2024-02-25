@@ -121,8 +121,8 @@ impl ApiLogFilter {
 pub fn api_log_query(filter: &ApiLogFilter) -> EResult<String> {
     //let pool = DB_POOL.get().unwrap();
     let q = format!(
-        r#"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params, oid, note
-            FROM api_log {} ORDER BY t"#,
+        r"SELECT id, t, auth, login, acl, source, method, code, msg, elapsed, params, oid, note
+            FROM api_log {} ORDER BY t",
         filter.condition()?
     );
     Ok(q)
@@ -168,8 +168,8 @@ where
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+                r"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(id_str)
             .bind(i64::try_from(now()).map_err(Error::failed)?)
@@ -190,8 +190,8 @@ where
         }
         AnyKind::Postgres => {
             sqlx::query(
-                r#"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#,
+                r"INSERT INTO api_log (id, t, login, auth, acl, source, method, params, oid, note)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
             )
             .bind(id_str)
             .bind(i64::try_from(now()).map_err(Error::failed)?)
@@ -493,11 +493,11 @@ pub async fn save_token(token: &Token) -> EResult<()> {
     match kind {
         AnyKind::Sqlite | AnyKind::MySql => {
             sqlx::query(
-                r#"INSERT INTO tokens
+                r"INSERT INTO tokens
                 (id, md, t, login, acl, auth_svc, ip)
                 VALUES
                 (?, ?, ?, ?, ?, ?, ?)
-                 "#,
+                 ",
             )
             .bind(&token_id)
             .bind(i64::from(token.mode()))
@@ -510,11 +510,11 @@ pub async fn save_token(token: &Token) -> EResult<()> {
             .await?;
             for acl_id in token.acl().from() {
                 sqlx::query(
-                    r#"INSERT INTO token_acls
+                    r"INSERT INTO token_acls
                     (token_id, acl_id)
                     VALUES
                     (?, ?)
-                     "#,
+                     ",
                 )
                 .bind(&token_id)
                 .bind(acl_id)
@@ -524,11 +524,11 @@ pub async fn save_token(token: &Token) -> EResult<()> {
         }
         AnyKind::Postgres => {
             sqlx::query(
-                r#"INSERT INTO tokens
+                r"INSERT INTO tokens
                 (id, md, t, login, acl, auth_svc, ip)
                 VALUES
                 ($1, $2, $3, $4, $5, $6, $7)
-                 "#,
+                 ",
             )
             .bind(&token_id)
             .bind(i64::from(token.mode()))
@@ -541,11 +541,11 @@ pub async fn save_token(token: &Token) -> EResult<()> {
             .await?;
             for acl_id in token.acl().from() {
                 sqlx::query(
-                    r#"INSERT INTO token_acls
+                    r"INSERT INTO token_acls
                     (token_id, acl_id)
                     VALUES
                     ($1, $2)
-                     "#,
+                     ",
                 )
                 .bind(&token_id)
                 .bind(acl_id)
@@ -722,8 +722,8 @@ pub async fn set_user_data(login: &str, key: &str, value: Value) -> EResult<()> 
     let q = match kind {
         AnyKind::Sqlite => "INSERT OR REPLACE INTO user_data(login, k, v) VALUES (?, ?, ?)",
         AnyKind::Postgres => {
-            r#"INSERT INTO user_data(login, k, v) VALUES ($1, $2, $3)
-ON CONFLICT ON CONSTRAINT user_data_pkey DO UPDATE SET v=$3"#
+            r"INSERT INTO user_data(login, k, v) VALUES ($1, $2, $3)
+ON CONFLICT ON CONSTRAINT user_data_pkey DO UPDATE SET v=$3"
         }
         AnyKind::MySql => not_impl!(kind),
     };
@@ -762,7 +762,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
     match kind {
         AnyKind::Sqlite => {
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         api_log(
             id CHAR(36),
             t INT,
@@ -777,7 +777,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             params VARCHAR(4096),
             oid VARCHAR(1024),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -785,7 +785,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         tokens(
             id CHAR(48),
             md INT,
@@ -795,7 +795,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             auth_svc VARCHAR(256),
             ip VARCHAR(39),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -803,12 +803,12 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         token_acls(
             token_id CHAR(48),
             acl_id VARCHAR(256),
             PRIMARY KEY(token_id, acl_id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -816,7 +816,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         ehmi_configs(
             k VARCHAR(128) NOT NULL,
             token_id CHAR(48) NOT NULL,
@@ -824,18 +824,18 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             t INTEGER NOT NULL,
             PRIMARY KEY(k)
             FOREIGN KEY(token_id) REFERENCES tokens(id) ON DELETE CASCADE
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         user_data(
         login VARCHAR(64) NOT NULL,
         k VARCHAR(128) NOT NULL,
         v VARCHAR(16384) NOT NULL,
         PRIMARY KEY(login, k)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -843,7 +843,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
         // MySQL support is deprecated, do not port new features
         AnyKind::MySql => {
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         api_log(
             id CHAR(36),
             t INT,
@@ -859,7 +859,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             oid VARCHAR(1024),
             note VARCHAR(1024),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -867,7 +867,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         tokens(
             id CHAR(48),
             md INT,
@@ -877,7 +877,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             auth_svc VARCHAR(256),
             ip VARCHAR(39),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -885,12 +885,12 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         token_acls(
             token_id CHAR(48),
             acl_id VARCHAR(256),
             PRIMARY KEY(token_id, acl_id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -900,7 +900,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
         }
         AnyKind::Postgres => {
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         api_log(
             id CHAR(36),
             t BIGINT,
@@ -915,7 +915,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             params VARCHAR(4096),
             oid VARCHAR(1024),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -923,7 +923,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         tokens(
             id CHAR(48),
             md BIGINT,
@@ -933,7 +933,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             auth_svc VARCHAR(256),
             ip VARCHAR(39),
             PRIMARY KEY(id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -941,12 +941,12 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         token_acls(
             token_id CHAR(48),
             acl_id VARCHAR(256),
             PRIMARY KEY(token_id, acl_id)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
@@ -954,7 +954,7 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
                 .execute(&pool)
                 .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         ehmi_configs(
             k VARCHAR(128),
             token_id CHAR(48) NOT NULL,
@@ -962,18 +962,18 @@ pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> 
             t BIGINT,
             PRIMARY KEY(k),
             FOREIGN KEY(token_id) REFERENCES tokens(id) ON DELETE CASCADE
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;
             sqlx::query(
-                r#"CREATE TABLE IF NOT EXISTS
+                r"CREATE TABLE IF NOT EXISTS
         user_data(
         login VARCHAR(64) NOT NULL,
         k VARCHAR(128) NOT NULL,
         v VARCHAR(16384),
         PRIMARY KEY(login, k)
-        )"#,
+        )",
             )
             .execute(&pool)
             .await?;

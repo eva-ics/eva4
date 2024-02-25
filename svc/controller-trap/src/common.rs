@@ -18,6 +18,7 @@ pub struct ParamsRun<'a> {
 }
 
 #[derive(Serialize, Debug)]
+#[allow(clippy::struct_field_names)]
 pub struct TrapData {
     pub(crate) trap_source: String,
     pub(crate) trap_community: String,

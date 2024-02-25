@@ -384,7 +384,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
             .call::<()>(&c.name, "eva.core", "update", Some(payload.clone()))
             .await
         {
-            Ok(_) => {
+            Ok(()) => {
                 info!("command accepted");
                 wait_candidates.push(c);
             }
@@ -461,7 +461,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
                 .call::<()>(&c.node, &c.name, "update", Some(payload.clone()))
                 .await
             {
-                Ok(_) => {
+                Ok(()) => {
                     info!("command accepted");
                     wait_candidates.push(c);
                 }

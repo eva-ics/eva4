@@ -43,12 +43,12 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .connect_with(opts)
         .await?;
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS inventory(
+        r"CREATE TABLE IF NOT EXISTS inventory(
                     oid VARCHAR(768),
                     cfg VARCHAR(4096),
                     state VARCHAR(8192),
                     PRIMARY KEY(oid))
-                "#,
+                ",
     )
     .execute(&pool)
     .await?;

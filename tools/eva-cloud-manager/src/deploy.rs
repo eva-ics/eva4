@@ -68,7 +68,7 @@ async fn execute_extra(
             }
             ExtraMethod::Func(f) => match f.function {
                 LocalFunction::Sleep => {
-                    let t: Duration = if let Some(v) = f.args.get(0) {
+                    let t: Duration = if let Some(v) = f.args.first() {
                         let ft: f64 = v.try_into()?;
                         Duration::from_secs_f64(ft)
                     } else {
@@ -78,7 +78,7 @@ async fn execute_extra(
                     tokio::time::sleep(t).await;
                 }
                 LocalFunction::System => {
-                    if let Some(args) = f.args.get(0) {
+                    if let Some(args) = f.args.first() {
                         let a = args.to_string();
                         info!("system({})", a);
                         let result = bmart::process::command(
@@ -623,6 +623,7 @@ struct BusMethod {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_field_names)]
 struct Function {
     function: LocalFunction,
     #[serde(default)]
@@ -656,6 +657,7 @@ fn default_generator_svc() -> String {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_field_names)]
 struct NodeParams {
     #[serde(default = "default_acl_svc")]
     acl_svc: String,

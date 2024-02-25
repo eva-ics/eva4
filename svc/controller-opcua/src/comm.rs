@@ -258,7 +258,7 @@ pub async fn init_session(
                 int.tick().await;
                 match read_multi(n.clone(), r.clone(), timeout, 0).await {
                     Ok(v) => {
-                        if v.get(0).and_then(|v| v.value.as_ref()).is_none() {
+                        if v.first().and_then(|v| v.value.as_ref()).is_none() {
                             poc!("no value");
                         }
                     }

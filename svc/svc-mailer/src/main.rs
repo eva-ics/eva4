@@ -158,7 +158,7 @@ async fn resolve_email(user: &str) -> EResult<Option<String>> {
 }
 
 struct Mailer {
-    mailer: AsyncSmtpTransport<Tokio1Executor>,
+    inner: AsyncSmtpTransport<Tokio1Executor>,
     timeout: Duration,
     default_rcp: Vec<Mailbox>,
     from: Mailbox,
@@ -209,7 +209,7 @@ impl Mailer {
         let mailer = b.build();
         let tasks_sem = tokio::sync::Semaphore::new(MAX_PARALLEL_TASKS);
         Ok(Self {
-            mailer,
+            inner: mailer,
             timeout,
             default_rcp: rcps,
             from: from.parse().map_err(Error::invalid_data)?,
@@ -276,7 +276,7 @@ impl Mailer {
             ebuilder = ebuilder.subject(subj);
         }
         let message = ebuilder.body(body).map_err(Error::invalid_data)?;
-        tokio::time::timeout(self.timeout, self.mailer.send(message))
+        tokio::time::timeout(self.timeout, self.inner.send(message))
             .await?
             .map_err(Error::failed)?;
         Ok(())

@@ -27,7 +27,7 @@ impl ApiKeyId for Acl {
     fn api_key_id(&self) -> Option<&str> {
         if let Some(Value::Map(map)) = self.meta() {
             if let Some(Value::Seq(s)) = map.get(&Value::String("api_key_id".to_owned())) {
-                if let Some(Value::String(val)) = s.get(0) {
+                if let Some(Value::String(val)) = s.first() {
                     return Some(val);
                 }
             }

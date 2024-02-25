@@ -814,7 +814,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         for m in &o.map {
             if let Some(ref oid) = m.oid {
                 bus_oids.push(oid);
-                omap.entry(oid.clone()).or_insert(vec![]).push(o.clone());
+                omap.entry(oid.clone()).or_default().push(o.clone());
             }
         }
     }

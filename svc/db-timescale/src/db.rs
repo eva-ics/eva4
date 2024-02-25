@@ -41,21 +41,21 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .connect_with(opts)
         .await?;
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS state_history_oids
+        r"CREATE TABLE IF NOT EXISTS state_history_oids
         (id SERIAL,
         oid VARCHAR(256) NOT NULL UNIQUE,
-        PRIMARY KEY (id))"#,
+        PRIMARY KEY (id))",
     )
     .execute(&pool)
     .await?;
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS state_history_events
+        r"CREATE TABLE IF NOT EXISTS state_history_events
         (t TIMESTAMP,
         oid_id INT,
         status SMALLINT,
         value DOUBLE PRECISION,
         PRIMARY KEY (t, oid_id),
-        FOREIGN KEY(oid_id) REFERENCES state_history_oids(id) ON DELETE CASCADE)"#,
+        FOREIGN KEY(oid_id) REFERENCES state_history_oids(id) ON DELETE CASCADE)",
     )
     .execute(&pool)
     .await?;
@@ -63,7 +63,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .execute(&pool)
         .await;
     sqlx::query(
-        r#"CREATE OR REPLACE FUNCTION insert_state_history_events(
+        r"CREATE OR REPLACE FUNCTION insert_state_history_events(
 t TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -86,13 +86,13 @@ BEGIN
       UNNEST(vals)
     ) ON CONFLICT DO NOTHING;
   END
-$$;"#,
+$$;",
     )
     .execute(&pool)
     .await?;
     let c: i64 = sqlx::query(
-        r#"SELECT COUNT(*) FROM timescaledb_information.hypertables
-        WHERE hypertable_name='state_history_events'"#,
+        r"SELECT COUNT(*) FROM timescaledb_information.hypertables
+        WHERE hypertable_name='state_history_events'",
     )
     .fetch_one(&pool)
     .await.map_err(|e| Error::failed(format!("unable to get timescale hypertable information. is the timescale extension enabled? ({})", e)))?
@@ -122,11 +122,11 @@ async fn init_hypertable(pool: &PgPool) -> EResult<()> {
         .execute(pool)
         .await?;
     sqlx::query(
-        r#"ALTER TABLE state_history_events
+        r"ALTER TABLE state_history_events
                 SET (
                     timescaledb.compress,
                     timescaledb.compress_orderby = 't DESC',
-                    timescaledb.compress_segmentby = 'oid_id')"#,
+                    timescaledb.compress_segmentby = 'oid_id')",
     )
     .execute(pool)
     .await?;
@@ -215,9 +215,9 @@ pub async fn state_history(
         "value"
     };
     let query = format!(
-        r#"SELECT t,{pq} FROM state_history_events
+        r"SELECT t,{pq} FROM state_history_events
             JOIN state_history_oids
-            ON state_history_events.oid_id=state_history_oids.id {q}"#
+            ON state_history_events.oid_id=state_history_oids.id {q}"
     );
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);
@@ -288,9 +288,9 @@ pub async fn state_log(
         q += ", oid";
     }
     let query = format!(
-        r#"SELECT oid,t,status,value FROM state_history_events
+        r"SELECT oid,t,status,value FROM state_history_events
         JOIN state_history_oids
-        ON state_history_events.oid_id=state_history_oids.id {q}"#
+        ON state_history_events.oid_id=state_history_oids.id {q}"
     );
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);
@@ -344,8 +344,8 @@ pub async fn cleanup_oids() {
 async fn cleanup_event_oids() -> EResult<()> {
     let pool = POOL.get().unwrap();
     sqlx::query(
-        r#"DELETE FROM state_history_oids
-        WHERE id NOT IN (SELECT DISTINCT oid_id FROM state_history_events)"#,
+        r"DELETE FROM state_history_oids
+        WHERE id NOT IN (SELECT DISTINCT oid_id FROM state_history_events)",
     )
     .execute(pool)
     .await?;

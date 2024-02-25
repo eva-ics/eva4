@@ -516,8 +516,8 @@ fn parse_symbol_definition(buf: &[u8]) -> Option<&str> {
     }
     let name_len = u16::from_le_bytes(buf[24..26].try_into().unwrap());
     let definition_len = u16::from_le_bytes(buf[26..28].try_into().unwrap());
-    let def_start = 30 + usize::try_from(name_len).unwrap() + 1;
-    let def_end = def_start + usize::try_from(definition_len).unwrap();
+    let def_start = 30 + usize::from(name_len) + 1;
+    let def_end = def_start + usize::from(definition_len);
     if buf.len() < def_end {
         return None;
     }

@@ -166,6 +166,7 @@ struct UserInfo<'a> {
 /// full key object, stored in the registry
 #[derive(Debug, Serialize, Deserialize, Sorting)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_field_names)]
 struct Key {
     id: String,
     key: String,

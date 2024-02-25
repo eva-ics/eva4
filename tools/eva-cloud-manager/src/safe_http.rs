@@ -30,7 +30,7 @@ impl IsUrl for std::path::Path {
 
 pub struct Client {
     timeout: Duration,
-    client: hyper::Client<HttpsConnector<HttpConnector>>,
+    inner: hyper::Client<HttpsConnector<HttpConnector>>,
     manifest: Option<Manifest>,
     max_redirects: usize,
 }
@@ -43,7 +43,7 @@ impl Client {
             .build(https);
         Self {
             timeout,
-            client,
+            inner: client,
             manifest: None,
             max_redirects: 0,
         }
@@ -66,7 +66,7 @@ impl Client {
         .map_err(|e| Error::invalid_params(format!("invalid url {}: {}", url, e)))?;
         let mut rdr = 0;
         loop {
-            let res = tokio::time::timeout(op.timeout()?, self.client.get(target_uri.clone()))
+            let res = tokio::time::timeout(op.timeout()?, self.inner.get(target_uri.clone()))
                 .await?
                 .map_err(Error::io)?;
             if self.max_redirects > 0
