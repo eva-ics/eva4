@@ -495,6 +495,10 @@ def format_value(value, advanced=False, name='', p=None):
         value = pwinput.pwinput(prompt=f'{name}: ')
     if value.startswith('!'):
         return value[1:]
+    if value.startswith('@'):
+        import yaml
+        with open(value[1:]) as fh:
+            return yaml.safe_load(fh)
     elif advanced and ',' in value:
         return [format_value(v) for v in value.split(',')]
     else:

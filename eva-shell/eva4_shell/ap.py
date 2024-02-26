@@ -267,7 +267,7 @@ def append_svc_cli(root_sp):
     p.add_argument('method', metavar='METHOD').completer = ComplSvcRpcMethod()
     p.add_argument('params',
                    nargs='*',
-                   help='param=value. use "<<" to input sensitive data',
+                   help='param=value. use "<<" to input sensitive data, use "@filename" to read a value from JSON/YAML',
                    metavar='PARAM=VALUE').completer = ComplSvcRpcParams()
     p.add_argument('--trace',
                    action='store_true',
