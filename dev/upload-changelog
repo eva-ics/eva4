@@ -3,7 +3,7 @@
 [ -z "${BUILD_DIR}" ] && BUILD_DIR=/tdata/_eva4_build
 cd "${BUILD_DIR}/eva4" || exit 1
 
-VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+VERSION=$(grep ^version Cargo.toml|cut -d \" -f2)
 URI=pub.bma.ai/eva4/${VERSION}/nightly
 rst2html5.py CHANGELOG.rst CHANGELOG.html || exit 1
 gsutil cp -a public-read -z html CHANGELOG.html "gs://${URI}/" || exit 1

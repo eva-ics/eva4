@@ -4,7 +4,7 @@
 cd "${BUILD_DIR}/eva4" || exit 1
 
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
-VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+VERSION=$(grep ^version Cargo.toml|cut -d \" -f2)
 URI=pub.bma.ai/eva4/${VERSION}/nightly
 
 gsutil -h "Content-Type:text/x-shellscript" cp -a public-read \

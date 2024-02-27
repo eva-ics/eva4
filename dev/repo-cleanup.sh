@@ -3,7 +3,7 @@
 KEEP_NIGHTLY=6
 KEEP_STABLE=3
 
-VERSION=$(grep ^version eva/Cargo.toml|cut -d\" -f2)
+VERSION=$(grep ^version Cargo.toml|cut -d\" -f2)
 
 remove_build() {
   build=$1

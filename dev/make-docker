@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+VERSION=$(grep ^version Cargo.toml|cut -d \" -f2)
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 
 echo "Releasing Docker image for EVA distribution ver ${VERSION} build ${BUILD}"

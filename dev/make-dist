@@ -56,7 +56,7 @@ case $ARCH in
     ;;
 esac
 
-VERSION=$(grep ^version eva/Cargo.toml|cut -d \" -f2)
+VERSION=$(grep ^version Cargo.toml|cut -d \" -f2)
 if [ "$MASTER" = "allow" ]; then
   echo "WARNING. Building from main branch, the build may be very unstable"
   BRANCH=main
