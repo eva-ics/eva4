@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-02-27 build 2024022701: Modbus improvements, EVA_CONSOLE_LOG_NO_TIMESTAMP option
 * 2024-02-21 build 2024022101: Pub/Sub extra topics, security improvements
 * 2024-02-12 build 2024021201: System controller improvements, formulas in OpCentre components
 * 2024-02-08 build 2024020801: System Controller service, sdash audit trail, bug fixes
