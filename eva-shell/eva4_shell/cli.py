@@ -945,13 +945,18 @@ class CLI:
         )
         ok()
 
-    def item_export(self, i, output=None):
+    def item_export(self, i, full=False, output=None):
         c = 0
-        configs = []
+        configs = dict()
         for item in call_rpc('item.list', dict(i=i, node='.local')):
             c += 1
-            configs.append(call_rpc('item.get_config', dict(i=item['oid'])))
-        result = dict(items=configs)
+            configs[item['oid']] = call_rpc('item.get_config', dict(i=item['oid']))
+        if full:
+            for state in call_rpc('item.state', dict(i=list(configs))):
+                oid = state['oid']
+                configs[oid]['status'] = state['status']
+                configs[oid]['value'] = state['value']
+        result = dict(items=sorted([v for _, v in configs.items()], key= lambda k: k['oid']))
         if current_command.json:
             print_result(result)
         else:

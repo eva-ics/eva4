@@ -618,6 +618,7 @@ def append_item_cli(root_sp):
 
     p = sp.add_parser('export', help='export item(s) to a deployment file')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
+    p.add_argument('-y', '--full', help='include item states', action='store_true')
     p.add_argument('-o', '--output', metavar='FILE',
                    help='output file').completer = ComplDeployFile()
 
