@@ -13,6 +13,9 @@ config:
     # set to false if the target device is unable to process FC16 (bulk set,
     # default: true)
     #fc16_supported: false
+    # turn off TCP keep-alive (opens a new connection per request), can be used
+    # for devices which can not handle Modbus command queue properly (SLOW!)
+    #keep_alive: false
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: null
   # default retry attempts for all operations (0 - no retries, give up if the

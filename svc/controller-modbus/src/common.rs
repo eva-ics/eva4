@@ -28,6 +28,8 @@ pub struct ModBusConfig {
     pub frame_delay: Option<Duration>,
     #[serde(default = "eva_common::tools::default_true")]
     pub fc16_supported: bool,
+    #[serde(default = "eva_common::tools::default_true")]
+    pub keep_alive: bool,
 }
 
 #[derive(Deserialize)]

@@ -124,6 +124,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config.modbus.protocol,
         config.modbus.frame_delay,
         config.modbus.fc16_supported,
+        config.modbus.keep_alive,
     )
     .await?;
     initial.drop_privileges()?;

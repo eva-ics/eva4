@@ -212,7 +212,14 @@ impl ModbusClient for Serial {
 
 struct Tcp {
     target: String,
-    pool: ResourcePool<TcpStream>,
+    pool: Option<ResourcePool<TcpStream>>,
+    connect_timeout: Duration,
+}
+
+async fn create_tcp_client(target: &str, connect_timeout: Duration) -> EResult<TcpStream> {
+    let client = tokio::time::timeout(connect_timeout, TcpStream::connect(&target)).await??;
+    client.set_nodelay(true)?;
+    Ok(client)
 }
 
 impl Tcp {
@@ -221,16 +228,23 @@ impl Tcp {
         port: u16,
         connect_timeout: Duration,
         pool_size: usize,
+        keep_alive: bool,
     ) -> EResult<Self> {
-        let pool = ResourcePool::new();
         let target = format!("{}:{}", host, port);
-        for _ in 0..pool_size {
-            let client =
-                tokio::time::timeout(connect_timeout, TcpStream::connect(&target)).await??;
-            client.set_nodelay(true)?;
-            pool.append(client);
-        }
-        Ok(Self { target, pool })
+        let pool = if keep_alive {
+            let pool = ResourcePool::new();
+            for _ in 0..pool_size {
+                pool.append(create_tcp_client(&target, connect_timeout).await?);
+            }
+            Some(pool)
+        } else {
+            None
+        };
+        Ok(Self {
+            target,
+            pool,
+            connect_timeout,
+        })
     }
 }
 
@@ -262,27 +276,38 @@ trait ModbusClient {
     async fn process_request(&self, payload: Vec<u8>) -> EResult<Vec<u8>>;
 }
 
-#[async_trait]
-impl ModbusClient for Tcp {
-    async fn process_request(&self, payload: Vec<u8>) -> EResult<Vec<u8>> {
-        let mut client = self.pool.get().await;
-        if let Err(e) = client.write_all(&payload).await {
-            trace!("tcp stream error: {}, trying to reconnect", e);
-            let mut new_client = TcpStream::connect(&self.target).await?;
-            new_client.write_all(&payload).await?;
-            client.replace_resource(new_client);
-        }
+macro_rules! process_modbus_request {
+    ($client: expr, $payload: expr) => {{
         let mut buf = [0u8; 6];
-        client.read_exact(&mut buf).await?;
+        $client.read_exact(&mut buf).await?;
         let mut response = buf.to_vec();
         let len = rmodbus::guess_response_frame_len(&buf, rmodbus::ModbusProto::TcpUdp)
             .map_err(Error::failed)?;
         if len > 6 {
             let mut rest = vec![0u8; (len - 6) as usize];
-            client.read_exact(&mut rest).await?;
+            $client.read_exact(&mut rest).await?;
             response.extend(rest);
         }
         Ok(response)
+    }};
+}
+
+#[async_trait]
+impl ModbusClient for Tcp {
+    async fn process_request(&self, payload: Vec<u8>) -> EResult<Vec<u8>> {
+        if let Some(ref pool) = self.pool {
+            let mut client = pool.get().await;
+            if let Err(e) = client.write_all(&payload).await {
+                trace!("tcp stream error: {}, trying to reconnect", e);
+                let mut new_client = TcpStream::connect(&self.target).await?;
+                new_client.write_all(&payload).await?;
+                client.replace_resource(new_client);
+            }
+            process_modbus_request!(client, payload)
+        } else {
+            let mut client = create_tcp_client(&self.target, self.connect_timeout).await?;
+            process_modbus_request!(client, payload)
+        }
     }
 }
 
@@ -359,12 +384,13 @@ impl Client {
         kind: ProtocolKind,
         frame_delay: Option<Duration>,
         fc16_supported: bool,
+        keep_alive: bool,
     ) -> EResult<Self> {
         let (client, proto) = match kind {
             ProtocolKind::Tcp => {
                 let (host, port) = parse_host_port(path)?;
                 let client: Box<dyn ModbusClient + Send + Sync> =
-                    Box::new(Tcp::create(host, port, timeout, pool_size).await?);
+                    Box::new(Tcp::create(host, port, timeout, pool_size, keep_alive).await?);
                 (client, rmodbus::ModbusProto::TcpUdp)
             }
             ProtocolKind::Udp => {
