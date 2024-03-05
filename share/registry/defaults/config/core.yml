@@ -7,12 +7,19 @@ timeout: 5
 suicide_timeout: 15
 # auto-create items coming from controllers (svc ids *.controller.* or *.plc.*)
 auto_create: true
-# instantly save item states
+# instantly save item states. can be true (save), false (do not save) or
+# contain a list of OID masks for instant save. it is recommended to save at
+# least lvar states, unless they are always re-generated on the fly
 instant_save: true
+#instant_save:
+# - lvar:#
+# - sensor:group1/#
 # keep action history in memory (seconds)
 keep_action_history: 86400
 # core process memory usage warning (bytes), the default is 128 MiB per worker
 #mem_warn: 134217728
-# optional inventory database (for huge projects)
+# optional inventory database (for large projects)
 # NOTE: MySQL support is deprecated, use SQLite or PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB
+# for SQLite: a relative path to the runtime directory or an absolute one
+#inventory_db: sqlite://inventory.db

@@ -30,6 +30,7 @@ use log::{debug, error, info, trace, warn};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::mem;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
@@ -170,29 +171,28 @@ where
 
 /// Stores local states into the registry
 #[inline]
-async fn save_item_state(oid: &OID, state: DbState, rpc: &RpcClient) -> EResult<()> {
+async fn save_item_state(oid: OID, state: DbState, rpc: &RpcClient) {
     trace!("saving state key for {}", oid);
-    if let Some(pool) = inventory_db::get_pool() {
-        inventory_db::save_state(oid, state, pool).await?;
+    if inventory_db::is_initialized() {
+        inventory_db::push_state(oid, state);
     } else {
-        registry::key_set(registry::R_STATE, oid.as_path(), state, rpc).await?;
+        registry::key_set(registry::R_STATE, oid.as_path(), state, rpc)
+            .await
+            .log_ef_with("unable to save state");
     }
-    Ok(())
 }
 
 async fn handle_save(rx: async_channel::Receiver<(OID, DbState)>, rpc: &RpcClient) {
     while let Ok((oid, db_state)) = rx.recv().await {
-        save_item_state(&oid, db_state, rpc)
-            .await
-            .log_ef_with("item state save");
+        save_item_state(oid, db_state, rpc).await;
     }
 }
 
 /// Stores local item configs into the registry
 #[inline]
 async fn save_item_config(oid: &OID, config: Value, rpc: &RpcClient) -> EResult<()> {
-    if let Some(pool) = inventory_db::get_pool() {
-        inventory_db::save_config(oid, config, pool).await?;
+    if inventory_db::is_initialized() {
+        inventory_db::save_item(oid.clone(), config).await?;
     } else {
         registry::key_set(registry::R_INVENTORY, oid.as_path(), config, rpc).await?;
     }
@@ -203,8 +203,8 @@ async fn save_item_config(oid: &OID, config: Value, rpc: &RpcClient) -> EResult<
 #[inline]
 async fn destroy_inventory_item(oid: &OID, rpc: &RpcClient) -> EResult<()> {
     let oid_path = oid.as_path();
-    if let Some(pool) = inventory_db::get_pool() {
-        inventory_db::destroy(oid, pool).await?;
+    if inventory_db::is_initialized() {
+        inventory_db::destroy_item(oid.clone()).await?;
     } else {
         registry::key_delete(registry::R_STATE, oid_path, rpc).await?;
         registry::key_delete(registry::R_INVENTORY, oid_path, rpc).await?;
@@ -216,13 +216,30 @@ async fn destroy_inventory_item(oid: &OID, rpc: &RpcClient) -> EResult<()> {
 macro_rules! prepare_state_data {
     ($item: expr, $state: expr, $instant_save: expr) => {{
         let s_st: LocalStateEvent = Into::<LocalStateEvent>::into($state);
-        let db_st = if $instant_save {
+        let db_st = if $instant_save.matches($item.oid()) {
             Some(Into::<DbState>::into($state))
         } else {
             None
         };
         (s_st, db_st)
     }};
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(untagged)]
+enum InstantSave {
+    Strict(bool),
+    ByMask(OIDMaskList),
+}
+
+impl InstantSave {
+    #[inline]
+    fn matches(&self, oid: &OID) -> bool {
+        match self {
+            InstantSave::Strict(v) => *v,
+            InstantSave::ByMask(mask) => mask.matches(oid),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -248,7 +265,7 @@ pub struct Core {
     system_name: String,
     #[serde(skip)]
     pid_file: String,
-    instant_save: bool,
+    instant_save: InstantSave,
     #[serde(default)]
     auto_create: bool,
     #[serde(
@@ -298,7 +315,7 @@ pub struct Core {
     #[serde(skip)]
     inv_process: std::sync::Mutex<HashSet<String>>, // locked sources
     #[serde(skip)]
-    scheduled_saves: std::sync::Mutex<HashSet<OID>>,
+    scheduled_saves: parking_lot::Mutex<HashSet<OID>>,
     #[serde(skip)]
     action_manager: Arc<actmgr::Manager>,
     #[serde(skip)]
@@ -448,7 +465,7 @@ impl Core {
             system_name: system_name.to_owned(),
             pid_file: <_>::default(),
             auto_create: false,
-            instant_save: false,
+            instant_save: InstantSave::Strict(false),
             suicide_timeout,
             timeout,
             keep_action_history: Duration::from_secs(0),
@@ -485,10 +502,10 @@ impl Core {
         Ok(())
     }
     pub async fn load_inventory_db(&self) -> EResult<()> {
-        if let Some(pool) = inventory_db::get_pool() {
+        if inventory_db::is_initialized() {
             info!("loading inventory from the database");
             let mut inv = self.inventory.write().await;
-            inventory_db::load(&mut inv, pool, self.boot_id).await?;
+            inventory_db::load(&mut inv, self.boot_id).await?;
         }
         Ok(())
     }
@@ -608,30 +625,15 @@ impl Core {
     /// Will panic if the core rpc is not set or the mutex is poisoned
     pub async fn save(&self) -> EResult<()> {
         trace!("saving scheduled item states");
-        let oids: Vec<OID> = self.scheduled_saves.lock().unwrap().drain().collect();
+        let oids: HashSet<OID> = mem::take(&mut self.scheduled_saves.lock());
         if oids.is_empty() {
             return Ok(());
         }
         let rpc = self.rpc.get().unwrap();
-        if let Some(pool) = inventory_db::get_pool() {
-            let mut tx = pool.begin().await?;
-            for oid in oids {
-                let r = self.inventory.read().await.get_item(&oid);
-                if let Some(s_state) = r.and_then(|item| item.db_state()) {
-                    if let Err(e) = inventory_db::save_state_tx(&oid, s_state, &mut tx).await {
-                        error!("unable to save state for {}: {}", oid, e);
-                    }
-                }
-            }
-            tx.commit().await?;
-        } else {
-            for oid in oids {
-                let r = self.inventory.read().await.get_item(&oid);
-                if let Some(s_state) = r.and_then(|item| item.db_state()) {
-                    if let Err(e) = save_item_state(&oid, s_state, rpc).await {
-                        error!("unable to save state for {}: {}", oid, e);
-                    }
-                }
+        for oid in oids {
+            let r = self.inventory.read().await.get_item(&oid);
+            if let Some(s_state) = r.and_then(|item| item.db_state()) {
+                save_item_state(oid, s_state, rpc).await;
             }
         }
         Ok(())
@@ -719,8 +721,9 @@ impl Core {
     #[inline]
     pub async fn deploy_local_items(&self, configs: Vec<ItemConfigData>) -> EResult<()> {
         let rpc = self.rpc.get().unwrap();
-        if let Some(pool) = inventory_db::get_pool() {
-            let mut tx = pool.begin().await?;
+        if inventory_db::is_initialized() {
+            let mut configs_to_save: Vec<(OID, Value)> = Vec::with_capacity(configs.len());
+            let mut oids = Vec::with_capacity(configs.len());
             for val in configs {
                 let item = self
                     .inventory
@@ -728,23 +731,27 @@ impl Core {
                     .await
                     .append_item_from_config_data(val, self.boot_id)?;
                 let oid = item.oid();
+                oids.push(oid.clone());
                 info!("local item created: {}", oid);
                 trace!("saving config for {}", oid);
-                inventory_db::create_tx(oid, &mut tx).await?;
-                inventory_db::save_config_tx(oid, item.config()?, &mut tx).await?;
-                if let Some(stc) = item.state() {
-                    let _stp_lock = self.state_processor_lock.lock().await;
-                    let (s_state, db_st) =
-                        prepare_state_data!(item, &*stc.lock(), self.instant_save);
-                    // process new state without db_st, manually save
-                    self.process_new_state(item.oid(), s_state, None, rpc)
-                        .await?;
-                    if let Some(db_state) = db_st {
-                        inventory_db::save_state_tx(oid, db_state, &mut tx).await?;
+                configs_to_save.push((oid.clone(), item.config()?));
+            }
+            inventory_db::save_items_bulk(configs_to_save).await?;
+            for oid in oids {
+                if let Some(item) = self.inventory.read().await.get_item(&oid) {
+                    if let Some(stc) = item.state() {
+                        let _stp_lock = self.state_processor_lock.lock().await;
+                        let (s_state, db_st) =
+                            prepare_state_data!(item, &*stc.lock(), self.instant_save);
+                        //process new state without db_st, manually save
+                        self.process_new_state(item.oid(), s_state, None, rpc)
+                            .await?;
+                        if let Some(db_state) = db_st {
+                            inventory_db::push_state(oid, db_state);
+                        }
                     }
                 }
             }
-            tx.commit().await?;
         } else {
             for val in configs {
                 let item = self
@@ -1021,17 +1028,19 @@ impl Core {
                 ItemOrOid::Oid(oid) => oid,
             });
         }
-        if let Some(pool) = inventory_db::get_pool() {
-            let mut tx = pool.begin().await?;
+        if inventory_db::is_initialized() {
+            let mut oids_to_destroy = Vec::new();
             for oid in oids {
                 let result = self.inventory.write().await.remove_item(&oid);
                 if result.is_some() {
-                    inventory_db::destroy_tx(&oid, &mut tx).await?;
                     info!("local item destroyed: {}", oid);
+                    self.unschedule_save(&oid);
+                    oids_to_destroy.push(oid);
                 }
-                self.unschedule_save(&oid);
             }
-            tx.commit().await?;
+            inventory_db::destroy_items_bulk(oids_to_destroy)
+                .await
+                .log_ef_with("unable to destroy items in database");
         } else {
             for oid in oids {
                 let result = self.inventory.write().await.remove_item(&oid);
@@ -1644,11 +1653,11 @@ impl Core {
     }
     #[inline]
     fn schedule_save(&self, oid: &OID) {
-        self.scheduled_saves.lock().unwrap().insert(oid.clone());
+        self.scheduled_saves.lock().insert(oid.clone());
     }
     #[inline]
     fn unschedule_save(&self, oid: &OID) {
-        self.scheduled_saves.lock().unwrap().remove(oid);
+        self.scheduled_saves.lock().remove(oid);
     }
     /// # Panics
     ///
@@ -1787,7 +1796,7 @@ impl Core {
         debug!("core.boot_id = {}", self.boot_id);
         debug!("core.dir_eva = {}", self.dir_eva);
         debug!("core.system_name = {}", self.system_name);
-        debug!("core.instant_save = {}", self.instant_save);
+        debug!("core.instant_save = {:?}", self.instant_save);
         debug!("core.pid_file = {}", self.pid_file);
         debug!("core.suicide_timeout = {:?}", self.suicide_timeout);
         debug!("core.timeout = {:?}", self.timeout);
@@ -1979,6 +1988,7 @@ impl Core {
             // give 100ms more to make sure states are saved
             tokio::time::sleep(SLEEP_STEP).await;
         }
+        inventory_db::shutdown().await;
         let _r = tokio::fs::remove_file(&self.pid_file).await;
         info!("the core shutted down");
     }

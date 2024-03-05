@@ -116,7 +116,14 @@ config/core:
     #dump: *bool
     suicide_timeout: *floatpositive
     auto_create: *bool
-    instant_save: *bool
+    instant_save:
+      anyOf:
+        - type: boolean
+        - type: array
+          uniqueItems: true
+          additionalItems: false
+          items:
+            type: string
     mem_warn: &intpositiveornull
       anyOf:
         - type: integer
