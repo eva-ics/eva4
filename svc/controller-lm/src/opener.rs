@@ -460,6 +460,7 @@ mod test {
     use std::time::Duration;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_up() {
         let warmup = Duration::from_millis(300);
         let tuning = Duration::from_millis(100);
@@ -675,6 +676,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_down() {
         let warmup = Duration::from_millis(300);
         let tuning = Duration::from_millis(100);

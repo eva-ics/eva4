@@ -23,7 +23,10 @@ use std::time::Duration;
 #[cfg(test)]
 mod tests {
     use eva_common::payload::{pack, unpack};
+    use eva_common::prelude::*;
+
     #[test]
+    #[allow(clippy::items_after_statements, clippy::field_reassign_with_default)]
     fn test_ser() {
         //let loc = super::Location::Geo(1.0, 2.0, 3.0);
         let mut logic = super::Logic::default();
@@ -55,13 +58,12 @@ mod tests {
     #[test]
     fn test_logic() {
         let oid: OID = "sensor:tests/s1".parse().unwrap();
-        use eva_common::prelude::*;
         let mut state = super::ItemState::new0(IEID::new(1, 1), ItemKind::Sensor);
         state.value = Value::from(33.99);
-        assert_eq!(state.apply_logic(None, &oid, 1), false);
+        assert!(!state.apply_logic(None, &oid, 1));
         assert_eq!(state.status, 1);
         let mut logic = super::Logic { range: None };
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), false);
+        assert!(!state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, 1);
         logic.range = Some(super::Range {
             min: Some(0.0),
@@ -71,16 +73,16 @@ mod tests {
         });
         // test invalid value type
         state.value = Value::Unit;
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), true);
+        assert!(state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, -1);
         // test min
         state.status = 1;
         state.value = Value::from(1);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), false);
+        assert!(!state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, 1);
         // test value below min
         state.value = Value::from(0);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), true);
+        assert!(state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, -1);
         // change the range to min eq
         state.status = 1;
@@ -92,10 +94,10 @@ mod tests {
         });
         // test value min eq
         state.value = Value::from(0);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), false);
+        assert!(!state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, 1);
         state.value = Value::from(-1);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), true);
+        assert!(state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, -1);
         state.status = 1;
         // test max
@@ -107,10 +109,10 @@ mod tests {
         });
         // test value above max
         state.value = Value::from(1);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), false);
+        assert!(!state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, 1);
         state.value = Value::from(10.0);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), true);
+        assert!(state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, -1);
         // change the range to max eq
         state.status = 1;
@@ -122,11 +124,11 @@ mod tests {
         });
         // test value max eq
         state.value = Value::from(10);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), false);
+        assert!(!state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, 1);
         // test value above max
         state.value = Value::from(11);
-        assert_eq!(state.apply_logic(Some(&logic), &oid, 1), true);
+        assert!(state.apply_logic(Some(&logic), &oid, 1));
         assert_eq!(state.status, -1);
     }
 }
