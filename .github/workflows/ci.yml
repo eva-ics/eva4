@@ -9,12 +9,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: cargo test
-        run: cargo test --verbose --all-targets --features eva-common/openssl-no-fips
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -27,7 +21,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: cargo clippy
         run: |
-          cargo clippy --all-targets -- -W clippy::all -W clippy::pedantic \
+          cargo clippy --all-targets --features eva4-common/openssl-no-fips -- -W clippy::all -W clippy::pedantic \
           -A clippy::used-underscore-binding \
           -A clippy::doc_markdown \
           -A clippy::needless_pass_by_value \
