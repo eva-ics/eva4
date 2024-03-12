@@ -1388,7 +1388,8 @@ def init_ap():
 
     sp.add_parser('save', help='save scheduled states (if instant-save is off)')
     append_svc_cli(sp)
-    sp.add_parser('test', help='core test/info')
+    p = sp.add_parser('test', help='core test/info')
+    p.add_argument('--wait-active', help='wait for the core to become active', action='store_true')
 
     p = sp.add_parser('dump', help='dump node info')
     p.add_argument('-s',

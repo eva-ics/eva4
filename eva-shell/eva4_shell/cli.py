@@ -52,8 +52,15 @@ class CLI:
             args += f' --dest "{kwargs["dest"]}"'
         exec_cmd('venvmgr', args, search_in='sbin', search_system=False)
 
-    def test(self):
-        data = call_rpc('test')
+    def test(self, wait_active=False):
+        op_start = time.perf_counter()
+        while True:
+            if op_start + current_command.timeout < time.perf_counter():
+                raise TimeoutError
+            else:
+                data = call_rpc('test')
+                if not wait_active or data.get('active'):
+                    break
         print_result(data, need_header=False, name_value=True)
 
     def dump(self, s=False):
