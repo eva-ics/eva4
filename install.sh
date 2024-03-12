@@ -222,10 +222,10 @@ fi
 
 if [ $ID_LIKE = "debian" ]; then
   if [ -z "$SKIP_SYSTEM_UPDATE" ]; then
-    apt-get update || exit 10
+    apt-get -q update || exit 10
   fi
   if [ ! -f /etc/localtime ]; then
-    env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y tzdata || exit 10
+    env DEBIAN_FRONTEND=noninteractive apt-get install -q --no-install-recommends -y tzdata || exit 10
     ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   fi
 fi
@@ -249,21 +249,21 @@ fi
 
 case $ID_LIKE in
   debian)
-    apt-get install -y --no-install-recommends \
+    apt-get install -y -q --no-install-recommends \
       bash jq curl procps ca-certificates tar gzip adduser || exit 10
     if [ $MODE -ge 1 ]; then
-      apt-get install -y --no-install-recommends \
+      apt-get install -y -q --no-install-recommends \
         python3 || exit 10
-      apt-get install -y --no-install-recommends python3-venv # no dedicated deb in some distros
+      apt-get install -y -q --no-install-recommends python3-venv # no dedicated deb in some distros
     fi
     if [ $MODE -ge 2 ]; then
-      apt-get install -y --no-install-recommends gcc g++ make python3-dev || exit 10
+      apt-get install -y -q --no-install-recommends gcc g++ make python3-dev || exit 10
     fi
     if [ $MODE -ge 3 ]; then
-      apt-get install -y --no-install-recommends libjpeg-dev libz-dev libssl-dev libffi-dev || exit 10
+      apt-get install -y -q --no-install-recommends libjpeg-dev libz-dev libssl-dev libffi-dev || exit 10
     fi
     if [ "$LOGROTATE" ]; then
-      apt-get install -y --no-install-recommends logrotate
+      apt-get install -y -q --no-install-recommends logrotate
     fi
     ADDGROUP=$(command -v addgroup || echo /usr/sbin/addgroup)
     ;;
