@@ -748,7 +748,6 @@ async fn method_get_profile_field(params: Value, aci: &mut ACI) -> EResult<Value
     }
     aci.log_request(log::Level::Trace).await.log_ef();
     if let Some(token) = aci.token() {
-        aci.check_write()?;
         let mut p = ParamsProfileField::deserialize(params)?;
         p.i.replace(token.user());
         let payload = pack(&p)?;
