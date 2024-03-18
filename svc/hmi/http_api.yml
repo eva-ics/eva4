@@ -214,10 +214,6 @@ profile.get_field:
       typ: String
       des: Field name (email)
       req: true
-    - nam: value
-      typ: Any
-      des: Field value
-      req: true
   http_req:
     field: email
   http_rpl: |
