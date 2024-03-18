@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2023-03-18 build 2024031801: InventoryDB2 and HMI API bug fixes, stability improvements
 * 2024-03-12 build 2024031201: New core inventory database engine, vendored apps improvements
 * 2024-03-06 build 2024030601: Modbus improvements, reports in vendored apps, eva-shell updates
 * 2024-02-27 build 2024022701: Modbus improvements, EVA_CONSOLE_LOG_NO_TIMESTAMP option
