@@ -12,6 +12,7 @@ use busrt::rpc::{Rpc, RpcClient};
 use busrt::QoS;
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
+use eva_common::dobj::{DataObject, Endianess, ObjectMap};
 use eva_common::err_logger;
 use eva_common::events::{
     DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
@@ -333,6 +334,8 @@ pub struct Core {
     state_processor_lock: Arc<tokio::sync::Mutex<()>>,
     #[serde(skip_deserializing, default = "num_cpus::get")]
     num_cpus: usize,
+    #[serde(skip)]
+    object_map: parking_lot::Mutex<ObjectMap>,
 }
 
 /// # Panics
@@ -490,6 +493,7 @@ impl Core {
             state_processor_lock: <_>::default(),
             num_cpus: num_cpus::get(),
             mem_warn: None,
+            object_map: <_>::default(),
         };
         core.update_paths(dir_eva, pid_file);
         core
@@ -1991,6 +1995,77 @@ impl Core {
         inventory_db::shutdown().await;
         let _r = tokio::fs::remove_file(&self.pid_file).await;
         info!("the core shutted down");
+    }
+    pub fn dobj_list(&self) -> Vec<(String, usize)> {
+        let map = self.object_map.lock();
+        let mut result = Vec::with_capacity(map.objects.len());
+        for n in map.objects.keys() {
+            result.push((n.to_string(), map.size_of(n).unwrap_or_default()));
+        }
+        result
+    }
+    pub fn dobj_get(&self, name: &str) -> Option<DataObject> {
+        self.object_map.lock().objects.get(name).cloned()
+    }
+    pub fn dobj_validate(&self) -> EResult<()> {
+        self.object_map.lock().validate()
+    }
+    /// # Panics
+    ///
+    /// Will panic if registry is not set
+    pub async fn dobj_insert(&self, dobj: Vec<DataObject>) -> EResult<()> {
+        self.object_map.lock().extend(dobj.clone());
+        for o in dobj {
+            let name = o.name.clone();
+            registry::key_set(registry::R_DATA_OBJECT, &name, o, self.rpc.get().unwrap()).await?;
+        }
+        Ok(())
+    }
+    /// # Panics
+    ///
+    /// Will panic if registry is not set
+    pub async fn dobj_remove(&self, names: &[&str]) -> EResult<()> {
+        self.object_map.lock().remove_bulk(names);
+        for n in names {
+            registry::key_delete(registry::R_DATA_OBJECT, n, self.rpc.get().unwrap()).await?;
+        }
+        Ok(())
+    }
+    pub fn load_dobj(&self, db: &mut yedb::Database) -> EResult<()> {
+        info!("loading data objects");
+        let s_key = registry::format_top_key(registry::R_DATA_OBJECT);
+        let s_offs = s_key.len() + 1;
+        let mut objects = Vec::new();
+        for (n, v) in db.key_get_recursive(&s_key)? {
+            let name = &n[s_offs..];
+            debug!("loading dobj {}", name);
+            let dobj: DataObject = serde_json::from_value(v)?;
+            objects.push(dobj);
+        }
+        let mut map = self.object_map.lock();
+        map.extend(objects);
+        if let Err(e) = map.validate() {
+            error!("invalid data objects found: {}", e);
+        }
+        Ok(())
+    }
+    pub async fn dobj_push(
+        &self,
+        name: String,
+        buf: Vec<u8>,
+        endianess: Endianess,
+        sender: &str,
+    ) -> EResult<()> {
+        let vals = self
+            .object_map
+            .lock()
+            .parse_values(&name.try_into()?, &buf, endianess)?;
+        let raw: Vec<RawStateBulkEventOwned> = vals
+            .into_iter()
+            .map(|(oid, value)| RawStateBulkEventOwned::new(oid, RawStateEventOwned::new(1, value)))
+            .collect();
+        self.update_state_from_raw_bulk(raw, sender).await;
+        Ok(())
     }
 }
 

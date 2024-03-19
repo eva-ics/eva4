@@ -12,7 +12,7 @@ neotermcolor.readline_always_safe = True
 
 from .sharedobj import common, current_command
 from .tools import print_tb, err, is_local_shell
-from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile
+from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile, ComplDobj
 from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
@@ -233,6 +233,41 @@ def append_accounting_cli(root_sp):
     p.add_argument('--err', metavar='ERR')
 
 
+def append_dobj_cli(root_sp):
+    ap = root_sp.add_parser('dobj', help='data object commands')
+    sp = ap.add_subparsers(dest='_subc', help='sub command')
+    p = sp.add_parser('list', help='list data objects')
+    p.add_argument('-x', '--filter', type=str)
+
+    p = sp.add_parser('edit', help='edit data object')
+    p.add_argument('i', metavar='NAME').completer = ComplDobj()
+
+    p = sp.add_parser('validate', help='validate node data object map')
+
+    p = sp.add_parser('export',
+                      help='export data object(s) to a deployment file')
+    p.add_argument('i', metavar='MASK').completer = ComplDobj()
+    p.add_argument('-o', '--output', metavar='FILE',
+                   help='output file').completer = ComplDeployFile()
+
+    p = sp.add_parser('deploy',
+                      help='deploy data object(s) from a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+
+    p = sp.add_parser('undeploy',
+                      help='undeploy data object(s) using a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+
+    p = sp.add_parser('create', help='create a new empty data object')
+    p.add_argument('i', metavar='NAME',
+                   help='service id').completer = ComplDobj()
+
+    p = sp.add_parser('destroy', help='destroy data object')
+    p.add_argument('i', metavar='NAME').completer = ComplDobj()
+
+
 def append_svc_cli(root_sp):
     ap = root_sp.add_parser('svc', help='service commands')
     sp = ap.add_subparsers(dest='_subc', help='sub command')
@@ -265,10 +300,12 @@ def append_svc_cli(root_sp):
                    help='read call params payload form the file ("-" for stdin)'
                   ).completer = ComplDeployFile()
     p.add_argument('method', metavar='METHOD').completer = ComplSvcRpcMethod()
-    p.add_argument('params',
-                   nargs='*',
-                   help='param=value. use "<<" to input sensitive data, use "@filename" to read a value from JSON/YAML',
-                   metavar='PARAM=VALUE').completer = ComplSvcRpcParams()
+    p.add_argument(
+        'params',
+        nargs='*',
+        help=
+        'param=value. use "<<" to input sensitive data, use "@filename" to read a value from JSON/YAML',
+        metavar='PARAM=VALUE').completer = ComplSvcRpcParams()
     p.add_argument('--trace',
                    action='store_true',
                    help='enable call tracing (if supported by the svc)'
@@ -618,7 +655,10 @@ def append_item_cli(root_sp):
 
     p = sp.add_parser('export', help='export item(s) to a deployment file')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
-    p.add_argument('-y', '--full', help='include item states', action='store_true')
+    p.add_argument('-y',
+                   '--full',
+                   help='include item states',
+                   action='store_true')
     p.add_argument('-o', '--output', metavar='FILE',
                    help='output file').completer = ComplDeployFile()
 
@@ -1366,6 +1406,7 @@ def init_ap():
     append_accounting_cli(sp)
     append_broker_cli(sp)
     append_item_cli(sp)
+    append_dobj_cli(sp)
     append_key_cli(sp)
     append_lvar_cli(sp)
     append_log_cli(sp)
@@ -1389,7 +1430,9 @@ def init_ap():
     sp.add_parser('save', help='save scheduled states (if instant-save is off)')
     append_svc_cli(sp)
     p = sp.add_parser('test', help='core test/info')
-    p.add_argument('--wait-active', help='wait for the core to become active', action='store_true')
+    p.add_argument('--wait-active',
+                   help='wait for the core to become active',
+                   action='store_true')
 
     p = sp.add_parser('dump', help='dump node info')
     p.add_argument('-s',

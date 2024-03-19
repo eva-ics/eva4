@@ -308,6 +308,17 @@ svc:
 cache: *any
 user_data: *any
 svc_data: *any
+dobj:
+  type: object
+  additionalProperties: false
+  properties:
+    name: *str
+    fields:
+      type: array
+      items: *any
+  required:
+    - name
+    - fields
 config/ee/license:
   type: object
   additionalProperties: false

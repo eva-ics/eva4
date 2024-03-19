@@ -151,6 +151,7 @@ pub fn launch(
                 .enable_all()
                 .build()?;
             core.load_inventory(&mut db)?;
+            core.load_dobj(&mut db)?;
             core.service_manager().load(&mut db)?;
             drop(db);
             debug!("starting runtime");

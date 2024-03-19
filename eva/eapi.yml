@@ -763,3 +763,74 @@ update:
       typ: bool
       des: allow updating to test builds
       req: false
+dobj.push:
+  des: Push buffer to data object
+  par:
+    - nam: i
+      typ: String
+      des: Data object name
+      req: true
+    - nam: d
+      typ: Vec<u8>
+      des: Data buffer
+      req: true
+    - nam: e
+      typ: String
+      des: Endianess (big/little), the default is little
+      req: false
+  ret:
+dobj.list:
+  des: List data objects
+  par:
+  ret: List of data objects
+  exm: |
+    [
+        {
+            "name": "test",
+            "size": 10
+        },
+        {
+            "name": "test2",
+            "size": 548
+        }
+    ]
+dobj.get_config:
+  des: Get data object configuration
+  par:
+    - nam: i
+      typ: String
+      des: Data object name
+      req: true
+  ret: Data object configuration
+  exm: |
+    fields:
+    - name: temp
+      oid: sensor:env/temp
+      type: f64
+    - name: hum
+      oid: sensor:env/hum
+      type: f64
+    - name: pressure
+      oid: sensor:env/pressure
+      type: f64
+    name: Env
+dobj.validate:
+  des: Validate node data objects
+  par:
+  ret: Validation result
+dobj.deploy:
+  des: Deploys data objects
+  par:
+    - nam: data_objects
+      typ: Vec<struct>
+      des: Data object parameters
+      req: false
+  ret:
+dobj.undeploy:
+  des: Undeploys data objects
+  par:
+    - nam: data_objects
+      typ: Vec<struct/String>
+      des: Data object parameters or a list of data object names
+      req: false
+  ret:
