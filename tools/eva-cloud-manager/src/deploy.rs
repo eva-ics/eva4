@@ -416,7 +416,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             macro_rules! deploy_resource {
                 ($src: expr, $name: expr, $field: expr, $svc: expr, $fn: expr) => {
                     if let ValueOptionOwned::Value(res) = $src {
-                        info!("deploying {}", $name);
+                        info!("deploying {}", $name.replace("_", " "));
                         client
                             .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
@@ -427,6 +427,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 };
             }
             deploy_resource!(node.items, "items", "eva.core", "item.deploy");
+            deploy_resource!(node.data_objects, "data_objects", "eva.core", "dobj.deploy");
             if !node.svcs.is_empty() {
                 let mut svcs_wait: HashSet<&str> = HashSet::new();
                 info!("deploying services");
@@ -496,7 +497,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             macro_rules! undeploy_resource {
                 ($src: expr, $name: expr, $field: expr, $svc: expr, $fn: expr) => {
                     if let ValueOptionOwned::Value(res) = $src {
-                        info!("undeploying {}", $name);
+                        info!("undeploying {}", $name.replace("_", " "));
                         client
                             .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
@@ -506,6 +507,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     undeploy_resource!($src, $name, $name, $svc, $fn);
                 };
             }
+            undeploy_resource!(
+                node.data_objects,
+                "data_objects",
+                "eva.core",
+                "dobj.undeploy"
+            );
             undeploy_resource!(node.items, "items", "eva.core", "item.undeploy");
             undeploy_resource!(
                 node.generator_sources,
@@ -575,6 +582,8 @@ struct DeploymentContent {
     items: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     generator_sources: ValueOptionOwned,
+    #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
+    data_objects: ValueOptionOwned,
     #[serde(default)]
     extra: DeploymentExtra,
 }
