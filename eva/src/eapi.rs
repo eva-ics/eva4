@@ -524,6 +524,7 @@ impl RpcHandlers for BusApi {
                 } else {
                     #[derive(Deserialize)]
                     struct Payload {
+                        #[serde(alias = "i")]
                         name: String,
                         data: Vec<u8>,
                         #[serde(default)]
