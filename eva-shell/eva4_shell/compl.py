@@ -59,6 +59,16 @@ class ComplSvc:
             if self.prefix is None or i.startswith(self.prefix):
                 yield i
 
+class ComplDobj:
+
+    def __init__(self):
+        self.prefix = None
+
+    def __call__(self, prefix, **kwargs):
+        for r in call_rpc('dobj.list'):
+            i = r['name']
+            if self.prefix is None or i.startswith(self.prefix):
+                yield i
 
 class ComplSvcRpcMethod:
 

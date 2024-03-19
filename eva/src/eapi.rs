@@ -1,5 +1,6 @@
 use crate::actmgr;
 use crate::core::{ActionLaunchResult, Core, LvarOp};
+use crate::dobj::{DataObject, Endianess};
 use crate::items::{ItemConfigData, NodeFilter};
 use crate::logs::LogLevel;
 use crate::seq;
@@ -515,6 +516,111 @@ impl RpcHandlers for BusApi {
                         let node_data = nodes.get(p.i).ok_or_else(|| Error::not_found(p.i))?;
                         Ok(Some(pack(node_data)?))
                     }
+                }
+            }
+            "dobj.push" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    struct Payload {
+                        name: String,
+                        data: Vec<u8>,
+                        #[serde(default)]
+                        endianess: Endianess,
+                    }
+                    let p: Payload = unpack(event.payload()).log_err()?;
+                    self.core
+                        .dobj_push(p.name, p.data, p.endianess, event.primary_sender())
+                        .await
+                        .log_ef();
+                    Ok(None)
+                }
+            }
+            "dobj.list" => {
+                if payload.is_empty() {
+                    #[derive(Serialize)]
+                    struct DataObjectName {
+                        name: String,
+                    }
+                    let result: Vec<DataObjectName> = self
+                        .core
+                        .dobj_list()
+                        .into_iter()
+                        .map(|v| DataObjectName { name: v })
+                        .collect();
+                    Ok(Some(pack(&result)?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
+            "dobj.get_config" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: ParamsId = unpack(event.payload()).log_err()?;
+                    let dobj = self
+                        .core
+                        .dobj_get(p.i)
+                        .ok_or_else(|| Error::not_found(p.i))?;
+                    Ok(Some(pack(&dobj)?))
+                }
+            }
+            "dobj.validate" => {
+                if payload.is_empty() {
+                    self.core.dobj_validate()?;
+                    Ok(None)
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
+            "dobj.deploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    struct Payload {
+                        #[serde(default)]
+                        data_objects: Vec<DataObject>,
+                    }
+                    let p: Payload = unpack(event.payload()).log_err()?;
+                    self.core.dobj_insert(p.data_objects).await?;
+                    Ok(None)
+                }
+            }
+            "dobj.undeploy" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(untagged)]
+                    enum DataObjectOrName {
+                        Name(String),
+                        Object(DataObject),
+                    }
+                    #[derive(Deserialize)]
+                    struct Payload {
+                        #[serde(default)]
+                        data_objects: Vec<DataObjectOrName>,
+                    }
+                    let p: Payload = unpack(event.payload()).log_err()?;
+                    let objects_to_remove: Vec<String> = p
+                        .data_objects
+                        .into_iter()
+                        .map(|v| match v {
+                            DataObjectOrName::Name(n) => n,
+                            DataObjectOrName::Object(o) => o.name.into(),
+                        })
+                        .collect();
+                    self.core
+                        .dobj_remove(
+                            &objects_to_remove
+                                .iter()
+                                .map(|v| v.as_str())
+                                .collect::<Vec<&str>>(),
+                        )
+                        .await?;
+                    Ok(None)
                 }
             }
             "node.list" => {

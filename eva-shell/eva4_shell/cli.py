@@ -535,6 +535,76 @@ class CLI:
             data['acls'] = ', '.join(data['acls'])
         print_result([data], cols=['login', 'acls'])
 
+    def dobj_list(self, filter=None):
+        data = []
+        for obj in call_rpc('dobj.list'):
+            if filter is None or obj['name'].startswith(filter):
+                data.append(obj)
+        print_result(data, cols=['name'])
+
+    def dobj_create(self, i):
+        call_rpc('dobj.deploy', {'data_objects': [{'name': i}]})
+        ok()
+
+    def dobj_destroy(self, i):
+        call_rpc('dobj.undeploy', {'data_objects': [{'name': i}]})
+        ok()
+
+    def dobj_validate(self):
+        call_rpc('dobj.validate')
+        ok()
+
+    def dobj_edit(self, i):
+
+        def deploy(cfg, i):
+            call_rpc('dobj.deploy', dict(data_objects=[cfg]))
+            print(f'data object re-deployed: {i}')
+            print()
+
+        config = call_rpc('dobj.get_config', dict(i=i))
+        edit_config(config, f'dobj|{i}|config', deploy_fn=partial(deploy, i=i))
+
+    def dobj_export(self, i, output=None):
+        c = 0
+        configs = []
+        for dobj in call_rpc('dobj.list'):
+            name = dobj['name']
+            if (i.startswith('*') and name.endswith(i[1:])) or \
+                (i.endswith('*') and name.startswith(i[:-1])) or \
+                (i.startswith('*') and i.endswith('*') and i[1:-1] in name) or \
+                i == name:
+                c += 1
+                configs.append(call_rpc('dobj.get_config', dict(i=name)))
+        result = dict(data_objects=configs)
+        if current_command.json:
+            print_result(result)
+        else:
+            import yaml
+            dump = yaml.dump(dict(data_objects=configs),
+                             default_flow_style=False)
+            if output is None:
+                print(dump)
+            else:
+                write_file(output, dump)
+                print(f'{c} data object(s) exported')
+                print()
+
+    def dobj_deploy(self, file=None):
+        import yaml
+        data_objects = yaml.safe_load(
+            read_file(file).decode()).pop('data_objects')
+        call_rpc('dobj.deploy', dict(data_objects=data_objects))
+        print(f'{len(data_objects)} data objects(s) deployed')
+        print()
+
+    def dobj_undeploy(self, file=None):
+        import yaml
+        data_objects = yaml.safe_load(
+            read_file(file).decode()).pop('data_objects')
+        call_rpc('dobj.undeploy', dict(data_objects=data_objects))
+        print(f'{len(data_objects)} data object(s) undeployed')
+        print()
+
     def svc_list(self, filter=None):
         if filter is None:
             params = None
@@ -957,13 +1027,15 @@ class CLI:
         configs = dict()
         for item in call_rpc('item.list', dict(i=i, node='.local')):
             c += 1
-            configs[item['oid']] = call_rpc('item.get_config', dict(i=item['oid']))
+            configs[item['oid']] = call_rpc('item.get_config',
+                                            dict(i=item['oid']))
         if full:
             for state in call_rpc('item.state', dict(i=list(configs))):
                 oid = state['oid']
                 configs[oid]['status'] = state['status']
                 configs[oid]['value'] = state['value']
-        result = dict(items=sorted([v for _, v in configs.items()], key= lambda k: k['oid']))
+        result = dict(items=sorted([v for _, v in configs.items()],
+                                   key=lambda k: k['oid']))
         if current_command.json:
             print_result(result)
         else:
