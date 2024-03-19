@@ -313,7 +313,9 @@ dobj:
   additionalProperties: false
   properties:
     name: *str
-    fields: *any
+    fields:
+      type: array
+      items: *any
   required:
     - name
     - fields
