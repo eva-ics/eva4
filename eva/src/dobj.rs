@@ -249,15 +249,17 @@ impl ObjectMap {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DataObject {
+    #[serde(alias = "i")]
     pub(crate) name: Name,
-    #[serde(default)]
+    #[serde(default, alias = "f")]
     fields: Vec<Field>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Field {
+    #[serde(alias = "i")]
     name: Name,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", alias="t")]
     kind: Kind,
     #[serde(skip_serializing_if = "Option::is_none")]
     oid: Option<OID>,
