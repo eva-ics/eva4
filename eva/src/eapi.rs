@@ -533,8 +533,7 @@ impl RpcHandlers for BusApi {
                     let p: Payload = unpack(event.payload()).log_err()?;
                     self.core
                         .dobj_push(p.name, p.data, p.endianess, event.primary_sender())
-                        .await
-                        .log_ef();
+                        .await?;
                     Ok(None)
                 }
             }
