@@ -1998,13 +1998,13 @@ impl Core {
         let _r = tokio::fs::remove_file(&self.pid_file).await;
         info!("the core shutted down");
     }
-    pub fn dobj_list(&self) -> Vec<String> {
-        self.object_map
-            .lock()
-            .objects
-            .keys()
-            .map(ToString::to_string)
-            .collect()
+    pub fn dobj_list(&self) -> Vec<(String, usize)> {
+        let map = self.object_map.lock();
+        let mut result = Vec::with_capacity(map.objects.len());
+        for n in map.objects.keys() {
+            result.push((n.to_string(), map.size_of(n).unwrap_or_default()));
+        }
+        result
     }
     pub fn dobj_get(&self, name: &str) -> Option<DataObject> {
         self.object_map.lock().objects.get(name).cloned()

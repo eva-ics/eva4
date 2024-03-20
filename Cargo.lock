@@ -1666,6 +1666,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-controller-dobj"
+version = "4.0.2"
+dependencies = [
+ "async-channel",
+ "async-trait",
+ "busrt",
+ "eva-common",
+ "eva-sdk",
+ "jemallocator",
+ "log",
+ "once_cell",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "eva-controller-enip"
 version = "4.0.2"
 dependencies = [

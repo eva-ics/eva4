@@ -540,7 +540,7 @@ class CLI:
         for obj in call_rpc('dobj.list'):
             if filter is None or obj['name'].startswith(filter):
                 data.append(obj)
-        print_result(data, cols=['name'])
+        print_result(data, cols=['name', 'size'])
 
     def dobj_create(self, i):
         call_rpc('dobj.deploy', {'data_objects': [{'name': i}]})

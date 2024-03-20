@@ -526,8 +526,9 @@ impl RpcHandlers for BusApi {
                     struct Payload {
                         #[serde(alias = "i")]
                         name: String,
+                        #[serde(alias = "d")]
                         data: Vec<u8>,
-                        #[serde(default)]
+                        #[serde(default, alias = "e")]
                         endianess: Endianess,
                     }
                     let p: Payload = unpack(event.payload()).log_err()?;
@@ -542,12 +543,13 @@ impl RpcHandlers for BusApi {
                     #[derive(Serialize)]
                     struct DataObjectName {
                         name: String,
+                        size: usize,
                     }
                     let result: Vec<DataObjectName> = self
                         .core
                         .dobj_list()
                         .into_iter()
-                        .map(|v| DataObjectName { name: v })
+                        .map(|(name, size)| DataObjectName { name, size })
                         .collect();
                     Ok(Some(pack(&result)?))
                 } else {

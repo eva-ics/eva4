@@ -1,0 +1,21 @@
+[package]
+name = "eva-controller-dobj"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+busrt = { features = ["rpc", "ipc"] , workspace = true }
+eva-common = { features = ["events", "time"] , workspace = true }
+eva-sdk = { workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { workspace = true }
+serde = { features = ["derive", "rc"] , workspace = true }
+log = { workspace = true }
+async-channel = { workspace = true }
+jemallocator = { workspace = true }
+once_cell = { workspace = true }
+
+[features]
+std-alloc = []

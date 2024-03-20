@@ -21,6 +21,7 @@ members = [
   "svc/bridge-ads",
   "svc/controller-w1",
   "svc/controller-trap",
+  "svc/controller-dobj",
   "svc/controller-sr",
   "svc/controller-virtual",
   "svc/controller-lm",
