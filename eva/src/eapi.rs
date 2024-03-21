@@ -618,7 +618,7 @@ impl RpcHandlers for BusApi {
                         .dobj_remove(
                             &objects_to_remove
                                 .iter()
-                                .map(|v| v.as_str())
+                                .map(String::as_str)
                                 .collect::<Vec<&str>>(),
                         )
                         .await?;

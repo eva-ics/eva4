@@ -259,7 +259,7 @@ pub struct DataObject {
 pub struct Field {
     #[serde(alias = "i")]
     name: Name,
-    #[serde(rename = "type", alias="t")]
+    #[serde(rename = "type", alias = "t")]
     kind: Kind,
     #[serde(skip_serializing_if = "Option::is_none")]
     oid: Option<OID>,
