@@ -114,7 +114,6 @@ pub fn check_memory_usage(source: &str, current: u64, warn_limit: u64) {
 pub mod actmgr;
 pub mod bus;
 pub mod core;
-pub mod dobj;
 pub mod eapi;
 pub mod inventory_db;
 pub mod items;

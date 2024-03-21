@@ -1,6 +1,5 @@
 /// The core module
 use crate::actmgr;
-use crate::dobj::{DataObject, Endianess, ObjectMap};
 use crate::inventory_db;
 use crate::items::{self, Filter, Inventory, InventoryStats, Item, ItemConfigData, NodeFilter};
 use crate::spoint;
@@ -13,6 +12,7 @@ use busrt::rpc::{Rpc, RpcClient};
 use busrt::QoS;
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
+use eva_common::dobj::{DataObject, Endianess, ObjectMap};
 use eva_common::err_logger;
 use eva_common::events::{
     DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
@@ -56,8 +56,6 @@ err_logger!();
 
 const ACCOUNTING_TOPIC: &str = "AAA/REPORT";
 const NODE_CHECKER_INTERVAL: Duration = Duration::from_secs(1);
-
-const R_DOBJ: &str = "dobj";
 
 /// Lvar operations
 pub enum LvarOp {
@@ -2019,7 +2017,7 @@ impl Core {
         self.object_map.lock().extend(dobj.clone());
         for o in dobj {
             let name = o.name.clone();
-            registry::key_set(R_DOBJ, &name, o, self.rpc.get().unwrap()).await?;
+            registry::key_set(registry::R_DATA_OBJECT, &name, o, self.rpc.get().unwrap()).await?;
         }
         Ok(())
     }
@@ -2029,13 +2027,13 @@ impl Core {
     pub async fn dobj_remove(&self, names: &[&str]) -> EResult<()> {
         self.object_map.lock().remove_bulk(names);
         for n in names {
-            registry::key_delete(R_DOBJ, n, self.rpc.get().unwrap()).await?;
+            registry::key_delete(registry::R_DATA_OBJECT, n, self.rpc.get().unwrap()).await?;
         }
         Ok(())
     }
     pub fn load_dobj(&self, db: &mut yedb::Database) -> EResult<()> {
         info!("loading data objects");
-        let s_key = registry::format_top_key(R_DOBJ);
+        let s_key = registry::format_top_key(registry::R_DATA_OBJECT);
         let s_offs = s_key.len() + 1;
         let mut objects = Vec::new();
         for (n, v) in db.key_get_recursive(&s_key)? {

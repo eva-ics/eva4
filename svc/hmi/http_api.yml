@@ -65,7 +65,7 @@ logout:
     token: "token:1oeb5vHbLTTABBg2DfoueSHl9kT3ZPm6"
   http_req_omit_key: true
 api_log.get:
-  des: Gets log of recent API calls
+  des: Gets log of recent API calls (requires ACL op "moderator")
   par:
     - nam: t_start
       typ: String/i64
@@ -1054,3 +1054,63 @@ pvt.unlink:
       req: true
   http_req:
     path: vendored-apps/file1.json
+dobj.list:
+  des: Get list of data objects (requires ACL op "developer")
+  par:
+  ret: List of data objects
+  http_rpl: |
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": [
+        {
+            "name": "Env",
+            "size": 24
+        },
+        {
+            "name": "sub1",
+            "size": 8
+        },
+        {
+            "name": "test",
+            "size": 12
+        },
+        {
+            "name": "xstruct",
+            "size": 2
+        }
+      ]
+    }
+dobj.get_struct:
+  des: Get data object structure (requires ACL op "developer")
+  par:
+    - nam: i
+      typ: String
+      des: Data object name
+      req: true
+  ret: Data object structure
+  http_req:
+    i: "test"
+  http_rpl: |
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": {
+        "fields": [
+            {
+                "name": "value2",
+                "type": "u16"
+            },
+            {
+                "name": "value_s1",
+                "oid": "sensor:tests/s1",
+                "type": "i16"
+            },
+            {
+                "name": "subpayload",
+                "type": "sub1"
+            }
+        ],
+        "name": "test"
+      }
+    }

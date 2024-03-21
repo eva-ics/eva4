@@ -14,7 +14,7 @@ async-channel = { workspace = true }
 submap = { version = "0.2.7" }
 serde = { features = ["derive", "rc"] , workspace = true }
 eva-common = { features = [
-"events", "workers", "acl", "dataconv", "time",
+"events", "workers", "acl", "dataconv", "time", "data-objects",
 "db", "hyper-tools", "common-payloads"] , workspace = true }
 log = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }

@@ -3,8 +3,9 @@ use crate::aci::{self, ACI};
 use crate::db;
 use crate::ApiKeyId;
 use eva_common::acl::{self, Acl, OIDMask};
-use eva_common::common_payloads::ParamsIdOrListOwned;
 use eva_common::common_payloads::ValueOrList;
+use eva_common::common_payloads::{ParamsIdOrListOwned, ParamsIdOwned};
+use eva_common::dobj;
 use eva_common::prelude::*;
 use eva_sdk::fs as sdkfs;
 use eva_sdk::prelude::*;
@@ -596,6 +597,8 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "pvt.get" => method_pvt_get(params, &mut aci).await,
                         "pvt.unlink" => method_pvt_unlink(params, &mut aci).await,
                         "pvt.list" => method_pvt_list(params, &mut aci).await,
+                        "dobj.list" => method_dobj_list(params, &mut aci).await,
+                        "dobj.get_struct" => method_dobj_get_struct(params, &mut aci).await,
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
@@ -1116,10 +1119,7 @@ async fn method_api_log_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     } else {
         crate::db::ApiLogFilter::deserialize(params)?
     };
-    if !crate::public_api_log()
-        && !aci.acl().check_admin()
-        && !aci.acl().check_op(acl::Op::Moderator)
-    {
+    if !crate::public_api_log() && !aci.acl().check_op(acl::Op::Moderator) {
         if let Some(token) = aci.token() {
             if let Some(ref f_user) = filter.user {
                 if token.user() != f_user {
@@ -1985,4 +1985,30 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         })
         .collect();
     to_value(result).map_err(Into::into)
+}
+
+async fn method_dobj_list(params: Value, aci: &mut ACI) -> EResult<Value> {
+    aci.log_request(log::Level::Debug).await.log_ef();
+    aci.acl().require_op(acl::Op::Developer)?;
+    ParamsEmpty::deserialize(params)?;
+    unpack::<Value>(eapi_bus::call0("eva.core", "dobj.list").await?.payload())
+}
+
+async fn method_dobj_get_struct(params: Value, aci: &mut ACI) -> EResult<Value> {
+    aci.log_request(log::Level::Debug).await.log_ef();
+    aci.acl().require_op(acl::Op::Developer)?;
+    let i = ParamsIdOwned::deserialize(params)?.i;
+    let mut data_object: dobj::DataObject = unpack(
+        eapi_bus::call(
+            "eva.core",
+            "dobj.get_config",
+            pack(&ParamsIdOwned { i })?.into(),
+        )
+        .await?
+        .payload(),
+    )?;
+    for field in &data_object.fields {
+        field.oid = None;
+    }
+    to_value(data_object).map_err(Into::into)
 }
