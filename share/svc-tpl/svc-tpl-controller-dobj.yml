@@ -1,0 +1,18 @@
+# EVA ICS data object controller service
+command: target/debug/eva-controller-dobj
+bus:
+  path: var/bus.ipc
+config:
+  # UDP bridges for external software
+  input:
+    # all incoming UDP packets are processed with core data object named 'MyDataObject'
+    - bind: localhost:25001
+      data_object: MyDataObject
+      # specify endianess (big/little, default: little)
+      endianess: little
+      # data buffer size, must be great or equal than the data object size
+      # the default buffer capacity is max UDP packet size
+      #buffer: 8192
+  # Enable verbose mode
+  #verbose: true
+user: nobody
