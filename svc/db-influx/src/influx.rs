@@ -1,3 +1,4 @@
+use crypto_tools::read_tls_certificate;
 use eva_common::prelude::*;
 use eva_common::time::{ts_from_ns, ts_to_ns};
 use eva_sdk::types::{Fill, HistoricalState, ItemState, StateHistoryData, StateProp};
@@ -11,6 +12,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::time::Duration;
+use tokio_native_tls::native_tls::TlsConnector;
 
 macro_rules! influx_err {
     ($kind: expr, $res: expr, $q: expr) => {{
@@ -77,9 +79,19 @@ pub struct InfluxClient {
 }
 
 impl InfluxClient {
-    pub fn create(config: &crate::common::Config, timeout: Duration) -> EResult<Self> {
+    #[allow(clippy::too_many_lines)]
+    pub async fn create(config: &crate::common::Config, timeout: Duration) -> EResult<Self> {
         let influx_api_version = config.api_version.try_into()?;
-        let https = HttpsConnector::new();
+        let mut tls_builder = TlsConnector::builder();
+        if let Some(ref ca) = config.tls_ca {
+            tls_builder.add_root_certificate(
+                read_tls_certificate(ca, &eva_common::tools::get_eva_dir()).await?,
+            );
+        }
+        let tls = tls_builder.build().map_err(Error::failed)?;
+        let mut http = HttpConnector::new();
+        http.enforce_http(false);
+        let https = HttpsConnector::from((http, tls.into()));
         let client: Client<_> = Client::builder()
             .http2_only(false)
             .pool_idle_timeout(timeout)

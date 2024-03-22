@@ -352,7 +352,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     });
     let client_pool = ResourcePool::new();
     let timeout = initial.timeout();
-    let influx_client = influx::InfluxClient::create(&config, timeout)?;
+    let influx_client = influx::InfluxClient::create(&config, timeout).await?;
     for _ in 0..config.clients.unwrap_or_else(|| initial.workers()) {
         client_pool.append(influx_client.clone());
     }

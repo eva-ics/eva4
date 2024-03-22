@@ -22,6 +22,7 @@ pub struct Config {
     #[serde(default)]
     pub token: Option<String>,
     pub url: String,
+    pub tls_ca: Option<String>,
     pub db: String,
     #[serde(default)]
     pub org: Option<String>,

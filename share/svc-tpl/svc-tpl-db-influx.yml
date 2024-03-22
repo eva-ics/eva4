@@ -12,6 +12,8 @@ config:
   # token: sometoken
   url: http://localhost:8086
   db: eva
+  ## alternative CA file (.der for DER, any other extension for PEM)
+  #tls_ca: path/to/crt
   ## required for v2
   # org: myorg
   # event buffer time-to-live, seconds

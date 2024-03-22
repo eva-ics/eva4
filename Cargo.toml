@@ -35,8 +35,9 @@ members = [
   "tools/gen-intl",
   "psrpc",
   "genpass-native",
+  "crypto-tools",
   "benchmarks/bm-primary"
-]
+, "crypto-tools"]
 
 resolver = "1"
 
