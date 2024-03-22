@@ -1,0 +1,16 @@
+[package]
+name = "crypto-tools"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio-native-tls = "0.3.1"
+eva-common = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+openssl-vendored = ["tokio-native-tls/vendored"]
