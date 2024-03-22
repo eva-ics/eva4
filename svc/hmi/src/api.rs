@@ -2007,7 +2007,7 @@ async fn method_dobj_get_struct(params: Value, aci: &mut ACI) -> EResult<Value> 
         .await?
         .payload(),
     )?;
-    for field in &data_object.fields {
+    for field in &mut data_object.fields {
         field.oid = None;
     }
     to_value(data_object).map_err(Into::into)
