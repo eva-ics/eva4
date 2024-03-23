@@ -947,6 +947,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "codegen"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff61280aed771c3070e7dcc9e050c66f1eb1e3b96431ba66f9f74641d02fc41d"
+dependencies = [
+ "indexmap 1.9.3",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1303,6 +1312,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dobj-codegen"
+version = "4.0.2"
+dependencies = [
+ "codegen",
+ "eva-common",
+ "serde",
+]
+
+[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1609,9 +1627,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.47"
+version = "0.3.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9432c45beded48d03ea76ef59df42a14d3004b239fd47e4a8bd8f8f359ac27d"
+checksum = "82a2a5a26332ffd6816e2f854cbda4f80b677c15189e3f8455379280dbf16eac"
 dependencies = [
  "async-channel",
  "async-recursion",

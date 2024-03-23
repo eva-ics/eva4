@@ -1,0 +1,11 @@
+[package]
+name = "dobj-codegen"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+codegen = "0.2.0"
+eva-common = { workspace = true, features = ["data-objects"] }
+serde = { workspace = true }

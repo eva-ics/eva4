@@ -803,17 +803,26 @@ dobj.get_config:
       req: true
   ret: Data object configuration
   exm: |
-    fields:
-    - name: temp
-      oid: sensor:env/temp
-      type: f64
-    - name: hum
-      oid: sensor:env/hum
-      type: f64
-    - name: pressure
-      oid: sensor:env/pressure
-      type: f64
-    name: Env
+    {
+    "fields": [
+          {
+              "name": "temp",
+              "oid": "sensor:env/temp",
+              "type": "f64"
+          },
+          {
+              "name": "hum",
+              "oid": "sensor:env/hum",
+              "type": "f64"
+          },
+          {
+              "name": "pressure",
+              "oid": "sensor:env/pressure",
+              "type": "f64"
+          }
+      ],
+      "name": "Env"
+    }
 dobj.validate:
   des: Validate node data objects
   par:

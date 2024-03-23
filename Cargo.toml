@@ -34,11 +34,12 @@ members = [
   "svc/svc-mailer",
   "tools/eva-cloud-manager",
   "tools/gen-intl",
+  "dobj-codegen",
   "psrpc",
   "genpass-native",
   "crypto-tools",
   "benchmarks/bm-primary"
-, "crypto-tools"]
+, "crypto-tools", "dobj-codegen"]
 
 resolver = "1"
 
@@ -63,7 +64,7 @@ parking_lot = "^0.12.1"
 async-channel = "^1.7"
 async-recursion = "^1.0.5"
 serde_yaml = "^0.8"
-eva-common = "^0.3.47"
+eva-common = "^0.3.49"
 cargo_metadata = "^0.18.1"
 itertools = "^0.12.1"
 hex = "^0.4.3"
