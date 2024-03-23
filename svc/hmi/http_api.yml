@@ -1055,7 +1055,7 @@ pvt.unlink:
   http_req:
     path: vendored-apps/file1.json
 dobj.list:
-  des: Get list of data objects (requires ACL op "developer")
+  des: Get list of data objects
   par:
   ret: List of data objects
   http_rpl: |
@@ -1082,7 +1082,7 @@ dobj.list:
       ]
     }
 dobj.get_struct:
-  des: Get data object structure (requires ACL op "developer")
+  des: Get data object structure
   par:
     - nam: i
       typ: String
@@ -1115,7 +1115,7 @@ dobj.get_struct:
       }
     }
 dobj.generate_struct_code:
-  des: Generate data object structure code for a selected language (requires ACL op "developer")
+  des: Generate data object structure code
   par:
     - nam: i
       typ: String/Vec<String>
