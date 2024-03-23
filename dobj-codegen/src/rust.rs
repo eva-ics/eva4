@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum Endianess {
     Big,
     Little,
-    Auto,
+    Native,
 }
 
 use crate::CodeGen;
@@ -28,6 +28,9 @@ impl CodeGen for Rust {
         if self.config.derive_debug {
             s.derive("Debug");
         }
+        if self.config.derive_default {
+            s.derive("Default");
+        }
         if self.config.derive_eq {
             s.derive("Eq").derive("PartialEq");
         }
@@ -40,7 +43,7 @@ impl CodeGen for Rust {
                 Endianess::Little => {
                     s.attr("brw(little)");
                 }
-                Endianess::Auto => {}
+                Endianess::Native => {}
             }
         }
         for field in &dobj.fields {
@@ -72,14 +75,20 @@ impl Rust {
     }
 }
 
+fn default_box_arrays() -> usize {
+    100
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
-    #[serde(default)]
+    #[serde(default = "default_box_arrays")]
     box_arrays: usize,
     #[serde(default)]
     derive_debug: bool,
+    #[serde(default)]
+    derive_default: bool,
     #[serde(default)]
     derive_clone: bool,
     #[serde(default)]
@@ -92,12 +101,13 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            box_arrays: 100,
-            derive_debug: true,
-            derive_clone: true,
+            box_arrays: default_box_arrays(),
+            derive_debug: false,
+            derive_default: false,
+            derive_clone: false,
             derive_copy: false,
             derive_eq: false,
-            binrw: Some(Endianess::Little),
+            binrw: None,
         }
     }
 }
@@ -113,6 +123,10 @@ impl Config {
     }
     pub fn derive_debug(mut self, derive_debug: bool) -> Self {
         self.derive_debug = derive_debug;
+        self
+    }
+    pub fn derive_default(mut self, derive_default: bool) -> Self {
+        self.derive_default = derive_default;
         self
     }
     pub fn derive_clone(mut self, derive_clone: bool) -> Self {
