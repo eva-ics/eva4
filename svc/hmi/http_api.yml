@@ -1114,3 +1114,31 @@ dobj.get_struct:
         "name": "test"
       }
     }
+dobj.generate_struct_code:
+  des: Generate data object structure code for a selected language (requires ACL op "developer")
+  par:
+    - nam: i
+      typ: String/Vec<String>
+      des: Data object name(s)
+      req: true
+    - nam: lang
+      typ: String
+      des: Language ("rust", "c")
+      req: true
+    - nam: config
+      typ: Any
+      des: A specific language generator configuration
+      req: false
+  ret: Data object structure code
+  http_req:
+    i: ["Env", "PlantEnv"]
+    lang: "c"
+  http_rpl: |
+    {
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": {
+        "code": "#[derive(Clone, Debug)]\n#[binrw]\n#[brw(little)]\nstruct test {\n    value2: u16,\n    value_s1: i16,\n    subpayload: sub1,\n}\n\n#[derive(Clone, Debug)]\n#[binrw]\n#[brw(little)]\nstruct Env {\n    temp: [f64; 2],\n    hum: f64,\n    pressure: f64,\n}\n"
+      }
+    }
+

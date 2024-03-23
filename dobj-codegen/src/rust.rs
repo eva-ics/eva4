@@ -1,5 +1,13 @@
-use eva_common::dobj::{DataObject, Endianess, Kind};
+use eva_common::dobj::{DataObject, Kind};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Endianess {
+    Big,
+    Little,
+    Auto,
+}
 
 use crate::CodeGen;
 
@@ -24,13 +32,16 @@ impl CodeGen for Rust {
             s.derive("Eq").derive("PartialEq");
         }
         if let Some(endianess) = self.config.binrw {
-            s.attr(format!(
-                "brw({})",
-                match endianess {
-                    Endianess::Big => "big",
-                    Endianess::Little => "little",
+            s.attr("binrw");
+            match endianess {
+                Endianess::Big => {
+                    s.attr("brw(big)");
                 }
-            ));
+                Endianess::Little => {
+                    s.attr("brw(little)");
+                }
+                Endianess::Auto => {}
+            }
         }
         for field in &dobj.fields {
             let ks = match &field.kind {
@@ -63,11 +74,17 @@ impl Rust {
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
+    #[serde(default)]
     box_arrays: usize,
+    #[serde(default)]
     derive_debug: bool,
+    #[serde(default)]
     derive_clone: bool,
+    #[serde(default)]
     derive_copy: bool,
+    #[serde(default)]
     derive_eq: bool,
     binrw: Option<Endianess>,
 }

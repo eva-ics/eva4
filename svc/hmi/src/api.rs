@@ -3,7 +3,7 @@ use crate::aci::{self, ACI};
 use crate::db;
 use crate::ApiKeyId;
 use eva_common::acl::{self, Acl, OIDMask};
-use eva_common::common_payloads::ValueOrList;
+use eva_common::common_payloads::{IdOrListOwned, ValueOrList};
 use eva_common::common_payloads::{ParamsIdOrListOwned, ParamsIdOwned};
 use eva_common::dobj;
 use eva_common::prelude::*;
@@ -599,6 +599,9 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "pvt.list" => method_pvt_list(params, &mut aci).await,
                         "dobj.list" => method_dobj_list(params, &mut aci).await,
                         "dobj.get_struct" => method_dobj_get_struct(params, &mut aci).await,
+                        "dobj.generate_struct_code" => {
+                            method_dobj_get_struct_code(params, &mut aci).await
+                        }
                         _ => {
                             return Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD));
                         }
@@ -2011,4 +2014,57 @@ async fn method_dobj_get_struct(params: Value, aci: &mut ACI) -> EResult<Value> 
         field.oid = None;
     }
     to_value(data_object).map_err(Into::into)
+}
+
+async fn method_dobj_get_struct_code(params: Value, aci: &mut ACI) -> EResult<Value> {
+    use dobj_codegen::CodeGen;
+    #[derive(Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    enum Language {
+        C,
+        Rust,
+    }
+    #[derive(Deserialize)]
+    struct Params {
+        i: IdOrListOwned,
+        lang: Language,
+        #[serde(default)]
+        config: Value,
+    }
+    #[derive(Serialize)]
+    struct Response {
+        code: String,
+    }
+    aci.log_request(log::Level::Debug).await.log_ef();
+    aci.acl().require_op(acl::Op::Developer)?;
+    let params = Params::deserialize(params)?;
+    let code_gen: Box<dyn CodeGen> = match params.lang {
+        Language::C => Box::new(dobj_codegen::C::new()),
+        Language::Rust => {
+            let rust_config = if params.config == Value::Unit {
+                dobj_codegen::rust::Config::default()
+            } else {
+                dobj_codegen::rust::Config::deserialize(params.config)?
+            };
+            Box::new(dobj_codegen::Rust::new(rust_config))
+        }
+    };
+    let mut code = String::new();
+    for i in params.i {
+        let data_object: dobj::DataObject = unpack(
+            eapi_bus::call(
+                "eva.core",
+                "dobj.get_config",
+                pack(&ParamsIdOwned { i })?.into(),
+            )
+            .await?
+            .payload(),
+        )?;
+        if !code.is_empty() {
+            code.push('\n');
+        }
+        code.push_str(&code_gen.generate_struct(&data_object));
+        code.push('\n');
+    }
+    to_value(Response { code }).map_err(Into::into)
 }

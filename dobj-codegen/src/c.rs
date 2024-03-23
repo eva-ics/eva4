@@ -38,7 +38,7 @@ impl CodeGen for C {
                 }
             }
         }
-        result.push_str(&format!("}} {};\n", dobj.name));
+        result.push_str(&format!("}} {};", dobj.name));
         result
     }
 

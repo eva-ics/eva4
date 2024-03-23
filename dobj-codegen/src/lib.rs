@@ -1,13 +1,13 @@
 use eva_common::dobj::DataObject;
 use eva_common::dobj::Kind;
 
-mod c;
-mod rust;
+pub mod c;
+pub mod rust;
 
 pub use c::C;
 pub use rust::Rust;
 
-pub trait CodeGen {
+pub trait CodeGen: Send + Sync {
     fn ident(&self) -> &'static str {
         "    "
     }

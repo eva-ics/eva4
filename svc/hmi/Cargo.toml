@@ -40,6 +40,7 @@ hyper-static = "0.1"
 urlencoding = "2.1.3"
 openssl = { workspace = true }
 genpass-native = { path = "../../genpass-native" }
+dobj-codegen = { path = "../../dobj-codegen" }
 parking_lot = "0.12.1"
 shlex = "1.3.0"
 async-recursion = { workspace = true }

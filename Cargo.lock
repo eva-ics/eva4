@@ -2016,6 +2016,7 @@ dependencies = [
  "cargo_metadata",
  "chrono",
  "cookie",
+ "dobj-codegen",
  "eva-common",
  "eva-rjrpc",
  "eva-sdk",
