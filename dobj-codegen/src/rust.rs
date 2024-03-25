@@ -1,4 +1,5 @@
 use eva_common::dobj::{DataObject, Kind};
+use eva_common::tools::default_true;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -33,6 +34,9 @@ impl CodeGen for Rust {
         }
         if self.config.derive_eq {
             s.derive("Eq").derive("PartialEq");
+        }
+        if self.config.repr_c {
+            s.attr("repr(C)");
         }
         if let Some(endianess) = self.config.binrw {
             s.attr("binrw");
@@ -85,11 +89,13 @@ fn default_box_arrays() -> usize {
 pub struct Config {
     #[serde(default = "default_box_arrays")]
     box_arrays: usize,
-    #[serde(default)]
+    #[serde(default = "default_true")]
+    repr_c: bool,
+    #[serde(default = "default_true")]
     derive_debug: bool,
     #[serde(default)]
     derive_default: bool,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     derive_clone: bool,
     #[serde(default)]
     derive_copy: bool,
@@ -102,6 +108,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             box_arrays: default_box_arrays(),
+            repr_c: true,
             derive_debug: false,
             derive_default: false,
             derive_clone: false,
@@ -119,6 +126,10 @@ impl Config {
 
     pub fn box_arrays(mut self, box_arrays: usize) -> Self {
         self.box_arrays = box_arrays;
+        self
+    }
+    pub fn repr_c(mut self, repr_c: bool) -> Self {
+        self.repr_c = repr_c;
         self
     }
     pub fn derive_debug(mut self, derive_debug: bool) -> Self {
