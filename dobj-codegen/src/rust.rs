@@ -109,9 +109,9 @@ impl Default for Config {
         Self {
             box_arrays: default_box_arrays(),
             repr_c: true,
-            derive_debug: false,
+            derive_debug: true,
             derive_default: false,
-            derive_clone: false,
+            derive_clone: true,
             derive_copy: false,
             derive_eq: false,
             binrw: None,
