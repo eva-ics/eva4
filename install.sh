@@ -472,6 +472,7 @@ acls:
   read: { items: [ "#" ], pvt: [ "#" ], rpvt: [ "#" ] }
   write: { items: [ "#" ], pvt: ["vendored-apps/opcentre/#"] }
   deny_read: { items: [ "lvar:+/accounting" ] }
+  ops: ["developer"]
 EOF
   ) | ./bin/yml2mp | \
     ./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.acl acl.deploy - > /dev/null || exit 12
