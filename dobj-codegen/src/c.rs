@@ -12,9 +12,6 @@ impl C {
 }
 
 impl CodeGen for C {
-    fn ident(&self) -> &'static str {
-        "  "
-    }
     fn generate_struct(&self, dobj: &DataObject) -> String {
         let mut result = format!("typedef struct {} {{\n", dobj.name);
         for field in &dobj.fields {
