@@ -779,6 +779,18 @@ dobj.push:
       des: Endianess (big/little), the default is little
       req: false
   ret:
+dobj.error:
+  des: Report an error to mapped OIDs
+  par:
+    - nam: i
+      typ: String
+      des: Data object name
+      req: true
+    - nam: status
+      typ: i16
+      des: "Error status code (<0)"
+      req: false
+  ret:
 dobj.list:
   des: List data objects
   par:

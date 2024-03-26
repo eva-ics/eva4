@@ -538,6 +538,24 @@ impl RpcHandlers for BusApi {
                     Ok(None)
                 }
             }
+            "dobj.error" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    struct Payload {
+                        #[serde(alias = "i")]
+                        name: String,
+                        #[serde(alias = "s")]
+                        status: Option<ItemStatus>,
+                    }
+                    let p: Payload = unpack(event.payload()).log_err()?;
+                    self.core
+                        .dobj_error(p.name, p.status, event.primary_sender())
+                        .await?;
+                    Ok(None)
+                }
+            }
             "dobj.list" => {
                 if payload.is_empty() {
                     #[derive(Serialize)]

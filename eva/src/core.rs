@@ -26,6 +26,7 @@ use eva_common::prelude::*;
 use eva_common::registry;
 use eva_common::time::monotonic_ns;
 use eva_common::tools::format_path;
+use eva_common::ITEM_STATUS_ERROR;
 use eva_common::SLEEP_STEP;
 use log::{debug, error, info, trace, warn};
 use once_cell::sync::OnceCell;
@@ -2063,6 +2064,26 @@ impl Core {
         let raw: Vec<RawStateBulkEventOwned> = vals
             .into_iter()
             .map(|(oid, value)| RawStateBulkEventOwned::new(oid, RawStateEventOwned::new(1, value)))
+            .collect();
+        self.update_state_from_raw_bulk(raw, sender).await;
+        Ok(())
+    }
+    pub async fn dobj_error(
+        &self,
+        name: String,
+        status: Option<ItemStatus>,
+        sender: &str,
+    ) -> EResult<()> {
+        let status = status.unwrap_or(ITEM_STATUS_ERROR);
+        if status >= 0 {
+            return Err(Error::invalid_params(
+                "error status must be a negative integer",
+            ));
+        }
+        let oids = self.object_map.lock().mapped_oids(&name.try_into()?);
+        let raw: Vec<RawStateBulkEventOwned> = oids
+            .into_iter()
+            .map(|oid| RawStateBulkEventOwned::new(oid, RawStateEventOwned::new0(status)))
             .collect();
         self.update_state_from_raw_bulk(raw, sender).await;
         Ok(())
