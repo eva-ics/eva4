@@ -42,9 +42,10 @@ async fn pull(
             for (res, node) in result.into_iter().zip(nodes.iter()) {
                 if let Some(val) = res.value.and_then(|v| {
                     v.into_eva_value()
-                        .map_err(|e| error!("value conversion error {}: {}", node.node(), e))
+                        .map_err(|e| node.report_error("value conversion", Some(e)))
                         .ok()
                 }) {
+                    node.set_online();
                     for task in node.map() {
                         macro_rules! save_value {
                             ($val: expr) => {
@@ -62,16 +63,25 @@ async fn pull(
                             ($val: expr) => {
                                 if task.need_transform() {
                                     if let Ok(val) = TryInto::<f64>::try_into($val) {
-                                        if let Ok(n) = task.transform_value(val).log_err() {
-                                            save_value!(Value::F64(n));
-                                        } else {
-                                            oids_failed.insert(task.oid());
+                                        match task.transform_value(val) {
+                                            Ok(n) => {
+                                                task.set_online();
+                                                save_value!(Value::F64(n));
+                                            }
+                                            Err(e) => {
+                                                task.report_error("transform", Some(e));
+                                                oids_failed.insert(task.oid());
+                                            }
                                         }
                                     } else {
-                                        error!("{} value parse error", task.oid());
+                                        task.report_error(
+                                            &format!("{} value parse error", task.oid()),
+                                            None,
+                                        );
                                         oids_failed.insert(task.oid());
                                     }
                                 } else {
+                                    task.set_online();
                                     save_value!($val.clone());
                                 }
                             };
@@ -80,11 +90,11 @@ async fn pull(
                             if let Some(v) = val.get_by_index(idx) {
                                 process!(v);
                             } else {
-                                error!(
+                                task.report_error(&format!(
                                     "{} pull error: {} value is not an array or index is out of bounds",
                                     task.oid(),
                                     node.node()
-                                );
+                                ), None);
                                 oids_failed.insert(task.oid());
                             }
                         } else {
@@ -92,7 +102,7 @@ async fn pull(
                         }
                     }
                 } else {
-                    error!("{} pull error", node.node());
+                    node.report_error("pull", None);
                     for task in node.map() {
                         oids_failed.insert(task.oid());
                     }

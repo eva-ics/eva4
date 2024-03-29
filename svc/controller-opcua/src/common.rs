@@ -1,9 +1,11 @@
 use eva_common::prelude::*;
 use eva_common::value::Index;
 use eva_sdk::controller::transform::{self, Transform};
+use log::{error, info};
 use opcua::client::prelude::*;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::sync::atomic;
 use std::time::Duration;
 
 #[inline]
@@ -210,6 +212,10 @@ pub struct Config {
     pub ping: Option<Ping>,
 }
 
+fn default_online() -> atomic::AtomicBool {
+    atomic::AtomicBool::new(true)
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullNode {
@@ -218,6 +224,8 @@ pub struct PullNode {
     #[serde(default, deserialize_with = "deserialize_opt_range")]
     range: Option<String>,
     map: Vec<PullTask>,
+    #[serde(skip, default = "default_online")]
+    online: atomic::AtomicBool,
 }
 
 #[derive(Deserialize)]
@@ -249,6 +257,22 @@ impl PullNode {
     pub fn map(&self) -> &[PullTask] {
         &self.map
     }
+    pub fn set_online(&self) {
+        if !self.online.swap(true, atomic::Ordering::Relaxed) {
+            info!("{} back online", self.node);
+        }
+    }
+    pub fn report_error(&self, action: &str, error: Option<Error>) -> Error {
+        let mut msg = format!("{}: {}", self.node, action);
+        if let Some(e) = error {
+            msg.push(' ');
+            msg.push_str(&e.to_string());
+        }
+        if self.online.swap(false, atomic::Ordering::Relaxed) {
+            error!("{}", msg);
+        }
+        Error::io(msg)
+    }
 }
 
 #[derive(Deserialize)]
@@ -260,6 +284,8 @@ pub struct PullTask {
     #[serde(default)]
     transform: Vec<transform::Task>,
     idx: Option<Index>,
+    #[serde(skip, default = "default_online")]
+    online: atomic::AtomicBool,
 }
 
 impl PullTask {
@@ -282,5 +308,21 @@ impl PullTask {
     #[inline]
     pub fn idx(&self) -> Option<&Index> {
         self.idx.as_ref()
+    }
+    pub fn set_online(&self) {
+        if !self.online.swap(true, atomic::Ordering::Relaxed) {
+            info!("{} back online", self.oid);
+        }
+    }
+    pub fn report_error(&self, action: &str, error: Option<Error>) -> Error {
+        let mut msg = format!("{}: {}", self.oid, action);
+        if let Some(e) = error {
+            msg.push(' ');
+            msg.push_str(&e.to_string());
+        }
+        if self.online.swap(false, atomic::Ordering::Relaxed) {
+            error!("{}", msg);
+        }
+        Error::io(msg)
     }
 }
