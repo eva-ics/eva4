@@ -72,7 +72,10 @@ pub enum LvarOp {
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 #[inline]
 pub fn sender_allowed_auto_create(sender: &str) -> bool {
-    sender.contains(".controller.") || sender.contains(".plc.") || sender.ends_with(".plc")
+    sender.contains(".controller.")
+        || sender.contains(".plc.")
+        || sender.ends_with(".plc")
+        || sender.ends_with(".program")
 }
 
 pub enum ActionLaunchResult {
