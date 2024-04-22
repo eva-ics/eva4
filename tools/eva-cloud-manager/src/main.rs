@@ -58,6 +58,7 @@ lazy_static::lazy_static! {
     };
 }
 
+#[allow(clippy::large_futures)]
 #[tokio::main(worker_threads = 2)]
 async fn main() {
     macro_rules! handle_signal {

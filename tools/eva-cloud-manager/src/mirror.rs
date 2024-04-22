@@ -62,6 +62,7 @@ async fn download(
     res
 }
 
+#[allow(clippy::large_futures)]
 async fn verify_local(path: &Path, manifest: &Manifest) -> EResult<()> {
     ttycarousel::tokio1::spawn0(&format!(
         "Verifying the local file {}",
@@ -73,6 +74,7 @@ async fn verify_local(path: &Path, manifest: &Manifest) -> EResult<()> {
     res
 }
 
+#[allow(clippy::large_futures)]
 pub async fn update(opts: Options) -> EResult<()> {
     let mut repository_url = opts
         .repository_url

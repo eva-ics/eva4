@@ -159,6 +159,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     }
     let rpc_c = rpc.clone();
+    #[allow(clippy::large_futures)]
     tokio::spawn(async move {
         loop {
             match config.protocol {
