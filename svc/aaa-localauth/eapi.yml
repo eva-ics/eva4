@@ -222,7 +222,7 @@ user.get_profile_field:
       req: true
     - nam: field
       typ: String
-      des: Field name (email)
+      des: Field name (email/phone)
       req: true
   ret: Profile field
   exm: |
@@ -239,7 +239,7 @@ user.set_profile_field:
       req: true
     - nam: field
       typ: String
-      des: Field name (email)
+      des: Field name (email/phone)
       req: true
     - nam: value
       typ: Any

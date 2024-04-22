@@ -54,6 +54,7 @@ struct PasswordPolicy {
 #[serde(rename_all = "snake_case")]
 enum ProfileField {
     Email,
+    Phone,
 }
 
 struct OneTimeUser {
@@ -130,12 +131,14 @@ impl User {
 #[serde(deny_unknown_fields)]
 struct UserProfile {
     email: Option<String>,
+    phone: Option<String>,
 }
 
 impl UserProfile {
     fn get_field(&self, field: ProfileField) -> Option<Value> {
         match field {
             ProfileField::Email => self.email.as_ref().map(|v| Value::String(v.clone())),
+            ProfileField::Phone => self.phone.as_ref().map(|v| Value::String(v.clone())),
         }
     }
     fn set_field(&mut self, field: ProfileField, value: Value) {
@@ -145,6 +148,13 @@ impl UserProfile {
                     self.email.take();
                 } else {
                     self.email.replace(value.to_string());
+                }
+            }
+            ProfileField::Phone => {
+                if value == Value::Unit {
+                    self.phone.take();
+                } else {
+                    self.phone.replace(value.to_string());
                 }
             }
         }
