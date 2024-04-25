@@ -1,4 +1,6 @@
-use crate::common::{init_cmd_options, init_cmd_options_basic, OIDSingleOrMulti};
+use crate::common::{
+    self, init_cmd_options, init_cmd_options_basic, safe_run_macro, OIDSingleOrMulti,
+};
 use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -8,6 +10,8 @@ use std::path::Path;
 use std::time::Duration;
 
 err_logger!();
+
+const RESTART_DELAY: u64 = 2;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -21,6 +25,13 @@ pub struct Update {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     timeout: Option<Duration>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UpdatePipe {
+    command: String,
+    process: OID,
 }
 
 fn register_update_trigger(oid: &OID, tx: async_channel::Sender<()>) {
@@ -81,7 +92,9 @@ pub async fn update_handler(update: Update) -> EResult<()> {
     });
     while let Ok(()) = rx.recv().await {
         trace!("executing {}", command_str);
-        match bmart::process::command(&command_str, args, timeout, cmd_options.clone()).await {
+        match bmart::process::command(command_str.as_ref(), args, timeout, cmd_options.clone())
+            .await
+        {
             Ok(res) => {
                 let code = res.code.unwrap_or(-1);
                 for err in res.err {
@@ -120,10 +133,7 @@ async fn mark_error(oid: &OID) -> EResult<()> {
         force: true,
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
+    eapi_bus::client()
         .lock()
         .await
         .publish(&raw_topic, pack(&ev)?.into(), QoS::No)
@@ -146,13 +156,62 @@ async fn process_data(oid: &OID, data: &str) -> EResult<()> {
         force: true,
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
+    eapi_bus::client()
         .lock()
         .await
         .publish(&raw_topic, pack(&ev)?.into(), QoS::No)
         .await?;
     Ok(())
+}
+
+async fn launch_update_pipe(config: &UpdatePipe) -> EResult<()> {
+    trace!("executing {}", config.command);
+    let rx = bmart::process::command_pipe(
+        "sh",
+        ["-c", &config.command],
+        bmart::process::Options::default(),
+    )?;
+    while let Ok(v) = rx.recv().await {
+        match v {
+            bmart::process::CommandPipeOutput::Stdout(line) => {
+                let kwargs = common::LineData { line: Some(line) };
+                let params = common::ParamsRun {
+                    i: &config.process,
+                    params: common::LParams { kwargs },
+                    wait: eapi_bus::timeout(),
+                };
+                safe_run_macro(params).await.log_ef();
+            }
+            bmart::process::CommandPipeOutput::Stderr(e) => {
+                error!("{}", e);
+            }
+            bmart::process::CommandPipeOutput::Terminated(_) => {
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn run_update_pipe(config: UpdatePipe) {
+    loop {
+        let res = launch_update_pipe(&config).await;
+        if eva_sdk::service::svc_is_terminating() {
+            break;
+        }
+        if let Err(e) = res {
+            warn!("Error running command \"{}\": {}", config.command, e);
+        } else {
+            warn!("Command \"{}\" exited", config.command);
+        }
+        let kwargs = common::LineData { line: None };
+        let params = common::ParamsRun {
+            i: &config.process,
+            params: common::LParams { kwargs },
+            wait: eapi_bus::timeout(),
+        };
+        safe_run_macro(params).await.log_ef();
+        warn!("Restarting the command in {} seconds", RESTART_DELAY);
+        tokio::time::sleep(Duration::from_secs(RESTART_DELAY)).await;
+    }
 }

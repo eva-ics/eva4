@@ -214,6 +214,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-channel"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "136d4d23bcc79e27423727b36823d86233aad06dfea531837b038394d11e9928"
+dependencies = [
+ "concurrent-queue 2.4.0",
+ "event-listener 5.3.0",
+ "event-listener-strategy 0.5.1",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-io"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -259,7 +272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d034b430882f8381900d3fe6f0aaa3ad94f2cb4ac519b429692a1bc2dda4ae7b"
 dependencies = [
  "event-listener 4.0.3",
- "event-listener-strategy",
+ "event-listener-strategy 0.4.0",
  "pin-project-lite",
 ]
 
@@ -524,7 +537,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c598214120cccfa036fe40e73bd2713243e4e8ed3787afb1514300fb850ffb9"
 dependencies = [
  "bma-benchmark-proc",
- "colored",
+ "colored 2.1.0",
  "lazy_static",
  "num-format",
  "prettytable-rs",
@@ -543,12 +556,13 @@ dependencies = [
 
 [[package]]
 name = "bmart"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddad030cdedba7c8fa6bb7b135745a110cb6b1fc5d0c46ed04238a592d6b7b39"
+checksum = "da18c8bdb9276c1ee2b0eea908b525f2093f98cbb9414dd7ee491c9515a61330"
 dependencies = [
+ "async-channel 2.2.1",
  "bmart-derive",
- "colored",
+ "colored 1.9.4",
  "log",
  "nix 0.22.3",
  "sysinfo 0.29.2",
@@ -650,7 +664,7 @@ version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea0c23e690f9b54914925fc2fad286ed03f48ef490c893eee9d22955b604d929"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-io 1.8.0",
  "async-trait",
  "ipnetwork",
@@ -960,6 +974,17 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
+name = "colored"
+version = "1.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a5f741c91823341bebf717d4c71bda820630ce065443b58bd1b7451af008355"
+dependencies = [
+ "is-terminal",
+ "lazy_static",
+ "winapi",
+]
 
 [[package]]
 name = "colored"
@@ -1500,7 +1525,7 @@ dependencies = [
 name = "eva-aaa-acl"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1517,7 +1542,7 @@ dependencies = [
 name = "eva-aaa-localauth"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1537,7 +1562,7 @@ dependencies = [
 name = "eva-aaa-otp"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "base32",
  "bmart",
@@ -1560,7 +1585,7 @@ name = "eva-bridge-ads"
 version = "4.0.2"
 dependencies = [
  "ads",
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1603,7 +1628,7 @@ dependencies = [
  "cargo_metadata",
  "chrono",
  "clap 3.2.25",
- "colored",
+ "colored 2.1.0",
  "env_logger",
  "eva-client",
  "eva-common",
@@ -1631,7 +1656,7 @@ version = "0.3.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5d4227a29bcbfe3dac81436a46b4d6527f0f3b51425df8ca6787127f237c02c"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-recursion",
  "axum",
  "binrw",
@@ -1675,7 +1700,7 @@ name = "eva-controller-ads"
 version = "4.0.2"
 dependencies = [
  "ads",
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1697,7 +1722,7 @@ dependencies = [
 name = "eva-controller-dobj"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "busrt",
  "eva-common",
@@ -1713,7 +1738,7 @@ dependencies = [
 name = "eva-controller-enip"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1734,7 +1759,7 @@ dependencies = [
 name = "eva-controller-lm"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1757,7 +1782,7 @@ dependencies = [
 name = "eva-controller-modbus"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1781,7 +1806,7 @@ dependencies = [
 name = "eva-controller-opcua"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1801,7 +1826,7 @@ dependencies = [
 name = "eva-controller-pubsub"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "busrt",
@@ -1824,16 +1849,16 @@ dependencies = [
 name = "eva-controller-sr"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "eva-common",
  "eva-sdk",
  "jemallocator",
- "lazy_static",
  "log",
  "once_cell",
  "serde",
+ "shlex",
  "tokio",
 ]
 
@@ -1841,7 +1866,7 @@ dependencies = [
 name = "eva-controller-trap"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "busrt",
  "eva-common",
@@ -1862,7 +1887,7 @@ dependencies = [
 name = "eva-controller-virtual"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "eva-common",
@@ -1880,7 +1905,7 @@ dependencies = [
 name = "eva-controller-w1"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1901,7 +1926,7 @@ dependencies = [
 name = "eva-dapp"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "eva-common",
@@ -1918,7 +1943,7 @@ dependencies = [
 name = "eva-db-influx"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "base64 0.13.1",
  "busrt",
@@ -1944,7 +1969,7 @@ dependencies = [
 name = "eva-db-sql"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1963,7 +1988,7 @@ dependencies = [
 name = "eva-db-timescale"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -1983,7 +2008,7 @@ dependencies = [
 name = "eva-filemgr"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "bmart",
@@ -2007,7 +2032,7 @@ dependencies = [
 name = "eva-hmi"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "base64 0.13.1",
@@ -2051,7 +2076,7 @@ dependencies = [
 name = "eva-ics"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-io 2.3.1",
  "async-trait",
  "atty",
@@ -2062,7 +2087,7 @@ dependencies = [
  "cargo_metadata",
  "chrono",
  "clap 3.2.25",
- "colored",
+ "colored 2.1.0",
  "eva-common",
  "eva-robots",
  "futures",
@@ -2096,7 +2121,7 @@ dependencies = [
 name = "eva-repl"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bmart",
  "busrt",
@@ -2152,7 +2177,7 @@ version = "0.3.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7732f8510b80708bd952133e953cac7ee7902eecce32cf2ab0c3c1a36409d571"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "bmart",
@@ -2189,7 +2214,7 @@ dependencies = [
 name = "eva-svc-expiration"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-io 2.3.1",
  "async-trait",
  "busrt",
@@ -2206,7 +2231,7 @@ dependencies = [
 name = "eva-svc-filewriter"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "busrt",
  "chrono",
@@ -2261,7 +2286,7 @@ dependencies = [
 name = "eva-svc-mailer"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "eva-common",
  "eva-sdk",
@@ -2280,7 +2305,7 @@ dependencies = [
 name = "eva-svc-mirror"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "eva-common",
  "eva-sdk",
@@ -2299,7 +2324,7 @@ dependencies = [
 name = "eva-svc-modbus-slave"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "eva-common",
  "eva-sdk",
@@ -2317,7 +2342,7 @@ dependencies = [
 name = "eva-svc-template"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "busrt",
  "eva-common",
@@ -2346,12 +2371,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "event-listener"
+version = "5.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d9944b8ca13534cdfb2800775f8dd4902ff3fc75a50101466decadfdf322a24"
+dependencies = [
+ "concurrent-queue 2.4.0",
+ "parking",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "event-listener-strategy"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "958e4d70b6d5e81971bebec42271ec641e7ff4e170a6fa605f2b8a8b65cb97d3"
 dependencies = [
  "event-listener 4.0.3",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "332f51cb23d20b0de8458b86580878211da09bcd4503cb579c225b3d124cabb3"
+dependencies = [
+ "event-listener 5.3.0",
  "pin-project-lite",
 ]
 
@@ -2601,7 +2647,7 @@ name = "gen-intl"
 version = "4.0.2"
 dependencies = [
  "clap 3.2.25",
- "colored",
+ "colored 2.1.0",
  "eva-common",
  "serde_yaml 0.8.26",
 ]
@@ -2929,7 +2975,7 @@ dependencies = [
  "httpdate",
  "itoa 1.0.10",
  "pin-project-lite",
- "socket2 0.4.9",
+ "socket2 0.5.5",
  "tokio",
  "tower-service",
  "tracing",
@@ -3835,7 +3881,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19e405de34b835fb6457d8b0169eda21949f855472b3e346556af9e29fac6eb2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "crossbeam-channel",
  "futures",
  "futures-timer",
@@ -4247,7 +4293,7 @@ dependencies = [
 name = "psrpc"
 version = "4.0.2"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "bzip2",
  "eva-common",
@@ -4269,7 +4315,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8afb77c9734707b1516d56db37df40d2248e67a39dc6a72aa5006ac277af5e18"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-trait",
  "eva-sdk",
  "hex 0.4.3",

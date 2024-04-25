@@ -2,11 +2,9 @@ use eva_common::common_payloads::{ParamsOID, ParamsUuid};
 use eva_common::prelude::*;
 use eva_sdk::controller::{actt::Actt, format_action_topic, Action};
 use eva_sdk::prelude::*;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -20,16 +18,13 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Script-runner controller service";
 
-lazy_static! {
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref EVA_DIR: OnceCell<String> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref UPDATE_TRIGGERS: Mutex<HashMap<OID, async_channel::Sender<()>>> = <_>::default();
-    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
-        <_>::default();
-    static ref ACTT: OnceCell<Actt> = <_>::default();
-    static ref BUS_PATH: OnceCell<String> = <_>::default();
-}
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static EVA_DIR: OnceCell<String> = OnceCell::new();
+static UPDATE_TRIGGERS: Lazy<Mutex<HashMap<OID, async_channel::Sender<()>>>> =
+    Lazy::new(<_>::default);
+static ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> = OnceCell::new();
+static ACTT: OnceCell<Actt> = OnceCell::new();
+static BUS_PATH: OnceCell<String> = OnceCell::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -125,7 +120,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
     BUS_PATH
         .set(initial.bus_path().to_owned())
         .map_err(|_| Error::core("Unable to set BUS_PATH"))?;
-    let startup_timeout = initial.startup_timeout();
     let eva_dir = initial.eva_dir();
     EVA_DIR
         .set(eva_dir.to_owned())
@@ -136,34 +130,38 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     info.add_method(ServiceMethod::new("update").required("i"));
     let (tx, rx) = async_channel::bounded::<(String, Vec<u8>)>(config.queue_size);
-    let rpc = initial
-        .init_rpc(Handlers {
+    eapi_bus::init_blocking(
+        &initial,
+        Handlers {
             info,
             tx: tx.clone(),
-        })
-        .await?;
-    RPC.set(rpc.clone())
-        .map_err(|_| Error::core("Unable to set RPC"))?;
+        },
+    )
+    .await?;
     initial.drop_privileges()?;
-    let client = rpc.client().clone();
-    let cl = client.clone();
     tokio::spawn(async move {
+        let client = eapi_bus::client();
         while let Ok((topic, payload)) = rx.recv().await {
-            cl.lock()
+            client
+                .lock()
                 .await
                 .publish(&topic, payload.into(), QoS::No)
                 .await
                 .log_ef();
         }
     });
-    svc_init_logs(&initial, client.clone())?;
+    eapi_bus::init_logs(&initial)?;
     svc_start_signal_handlers();
-    let rpc_c = rpc.clone();
     tokio::spawn(async move {
-        let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
+        eapi_bus::wait_core(true).await.log_ef();
         for update in config.update {
             tokio::spawn(async move {
                 updates::update_handler(update).await.log_ef();
+            });
+        }
+        for update in config.update_pipe {
+            tokio::spawn(async move {
+                updates::run_update_pipe(update).await;
             });
         }
     });
@@ -177,9 +175,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     ACTION_QUEUES
         .set(action_queues)
         .map_err(|_| Error::core("Unable to set ACTION_QUEUES"))?;
-    svc_mark_ready(&client).await?;
+    eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block(&rpc).await;
-    svc_mark_terminating(&client).await?;
+    eapi_bus::block().await;
+    eapi_bus::mark_terminating().await?;
     Ok(())
 }

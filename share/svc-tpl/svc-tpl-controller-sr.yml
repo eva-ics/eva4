@@ -13,6 +13,18 @@ config:
         - sensor:tests/s1
         - sensor:tests/s2
       interval: 5
+  # update pipes launch a process and process its output line by line
+  # STDOUT goes to process lmacro, while STDERR is logged as errors
+  # the process is restarted automatically if it exits
+  update_pipe:
+      # the command path MUST be absolute or the command must be in PATH. the
+      # command may contain arguments
+    - command: some-command --some-args
+      # the process lmacro receives a keyword argument "line" which contains
+      # the line read from the process STDOUT. If the "line" contains null, it
+      # means the process exited and the lmacro should mark related items as
+      # failed
+      process: lmacro:process/pipe1
   action_map:
     unit:tests/u1:
       command: xc/sr/u1_action.sh

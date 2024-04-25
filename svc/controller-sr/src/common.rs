@@ -1,6 +1,8 @@
 use eva_common::prelude::*;
-use serde::Deserialize;
+use eva_sdk::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[inline]
 fn default_queue_size() -> usize {
@@ -17,6 +19,8 @@ fn default_action_queue_size() -> usize {
 pub struct Config {
     #[serde(default)]
     pub update: Vec<crate::updates::Update>,
+    #[serde(default)]
+    pub update_pipe: Vec<crate::updates::UpdatePipe>,
     #[serde(default)]
     pub action_map: HashMap<OID, crate::actions::ActionMap>,
     #[serde(default = "default_queue_size")]
@@ -87,4 +91,50 @@ pub fn init_cmd_options<'a>(oid: &'a OID, kind_str: &'a str) -> bmart::process::
             .env("EVA_ITEM_PARENT_GROUP", "");
     }
     cmd_options
+}
+
+#[derive(Serialize, Debug)]
+pub struct LParams {
+    pub(crate) kwargs: LineData,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ParamsRun<'a> {
+    pub(crate) i: &'a OID,
+    pub(crate) params: LParams,
+    #[serde(serialize_with = "eva_common::tools::serialize_duration_as_f64")]
+    pub(crate) wait: Duration,
+}
+
+#[derive(Serialize, Debug)]
+pub struct LineData {
+    pub(crate) line: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct MacroResult {
+    exitcode: Option<i16>,
+}
+
+pub async fn safe_run_macro(params: ParamsRun<'_>) -> EResult<()> {
+    let res = tokio::time::timeout(
+        eapi_bus::timeout(),
+        eapi_bus::rpc_secondary().call(
+            "eva.core",
+            "run",
+            pack(&params)?.into(),
+            QoS::RealtimeProcessed,
+        ),
+    )
+    .await??;
+    let result: MacroResult = unpack(res.payload())?;
+    if let Some(code) = result.exitcode {
+        if code == 0 {
+            Ok(())
+        } else {
+            Err(Error::failed(format!("exit code {}", code)))
+        }
+    } else {
+        Err(Error::failed("timeout"))
+    }
 }
