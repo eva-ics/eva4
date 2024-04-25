@@ -124,9 +124,6 @@ def update_state(oid, state):
     Args:
         oid: item OID
         state: new state (may contain status/value fields)
-
-    Optional:
-        force: force update even if the state is not changed
     """
     if 'status' not in state:
         state['status'] = 1
