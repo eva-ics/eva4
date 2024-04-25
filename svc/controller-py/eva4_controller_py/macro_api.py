@@ -21,7 +21,8 @@ from evaics.exceptions import AccessDenied
 from evaics.exceptions import InvalidParameter
 from evaics.exceptions import MethodNotImplemented
 
-from evaics.sdk import LocalProxy, rpc_e2e, pack, unpack
+from evaics.sdk import LocalProxy, rpc_e2e, pack, unpack, OID
+from evaics.sdk import RAW_STATE_TOPIC
 
 from evaics.tools import dict_from_str
 
@@ -95,6 +96,43 @@ def rpc_call(method=None, _target='eva.core', _timeout=None, **kwargs):
         return unpack(result)
     else:
         return True
+
+
+def bus_publish(topic, payload, qos=0):
+    """
+    Publishes a message to a bus topic
+
+    Args:
+        topic: topic name
+        payload: message payload
+        qos: QoS level (default: 0)
+    """
+    try:
+        service.bus.send(
+            topic,
+            busrt.client.Frame(pack(payload),
+                               tp=busrt.client.OP_PUBLISH,
+                               qos=qos)).wait_completed()
+    except busrt.rpc.RpcException as e:
+        raise rpc_e2e(e)
+
+
+def update_state(oid, state):
+    """
+    Updates item state
+
+    Args:
+        oid: item OID
+        state: new state (may contain status/value fields)
+
+    Optional:
+        force: force update even if the state is not changed
+    """
+    if 'status' not in state:
+        state['status'] = 1
+    oid = OID(oid) if isinstance(oid, str) else oid
+    topic = f'{RAW_STATE_TOPIC}{oid.to_path()}'
+    bus_publish(topic, state)
 
 
 def report_accounting_event(u=None,
@@ -771,9 +809,7 @@ def ls(mask, recursive=False):
         dict with fields 'name' 'file', 'size' and 'time' { 'c': created,
         'm': modified }
     """
-    fls = [
-        x for x in glob.glob(mask, recursive=recursive) if os.path.isfile(x)
-    ]
+    fls = [x for x in glob.glob(mask, recursive=recursive) if os.path.isfile(x)]
     l = []
     for x in fls:
         l.append({
@@ -872,6 +908,7 @@ api_globals = {
     'is_busy': is_busy,
     'set': _set,
     'state': state,
+    'update_state': update_state,
     'sha256sum': sha256sum,
     'status': status,
     'value': value,
@@ -898,5 +935,6 @@ api_globals = {
     'date': date,
     'ls': ls,
     'rpc_call': rpc_call,
+    'bus_publish': bus_publish,
     'report_accounting_event': report_accounting_event
 }
