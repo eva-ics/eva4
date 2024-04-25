@@ -47,7 +47,7 @@ def get_service():
     """
     Get the service object for the direct access
 
-    e.g. service.bus: direct access to BUS/RT
+    e.g. service.bus: direct access to BUS/RT,
     service.rpc: direct access to BUS/RT RPC
 
     Returns:
