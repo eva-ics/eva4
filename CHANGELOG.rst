@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-04-27 build 2024042701: Controller SR update pipes, "phone" profile field, Python bus methods
 * 2024-04-02 build 2024040201: Vendored apps print fixes, OPC-UA logging improvements
 * 2024-03-26 build 2024032601: Data objects
 * 2024-03-18 build 2024031801: InventoryDB2 and HMI API bug fixes, stability improvements
