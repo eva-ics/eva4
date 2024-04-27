@@ -33,4 +33,5 @@ config:
   # item OIDs / OID masks
   oids:
     - "#"
+  oids_exclude: []
 user: nobody

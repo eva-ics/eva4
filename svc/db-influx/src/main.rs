@@ -1,6 +1,5 @@
 use busrt::QoS;
 use eva_common::acl::OIDMaskList;
-use eva_common::common_payloads::ParamsIdListOwned;
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_common::time::ts_to_ns;
@@ -9,7 +8,7 @@ use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, ItemState, ShortItemStateConnected, State, StateProp};
 use once_cell::sync::OnceCell;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use simple_pool::ResourcePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -293,11 +292,22 @@ async fn sender(rx: async_channel::Receiver<Event>, buf_ttl: Option<Duration>) {
 
 async fn collect_periodic(
     oids: &OIDMaskList,
+    oids_exclude: &OIDMaskList,
     interval: Duration,
     tx: &async_channel::Sender<Event>,
 ) -> EResult<()> {
+    #[derive(Serialize)]
+    struct ParamsState {
+        i: Vec<String>,
+        exclude: Vec<String>,
+    }
     let i: Vec<String> = oids.oid_masks().iter().map(ToString::to_string).collect();
-    let p = ParamsIdListOwned { i };
+    let exclude: Vec<String> = oids_exclude
+        .oid_masks()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let p = ParamsState { i, exclude };
     let payload = pack(&p)?;
     let mut int = tokio::time::interval(interval);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -392,6 +402,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
     if !config.ignore_events {
+        eva_sdk::service::exclude_oids(
+            rpc.as_ref(),
+            &config.oids_exclude,
+            eva_sdk::service::EventKind::Any,
+        )
+        .await?;
         eva_sdk::service::subscribe_oids(
             rpc.as_ref(),
             &config.oids,
@@ -406,7 +422,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
         let fut = tokio::spawn(async move {
             let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
             while !svc_is_terminating() {
-                collect_periodic(&config.oids, interval, &tx).await.log_ef();
+                collect_periodic(&config.oids, &config.oids_exclude, interval, &tx)
+                    .await
+                    .log_ef();
             }
         });
         Some(fut)

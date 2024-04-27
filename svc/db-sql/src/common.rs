@@ -38,7 +38,10 @@ pub struct Config {
     #[serde(default)]
     pub simple_cleaning: bool,
     pub keep: Option<u64>,
+    #[serde(default)]
     pub oids: OIDMaskList,
+    #[serde(default)]
+    pub oids_exclude: OIDMaskList,
     #[serde(
         default,
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"

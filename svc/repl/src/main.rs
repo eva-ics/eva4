@@ -155,7 +155,10 @@ struct Config {
     subscribe: SubscribeKind,
     #[serde(default)]
     bulk: Option<BulkConfig>,
+    #[serde(default)]
     oids: OIDMaskList,
+    #[serde(default)]
+    oids_exclude: OIDMaskList,
     #[serde(default)]
     replicate_remote: bool,
 }
@@ -264,6 +267,16 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let registry = initial.init_registry(&rpc);
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
+    eva_sdk::service::exclude_oids(
+        rpc.as_ref(),
+        &config.oids_exclude,
+        if config.replicate_remote {
+            eva_sdk::service::EventKind::Actual
+        } else {
+            eva_sdk::service::EventKind::Local
+        },
+    )
+    .await?;
     eva_sdk::service::subscribe_oids(
         rpc.as_ref(),
         &config.oids,

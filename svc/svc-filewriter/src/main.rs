@@ -1,7 +1,6 @@
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, Utc};
 use cron::Schedule;
 use eva_common::acl::OIDMaskList;
-use eva_common::common_payloads::ParamsIdListOwned;
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -9,7 +8,7 @@ use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::{Lazy, OnceCell};
 use openssl::sha::Sha256;
 use parking_lot::Mutex;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::io::SeekFrom;
@@ -306,7 +305,10 @@ struct Config {
     ignore_events: bool,
     dedup_lines: Option<u64>,
     fields: Option<Vec<FieldKind>>,
+    #[serde(default)]
     oids: OIDMaskList,
+    #[serde(default)]
+    oids_exclude: OIDMaskList,
 }
 
 enum Event {
@@ -601,11 +603,22 @@ impl DataGen {
 
 async fn collect_periodic(
     oids: &OIDMaskList,
+    oids_exclude: &OIDMaskList,
     interval: Duration,
     tx: &async_channel::Sender<Event>,
 ) -> EResult<()> {
+    #[derive(Serialize)]
+    struct ParamsState {
+        i: Vec<String>,
+        exclude: Vec<String>,
+    }
     let i: Vec<String> = oids.oid_masks().iter().map(ToString::to_string).collect();
-    let p = ParamsIdListOwned { i };
+    let exclude: Vec<String> = oids_exclude
+        .oid_masks()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let p = ParamsState { i, exclude };
     let payload = pack(&p)?;
     let mut int = tokio::time::interval(interval);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -720,6 +733,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
     RPC.set(rpc.clone())
         .map_err(|_| Error::core("unable to set RPC"))?;
     if !config.ignore_events {
+        eva_sdk::service::exclude_oids(
+            rpc.as_ref(),
+            &config.oids_exclude,
+            eva_sdk::service::EventKind::Any,
+        )
+        .await?;
         eva_sdk::service::subscribe_oids(
             rpc.as_ref(),
             &config.oids,
@@ -735,7 +754,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         tokio::spawn(async move {
             let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
             loop {
-                collect_periodic(&config.oids, interval, &txc)
+                collect_periodic(&config.oids, &config.oids_exclude, interval, &txc)
                     .await
                     .log_ef();
                 tokio::time::sleep(Duration::from_secs(1)).await;
