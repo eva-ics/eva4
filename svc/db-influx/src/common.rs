@@ -43,7 +43,10 @@ pub struct Config {
     pub queue_size: usize,
     #[serde(default)]
     pub ignore_events: bool,
+    #[serde(default)]
     pub oids: OIDMaskList,
+    #[serde(default)]
+    pub oids_exclude: OIDMaskList,
     #[serde(
         default,
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"

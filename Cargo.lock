@@ -660,9 +660,9 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busrt"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea0c23e690f9b54914925fc2fad286ed03f48ef490c893eee9d22955b604d929"
+checksum = "bfaa3ce1c559351db9f3a07bd73a0081ee27fbb91b7bc11e0f79c102b5cd7626"
 dependencies = [
  "async-channel 1.9.0",
  "async-io 1.8.0",
@@ -1796,7 +1796,7 @@ dependencies = [
  "once_cell",
  "rmodbus",
  "serde",
- "simple-pool 0.0.17",
+ "simple-pool",
  "tokio",
  "tokio-serial",
  "uuid 1.7.0",
@@ -1959,7 +1959,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
- "simple-pool 0.0.17",
+ "simple-pool",
  "tokio",
  "tokio-native-tls",
  "urlencoding",
@@ -2173,9 +2173,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.45"
+version = "0.3.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7732f8510b80708bd952133e953cac7ee7902eecce32cf2ab0c3c1a36409d571"
+checksum = "9707b2a02d66b20ba7cec79d7d9809e6c62df610b8031c0fa110f2555fd1fb76"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2193,7 +2193,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.1",
  "serde",
- "simple-pool 0.0.14",
+ "simple-pool",
  "tokio",
  "tokio-fd",
  "ttl_cache",
@@ -5068,15 +5068,6 @@ checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
 
 [[package]]
 name = "simple-pool"
-version = "0.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f88c5963450b12757ec5a5c395a01e4f0e66636d5016a909cffc9e4319de750"
-dependencies = [
- "parking_lot 0.12.1",
-]
-
-[[package]]
-name = "simple-pool"
 version = "0.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eedccae0b778a8a7e1045f3d76fe936446fd9294fda313564b327b2b230d45a"
@@ -5326,9 +5317,9 @@ checksum = "5ee073c9e4cd00e28217186dbe12796d692868f432bf2e97ee73bed0c56dfa01"
 
 [[package]]
 name = "submap"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18e9fba79d0c1192e243de5c588c10197bd7b3b0e1d57d18c21381051a5f55d9"
+checksum = "40139f1abb193656b34682557971d59b383465632d60671b40f3de7951c4f532"
 dependencies = [
  "openssl",
 ]
