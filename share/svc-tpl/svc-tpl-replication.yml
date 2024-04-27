@@ -53,6 +53,8 @@ config:
   # subscribed OIDs
   oids:
     - "#"
+  oids_exclude:
+    - "sensor:tests/temp"
   # DANGEROUS, enable for multi-level clusters only
   #replicate_remote: true
 user: nobody
