@@ -54,5 +54,6 @@ config:
   # item OIDs / OID masks
   oids:
     - "#"
+  oids_exclude: []
 # make sure the user has create/write access for the output file
 user: eva
