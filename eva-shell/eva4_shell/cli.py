@@ -1834,3 +1834,84 @@ class CLI:
     def generator_source_destroy(self, i, generator_svc):
         call_rpc('source.destroy', dict(i=i), target=generator_svc)
         ok()
+
+    def alarm_deploy(self, alarm_svc, file=None):
+        import yaml
+        alarms = yaml.safe_load(read_file(file).decode()).pop('alarms')
+        call_rpc('alarm.deploy', dict(alarms=alarms), target=alarm_svc)
+        print(f'{len(alarms)} alarm(s) deployed')
+        print()
+
+    def alarm_undeploy(self, alarm_svc, file=None):
+        import yaml
+        alarms = yaml.safe_load(read_file(file).decode()).pop('alarms')
+        call_rpc('alarm.undeploy', dict(alarms=alarms), target=alarm_svc)
+        print(f'{len(alarms)} alarm(s) undeployed')
+        print()
+
+    def alarm_list(self, alarm_svc, level=None, group=None, id=None):
+        flt = {}
+        if level:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        data = call_rpc('alarm.list', flt, target=alarm_svc)
+        print_result(data, cols=['oid', 'level', 'group', 'id'])
+
+    def alarm_state(self,
+                    alarm_svc,
+                    host=None,
+                    level=None,
+                    group=None,
+                    id=None,
+                    current=None):
+        flt = {}
+        if host:
+            flt['host'] = host
+        if level:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        if current:
+            flt['current'] = current
+        data = call_rpc('alarm.state', flt, target=alarm_svc)
+        print_result(data,
+                     cols=['oid', 'host', 'level', 'group', 'id', 'current'])
+
+    def alarm_export(self,
+                     alarm_svc,
+                     level=None,
+                     group=None,
+                     id=None,
+                     output=None):
+        c = 0
+        configs = []
+        flt = {}
+        if level:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        for alarm in call_rpc('alarm.list', flt, target=alarm_svc):
+            config = call_rpc('alarm.get_config',
+                              dict(i=alarm['oid']),
+                              target=alarm_svc)
+            configs.append(config)
+            c += 1
+        result = dict(alarms=configs)
+        if current_command.json:
+            print_result(result)
+        else:
+            import yaml
+            dump = yaml.dump(result, default_flow_style=False)
+            if output is None:
+                print(dump)
+            else:
+                write_file(output, dump)
+                print(f'{c} alarm(s) exported')
+                print()

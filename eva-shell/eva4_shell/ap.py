@@ -17,7 +17,7 @@ from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
 from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
-from .client import DEFAULT_ACCOUNTING_SERVICE
+from .client import DEFAULT_ACCOUNTING_SERVICE, DEFAULT_ALARM_SERVICE
 
 DEFAULT_RPC_ERROR_MESSAGE = {
     -32700: 'parse error',
@@ -231,6 +231,72 @@ def append_accounting_cli(root_sp):
     p.add_argument('--data', metavar='DATA')
     p.add_argument('--code', metavar='CODE', type=int)
     p.add_argument('--err', metavar='ERR')
+
+
+def append_alarm_cli(root_sp):
+    ap = root_sp.add_parser('alarm', help='alarm commands')
+    sp = ap.add_subparsers(dest='_subc', help='sub command')
+
+    p = sp.add_parser('state', help='alarm state')
+    p.add_argument('--host', metavar='HOST', help='filter by host')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('--current',
+                   choices=[
+                       'TT',
+                       'TL',
+                       'LL',
+                       'SS',
+                       'SD',
+                       'OS',
+                       'CC',
+                       'AA',
+                   ],
+                   metavar='CURRENT',
+                   help='filter by current status')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+
+    p = sp.add_parser('list', help='list managed alarms')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+
+    p = sp.add_parser('deploy',
+                      help='deploy managed alarm(s) from a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+
+    p = sp.add_parser('undeploy',
+                      help='undeploy managed alarm(s) using a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+
+    p = sp.add_parser('export', help='export managed alarms')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('-o', '--output', metavar='FILE',
+                   help='output file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
 
 
 def append_dobj_cli(root_sp):
@@ -1404,6 +1470,7 @@ def init_ap():
     append_action_cli(sp)
     append_acl_cli(sp)
     append_accounting_cli(sp)
+    append_alarm_cli(sp)
     append_broker_cli(sp)
     append_item_cli(sp)
     append_dobj_cli(sp)
