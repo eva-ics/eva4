@@ -1052,9 +1052,9 @@ impl RpcHandlers for BusApi {
                 struct ParamsSet<'a> {
                     #[serde(borrow)]
                     i: &'a str, // OID or OID mask (parse later)
-                    #[serde(default)]
+                    #[serde(default, alias = "s")]
                     status: Option<ItemStatus>,
-                    #[serde(default)]
+                    #[serde(default, alias = "v")]
                     value: ValueOptionOwned,
                 }
                 need_ready!();

@@ -59,6 +59,7 @@ class ComplSvc:
             if self.prefix is None or i.startswith(self.prefix):
                 yield i
 
+
 class ComplDobj:
 
     def __init__(self):
@@ -69,6 +70,7 @@ class ComplDobj:
             i = r['name']
             if self.prefix is None or i.startswith(self.prefix):
                 yield i
+
 
 class ComplSvcRpcMethod:
 
@@ -127,6 +129,9 @@ class ComplDeployFile:
         else:
             prefix = expand_user(prefix)
             masks = [f'{prefix}*.yml', f'{prefix}*.yaml', f'{prefix}*.json']
+            if '.' in prefix:
+                p = prefix.rsplit('.', 1)[0]
+                masks += [f'{p}*.yml', f'{p}*.yaml', f'{p}*.json']
         for mask in masks:
             for f in glob.glob(mask):
                 yield contract_user(f)

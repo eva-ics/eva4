@@ -35,6 +35,7 @@ service = None
 
 locker_svc = None
 mailer_svc = None
+alarm_svc = None
 
 g = LocalProxy()
 
@@ -348,6 +349,32 @@ def mail(subject=None, text=None, rcp=None, i=None):
                  text=text,
                  rcp=rcp,
                  i=i)
+
+
+def set_alarm(oid, op, source='lmacro'):
+    """
+    Sets alarm state
+
+    Requires alarm svc to be set in the controller config
+
+    Args:
+        oid: alarm OID
+        op: alarm operation
+    Optional:
+        source: alarm source (default: lmacro)
+
+    Raises:
+        FunctionFailed: failed to set alarm state
+    """
+    if alarm_svc is None:
+        raise MethodNotImplemented('no alarm svc defined')
+    else:
+        rpc_call('alarm.set',
+                 _target=alarm_svc,
+                 i=oid,
+                 op=op,
+                 source=source,
+                 sk='P')
 
 
 def state(oid):
@@ -928,6 +955,7 @@ api_globals = {
     'ping': ping,
     'time': time.time,
     'mail': mail,
+    'set_alarm': set_alarm,
     'instant': time.perf_counter,
     'date': date,
     'ls': ls,

@@ -17,7 +17,24 @@ from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
 from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
-from .client import DEFAULT_ACCOUNTING_SERVICE
+from .client import DEFAULT_ACCOUNTING_SERVICE, DEFAULT_ALARM_SERVICE
+
+ALARM_OP_CODES = [
+    'TT', 'TL', 'LL', 'SS', 'SD', 'OS', 'CC', 'AA', 'US', 'RD', 'IS'
+]
+
+ALARM_OP_SOURCE_KINDS = ['U', 'R', 'P']
+
+ALARM_CURRENT_CODES = [
+    'TT',
+    'TL',
+    'LL',
+    'SS',
+    'SD',
+    'OS',
+    'CC',
+    'AA',
+]
 
 DEFAULT_RPC_ERROR_MESSAGE = {
     -32700: 'parse error',
@@ -231,6 +248,160 @@ def append_accounting_cli(root_sp):
     p.add_argument('--data', metavar='DATA')
     p.add_argument('--code', metavar='CODE', type=int)
     p.add_argument('--err', metavar='ERR')
+
+
+def append_alarm_cli(root_sp):
+    ap = root_sp.add_parser('alarm', help='alarm commands')
+    sp = ap.add_subparsers(dest='_subc', help='sub command')
+
+    p = sp.add_parser('summary', help='alarm summary')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('state', help='alarm state')
+    p.add_argument('--node', metavar='NODE', help='filter by node')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('--current',
+                   choices=ALARM_CURRENT_CODES,
+                   metavar='CURRENT',
+                   help='filter by current status')
+    p.add_argument('--active', action='store_true', help='active only')
+    p.add_argument('--inactive', action='store_true', help='inactive only')
+    p.add_argument('--user', help='view user subscriptions')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('history', help='alarm history')
+    p.add_argument('-y', '--full', action='store_true')
+    p.add_argument('-s', '--time-start', metavar='TIME', help='start time')
+    p.add_argument('-e', '--time-end', metavar='TIME', help='end time')
+    p.add_argument('-z',
+                   '--time-zone',
+                   metavar='ZONE',
+                   help='time zone (pytz, e.g. UTC or Europe/Prague)')
+    p.add_argument('--node', metavar='NODE').completer = ComplNode()
+    p.add_argument('--level-min', metavar='LEVEL', type=int)
+    p.add_argument('--level-max', metavar='LEVEL', type=int)
+    p.add_argument('--group', metavar='GROUP')
+    p.add_argument('--id', metavar='ID')
+    p.add_argument('--ack', action='store_true')
+    p.add_argument('--no-ack', action='store_true')
+    p.add_argument('--latch', action='store_true')
+    p.add_argument('--no-latch', action='store_true')
+    p.add_argument('--oos', action='store_true')
+    p.add_argument('--no-oos', action='store_true')
+    p.add_argument('--sbd', action='store_true')
+    p.add_argument('--no-sbd', action='store_true')
+    p.add_argument('--shelv', action='store_true')
+    p.add_argument('--no-shelv', action='store_true')
+    p.add_argument('--trig', action='store_true')
+    p.add_argument('--no-trig', action='store_true')
+    p.add_argument('--lo', choices=ALARM_OP_CODES, help='last operation')
+    p.add_argument('--losk',
+                   choices=ALARM_OP_SOURCE_KINDS,
+                   help='last operation source kind')
+    p.add_argument('--los', help='last operation source')
+
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('list', help='list managed alarms')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('edit', help='edit a managed alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('create', help='create a new managed alarm')
+    p.add_argument('level', type=int, metavar='LEVEL')
+    p.add_argument('full_id', metavar='GROUP/ID')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('destroy', help='destroy a managed alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('acknowledge', help='acknowledge alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
+    p = sp.add_parser('shelve', help='shelve alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
+    p = sp.add_parser('unshelve', help='unshelve alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
+    p = sp.add_parser('deploy',
+                      help='deploy managed alarm(s) from a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('undeploy',
+                      help='undeploy managed alarm(s) using a deployment file')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('export', help='export managed alarms')
+    p.add_argument('--group', metavar='GROUP', help='filter by group')
+    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--id', metavar='ID', help='filter by ID')
+    p.add_argument('-o', '--output', metavar='FILE',
+                   help='output file').completer = ComplDeployFile()
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
 
 def append_dobj_cli(root_sp):
@@ -1370,22 +1541,27 @@ def init_ap():
 
     ap.sections = {
         'action': [],
-        'accounting': [],
-        'broker': [],
-        'item': [],
-        'lvar': [],
-        'log': [],
-        'svc': [],
-        'server': [],
-        'registry': [],
-        'node': [],
-        'cloud': [],
-        'venv': [],
         'acl': [],
+        'accounting': [],
+        'alarm': [],
+        'broker': [],
+        'cloud': [],
+        'item': [],
+        'dobj': [],
+        'generator': [],
         'key': [],
-        'user': [],
+        'kiosk': [],
+        'log': [],
+        'lvar': [],
+        'mirror': [],
+        'node': [],
+        'server': [],
+        'spoint': [],
         'system': [],
-        'mirror': []
+        'registry': [],
+        'svc': [],
+        'user': [],
+        'venv': [],
     }
 
     ap.add_argument('-D',
@@ -1404,28 +1580,29 @@ def init_ap():
     append_action_cli(sp)
     append_acl_cli(sp)
     append_accounting_cli(sp)
+    append_alarm_cli(sp)
     append_broker_cli(sp)
+    append_cloud_cli(sp)
     append_item_cli(sp)
     append_dobj_cli(sp)
+    append_generator_cli(sp)
     append_key_cli(sp)
-    append_lvar_cli(sp)
+    append_kiosk_cli(sp)
     append_log_cli(sp)
-    append_node_cli(sp)
-    append_spoint_cli(sp)
+    append_lvar_cli(sp)
     if is_local_shell():
-        append_registry_cli(sp)
+        append_mirror_cli(sp)
+    append_node_cli(sp)
     if is_local_shell():
         append_server_cli(sp)
-    append_user_cli(sp)
-    if is_local_shell():
-        append_venv_cli(sp)
-    append_cloud_cli(sp)
-    append_generator_cli(sp)
+    append_spoint_cli(sp)
     if is_local_shell():
         append_system_cli(sp)
     if is_local_shell():
-        append_mirror_cli(sp)
-    append_kiosk_cli(sp)
+        append_registry_cli(sp)
+    append_user_cli(sp)
+    if is_local_shell():
+        append_venv_cli(sp)
 
     sp.add_parser('save', help='save scheduled states (if instant-save is off)')
     append_svc_cli(sp)

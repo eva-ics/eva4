@@ -17,7 +17,7 @@ DEFAULT_AUTH_SERVICE = 'eva.aaa.localauth'
 DEFAULT_KIOSK_SERVICE = 'eva.kioskman.default'
 DEFAULT_GENERATOR_SERVICE = 'eva.generator.default'
 DEFAULT_ACCOUNTING_SERVICE = 'eva.aaa.accounting'
-
+DEFAULT_ALARM_SERVICE = 'eva.alarm.default'
 
 def print_trace_msg(msg):
     level = msg['l']

@@ -785,7 +785,28 @@ class CLI:
         else:
             print_action_result(result)
 
-    def action_run(self, i, arg, kwarg, priority, wait):
+    def alarm_shelve(self, i, wait=None):
+        self.alarm_control_command(i, 'SS', wait=wait)
+
+    def alarm_unshelve(self, i, wait=None):
+        self.alarm_control_command(i, 'US', wait=wait)
+
+    def alarm_acknowledge(self, i, wait=None):
+        self.alarm_control_command(i, 'AA', wait=wait)
+
+    def alarm_control_command(self, i, cmd, wait=None):
+        if wait is None:
+            wait = current_command.timeout
+        try:
+            lmacro_oid = 'lmacro:' + i.rsplit('/', maxsplit=3)[0].split(
+                ':', maxsplit=1)[-1] + '/control'
+        except:
+            raise RuntimeError('invalid alarm OID')
+        self.action_run(lmacro_oid, [],
+                        [f'i={i}', f'cmd={cmd}', 'sk=U', 'src=console'],
+                        wait=wait)
+
+    def action_run(self, i, arg, kwarg, priority=None, wait=None):
         params = dict(i=i, wait=wait)
         if priority is not None:
             params['priority'] = int(priority)
@@ -1834,3 +1855,214 @@ class CLI:
     def generator_source_destroy(self, i, generator_svc):
         call_rpc('source.destroy', dict(i=i), target=generator_svc)
         ok()
+
+    def alarm_create(self, level, full_id, alarm_svc):
+        if '/' not in full_id:
+            raise ValueError('alarm full ID must contain GROUP/ID')
+        group, id = full_id.rsplit('/', 1)
+        call_rpc('alarm.deploy',
+                 dict(alarms=[dict(level=level, group=group, id=id)]),
+                 target=alarm_svc)
+        ok()
+
+    def alarm_deploy(self, alarm_svc, file=None):
+        import yaml
+        alarms = yaml.safe_load(read_file(file).decode()).pop('alarms')
+        call_rpc('alarm.deploy', dict(alarms=alarms), target=alarm_svc)
+        print(f'{len(alarms)} alarm(s) deployed')
+        print()
+
+    def alarm_undeploy(self, alarm_svc, file=None):
+        import yaml
+        alarms = yaml.safe_load(read_file(file).decode()).pop('alarms')
+        call_rpc('alarm.undeploy', dict(alarms=alarms), target=alarm_svc)
+        print(f'{len(alarms)} alarm(s) undeployed')
+        print()
+
+    def alarm_list(self, alarm_svc, level=None, group=None, id=None):
+        flt = {}
+        if level:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        data = call_rpc('alarm.list', flt, target=alarm_svc)
+        print_result(data, cols=['oid', 'level', 'group', 'id'])
+
+    def alarm_state(self,
+                    alarm_svc,
+                    node=None,
+                    level=None,
+                    group=None,
+                    id=None,
+                    current=None,
+                    active=None,
+                    inactive=None,
+                    user=None):
+        flt = {}
+        if node:
+            flt['node'] = node
+        if level is not None:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        if current:
+            flt['current'] = current
+        if active:
+            flt['active'] = True
+        if inactive:
+            flt['active'] = False
+        if user:
+            flt['u'] = user
+        data = call_rpc('alarm.state', flt, target=alarm_svc)
+        if current_command.json:
+            print_result(data)
+        else:
+            cols = ['oid', 'node', 'level', 'group', 'id', 'current']
+            if user:
+                cols += ['subscriptions']
+                for d in data:
+                    d['subscriptions'] = ''
+                    if d['subscribed_email']:
+                        d['subscriptions'] += 'M:' + ','.join(
+                            d['subscribed_email'])
+            print_result(data, cols=cols)
+
+    def alarm_summary(self, alarm_svc):
+        data = call_rpc('alarm.summary', target=alarm_svc)
+        if current_command.json:
+            print_result(data)
+        else:
+            res = []
+            for node, active in data['active_by_node'].items():
+                res.append({'node': node, 'active': active})
+            res.sort(key=lambda x: x['node'])
+            print_result(res)
+            print('total active:', data['active'])
+
+    def alarm_destroy(self, i, alarm_svc):
+        call_rpc('alarm.destroy', dict(i=i), target=alarm_svc)
+        ok()
+
+    def alarm_edit(self, i, alarm_svc):
+
+        def deploy_edited_alarm(cfg, i, alarm_svc):
+            call_rpc('alarm.deploy', dict(alarms=[cfg]), target=alarm_svc)
+            print(f'alarms re-deployed: {i}')
+            print()
+
+        config = call_rpc('alarm.get_config', dict(i=i), target=alarm_svc)
+        edit_config(config,
+                    f'alarm|{i}|config',
+                    deploy_fn=partial(deploy_edited_alarm,
+                                      i=i,
+                                      alarm_svc=alarm_svc))
+
+    def alarm_export(self,
+                     alarm_svc,
+                     level=None,
+                     group=None,
+                     id=None,
+                     output=None):
+        c = 0
+        configs = []
+        flt = {}
+        if level:
+            flt['level'] = level
+        if group:
+            flt['group'] = group
+        if id:
+            flt['id'] = id
+        for alarm in call_rpc('alarm.list', flt, target=alarm_svc):
+            config = call_rpc('alarm.get_config',
+                              dict(i=alarm['oid']),
+                              target=alarm_svc)
+            configs.append(config)
+            c += 1
+        result = dict(alarms=configs)
+        if current_command.json:
+            print_result(result)
+        else:
+            import yaml
+            dump = yaml.dump(result, default_flow_style=False)
+            if output is None:
+                print(dump)
+            else:
+                write_file(output, dump)
+                print(f'{c} alarm(s) exported')
+                print()
+
+    def alarm_history(self, alarm_svc, time_start, time_end, time_zone, node,
+                      level_min, level_max, group, id, ack, no_ack, latch,
+                      no_latch, oos, no_oos, sbd, no_sbd, shelv, no_shelv, trig,
+                      no_trig, lo, losk, los, full):
+        payload = {}
+        if time_start is not None:
+            payload['t_start'] = time_start
+        if time_end is not None:
+            payload['t_end'] = time_end
+        if node is not None:
+            payload['node'] = node
+        if level_min is not None:
+            payload['level_min'] = level_min
+        if level_max is not None:
+            payload['level_max'] = level_max
+        if group is not None:
+            payload['group'] = group
+        if id is not None:
+            payload['id'] = id
+        if ack:
+            payload['ack'] = True
+        if no_ack:
+            payload['ack'] = False
+        if latch:
+            payload['latch'] = True
+        if no_latch:
+            payload['latch'] = False
+        if oos:
+            payload['oos'] = True
+        if no_oos:
+            payload['oos'] = False
+        if sbd:
+            payload['sbd'] = True
+        if no_sbd:
+            payload['sbd'] = False
+        if shelv:
+            payload['shelv'] = True
+        if no_shelv:
+            payload['shelv'] = False
+        if trig:
+            payload['trig'] = True
+        if no_trig:
+            payload['trig'] = False
+        if lo:
+            payload['lo'] = lo
+        if losk:
+            payload['losk'] = losk
+        if los:
+            payload['los'] = los
+        data = call_rpc('alarm.history', payload, target=alarm_svc)
+        cols = [
+            't|n=time|f=time_sec{}'.format(
+                f':{time_zone}' if time_zone else ''),
+            'alarm_node|n=node',
+            'alarm_level|n=lvl',
+            'alarm_group|n=group',
+            'alarm_id|n=id',
+            'lo',
+            'losk',
+            'los',
+        ]
+        if full:
+            cols += [
+                'ack',
+                'latch',
+                'oos',
+                'sbd',
+                'shelv',
+                'trig',
+            ]
+        print_result(data, cols=cols)
