@@ -298,6 +298,18 @@ def append_alarm_cli(root_sp):
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
                    default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
 
+    # p = sp.add_parser('ack', help='Acknowledge an alarm')
+    # p.add_argument('i', metavar='ID',
+    # help='alarm OID').completer = ComplOIDtp('lvar')
+
+    # p = sp.add_parser('shelve', help='Shelve an alarm')
+    # p.add_argument('i', metavar='ID',
+    # help='alarm OID').completer = ComplOIDtp('lvar')
+
+    # p = sp.add_parser('unshelve', help='Unshelve an alarm')
+    # p.add_argument('i', metavar='ID',
+    # help='alarm OID').completer = ComplOIDtp('lvar')
+
 
 def append_dobj_cli(root_sp):
     ap = root_sp.add_parser('dobj', help='data object commands')
@@ -1436,22 +1448,27 @@ def init_ap():
 
     ap.sections = {
         'action': [],
-        'accounting': [],
-        'broker': [],
-        'item': [],
-        'lvar': [],
-        'log': [],
-        'svc': [],
-        'server': [],
-        'registry': [],
-        'node': [],
-        'cloud': [],
-        'venv': [],
         'acl': [],
+        'accounting': [],
+        'alarm': [],
+        'broker': [],
+        'cloud': [],
+        'item': [],
+        'dobj': [],
+        'generator': [],
         'key': [],
-        'user': [],
+        'kiosk': [],
+        'log': [],
+        'lvar': [],
+        'mirror': [],
+        'node': [],
+        'server': [],
+        'spoint': [],
         'system': [],
-        'mirror': []
+        'registry': [],
+        'svc': [],
+        'user': [],
+        'venv': [],
     }
 
     ap.add_argument('-D',
@@ -1472,27 +1489,27 @@ def init_ap():
     append_accounting_cli(sp)
     append_alarm_cli(sp)
     append_broker_cli(sp)
+    append_cloud_cli(sp)
     append_item_cli(sp)
     append_dobj_cli(sp)
+    append_generator_cli(sp)
     append_key_cli(sp)
-    append_lvar_cli(sp)
+    append_kiosk_cli(sp)
     append_log_cli(sp)
-    append_node_cli(sp)
-    append_spoint_cli(sp)
+    append_lvar_cli(sp)
     if is_local_shell():
-        append_registry_cli(sp)
+        append_mirror_cli(sp)
+    append_node_cli(sp)
     if is_local_shell():
         append_server_cli(sp)
-    append_user_cli(sp)
-    if is_local_shell():
-        append_venv_cli(sp)
-    append_cloud_cli(sp)
-    append_generator_cli(sp)
+    append_spoint_cli(sp)
     if is_local_shell():
         append_system_cli(sp)
     if is_local_shell():
-        append_mirror_cli(sp)
-    append_kiosk_cli(sp)
+        append_registry_cli(sp)
+    append_user_cli(sp)
+    if is_local_shell():
+        append_venv_cli(sp)
 
     sp.add_parser('save', help='save scheduled states (if instant-save is off)')
     append_svc_cli(sp)
