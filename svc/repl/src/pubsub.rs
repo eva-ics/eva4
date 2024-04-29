@@ -1,3 +1,4 @@
+use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::events::{
     FullItemStateAndInfoOwned, ReplicationStateEvent, REPLICATION_STATE_TOPIC,
@@ -75,25 +76,33 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                     } else {
                         #[derive(Serialize)]
                         struct ListPayload<'a> {
-                            i: &'a str,
+                            i: &'a OIDMaskList,
                             #[serde(skip_serializing_if = "Option::is_none")]
                             node: Option<&'a str>,
                             include: Vec<String>,
-                            exclude: Vec<String>,
+                            exclude: Vec<&'a str>,
                         }
                         let rpc = crate::RPC.get().unwrap();
                         let acl = aaa::get_acl(rpc, key_id).await?;
                         let mut data = crate::PULL_DATA.get().unwrap().clone();
                         let (allow, deny) = acl.get_items_allow_deny_reading();
+                        let mut exclude = deny.iter().map(String::as_str).collect::<Vec<_>>();
+                        exclude.extend(
+                            crate::OIDS_EXCLUDE
+                                .get()
+                                .unwrap()
+                                .iter()
+                                .map(String::as_str),
+                        );
                         let payload = ListPayload {
-                            i: "#",
+                            i: crate::OIDS.get().unwrap(),
                             node: if self.replicate_remote {
                                 None
                             } else {
                                 Some(".local")
                             },
                             include: allow,
-                            exclude: deny,
+                            exclude,
                         };
                         let items: Vec<FullItemStateAndInfoOwned> = unpack(
                             safe_rpc_call(

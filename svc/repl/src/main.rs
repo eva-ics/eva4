@@ -34,21 +34,21 @@ const DEFAULT_PING_INTERVAL: Duration = Duration::from_secs(10);
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-lazy_static::lazy_static! {
-    static ref BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = <_>::default();
-    static ref BULK_STATE_TOPIC: OnceCell<String> = <_>::default();
-    static ref PUBSUB_RPC: OnceCell<Arc<psrpc::RpcClient>> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref KEY_SVC: OnceCell<String> = <_>::default();
-    static ref SYSTEM_NAME: OnceCell<String> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref DEFAULT_KEY_ID: OnceCell<String> = <_>::default();
-    static ref REG: OnceCell<Registry> = <_>::default();
-    static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
-    static ref PULL_DATA: OnceCell<nodes::PullData> = <_>::default();
-    static ref BULK_SECURE_TOPICS: OnceCell<HashSet<String>> = <_>::default();
+static BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = OnceCell::new();
+static BULK_STATE_TOPIC: OnceCell<String> = OnceCell::new();
+static PUBSUB_RPC: OnceCell<Arc<psrpc::RpcClient>> = OnceCell::new();
+static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static KEY_SVC: OnceCell<String> = OnceCell::new();
+static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static DEFAULT_KEY_ID: OnceCell<String> = OnceCell::new();
+static REG: OnceCell<Registry> = OnceCell::new();
+static HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = OnceCell::new();
+static PULL_DATA: OnceCell<nodes::PullData> = OnceCell::new();
+static BULK_SECURE_TOPICS: OnceCell<HashSet<String>> = OnceCell::new();
 
-}
+static OIDS: OnceCell<OIDMaskList> = OnceCell::new();
+static OIDS_EXCLUDE: OnceCell<Vec<String>> = OnceCell::new();
 
 static DISCOVERY_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static SUBSCRIBE_EACH: atomic::AtomicBool = atomic::AtomicBool::new(false);
@@ -248,6 +248,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config.subscribe == SubscribeKind::Each,
         atomic::Ordering::SeqCst,
     );
+    OIDS.set(config.oids.clone())
+        .map_err(|_| Error::core("unable to set OIDS"))?;
+    let oids_exclude_s: Vec<String> = config
+        .oids_exclude
+        .oid_masks()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    OIDS_EXCLUDE
+        .set(oids_exclude_s)
+        .map_err(|_| Error::core("unable to set OIDS_EXCLUDE"))?;
     let qos = config.pubsub.qos;
     let (sender_tx, sender_rx) = async_channel::bounded(config.pubsub.queue_size);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
