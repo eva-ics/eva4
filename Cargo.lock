@@ -2128,7 +2128,6 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "jemallocator",
- "lazy_static",
  "log",
  "once_cell",
  "openssl",
