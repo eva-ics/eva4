@@ -3,6 +3,7 @@ use eva_common::events::{
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic;
@@ -22,11 +23,9 @@ pub struct PullData {
     pub items: Option<Vec<ReplicationInventoryItem>>,
 }
 
-lazy_static::lazy_static! {
-    pub static ref NODES: RwLock<HashMap<String, Node>> = <_>::default();
-    pub static ref RELOAD_TRIGGERS: RwLock<HashMap<String,
-        async_channel::Sender<bool>>> = <_>::default();
-}
+pub static NODES: Lazy<RwLock<HashMap<String, Node>>> = Lazy::new(<_>::default);
+pub static RELOAD_TRIGGERS: Lazy<RwLock<HashMap<String, async_channel::Sender<bool>>>> =
+    Lazy::new(<_>::default);
 
 #[allow(clippy::too_many_lines)]
 async fn reload_node(

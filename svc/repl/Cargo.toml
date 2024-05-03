@@ -13,7 +13,6 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 jemallocator = { workspace = true }
 psrpc = { workspace = true }
