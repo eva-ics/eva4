@@ -237,8 +237,14 @@ def append_alarm_cli(root_sp):
     ap = root_sp.add_parser('alarm', help='alarm commands')
     sp = ap.add_subparsers(dest='_subc', help='sub command')
 
+    p = sp.add_parser('summary', help='alarm summary')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
     p = sp.add_parser('state', help='alarm state')
-    p.add_argument('--host', metavar='HOST', help='filter by host')
+    p.add_argument('--node', metavar='NODE', help='filter by node')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
     p.add_argument('--level', metavar='LEVEL', help='filter by level')
     p.add_argument('--id', metavar='ID', help='filter by ID')
@@ -255,10 +261,12 @@ def append_alarm_cli(root_sp):
                    ],
                    metavar='CURRENT',
                    help='filter by current status')
+    p.add_argument('--active', action='store_true', help='active only')
+    p.add_argument('--inactive', action='store_true', help='inactive only')
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
-                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     p = sp.add_parser('list', help='list managed alarms')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
@@ -267,7 +275,7 @@ def append_alarm_cli(root_sp):
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
-                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     p = sp.add_parser('deploy',
                       help='deploy managed alarm(s) from a deployment file')
@@ -276,7 +284,7 @@ def append_alarm_cli(root_sp):
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
-                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     p = sp.add_parser('undeploy',
                       help='undeploy managed alarm(s) using a deployment file')
@@ -285,7 +293,7 @@ def append_alarm_cli(root_sp):
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
-                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     p = sp.add_parser('export', help='export managed alarms')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
@@ -296,7 +304,7 @@ def append_alarm_cli(root_sp):
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
-                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('aaa')
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     # p = sp.add_parser('ack', help='Acknowledge an alarm')
     # p.add_argument('i', metavar='ID',

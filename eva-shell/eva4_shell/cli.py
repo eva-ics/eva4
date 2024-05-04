@@ -1862,15 +1862,17 @@ class CLI:
 
     def alarm_state(self,
                     alarm_svc,
-                    host=None,
+                    node=None,
                     level=None,
                     group=None,
                     id=None,
-                    current=None):
+                    current=None,
+                    active=None,
+                    inactive=None):
         flt = {}
-        if host:
-            flt['host'] = host
-        if level:
+        if node:
+            flt['node'] = node
+        if level is not None:
             flt['level'] = level
         if group:
             flt['group'] = group
@@ -1878,9 +1880,25 @@ class CLI:
             flt['id'] = id
         if current:
             flt['current'] = current
+        if active:
+            flt['active'] = True
+        if inactive:
+            flt['active'] = False
         data = call_rpc('alarm.state', flt, target=alarm_svc)
         print_result(data,
-                     cols=['oid', 'host', 'level', 'group', 'id', 'current'])
+                     cols=['oid', 'node', 'level', 'group', 'id', 'current'])
+
+    def alarm_summary(self, alarm_svc):
+        data = call_rpc('alarm.summary', target=alarm_svc)
+        if current_command.json:
+            print_result(data)
+        else:
+            res = []
+            for node, active in data['active_by_node'].items():
+                res.append({'node': node, 'active': active})
+            res.sort(key=lambda x: x['node'])
+            print_result(res)
+            print('total active:', data['active'])
 
     def alarm_export(self,
                      alarm_svc,
