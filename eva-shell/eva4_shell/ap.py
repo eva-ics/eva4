@@ -19,6 +19,23 @@ from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
 from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
 from .client import DEFAULT_ACCOUNTING_SERVICE, DEFAULT_ALARM_SERVICE
 
+ALARM_OP_CODES = [
+    'TT', 'TL', 'LL', 'SS', 'SD', 'OS', 'CC', 'AA', 'US', 'RD', 'IS'
+]
+
+ALARM_OP_SOURCE_KINDS = ['U', 'R', 'P']
+
+ALARM_CURRENT_CODES = [
+    'TT',
+    'TL',
+    'LL',
+    'SS',
+    'SD',
+    'OS',
+    'CC',
+    'AA',
+]
+
 DEFAULT_RPC_ERROR_MESSAGE = {
     -32700: 'parse error',
     -32600: 'invalid request',
@@ -249,20 +266,47 @@ def append_alarm_cli(root_sp):
     p.add_argument('--level', metavar='LEVEL', help='filter by level')
     p.add_argument('--id', metavar='ID', help='filter by ID')
     p.add_argument('--current',
-                   choices=[
-                       'TT',
-                       'TL',
-                       'LL',
-                       'SS',
-                       'SD',
-                       'OS',
-                       'CC',
-                       'AA',
-                   ],
+                   choices=ALARM_CURRENT_CODES,
                    metavar='CURRENT',
                    help='filter by current status')
     p.add_argument('--active', action='store_true', help='active only')
     p.add_argument('--inactive', action='store_true', help='inactive only')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
+    p = sp.add_parser('history', help='alarm history')
+    p.add_argument('-y', '--full', action='store_true')
+    p.add_argument('-s', '--time-start', metavar='TIME', help='start time')
+    p.add_argument('-e', '--time-end', metavar='TIME', help='end time')
+    p.add_argument('-z',
+                   '--time-zone',
+                   metavar='ZONE',
+                   help='time zone (pytz, e.g. UTC or Europe/Prague)')
+    p.add_argument('--node', metavar='NODE').completer = ComplNode()
+    p.add_argument('--level-min', metavar='LEVEL', type=int)
+    p.add_argument('--level-max', metavar='LEVEL', type=int)
+    p.add_argument('--group', metavar='GROUP')
+    p.add_argument('--id', metavar='ID')
+    p.add_argument('--ack', action='store_true')
+    p.add_argument('--no-ack', action='store_true')
+    p.add_argument('--latch', action='store_true')
+    p.add_argument('--no-latch', action='store_true')
+    p.add_argument('--oos', action='store_true')
+    p.add_argument('--no-oos', action='store_true')
+    p.add_argument('--sbd', action='store_true')
+    p.add_argument('--no-sbd', action='store_true')
+    p.add_argument('--shelv', action='store_true')
+    p.add_argument('--no-shelv', action='store_true')
+    p.add_argument('--trig', action='store_true')
+    p.add_argument('--no-trig', action='store_true')
+    p.add_argument('--lo', choices=ALARM_OP_CODES, help='last operation')
+    p.add_argument('--losk',
+                   choices=ALARM_OP_SOURCE_KINDS,
+                   help='last operation source kind')
+    p.add_argument('--los', help='last operation source')
+
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',

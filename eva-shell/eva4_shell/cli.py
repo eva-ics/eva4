@@ -1933,3 +1933,75 @@ class CLI:
                 write_file(output, dump)
                 print(f'{c} alarm(s) exported')
                 print()
+
+    def alarm_history(self, alarm_svc, time_start, time_end, time_zone, node,
+                      level_min, level_max, group, id, ack, no_ack, latch,
+                      no_latch, oos, no_oos, sbd, no_sbd, shelv, no_shelv, trig,
+                      no_trig, lo, losk, los, full):
+        payload = {}
+        if time_start is not None:
+            payload['t_start'] = time_start
+        if time_end is not None:
+            payload['t_end'] = time_end
+        if node is not None:
+            payload['node'] = node
+        if level_min is not None:
+            payload['level_min'] = level_min
+        if level_max is not None:
+            payload['level_max'] = level_max
+        if group is not None:
+            payload['group'] = group
+        if id is not None:
+            payload['id'] = id
+        if ack:
+            payload['ack'] = True
+        if no_ack:
+            payload['ack'] = False
+        if latch:
+            payload['latch'] = True
+        if no_latch:
+            payload['latch'] = False
+        if oos:
+            payload['oos'] = True
+        if no_oos:
+            payload['oos'] = False
+        if sbd:
+            payload['sbd'] = True
+        if no_sbd:
+            payload['sbd'] = False
+        if shelv:
+            payload['shelv'] = True
+        if no_shelv:
+            payload['shelv'] = False
+        if trig:
+            payload['trig'] = True
+        if no_trig:
+            payload['trig'] = False
+        if lo:
+            payload['lo'] = lo
+        if losk:
+            payload['losk'] = losk
+        if los:
+            payload['los'] = los
+        data = call_rpc('alarm.history', payload, target=alarm_svc)
+        cols = [
+            't|n=time|f=time_sec{}'.format(
+                f':{time_zone}' if time_zone else ''),
+            'alarm_node|n=node',
+            'alarm_level|n=lvl',
+            'alarm_group|n=group',
+            'alarm_id|n=id',
+            'lo',
+            'losk',
+            'los',
+        ]
+        if full:
+            cols += [
+                'ack',
+                'latch',
+                'oos',
+                'sbd',
+                'shelv',
+                'trig',
+            ]
+        print_result(data, cols=cols)
