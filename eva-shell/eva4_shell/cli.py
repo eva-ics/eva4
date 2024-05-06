@@ -785,7 +785,28 @@ class CLI:
         else:
             print_action_result(result)
 
-    def action_run(self, i, arg, kwarg, priority, wait):
+    def alarm_shelve(self, i, wait=None):
+        self.alarm_control_command(i, 'SS', wait=wait)
+
+    def alarm_unshelve(self, i, wait=None):
+        self.alarm_control_command(i, 'US', wait=wait)
+
+    def alarm_acknowledge(self, i, wait=None):
+        self.alarm_control_command(i, 'AA', wait=wait)
+
+    def alarm_control_command(self, i, cmd, wait=None):
+        if wait is None:
+            wait = current_command.timeout
+        try:
+            lmacro_oid = 'lmacro:' + i.rsplit('/', maxsplit=3)[0].split(
+                ':', maxsplit=1)[-1] + '/control'
+        except:
+            raise RuntimeError('invalid alarm OID')
+        self.action_run(lmacro_oid, [],
+                        [f'i={i}', f'cmd={cmd}', 'sk=U', 'src=console'],
+                        wait=wait)
+
+    def action_run(self, i, arg, kwarg, priority=None, wait=None):
         params = dict(i=i, wait=wait)
         if priority is not None:
             params['priority'] = int(priority)

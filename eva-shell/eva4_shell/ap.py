@@ -321,6 +321,36 @@ def append_alarm_cli(root_sp):
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
                    default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
+    p = sp.add_parser('acknowledge', help='acknowledge alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
+    p = sp.add_parser('shelve', help='shelve alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
+    p = sp.add_parser('unshelve', help='unshelve alarm')
+    p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
+    p.add_argument(
+        '-w',
+        '--wait',
+        metavar='SEC',
+        type=float,
+        help='wait max seconds until the action is completed (default: timeout)'
+    )
+
     p = sp.add_parser('deploy',
                       help='deploy managed alarm(s) from a deployment file')
     p.add_argument('-f', '--file', metavar='FILE',
@@ -349,18 +379,6 @@ def append_alarm_cli(root_sp):
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
                    default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
-
-    # p = sp.add_parser('ack', help='Acknowledge an alarm')
-    # p.add_argument('i', metavar='ID',
-    # help='alarm OID').completer = ComplOIDtp('lvar')
-
-    # p = sp.add_parser('shelve', help='Shelve an alarm')
-    # p.add_argument('i', metavar='ID',
-    # help='alarm OID').completer = ComplOIDtp('lvar')
-
-    # p = sp.add_parser('unshelve', help='Unshelve an alarm')
-    # p.add_argument('i', metavar='ID',
-    # help='alarm OID').completer = ComplOIDtp('lvar')
 
 
 def append_dobj_cli(root_sp):
