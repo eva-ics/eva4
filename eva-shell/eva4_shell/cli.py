@@ -1921,6 +1921,24 @@ class CLI:
             print_result(res)
             print('total active:', data['active'])
 
+    def alarm_destroy(self, i, alarm_svc):
+        call_rpc('alarm.destroy', dict(i=i), target=alarm_svc)
+        ok()
+
+    def alarm_edit(self, i, alarm_svc):
+
+        def deploy_edited_alarm(cfg, i, alarm_svc):
+            call_rpc('alarm.deploy', dict(alarms=[cfg]), target=alarm_svc)
+            print(f'alarms re-deployed: {i}')
+            print()
+
+        config = call_rpc('alarm.get_config', dict(i=i), target=alarm_svc)
+        edit_config(config,
+                    f'alarm|{i}|config',
+                    deploy_fn=partial(deploy_edited_alarm,
+                                      i=i,
+                                      alarm_svc=alarm_svc))
+
     def alarm_export(self,
                      alarm_svc,
                      level=None,
