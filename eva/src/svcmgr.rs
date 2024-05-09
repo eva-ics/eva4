@@ -1,4 +1,5 @@
 use crate::eapi::EAPI_VERSION;
+use crate::logs::LogLevel;
 use crate::MEMORY_WARN_DEFAULT;
 use crate::{EResult, Error};
 use crate::{BUILD, VERSION};
@@ -556,6 +557,7 @@ pub struct Params {
     launcher: Arc<String>,
     #[serde(default)]
     call_tracing: bool,
+    log_level: Option<String>,
 }
 
 impl Params {
@@ -575,6 +577,14 @@ impl Params {
         if crate::is_unix_socket!(bus.path()) {
             bus.set_path(&format_path(&dir_eva, Some(bus.path()), None));
         }
+        let mut log_level: u8 = crate::logs::get_min_log_level().0;
+        if let Some(lvl) = &self.log_level {
+            if lvl == "off" {
+                log_level = eva_common::LOG_LEVEL_OFF;
+            } else {
+                log_level = lvl.parse::<LogLevel>().map_or(log_level, |l| l.0);
+            }
+        }
         Initial::new(
             id,
             system_name,
@@ -587,7 +597,7 @@ impl Params {
                 VERSION,
                 EAPI_VERSION,
                 &dir_eva,
-                crate::logs::get_min_log_level().0,
+                log_level,
                 core_active,
             ),
             bus,

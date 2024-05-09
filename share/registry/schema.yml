@@ -167,6 +167,7 @@ config/logs:
           - info
           - warn
           - error
+          - "off"
       keep: *intzeropositive
       max_records: *intzeropositive
     required:
@@ -300,6 +301,16 @@ svc:
     react_to_fail: *bool
     mem_warn: *intpositiveornull
     call_tracing: *bool
+    log_level:
+      type: ["string", "null"]
+      enum:
+        - trace
+        - debug
+        - info
+        - warn
+        - error
+        - "off"
+        - null
     launcher: *str
   required:
     - bus

@@ -521,7 +521,7 @@ dependencies = [
  "bmart",
  "busrt",
  "clap 3.2.25",
- "env_logger",
+ "env_logger 0.11.2",
  "eva-common",
  "log",
  "serde",
@@ -1464,6 +1464,19 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
+dependencies = [
+ "humantime",
+ "is-terminal",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
@@ -1629,7 +1642,7 @@ dependencies = [
  "chrono",
  "clap 3.2.25",
  "colored 2.1.0",
- "env_logger",
+ "env_logger 0.11.2",
  "eva-client",
  "eva-common",
  "expanduser",
@@ -1652,9 +1665,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.50"
+version = "0.3.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5d4227a29bcbfe3dac81436a46b4d6527f0f3b51425df8ca6787127f237c02c"
+checksum = "bf767455ce2587dcf732bab3ab1e20df68e32de61e0b1129918cf1c418356dc9"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -1664,7 +1677,7 @@ dependencies = [
  "busrt",
  "chrono",
  "dateparser",
- "env_logger",
+ "env_logger 0.10.2",
  "hex 0.4.3",
  "hyper",
  "hyper-static",
