@@ -271,6 +271,7 @@ def append_alarm_cli(root_sp):
                    help='filter by current status')
     p.add_argument('--active', action='store_true', help='active only')
     p.add_argument('--inactive', action='store_true', help='inactive only')
+    p.add_argument('--user', help='view user subscriptions')
     p.add_argument('-a',
                    '--alarm-svc',
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',

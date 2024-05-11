@@ -1889,7 +1889,8 @@ class CLI:
                     id=None,
                     current=None,
                     active=None,
-                    inactive=None):
+                    inactive=None,
+                    user=None):
         flt = {}
         if node:
             flt['node'] = node
@@ -1905,9 +1906,19 @@ class CLI:
             flt['active'] = True
         if inactive:
             flt['active'] = False
+        if user:
+            flt['u'] = user
         data = call_rpc('alarm.state', flt, target=alarm_svc)
-        print_result(data,
-                     cols=['oid', 'node', 'level', 'group', 'id', 'current'])
+        cols = ['oid', 'node', 'level', 'group', 'id', 'current']
+        if user:
+            cols += ['subs']
+            for d in data:
+                d['subs'] = ''
+                if d['subscribed_email']:
+                    d['subs'] += '📧 '
+                else:
+                    d['subs'] += '  '
+        print_result(data, cols=cols)
 
     def alarm_summary(self, alarm_svc):
         data = call_rpc('alarm.summary', target=alarm_svc)
