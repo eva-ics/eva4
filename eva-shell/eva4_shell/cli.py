@@ -1915,9 +1915,9 @@ class CLI:
             for d in data:
                 d['subs'] = ''
                 if d['subscribed_email']:
-                    d['subs'] += '📧 '
+                    d['subs'] += 'M'
                 else:
-                    d['subs'] += '  '
+                    d['subs'] += ' '
         print_result(data, cols=cols)
 
     def alarm_summary(self, alarm_svc):
