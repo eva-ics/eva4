@@ -329,6 +329,14 @@ def append_alarm_cli(root_sp):
                    help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
                    default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
+    p = sp.add_parser('create', help='create a new managed alarm')
+    p.add_argument('level', type=int, metavar='LEVEL')
+    p.add_argument('full_id', metavar='GROUP/ID')
+    p.add_argument('-a',
+                   '--alarm-svc',
+                   help=f'Alarm service (default: {DEFAULT_ALARM_SERVICE})',
+                   default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
+
     p = sp.add_parser('destroy', help='destroy a managed alarm')
     p.add_argument('i', metavar='OID').completer = ComplOIDtp('lvar')
     p.add_argument('-a',

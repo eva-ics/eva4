@@ -1856,6 +1856,15 @@ class CLI:
         call_rpc('source.destroy', dict(i=i), target=generator_svc)
         ok()
 
+    def alarm_create(self, level, full_id, alarm_svc):
+        if '/' not in full_id:
+            raise ValueError('alarm full ID must contain GROUP/ID')
+        group, id = full_id.rsplit('/', 1)
+        call_rpc('alarm.deploy',
+                 dict(alarms=[dict(level=level, group=group, id=id)]),
+                 target=alarm_svc)
+        ok()
+
     def alarm_deploy(self, alarm_svc, file=None):
         import yaml
         alarms = yaml.safe_load(read_file(file).decode()).pop('alarms')
