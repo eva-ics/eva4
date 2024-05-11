@@ -1909,16 +1909,18 @@ class CLI:
         if user:
             flt['u'] = user
         data = call_rpc('alarm.state', flt, target=alarm_svc)
-        cols = ['oid', 'node', 'level', 'group', 'id', 'current']
-        if user:
-            cols += ['subs']
-            for d in data:
-                d['subs'] = ''
-                if d['subscribed_email']:
-                    d['subs'] += 'M'
-                else:
-                    d['subs'] += ' '
-        print_result(data, cols=cols)
+        if current_command.json:
+            print_result(data)
+        else:
+            cols = ['oid', 'node', 'level', 'group', 'id', 'current']
+            if user:
+                cols += ['subscriptions']
+                for d in data:
+                    d['subscriptions'] = ''
+                    if d['subscribed_email']:
+                        d['subscriptions'] += 'M:' + ','.join(
+                            d['subscribed_email'])
+            print_result(data, cols=cols)
 
     def alarm_summary(self, alarm_svc):
         data = call_rpc('alarm.summary', target=alarm_svc)
