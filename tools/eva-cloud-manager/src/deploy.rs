@@ -320,6 +320,9 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 test_mp!("source.deploy", "generator_sources"),
             );
         }
+        if node.alarms.is_some() {
+            svcs_to_test.insert(&node.params.alarm_svc, test_mp!("alarm.deploy", "alarms"));
+        }
         for (svc, p) in svcs_to_test {
             if node.svcs.iter().any(|s| s.id == svc) {
                 info!("skipping service test {}/{}", node.node, svc);
@@ -482,6 +485,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 &node.params.generator_svc,
                 "source.deploy"
             );
+            deploy_resource!(
+                node.alarms,
+                "alarms",
+                &node.params.alarm_svc,
+                "alarm.deploy"
+            );
             if !node.extra.deploy.after.is_empty() {
                 info!("executing after deploy tasks");
                 execute_extra(&client, &node.node, node.extra.deploy.after, timeout).await?;
@@ -514,6 +523,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 "dobj.undeploy"
             );
             undeploy_resource!(node.items, "items", "eva.core", "item.undeploy");
+            undeploy_resource!(
+                node.alarms,
+                "alarms",
+                &node.params.alarm_svc,
+                "alarm.undeploy"
+            );
             undeploy_resource!(
                 node.generator_sources,
                 "generator_sources",
@@ -582,6 +597,8 @@ struct DeploymentContent {
     items: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     generator_sources: ValueOptionOwned,
+    #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
+    alarms: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     data_objects: ValueOptionOwned,
     #[serde(default)]
@@ -664,6 +681,10 @@ fn default_generator_svc() -> String {
     "eva.generator.default".to_owned()
 }
 
+fn default_alarm_svc() -> String {
+    "eva.alarm.default".to_owned()
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_field_names)]
@@ -678,6 +699,8 @@ struct NodeParams {
     filemgr_svc: String,
     #[serde(default = "default_generator_svc")]
     generator_svc: String,
+    #[serde(default = "default_alarm_svc")]
+    alarm_svc: String,
 }
 
 impl Default for NodeParams {
@@ -688,6 +711,7 @@ impl Default for NodeParams {
             user_svc: default_auth_svc(),
             filemgr_svc: default_filemgr_svc(),
             generator_svc: default_generator_svc(),
+            alarm_svc: default_alarm_svc(),
         }
     }
 }
