@@ -34,6 +34,7 @@ with open(bfname) as fh:
 
 
 class Compiler:
+
     def __init__(self):
         self.cache = {}
         self.cache_lock = threading.Lock()
@@ -186,7 +187,8 @@ def run():
     _d.env.update(macro_api.api_globals)
     macro_api.service = service
     macro_api.locker_svc = config.get('locker_svc')
-    macro_api.mailer_svc = config.get('mailer_svc')
+    macro_api.mailer_svc = config.get('mailer_svc', 'eva.svc.mailer')
+    macro_api.alarm_svc = config.get('alarm_svc', 'eva.alarm.default')
     service.on_rpc_call = handle_rpc
     service.init_rpc(info)
     _d.logger.info(f'dir: {_d.dir_xcpy}, pool_size: {pool_size}')
