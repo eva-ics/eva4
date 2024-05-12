@@ -23,10 +23,14 @@ fn prop_value() -> StatePropExt {
 }
 
 #[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
+#[serde(rename_all = "lowercase")]
 enum InitialKind {
     #[default]
+    #[serde(alias = "Process")]
     Process,
+    #[serde(alias = "Skip")]
     Skip,
+    #[serde(alias = "Only")]
     Only,
 }
 
