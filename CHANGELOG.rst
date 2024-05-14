@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-05-14 build 2024051401: Service log level overriding
 * 2024-05-02 build 2024050201: Replication OID masks fixes
 * 2024-04-27 build 2024042703: SR update pipes, "phone" profile field, Py bus methods, OIDs exclude
 * 2024-04-02 build 2024040201: Vendored apps print fixes, OPC-UA logging improvements
