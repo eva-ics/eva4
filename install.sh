@@ -504,6 +504,13 @@ EOF
     ./sbin/bus -s ./var/bus.ipc rpc call eva.aaa.localauth user.deploy - > /dev/null || exit 12
 fi
 
+if [ "$PYTHON" ]; then
+  echo "Setting Python path to: ${PYTHON}"
+  ./sbin/eva-registry-cli get eva/config/python-venv | \
+    jq ".python = \"${PYTHON}\"" | \
+    ./sbin/eva-registry-cli set eva/config/python-venv - -p json > /dev/null || exit 12
+fi
+
 if [ $MODE -ge 1 ]; then
   echo "Preparing Python venv and installing eva-shell..."
   EXTRA="[\"eva-shell\""
