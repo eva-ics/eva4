@@ -109,7 +109,7 @@ class CLI:
     def server_status(self):
         eva_control_c('status')
 
-    def cloud_deploy(self, file, config_var, config, test):
+    def cloud_deploy(self, file, config_var, config, test, verbose_extra):
         args = ''
         if current_command.debug:
             args += ' --verbose '
@@ -122,9 +122,11 @@ class CLI:
             args += f' --config "{config}"'
         if test:
             args += ' --test'
+        if verbose_extra:
+            args += ' --verbose-extra'
         exec_cmd('eva-cloud-manager', args)
 
-    def cloud_undeploy(self, file, config_var, config, test):
+    def cloud_undeploy(self, file, config_var, config, test, verbose_extra):
         args = ''
         if current_command.debug:
             args += ' --verbose '
@@ -137,6 +139,8 @@ class CLI:
             args += f' --config "{config}"'
         if test:
             args += ' --test'
+        if verbose_extra:
+            args += ' --verbose-extra'
         exec_cmd('eva-cloud-manager', args)
 
     def cloud_update(self, nodes, check_timeout, all, info_only, yes):

@@ -37,6 +37,11 @@ pub struct Options {
     config: Option<String>,
     #[clap(long = "test", help = "test the configuration and exit")]
     test: bool,
+    #[clap(
+        long = "verbose-extra",
+        help = "output extra bus call parameters and results"
+    )]
+    verbose_extra: bool,
 }
 
 async fn execute_extra(
@@ -44,6 +49,7 @@ async fn execute_extra(
     node: &str,
     extra: Vec<ExtraMethod>,
     timeout: Duration,
+    verbose: bool,
 ) -> EResult<()> {
     for cmd in extra {
         match cmd {
@@ -61,9 +67,28 @@ async fn execute_extra(
                 } else {
                     None
                 };
-                let r: EResult<Value> = client.call(node, target, method, params).await;
-                if !b._pass {
-                    r?;
+                if verbose {
+                    if let Some(ref p) = params {
+                        match serde_json::to_string_pretty(p) {
+                            Ok(s) => info!("bus command parameters:\n{}", s),
+                            Err(e) => error!("unable to print bus command parameters: {}", e),
+                        }
+                    }
+                }
+                match client.call::<Value>(node, target, method, params).await {
+                    Ok(v) => {
+                        if verbose {
+                            match serde_json::to_string_pretty(&v) {
+                                Ok(s) => info!("bus command result:\n{}", s),
+                                Err(e) => error!("unable to print bus command result: {}", e),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        if !b._pass {
+                            return Err(e);
+                        }
+                    }
                 }
             }
             ExtraMethod::Func(f) => match f.function {
@@ -119,6 +144,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
         .connection_path
         .unwrap_or_else(|| crate::DEFAULT_CONNECTION_PATH.to_string());
     let timeout = Duration::from_secs_f64(opts.timeout);
+    let verbose_extra = opts.verbose_extra;
     let mut http_client = safe_http::Client::new(timeout * 10);
     http_client.allow_redirects();
     let mut tpl_context = tera::Context::new();
@@ -356,7 +382,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             info!("deploying node {}", node.node);
             if !node.extra.deploy.before.is_empty() {
                 info!("executing before deploy tasks");
-                execute_extra(&client, &node.node, node.extra.deploy.before, timeout).await?;
+                execute_extra(
+                    &client,
+                    &node.node,
+                    node.extra.deploy.before,
+                    timeout,
+                    verbose_extra,
+                )
+                .await?;
             }
             for f in node.upload {
                 let mut buf = Vec::new();
@@ -493,7 +526,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             );
             if !node.extra.deploy.after.is_empty() {
                 info!("executing after deploy tasks");
-                execute_extra(&client, &node.node, node.extra.deploy.after, timeout).await?;
+                execute_extra(
+                    &client,
+                    &node.node,
+                    node.extra.deploy.after,
+                    timeout,
+                    verbose_extra,
+                )
+                .await?;
             }
         }
     } else {
@@ -501,7 +541,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             info!("undeploying node {}", node.node);
             if !node.extra.undeploy.before.is_empty() {
                 info!("executing before undeploy tasks");
-                execute_extra(&client, &node.node, node.extra.undeploy.before, timeout).await?;
+                execute_extra(
+                    &client,
+                    &node.node,
+                    node.extra.undeploy.before,
+                    timeout,
+                    verbose_extra,
+                )
+                .await?;
             }
             macro_rules! undeploy_resource {
                 ($src: expr, $name: expr, $field: expr, $svc: expr, $fn: expr) => {
@@ -563,7 +610,14 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             }
             if !node.extra.undeploy.after.is_empty() {
                 info!("executing after undeploy tasks");
-                execute_extra(&client, &node.node, node.extra.undeploy.after, timeout).await?;
+                execute_extra(
+                    &client,
+                    &node.node,
+                    node.extra.undeploy.after,
+                    timeout,
+                    verbose_extra,
+                )
+                .await?;
             }
         }
     }

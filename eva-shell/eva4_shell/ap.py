@@ -1112,6 +1112,9 @@ def append_cloud_cli(root_sp):
     p.add_argument('--test',
                    action='store_true',
                    help=f'test deployment config and exit')
+    p.add_argument('--verbose-extra',
+                   action='store_true',
+                   help=f'output extra bus call parameters and results')
 
     p = sp.add_parser('undeploy', help='cloud undeploy')
     p.add_argument('file', metavar='FILE',
@@ -1128,6 +1131,9 @@ def append_cloud_cli(root_sp):
     p.add_argument('--test',
                    action='store_true',
                    help=f'test deployment config and exit')
+    p.add_argument('--verbose-extra',
+                   action='store_true',
+                   help=f'output extra bus call parameters and results')
 
     p = sp.add_parser('update', help='update cloud nodes')
     p.add_argument('nodes',
