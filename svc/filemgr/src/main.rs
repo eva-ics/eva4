@@ -225,6 +225,8 @@ impl RpcHandlers for Handlers {
                         )]
                         timeout: Option<Duration>,
                         stdin: Option<String>,
+                        #[serde(default)]
+                        check_exit_code: bool,
                     }
                     #[derive(Serialize)]
                     struct CmdResult {
@@ -244,11 +246,21 @@ impl RpcHandlers for Handlers {
                         opts,
                     )
                     .await?;
-                    Ok(Some(pack(&CmdResult {
-                        exitcode: result.code.unwrap_or(-15),
-                        out: result.out.join("\n"),
-                        err: result.err.join("\n"),
-                    })?))
+                    let exitcode = result.code.unwrap_or(-15);
+                    if exitcode == 0 || !p.check_exit_code {
+                        Ok(Some(pack(&CmdResult {
+                            exitcode,
+                            out: result.out.join("\n"),
+                            err: result.err.join("\n"),
+                        })?))
+                    } else {
+                        Err(Error::failed(format!(
+                            "command exit code {}\n{}",
+                            exitcode,
+                            result.err.join("\n")
+                        ))
+                        .into())
+                    }
                 }
             }
             "file.get" => {

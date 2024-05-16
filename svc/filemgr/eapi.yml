@@ -92,6 +92,10 @@ sh:
       typ: String
       des: STDIN data
       req: false
+    - nam: check_exit_code
+      typ: bool
+      des: Check exit code, return error if non-zero
+      req: false
   ret: Command execution info
   exm: |
     {
