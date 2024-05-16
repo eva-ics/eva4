@@ -1892,7 +1892,7 @@ class CLI:
         if id:
             flt['id'] = id
         data = call_rpc('alarm.list', flt, target=alarm_svc)
-        print_result(data, cols=['oid', 'level', 'group', 'id'])
+        print_result(data, cols=['oid', 'level', 'group', 'id', 'description'])
 
     def alarm_state(self,
                     alarm_svc,
@@ -1925,7 +1925,9 @@ class CLI:
         if current_command.json:
             print_result(data)
         else:
-            cols = ['oid', 'node', 'level', 'group', 'id', 'current']
+            cols = [
+                'oid', 'node', 'level', 'group', 'id', 'current', 'description'
+            ]
             if user:
                 cols += ['subscriptions']
                 for d in data:
