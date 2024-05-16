@@ -136,20 +136,47 @@ macro_rules! op_delay {
     }};
 }
 
+macro_rules! op_delay_sync {
+    ($start: expr, $result: expr) => {{
+        let elapsed = $start.elapsed();
+        let min_c_time = get_min_ctime();
+        if elapsed < min_c_time {
+            std::thread::sleep(min_c_time - elapsed);
+        }
+        $result
+    }};
+}
+
 impl Password {
-    pub async fn new_sha256(password: &str) -> Self {
+    fn new_hasher_sha256(password: &str) -> (Sha256, Instant) {
         let op_start = Instant::now();
         let mut hasher = Sha256::new();
         hasher.update(password.as_bytes());
+        (hasher, op_start)
+    }
+    pub async fn new_sha256(password: &str) -> Self {
+        let (hasher, op_start) = Self::new_hasher_sha256(password);
         op_delay!(op_start, Self::Sha256(hasher.finish()))
     }
-    pub async fn new_sha512(password: &str) -> Self {
+    pub fn new_sha256_sync(password: &str) -> Self {
+        let (hasher, op_start) = Self::new_hasher_sha256(password);
+        op_delay_sync!(op_start, Self::Sha256(hasher.finish()))
+    }
+    fn new_hasher_sha512(password: &str) -> (Sha512, Instant) {
         let op_start = Instant::now();
         let mut hasher = Sha512::new();
         hasher.update(password.as_bytes());
+        (hasher, op_start)
+    }
+    pub async fn new_sha512(password: &str) -> Self {
+        let (hasher, op_start) = Self::new_hasher_sha512(password);
         op_delay!(op_start, Self::Sha512(hasher.finish()))
     }
-    pub async fn new_pbkdf2(password: &str) -> EResult<Self> {
+    pub fn new_sha512_sync(password: &str) -> Self {
+        let (hasher, op_start) = Self::new_hasher_sha512(password);
+        op_delay_sync!(op_start, Self::Sha512(hasher.finish()))
+    }
+    fn new_hasher_pbkdf2(password: &str) -> EResult<([u8; 16], [u8; 32], Instant)> {
         let op_start = Instant::now();
         let mut salt = [0; 16];
         let mut hash = [0; 32];
@@ -162,37 +189,49 @@ impl Password {
             &mut hash,
         )
         .map_err(Error::core)?;
+        Ok((salt, hash, op_start))
+    }
+    pub async fn new_pbkdf2(password: &str) -> EResult<Self> {
+        let (salt, hash, op_start) = Self::new_hasher_pbkdf2(password)?;
         op_delay!(op_start, Ok(Self::Pbkdf2(salt, hash)))
+    }
+    pub fn new_pbkdf2_sync(password: &str) -> EResult<Self> {
+        let (salt, hash, op_start) = Self::new_hasher_pbkdf2(password)?;
+        op_delay_sync!(op_start, Ok(Self::Pbkdf2(salt, hash)))
+    }
+    fn verify_password(&self, password: &str) -> EResult<bool> {
+        Ok(match self {
+            Password::Sha256(hash) => {
+                let mut hasher = Sha256::new();
+                hasher.update(password.as_bytes());
+                &hasher.finish() == hash
+            }
+            Password::Sha512(hash) => {
+                let mut hasher = Sha512::new();
+                hasher.update(password.as_bytes());
+                &hasher.finish() == hash
+            }
+            Password::Pbkdf2(salt, hash) => {
+                let mut password_hash = [0; 32];
+                pkcs5::pbkdf2_hmac(
+                    password.as_bytes(),
+                    salt,
+                    PBKDF2_ITERS,
+                    openssl::hash::MessageDigest::sha256(),
+                    &mut password_hash,
+                )
+                .map_err(Error::core)?;
+                &password_hash == hash
+            }
+        })
     }
     pub async fn verify(&self, password: &str) -> EResult<bool> {
         let op_start = Instant::now();
-        op_delay!(
-            op_start,
-            Ok(match self {
-                Password::Sha256(hash) => {
-                    let mut hasher = Sha256::new();
-                    hasher.update(password.as_bytes());
-                    &hasher.finish() == hash
-                }
-                Password::Sha512(hash) => {
-                    let mut hasher = Sha512::new();
-                    hasher.update(password.as_bytes());
-                    &hasher.finish() == hash
-                }
-                Password::Pbkdf2(salt, hash) => {
-                    let mut password_hash = [0; 32];
-                    pkcs5::pbkdf2_hmac(
-                        password.as_bytes(),
-                        salt,
-                        PBKDF2_ITERS,
-                        openssl::hash::MessageDigest::sha256(),
-                        &mut password_hash,
-                    )
-                    .map_err(Error::core)?;
-                    &password_hash == hash
-                }
-            })
-        )
+        op_delay!(op_start, self.verify_password(password))
+    }
+    pub fn verify_sync(&self, password: &str) -> EResult<bool> {
+        let op_start = Instant::now();
+        op_delay_sync!(op_start, self.verify_password(password))
     }
 }
 
@@ -246,5 +285,19 @@ mod test {
             .parse()
             .unwrap();
         assert!(password.verify(p).await.unwrap());
+    }
+    #[test]
+    fn test_password_sync() {
+        let p = "letmein";
+        let password: Password = Password::new_sha256_sync(p).to_string().parse().unwrap();
+        assert!(password.verify_sync(p).unwrap());
+        let password: Password = Password::new_sha512_sync(p).to_string().parse().unwrap();
+        assert!(password.verify_sync(p).unwrap());
+        let password: Password = Password::new_pbkdf2_sync(p)
+            .unwrap()
+            .to_string()
+            .parse()
+            .unwrap();
+        assert!(password.verify_sync(p).unwrap());
     }
 }
