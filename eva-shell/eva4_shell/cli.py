@@ -2054,10 +2054,10 @@ class CLI:
         cols = [
             't|n=time|f=time_sec{}'.format(
                 f':{time_zone}' if time_zone else ''),
-            'alarm_node|n=node',
-            'alarm_level|n=lvl',
-            'alarm_group|n=group',
-            'alarm_id|n=id',
+            'node',
+            'level|n=lvl',
+            'group',
+            'id',
             'lo',
             'losk',
             'los',
