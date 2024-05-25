@@ -11,6 +11,7 @@ use eva_common::time::Time;
 use eva_common::tools::default_true;
 use eva_common::ITEM_STATUS_ERROR;
 use log::warn;
+use mkmf::MapKeysMatchFormula as _;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -1176,6 +1177,10 @@ fn get_item_by_mask_rec(
         } else if *chunk == "+" {
             if let Some(ref child) = tree.childs_any {
                 get_item_by_mask_rec(child, iter, result, filter);
+            }
+        } else if let Some(f) = chunk.strip_prefix('!') {
+            for child in tree.childs.values_match_key_formula(f) {
+                get_item_by_mask_rec(child, iter.clone(), result, filter);
             }
         } else if let Some(child) = tree.childs.get(*chunk) {
             get_item_by_mask_rec(child, iter, result, filter);

@@ -1665,9 +1665,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.52"
+version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf767455ce2587dcf732bab3ab1e20df68e32de61e0b1129918cf1c418356dc9"
+checksum = "44462aa1dcd5116eaa820b64b041b6e804443657e3e24b4ef754b4ae49c65303"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2111,6 +2111,7 @@ dependencies = [
  "jemallocator",
  "lazy_static",
  "log",
+ "mkmf",
  "multi_log",
  "nix 0.25.0",
  "num_cpus",
@@ -3507,6 +3508,10 @@ dependencies = [
  "serialport",
  "winapi",
 ]
+
+[[package]]
+name = "mkmf"
+version = "4.0.2"
 
 [[package]]
 name = "multer"
