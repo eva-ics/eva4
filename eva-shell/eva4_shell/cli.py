@@ -1897,7 +1897,8 @@ class CLI:
     def alarm_state(self,
                     alarm_svc,
                     node=None,
-                    level=None,
+                    level_min=None,
+                    level_max=None,
                     group=None,
                     id=None,
                     current=None,
@@ -1907,8 +1908,10 @@ class CLI:
         flt = {}
         if node:
             flt['node'] = node
-        if level is not None:
-            flt['level'] = level
+        if level_min:
+            flt['level_min'] = level_min
+        if level_max:
+            flt['level_max'] = level_max
         if group:
             flt['group'] = group
         if id:

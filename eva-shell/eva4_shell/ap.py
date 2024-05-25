@@ -263,7 +263,8 @@ def append_alarm_cli(root_sp):
     p = sp.add_parser('state', help='alarm state')
     p.add_argument('--node', metavar='NODE', help='filter by node')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
-    p.add_argument('--level', metavar='LEVEL', help='filter by level')
+    p.add_argument('--level-min', metavar='LEVEL_MIN', type=int, help='filter by min level')
+    p.add_argument('--level-max', metavar='LEVEL_MAX', type=int, help='filter by max level')
     p.add_argument('--id', metavar='ID', help='filter by ID')
     p.add_argument('--current',
                    choices=ALARM_CURRENT_CODES,
