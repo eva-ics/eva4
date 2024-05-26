@@ -37,7 +37,6 @@ members = [
   "dobj-codegen",
   "psrpc",
   "genpass-native",
-  "mkmf",
   "crypto-tools",
   "benchmarks/bm-primary"
 , "crypto-tools", "dobj-codegen"]

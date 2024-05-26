@@ -11,7 +11,6 @@ use eva_common::time::Time;
 use eva_common::tools::default_true;
 use eva_common::ITEM_STATUS_ERROR;
 use log::warn;
-use mkmf::MapKeysMatchFormula as _;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -20,6 +19,7 @@ use std::str::Split;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
+use submap::mkmf::MapKeysMatchFormula as _;
 
 #[cfg(test)]
 mod tests {

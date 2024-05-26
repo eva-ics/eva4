@@ -1,5 +1,0 @@
-[package]
-name = "mkmf"
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
