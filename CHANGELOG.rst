@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-06-02 build 2024060201: Alarm service SQLite fixes
 * 2024-05-27 build 2024052701: Alarm system
 * 2024-05-14 build 2024051401: Service log level overriding
 * 2024-05-02 build 2024050201: Replication OID masks fixes
