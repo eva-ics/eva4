@@ -23,7 +23,7 @@ tempfile = "3.10.0"
 bmart = { workspace = true }
 openssl = { workspace = true }
 glob-match = "0.2.1"
-async-recursion = "1.0.5"
+async-recursion = { workspace = true }
 
 [features]
 std-alloc = []

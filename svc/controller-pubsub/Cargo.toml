@@ -21,7 +21,7 @@ psrt = "0.2"
 paho-mqtt = "0.12.3"
 serde_json = { workspace = true }
 once_cell = { workspace = true }
-async-recursion = "1.0.5"
+async-recursion = { workspace = true }
 parking_lot = "0.12.1"
 
 [features]
