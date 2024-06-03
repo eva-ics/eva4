@@ -29,6 +29,8 @@ config:
   # any user can get API log for everyone (false = admins and users with op moderator in ACLs)
   # public_api_log: true
   ui_path: ui
+  # for all 404 serve /ui/ index (useful e.g. for SPAs)
+  #ui_not_found_to_base: true
   pvt_path: pvt
   # default database service ID for item.state_log & item.state_history,
   # without eva.db. prefix, e.g. "db1" for eva.db.db1

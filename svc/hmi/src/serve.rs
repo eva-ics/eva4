@@ -67,9 +67,11 @@ fn serve_ui_default(allow: bool, path: &str, file_path: &str) -> HResult {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[async_recursion::async_recursion]
 async fn read_file<'a>(
     uri: &'a str,
     base: &str,
+    not_found_to_base: bool,
     path: &str,
     allow_default: bool,
     convert_to: Option<Convert<'a>>,
@@ -82,7 +84,25 @@ async fn read_file<'a>(
     let attr = match tokio::fs::metadata(&file_path).await {
         Ok(v) => v,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return serve_ui_default(allow_ui_default, path, &file_path);
+            match serve_ui_default(allow_ui_default, path, &file_path) {
+                Ok(v) => return Ok(v),
+                Err(e) if e.kind() == ErrorKind::ResourceNotFound && not_found_to_base => {
+                    return read_file(
+                        uri,
+                        base,
+                        false,
+                        "",
+                        allow_default,
+                        convert_to,
+                        headers,
+                        ip,
+                        tpl_dir_kind,
+                        allow_ui_default,
+                    )
+                    .await;
+                }
+                Err(e) => return Err(e),
+            }
         }
         Err(e) => return Err(e.into()),
     };
@@ -169,6 +189,7 @@ async fn read_file<'a>(
 pub async fn file<'a>(
     uri: &'a str,
     base: &str,
+    not_found_to_base: bool,
     path: &str,
     params: Option<&'a HashMap<String, String>>,
     allow_default: bool,
@@ -186,6 +207,7 @@ pub async fn file<'a>(
             read_file(
                 uri,
                 base,
+                not_found_to_base,
                 path,
                 allow_default,
                 convert_to,
@@ -222,6 +244,7 @@ pub async fn pvt<'a>(
                     return file(
                         uri,
                         pvt_path,
+                        false,
                         pvt_file,
                         params,
                         false,

@@ -1,4 +1,4 @@
-use crate::aaa;
+use crate::{aaa, UI_NOT_FOUND_TO_BASE};
 use crate::{serve, upload};
 use eva_common::acl::OIDMaskList;
 use eva_common::hyper_response;
@@ -19,7 +19,7 @@ use rjrpc::http::HyperJsonRpcServer;
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::net::IpAddr;
-use std::sync::Arc;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 use submap::SubMap;
 use tungstenite::Message;
@@ -772,6 +772,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         return serve::file(
                             uri,
                             ui_path,
+                            false,
                             &uri[1..],
                             None,
                             false,
@@ -789,6 +790,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         return serve::file(
                             uri,
                             ui_path,
+                            false,
                             &uri[1..],
                             None,
                             false,
@@ -812,6 +814,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         return serve::file(
                             uri,
                             va_path,
+                            false,
                             va_file,
                             params.as_ref(),
                             true,
@@ -830,6 +833,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         return serve::file(
                             uri,
                             ui_path,
+                            UI_NOT_FOUND_TO_BASE.load(atomic::Ordering::Relaxed),
                             ui_file,
                             params.as_ref(),
                             true,

@@ -82,6 +82,7 @@ static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 static PUBLIC_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static DEVELOPMEPT_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static UI_NOT_FOUND_TO_BASE: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static DEMO_MODE: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[inline]
@@ -169,6 +170,8 @@ struct Config {
     default_history_db_svc: String,
     #[serde(default)]
     development: bool,
+    #[serde(default)]
+    ui_not_found_to_base: bool,
     #[serde(default)]
     demo: bool,
     #[serde(default = "eva_common::tools::default_true")]
@@ -322,6 +325,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         )
         .await?;
     svc_init_logs(&initial, client.clone())?;
+    UI_NOT_FOUND_TO_BASE.store(config.ui_not_found_to_base, atomic::Ordering::Relaxed);
     if config.development {
         warn!("development mode started");
         DEVELOPMEPT_MODE.store(true, atomic::Ordering::Relaxed);
