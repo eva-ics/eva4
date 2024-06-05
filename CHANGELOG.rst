@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-06-05 build 2024060501: HMI SPA built-in support
 * 2024-06-02 build 2024060201: Alarm service SQLite fixes
 * 2024-05-27 build 2024052701: Alarm system
 * 2024-05-14 build 2024051401: Service log level overriding
