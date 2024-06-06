@@ -423,8 +423,17 @@ async fn serve_websocket(
     });
     while let Some(message) = receiver.next().await {
         #[allow(clippy::single_match)]
-        match message.map_err(Error::io)? {
-            tungstenite::Message::Text(msg) => {
+        match message {
+            Err(e) => {
+                sender_fut.abort();
+                if let tungstenite::Error::Protocol(ref p_e) = e {
+                    if *p_e == tungstenite::error::ProtocolError::ResetWithoutClosingHandshake {
+                        return Ok(());
+                    }
+                }
+                return Err(Error::io(e));
+            }
+            Ok(tungstenite::Message::Text(msg)) => {
                 if !msg.is_empty() {
                     let cmd: WsCommand = serde_json::from_str(&msg).log_err()?;
                     let method = cmd.method.as_str();
