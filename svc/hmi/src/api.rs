@@ -548,6 +548,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                 } else {
                     match method {
                         "test" => method_test(params, &mut aci).await,
+                        "ping" => method_ping(params, &mut aci).await,
                         "set_password" => method_set_password(params, &mut aci).await,
                         "profile.get_field" => method_get_profile_field(params, &mut aci).await,
                         "profile.set_field" => method_set_profile_field(params, &mut aci).await,
@@ -694,6 +695,12 @@ async fn method_test(params: Value, aci: &mut ACI) -> EResult<Value> {
         info.num_cpus.take();
     }
     to_value(info).map_err(Into::into)
+}
+
+async fn method_ping(params: Value, aci: &mut ACI) -> EResult<Value> {
+    aci.log_request(log::Level::Debug).await.log_ef();
+    ParamsEmpty::deserialize(params)?;
+    Ok(Value::Unit)
 }
 
 async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {

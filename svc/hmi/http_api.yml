@@ -135,6 +135,16 @@ api_log.get:
             "user": "admin"
         }
     ]
+ping:
+  des: Pings the back-end, prolongs the session
+  par:
+  ret: Nothing
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": null
+    }
 test:
   des: Tests the node and HMI svc, returns system info
   par:
