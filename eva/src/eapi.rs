@@ -27,7 +27,7 @@ use eva_common::prelude::*;
 use log::{trace, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::{atomic, Arc};
@@ -886,7 +886,21 @@ impl RpcHandlers for BusApi {
                 let mut p: ParamsState = unpack(payload).log_err()?;
                 #[allow(clippy::redundant_closure)]
                 let mask_list = if let Some(v) = p.i.take() {
-                    v.try_into()?
+                    //let masks = HashSet::<String>::deserialize(v)?;
+                    if matches!(v, Value::Seq(_)) {
+                        let masks = HashSet::<String>::deserialize(v)?;
+                        let mut oid_masks: HashSet<OIDMask> = HashSet::with_capacity(masks.len());
+                        for mask in masks {
+                            let Ok(oid_mask) = mask.parse::<OIDMask>() else {
+                                warn!("invalid OID mask: {}", mask);
+                                continue;
+                            };
+                            oid_masks.insert(oid_mask);
+                        }
+                        OIDMaskList::new(oid_masks)
+                    } else {
+                        v.try_into()?
+                    }
                 } else {
                     OIDMaskList::new_any()
                 };
