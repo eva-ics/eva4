@@ -1,6 +1,6 @@
 use crate::{aaa, UI_NOT_FOUND_TO_BASE};
 use crate::{serve, upload};
-use eva_common::acl::OIDMaskList;
+use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::hyper_response;
 use eva_common::hyper_tools::HResultX;
 use eva_common::prelude::*;
@@ -441,9 +441,21 @@ async fn serve_websocket(
                     match method {
                         "subscribe.state" => {
                             if let Some(p) = cmd.params {
-                                if let Ok(masks) = OIDMaskList::deserialize(p).log_err() {
+                                if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
+                                    let mut oid_masks: HashSet<OIDMask> =
+                                        HashSet::with_capacity(masks.len());
+                                    for mask in masks {
+                                        let Ok(oid_mask) = mask.parse::<OIDMask>() else {
+                                            warn!(
+                                                "invalid OID mask from web socket subscription: {}",
+                                                mask
+                                            );
+                                            continue;
+                                        };
+                                        oid_masks.insert(oid_mask);
+                                    }
                                     let mut map = WS_SUB.lock();
-                                    for mask in masks.oid_masks() {
+                                    for mask in oid_masks {
                                         map.subscribe(&mask.as_path(), &ws_tx);
                                     }
                                 }
@@ -455,14 +467,29 @@ async fn serve_websocket(
                         }
                         "subscribe.state_initial" => {
                             if let Some(p) = cmd.params {
-                                if let Ok(masks) = OIDMaskList::deserialize(p).log_err() {
+                                if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
+                                    let mut oid_masks: HashSet<OIDMask> =
+                                        HashSet::with_capacity(masks.len());
+                                    for mask in masks {
+                                        let Ok(oid_mask) = mask.parse::<OIDMask>() else {
+                                            warn!(
+                                                "invalid OID mask from web socket subscription: {}",
+                                                mask
+                                            );
+                                            continue;
+                                        };
+                                        oid_masks.insert(oid_mask);
+                                    }
                                     let mut map = WS_SUB.lock();
-                                    for mask in masks.oid_masks() {
+                                    for mask in &oid_masks {
                                         map.subscribe(&mask.as_path(), &ws_tx);
                                     }
                                     let ws_tx_c = ws_tx.clone();
                                     tokio::spawn(async move {
-                                        ws_tx_c.send_initial(Some(masks)).await.log_ef();
+                                        ws_tx_c
+                                            .send_initial(Some(OIDMaskList::new(oid_masks)))
+                                            .await
+                                            .log_ef();
                                     });
                                 }
                             }
