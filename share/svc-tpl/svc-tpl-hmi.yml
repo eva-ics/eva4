@@ -43,6 +43,11 @@ config:
   #demo: true
   # uncomment to disable vendored apps
   #vendored_apps: false
+  # WebSocket URI alias. some front-end applications may interfere with /ws, so
+  # a custom one may be required. do not forget to change it also in EVA ICS
+  # Webengine and other front-end applications (the default "/ws" will be still
+  # available)
+  #ws_uri: /ws
 user: eva
 timeout:
   default: 10

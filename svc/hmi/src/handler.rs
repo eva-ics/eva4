@@ -1,4 +1,4 @@
-use crate::{aaa, UI_NOT_FOUND_TO_BASE};
+use crate::{aaa, UI_NOT_FOUND_TO_BASE, WS_URI};
 use crate::{serve, upload};
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::hyper_response;
@@ -658,7 +658,10 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
     if !svc_is_active() {
         return hyper_response!(StatusCode::SERVICE_UNAVAILABLE);
     }
-    if req.uri().path() == "/ws" && hyper_tungstenite::is_upgrade_request(&req) {
+    let path = req.uri().path();
+    if (path == "/ws" || path == WS_URI.get().unwrap())
+        && hyper_tungstenite::is_upgrade_request(&req)
+    {
         let params: Option<HashMap<String, String>> = req.uri().query().map(|v| {
             url::form_urlencoded::parse(v.as_bytes())
                 .into_owned()
