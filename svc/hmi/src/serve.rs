@@ -66,7 +66,7 @@ fn serve_ui_default(allow: bool, path: &str, file_path: &str) -> HResult {
     Err(Error::not_found(file_path))
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 #[async_recursion::async_recursion]
 async fn read_file<'a>(
     uri: &'a str,

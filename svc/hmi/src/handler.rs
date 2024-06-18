@@ -402,6 +402,7 @@ pub async fn remove_websocket_by_key_id(key_id: &str) {
         .retain(|_, ws| ws.key_modified_keep(key_id));
 }
 
+#[allow(clippy::too_many_lines)]
 async fn serve_websocket(
     ws_tx: Arc<WsTx>,
     rx: async_channel::Receiver<WsFrame>,
@@ -442,7 +443,7 @@ async fn serve_websocket(
                         "subscribe.state" => {
                             if let Some(p) = cmd.params {
                                 if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
-                                    let mut oid_masks: HashSet<OIDMask> =
+                                    let mut sub_oid_masks: HashSet<OIDMask> =
                                         HashSet::with_capacity(masks.len());
                                     for mask in masks {
                                         let Ok(oid_mask) = mask.parse::<OIDMask>() else {
@@ -452,10 +453,10 @@ async fn serve_websocket(
                                             );
                                             continue;
                                         };
-                                        oid_masks.insert(oid_mask);
+                                        sub_oid_masks.insert(oid_mask);
                                     }
                                     let mut map = WS_SUB.lock();
-                                    for mask in oid_masks {
+                                    for mask in sub_oid_masks {
                                         map.subscribe(&mask.as_path(), &ws_tx);
                                     }
                                 }
@@ -468,7 +469,7 @@ async fn serve_websocket(
                         "subscribe.state_initial" => {
                             if let Some(p) = cmd.params {
                                 if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
-                                    let mut oid_masks: HashSet<OIDMask> =
+                                    let mut sub_oid_masks: HashSet<OIDMask> =
                                         HashSet::with_capacity(masks.len());
                                     for mask in masks {
                                         let Ok(oid_mask) = mask.parse::<OIDMask>() else {
@@ -478,16 +479,16 @@ async fn serve_websocket(
                                             );
                                             continue;
                                         };
-                                        oid_masks.insert(oid_mask);
+                                        sub_oid_masks.insert(oid_mask);
                                     }
                                     let mut map = WS_SUB.lock();
-                                    for mask in &oid_masks {
+                                    for mask in &sub_oid_masks {
                                         map.subscribe(&mask.as_path(), &ws_tx);
                                     }
                                     let ws_tx_c = ws_tx.clone();
                                     tokio::spawn(async move {
                                         ws_tx_c
-                                            .send_initial(Some(OIDMaskList::new(oid_masks)))
+                                            .send_initial(Some(OIDMaskList::new(sub_oid_masks)))
                                             .await
                                             .log_ef();
                                     });
@@ -659,7 +660,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
         return hyper_response!(StatusCode::SERVICE_UNAVAILABLE);
     }
     let path = req.uri().path();
-    if (path == "/ws" || path == WS_URI.get().unwrap())
+    if (path == "/ws" || WS_URI.get().map_or(false, |ws_uri| path == ws_uri))
         && hyper_tungstenite::is_upgrade_request(&req)
     {
         let params: Option<HashMap<String, String>> = req.uri().query().map(|v| {

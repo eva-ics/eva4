@@ -146,11 +146,6 @@ fn default_buf_size() -> usize {
     16384
 }
 
-#[inline]
-fn default_ws_uri() -> String {
-    "/ws".to_owned()
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
@@ -184,8 +179,7 @@ struct Config {
     vendored_apps: bool,
     #[serde(default)]
     user_data: UserDataConfig,
-    #[serde(default = "default_ws_uri")]
-    ws_uri: String,
+    ws_uri: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -219,9 +213,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
             timeout,
         ))
         .map_err(|_| Error::core("Unable to set HTTP_CLIENT"))?;
-    WS_URI
-        .set(config.ws_uri)
-        .map_err(|_| Error::core("Unable to set WS_URI"))?;
+    if let Some(ws_uri) = config.ws_uri {
+        WS_URI
+            .set(ws_uri)
+            .map_err(|_| Error::core("Unable to set WS_URI"))?;
+    }
     let mut i18n = lang::Converter::default();
     let eva_dir = initial.eva_dir();
     if let Some(api_filter) = config.api_filter {
