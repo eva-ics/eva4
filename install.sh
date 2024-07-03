@@ -481,10 +481,10 @@ EOF
   cat <<EOF
 keys:
 - id: admin
-  key: ${ADMINKEY}
+  key: "${ADMINKEY}"
   acls: [ "admin" ]
 - id: operator
-  key: ${OPKEY}
+  key: "${OPKEY}"
   acls: [ "operator" ]
 EOF
   ) | ./bin/yml2mp | \
@@ -494,10 +494,10 @@ EOF
   cat <<EOF
 users:
 - login: admin
-  password: ${ADMINPASSWD_HASHED}
+  password: "${ADMINPASSWD_HASHED}"
   acls: [ "admin" ]
 - login: operator
-  password: ${OPPASSWD_HASHED}
+  password: "${OPPASSWD_HASHED}"
   acls: [ "operator" ]
 EOF
   ) | ./bin/yml2mp | \
