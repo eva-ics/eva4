@@ -442,7 +442,7 @@ EOF
   cat <<EOF
 keys:
 - id: default
-  key: ${DEFAULTKEY}
+  key: "${DEFAULTKEY}"
   acls: [ "default" ]
 EOF
   ) | ./bin/yml2mp | \
