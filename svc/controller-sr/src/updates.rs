@@ -131,6 +131,7 @@ async fn mark_error(oid: &OID) -> EResult<()> {
         status: eva_common::ITEM_STATUS_ERROR,
         value: ValueOptionOwned::No,
         force: Force::Full,
+        ..RawStateEventOwned::default()
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
     eapi_bus::client()
@@ -153,7 +154,7 @@ async fn process_data(oid: &OID, data: &str) -> EResult<()> {
     let ev = RawStateEventOwned {
         status,
         value,
-        force: Force::None,
+        ..RawStateEventOwned::default()
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
     eapi_bus::client()

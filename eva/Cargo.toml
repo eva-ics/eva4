@@ -40,6 +40,7 @@ regex = "1.10.3"
 bytes = "1.5.0"
 jemallocator = { workspace = true }
 async-trait = { workspace = true }
+async-recursion = { workspace = true }
 async-channel = { workspace = true }
 nix = { version = "0.25", features = ["user", "fs"] }
 atty = "0.2.14"

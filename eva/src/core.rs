@@ -1290,10 +1290,11 @@ impl Core {
         }
     }
 
+    #[async_recursion::async_recursion]
     async fn process_raw_state(
         &self,
         item: Item,
-        raw: RawStateEventOwned,
+        mut raw: RawStateEventOwned,
         lock: bool,
     ) -> EResult<()> {
         if item.source().is_some() {
@@ -1316,7 +1317,8 @@ impl Core {
                 } else {
                     None
                 };
-                let (s_state, db_st) = {
+                let on_modified = raw.on_modified.take();
+                let ((s_state, db_st), really_modified) = {
                     let mut state = state.lock();
                     if item.oid().kind() == ItemKind::Lvar
                         && state.status() == 0
@@ -1325,16 +1327,40 @@ impl Core {
                         // lvars with status 0 are not set from RAW
                         return Ok(());
                     }
-                    if state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id) {
-                        prepare_state_data!(item, &*state, self.instant_save)
+                    let really_modified =
+                        state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id);
+                    // status/value have been really modified or forced to report
+                    if really_modified || force != Force::None {
+                        (
+                            prepare_state_data!(item, &*state, self.instant_save),
+                            really_modified,
+                        )
                     } else {
-                        // not modified
+                        // not really_modified
                         return Ok(());
                     }
                 };
                 let rpc = self.rpc.get().unwrap();
                 self.process_new_state(item.oid(), s_state, db_st, rpc)
                     .await?;
+                if really_modified {
+                    if let Some(om) = on_modified {
+                        for oid in om.oid {
+                            for item in self.inventory.read().await.get_items_by_mask(
+                                &oid,
+                                &Filter::default().node(NodeFilter::Local),
+                                false,
+                            ) {
+                                let rw = RawStateEventOwned {
+                                    status: om.status,
+                                    value: om.value.clone(),
+                                    ..RawStateEventOwned::default()
+                                };
+                                self.process_raw_state(item, rw, false).await.log_ef();
+                            }
+                        }
+                    }
+                }
             } else {
                 warn!("no state property in {}", item.oid());
             }

@@ -254,6 +254,16 @@ impl ItemState {
             t,
         }
     }
+    pub fn mark_failed(&mut self, ieid: IEID) -> bool {
+        if self.status == ITEM_STATUS_ERROR {
+            false
+        } else {
+            self.status = ITEM_STATUS_ERROR;
+            self.ieid = ieid;
+            self.t = Time::now().timestamp();
+            true
+        }
+    }
     // used by lvar functions only
     pub fn force_set_state(
         &mut self,
@@ -307,6 +317,9 @@ impl ItemState {
         self.ieid = rpl.ieid;
         self.t = rpl.t;
     }
+    /// Returns true if the item state is changed. Note: if the state has been forcibly updated,
+    /// the method still returns the real modification flag only, despite the forced update
+    ///
     /// # Panics
     ///
     /// Will not panic
@@ -339,7 +352,7 @@ impl ItemState {
         if modified || raw.force != Force::None {
             self.ieid = IEID::generate(boot_id);
             self.t = Time::now().timestamp();
-            true
+            modified
         } else {
             false
         }
