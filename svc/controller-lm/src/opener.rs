@@ -1,5 +1,5 @@
 use eva_common::common_payloads::{ParamsId, ParamsUuid};
-use eva_common::events::RAW_STATE_TOPIC;
+use eva_common::events::{Force, RAW_STATE_TOPIC};
 use eva_common::payload::pack;
 use eva_common::prelude::*;
 use eva_sdk::controller::{format_action_topic, Action};
@@ -365,7 +365,7 @@ async fn handle_action(
                     Some(eva_common::events::RawStateEventOwned {
                         status: 1,
                         value: ValueOptionOwned::Value(params.value),
-                        force: false,
+                        force: Force::None,
                     })
                 } else {
                     None

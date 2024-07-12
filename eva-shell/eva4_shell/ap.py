@@ -263,8 +263,14 @@ def append_alarm_cli(root_sp):
     p = sp.add_parser('state', help='alarm state')
     p.add_argument('--node', metavar='NODE', help='filter by node')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
-    p.add_argument('--level-min', metavar='LEVEL_MIN', type=int, help='filter by min level')
-    p.add_argument('--level-max', metavar='LEVEL_MAX', type=int, help='filter by max level')
+    p.add_argument('--level-min',
+                   metavar='LEVEL_MIN',
+                   type=int,
+                   help='filter by min level')
+    p.add_argument('--level-max',
+                   metavar='LEVEL_MAX',
+                   type=int,
+                   help='filter by max level')
     p.add_argument('--id', metavar='ID', help='filter by ID')
     p.add_argument('--current',
                    choices=ALARM_CURRENT_CODES,
@@ -813,7 +819,7 @@ def append_item_cli(root_sp):
     p = sp.add_parser('edit', help='edit item config')
     p.add_argument('i', metavar='OID').completer = ComplOID()
 
-    p = sp.add_parser('set', help='forcibly set item state')
+    p = sp.add_parser('set', help='set item state')
     p.add_argument('i', metavar='OID').completer = ComplOID()
     p.add_argument('value', metavar='VALUE')
     p.add_argument('-s', '--status', metavar='STATUS', type=int)
@@ -822,6 +828,13 @@ def append_item_cli(root_sp):
                    dest='p',
                    metavar='TYPE',
                    choices=['auto', 'json'])
+    p.add_argument(
+        '-F',
+        '--force',
+        action='store_true',
+        help=
+        'Forcibly modify item state even if it is the same, also sets state for a disabled item'
+    )
 
     sp.add_parser('summary', help='item summary per source')
 

@@ -14,6 +14,7 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
 use eva_common::dobj::{DataObject, Endianess, ObjectMap};
 use eva_common::err_logger;
+use eva_common::events::Force;
 use eva_common::events::{
     DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
     RemoteStateEvent, ReplicationInventoryItem, ReplicationState, ReplicationStateEvent,
@@ -1301,7 +1302,8 @@ impl Core {
                 item.oid()
             )));
         }
-        if item.enabled() || raw.force {
+        let force = raw.force;
+        if item.enabled() || force == Force::Full {
             if let Some(state) = item.state() {
                 debug!(
                     "setting state from raw event for {}, status: {}, value: {:?}",
@@ -1316,7 +1318,10 @@ impl Core {
                 };
                 let (s_state, db_st) = {
                     let mut state = state.lock();
-                    if item.oid().kind() == ItemKind::Lvar && state.status() == 0 && !raw.force {
+                    if item.oid().kind() == ItemKind::Lvar
+                        && state.status() == 0
+                        && force == Force::None
+                    {
                         // lvars with status 0 are not set from RAW
                         return Ok(());
                     }

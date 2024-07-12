@@ -1073,11 +1073,11 @@ class CLI:
                 print(f'{c} item(s) exported')
                 print()
 
-    def item_set(self, i, status, value, p):
+    def item_set(self, i, status, value, p, force):
         val = format_value(value, p=p)
         payload = dict(status=1 if status is None else status,
                        value=val,
-                       force=True)
+                       force=force)
         connect()
         common.bus.send(
             'RAW/' + i.replace(':', '/', 1),

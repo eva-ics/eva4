@@ -1,7 +1,7 @@
 use crate::common::{
     self, init_cmd_options, init_cmd_options_basic, safe_run_macro, OIDSingleOrMulti,
 };
-use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::events::{Force, RawStateEventOwned, RAW_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::Deserialize;
@@ -130,7 +130,7 @@ async fn mark_error(oid: &OID) -> EResult<()> {
     let ev = RawStateEventOwned {
         status: eva_common::ITEM_STATUS_ERROR,
         value: ValueOptionOwned::No,
-        force: true,
+        force: Force::Full,
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
     eapi_bus::client()
@@ -153,7 +153,7 @@ async fn process_data(oid: &OID, data: &str) -> EResult<()> {
     let ev = RawStateEventOwned {
         status,
         value,
-        force: true,
+        force: Force::None,
     };
     let raw_topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
     eapi_bus::client()

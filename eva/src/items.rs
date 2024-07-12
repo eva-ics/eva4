@@ -1,7 +1,7 @@
 use crate::{EResult, Error};
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::events::{
-    DbState, FullItemStateAndInfo, ItemStateAndInfo, LocalStateEvent, RawStateEventOwned,
+    DbState, Force, FullItemStateAndInfo, ItemStateAndInfo, LocalStateEvent, RawStateEventOwned,
     ReplicationInventoryItem, ReplicationState,
 };
 use eva_common::logic::Range;
@@ -336,7 +336,7 @@ impl ItemState {
             mark_out_of_range!(self, oid, value);
             modified = true;
         }
-        if modified {
+        if modified || raw.force != Force::None {
             self.ieid = IEID::generate(boot_id);
             self.t = Time::now().timestamp();
             true
