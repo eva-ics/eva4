@@ -189,14 +189,22 @@ async fn raw_state_and_action_handler(
 async fn handle_raw_state_event(core: &Core, frame: pubsub::Publication) {
     if core.is_active() {
         match OID::from_path(frame.subtopic()) {
-            Ok(oid) => match unpack::<RawStateEventOwned>(frame.payload()) {
-                Ok(raw) => {
-                    core.update_state_from_raw(&oid, raw, frame.primary_sender())
-                        .await
-                        .log_efd();
+            Ok(oid) => {
+                let payload = frame.payload();
+                if payload.is_empty() {
+                    core.auto_create_item_from_raw_empty(&oid, frame.primary_sender())
+                        .await;
+                } else {
+                    match unpack::<RawStateEventOwned>(frame.payload()) {
+                        Ok(raw) => {
+                            core.update_state_from_raw(&oid, raw, frame.primary_sender())
+                                .await
+                                .log_efd();
+                        }
+                        Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
+                    }
                 }
-                Err(e) => warn!("invalid payload in raw event {}: {}", frame.topic(), e),
-            },
+            }
             Err(e) => warn!("invalid OID in raw event {}: {}", frame.topic(), e),
         }
     }

@@ -1254,6 +1254,109 @@ impl Core {
             Err(Error::core(format!("Lvar {} has no state", oid)))
         }
     }
+
+    async fn process_modified(
+        &self,
+        om: events::OnModifiedOwned,
+        really_modified: bool,
+        force: Force,
+        delta: Option<f64>,
+        sender: &str,
+    ) -> EResult<()> {
+        match om {
+            events::OnModifiedOwned::SetOther(o) => {
+                if really_modified {
+                    for oid in o.oid {
+                        for item in self.inventory.read().await.get_items_by_mask(
+                            &oid,
+                            &Filter::default().node(NodeFilter::Local),
+                            false,
+                        ) {
+                            let rw = RawStateEventOwned {
+                                status: o.status,
+                                value: o.value.clone(),
+                                force,
+                                ..RawStateEventOwned::default()
+                            };
+                            self.process_raw_state(item, rw, false, sender)
+                                .await
+                                .log_ef();
+                        }
+                    }
+                }
+            }
+            events::OnModifiedOwned::SetOtherValueDelta(o) => {
+                macro_rules! ev {
+                    ($delta: expr) => {
+                        RawStateEventOwned {
+                            status: 1,
+                            value: ValueOptionOwned::Value(Value::F64($delta)),
+                            force,
+                            ..RawStateEventOwned::default()
+                        }
+                    };
+                }
+                macro_rules! ev_reset {
+                    () => {
+                        RawStateEventOwned {
+                            status: 1,
+                            value: ValueOptionOwned::Value(Value::F64(0.0)),
+                            force,
+                            ..RawStateEventOwned::default()
+                        }
+                    };
+                }
+                if let Some(delta) = delta {
+                    let mut rw = None;
+                    macro_rules! apply_delta {
+                        () => {
+                            if delta < 0.0 {
+                                match o.on_negative {
+                                    events::OnNegativeDelta::Skip => {}
+                                    events::OnNegativeDelta::Reset => {
+                                        rw = Some(ev_reset!());
+                                    }
+                                    // overflow is already respected
+                                    events::OnNegativeDelta::Process
+                                    | events::OnNegativeDelta::Overflow { floor: _, ceil: _ } => {
+                                        rw = Some(ev!(delta));
+                                    }
+                                }
+                            } else {
+                                rw = Some(ev!(delta));
+                            }
+                        };
+                    }
+                    if let Some(item) = self.inventory.read().await.get_item(&o.oid) {
+                        if let Some(state) = item.state() {
+                            if state.lock().status() <= ITEM_STATUS_ERROR {
+                                match o.on_error {
+                                    events::OnModifiedError::Skip => {}
+                                    events::OnModifiedError::Reset => {
+                                        rw = Some(ev_reset!());
+                                    }
+                                    events::OnModifiedError::Process => {
+                                        apply_delta!();
+                                    }
+                                }
+                            }
+                        }
+                        if let Some(rw) = rw {
+                            self.process_raw_state(item, rw, false, sender)
+                                .await
+                                .log_ef();
+                        }
+                    } else if self.auto_create && sender_allowed_auto_create(sender) {
+                        apply_delta!();
+                        if let Some(rw) = rw {
+                            self.auto_create_item_from_raw(&o.oid, rw, sender).await;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
     /// # Panics
     ///
     /// Will panic if the state mutex is poisoned
@@ -1285,7 +1388,9 @@ impl Core {
         }
         let _stp_lock = self.state_processor_lock.lock().await;
         for (item, r) in item_events_to_process {
-            self.process_raw_state(item, r, false).await.log_efd();
+            self.process_raw_state(item, r, false, sender)
+                .await
+                .log_efd();
         }
         if !item_events_to_create.is_empty() {
             self.auto_create_item_from_raw_bulk(item_events_to_create, sender)
@@ -1294,12 +1399,12 @@ impl Core {
     }
 
     #[async_recursion::async_recursion]
-    #[allow(clippy::too_many_lines)]
     async fn process_raw_state(
         &self,
         item: Item,
         mut raw: RawStateEventOwned,
         lock: bool,
+        sender: &str,
     ) -> EResult<()> {
         if item.source().is_some() {
             return Err(Error::busy(format!(
@@ -1308,140 +1413,79 @@ impl Core {
             )));
         }
         let force = raw.force;
-        if item.enabled() || force == Force::Full {
-            if let Some(state) = item.state() {
-                debug!(
-                    "setting state from raw event for {}, status: {}, value: {:?}",
-                    item.oid(),
-                    raw.status,
-                    raw.value
-                );
-                let _stp_lock = if lock {
-                    Some(self.state_processor_lock.lock().await)
-                } else {
-                    None
-                };
-                let on_modified = raw.on_modified.take();
-                let mut delta = None;
-                let now = Time::now().timestamp();
-                let ((s_state, db_st), really_modified) = {
-                    let mut state = state.lock();
-                    if item.oid().kind() == ItemKind::Lvar
-                        && state.status() == 0
-                        && force == Force::None
-                    {
-                        // lvars with status 0 are not set from RAW
-                        return Ok(());
-                    }
-                    if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified {
-                        if let ValueOptionOwned::Value(ref value) = raw.value {
-                            let current: f64 = value.try_into().unwrap_or_default();
-                            let previous: f64 = state.value().try_into().unwrap_or_default();
-                            if let Some(period) = om.period {
-                                let elapsed = now - state.t();
-                                if elapsed > 0.0 {
-                                    delta = Some((current - previous) / elapsed * period);
-                                } else {
-                                    warn!(
-                                        "ignoring delta for {} - non-positive time delta",
-                                        item.oid()
-                                    );
-                                }
-                            } else {
-                                // no period
-                                delta = Some(current - previous);
-                            }
-                        }
-                    }
-                    let really_modified =
-                        state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id, now);
-                    // status/value have been really modified or forced to report
-                    if really_modified || force != Force::None {
-                        (
-                            prepare_state_data!(item, &*state, self.instant_save),
-                            really_modified,
-                        )
-                    } else {
-                        // not really_modified
-                        return Ok(());
-                    }
-                };
-                let rpc = self.rpc.get().unwrap();
-                self.process_new_state(item.oid(), s_state, db_st, rpc)
-                    .await?;
-                if let Some(om) = on_modified {
-                    match om {
-                        events::OnModifiedOwned::SetOther(o) => {
-                            if really_modified {
-                                for oid in o.oid {
-                                    for item in self.inventory.read().await.get_items_by_mask(
-                                        &oid,
-                                        &Filter::default().node(NodeFilter::Local),
-                                        false,
-                                    ) {
-                                        let rw = RawStateEventOwned {
-                                            status: o.status,
-                                            value: o.value.clone(),
-                                            force,
-                                            ..RawStateEventOwned::default()
-                                        };
-                                        self.process_raw_state(item, rw, false).await.log_ef();
-                                    }
-                                }
-                            }
-                        }
-                        events::OnModifiedOwned::SetOtherValueDelta(o) => {
-                            if let Some(delta) = delta {
-                                for oid in o.oid {
-                                    for item in self.inventory.read().await.get_items_by_mask(
-                                        &oid,
-                                        &Filter::default().node(NodeFilter::Local),
-                                        false,
-                                    ) {
-                                        if let Some(state) = item.state() {
-                                            if state.lock().status() == ITEM_STATUS_ERROR {
-                                                match o.on_error {
-                                                    events::OnModifiedError::Skip => {}
-                                                    events::OnModifiedError::Reset => {
-                                                        let rw = RawStateEventOwned {
-                                                            status: 1,
-                                                            value: ValueOptionOwned::Value(
-                                                                Value::F64(0.0),
-                                                            ),
-                                                            force,
-                                                            ..RawStateEventOwned::default()
-                                                        };
-                                                        self.process_raw_state(item, rw, false)
-                                                            .await
-                                                            .log_ef();
-                                                        continue;
-                                                    }
-                                                    events::OnModifiedError::Process => todo!(),
-                                                }
-                                            }
-                                            let rw = RawStateEventOwned {
-                                                status: 1,
-                                                value: ValueOptionOwned::Value(Value::F64(delta)),
-                                                force,
-                                                ..RawStateEventOwned::default()
-                                            };
-                                            self.process_raw_state(item, rw, false).await.log_ef();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                warn!("no state property in {}", item.oid());
-            }
-        } else {
+        if !item.enabled() && force != Force::Full {
             debug!(
                 "ignoring state from raw event for {} - disabled",
                 item.oid()
             );
+            return Ok(());
         }
+        let Some(state) = item.state() else {
+            warn!("no state property in {}", item.oid());
+            return Ok(());
+        };
+        debug!(
+            "setting state from raw event for {}, status: {}, value: {:?}",
+            item.oid(),
+            raw.status,
+            raw.value
+        );
+        let _stp_lock = if lock {
+            Some(self.state_processor_lock.lock().await)
+        } else {
+            None
+        };
+        let on_modified = raw.on_modified.take();
+        let mut delta = None;
+        let now = Time::now().timestamp();
+        let ((s_state, db_st), really_modified) = {
+            let mut state = state.lock();
+            if item.oid().kind() == ItemKind::Lvar && state.status() == 0 && force == Force::None {
+                // lvars with status 0 are not set from RAW
+                return Ok(());
+            }
+            if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified {
+                if let ValueOptionOwned::Value(ref value) = raw.value {
+                    let current: f64 = value.try_into().unwrap_or_default();
+                    let previous: f64 = state.value().try_into().unwrap_or_default();
+                    if let Some(period) = om.period {
+                        let elapsed = now - state.t();
+                        if elapsed > 0.0 {
+                            delta = Some(
+                                calc_delta(current, previous, om.on_negative) / elapsed * period,
+                            );
+                        } else {
+                            warn!(
+                                "ignoring delta for {} - non-positive time delta",
+                                item.oid()
+                            );
+                        }
+                    } else {
+                        // no period
+                        delta = Some(current - previous);
+                    }
+                }
+            }
+            let really_modified =
+                state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id, now);
+            // status/value have been really modified or forced to report
+            if really_modified || force != Force::None {
+                (
+                    prepare_state_data!(item, &*state, self.instant_save),
+                    really_modified,
+                )
+            } else {
+                // not really_modified
+                return Ok(());
+            }
+        };
+        let rpc = self.rpc.get().unwrap();
+        self.process_new_state(item.oid(), s_state, db_st, rpc)
+            .await?;
+        if let Some(om) = on_modified {
+            self.process_modified(om, really_modified, force, delta, sender)
+                .await?;
+        };
         Ok(())
     }
     /// # Panics
@@ -1461,12 +1505,25 @@ impl Core {
         }
         let maybe_item = self.inventory.read().await.get_item(oid);
         if let Some(item) = maybe_item {
-            self.process_raw_state(item, raw, true).await
+            self.process_raw_state(item, raw, true, sender).await
         } else if self.auto_create && sender_allowed_auto_create(sender) {
             self.auto_create_item_from_raw(oid, raw, sender).await;
             Ok(())
         } else {
             Err(Error::not_found(oid))
+        }
+    }
+
+    pub async fn auto_create_item_from_raw_empty(&self, oid: &OID, sender: &str) {
+        if self.auto_create && sender_allowed_auto_create(sender) {
+            let item_config = ItemConfigData::blank(oid, sender);
+            info!(
+                "auto-creating local item {} (blank) source: {}",
+                oid, sender
+            );
+            if let Err(e) = self.deploy_local_items(vec![item_config]).await {
+                error!("auto-creation failed for {}: {}", oid, e);
+            }
         }
     }
 
@@ -2255,4 +2312,14 @@ fn spawn_mem_checker(mem_warn: u64) {
             crate::check_memory_usage("core process", total_memory, mem_warn);
         }
     });
+}
+
+fn calc_delta(current: f64, prev: f64, on_negative: events::OnNegativeDelta) -> f64 {
+    if let events::OnNegativeDelta::Overflow { floor, ceil } = on_negative {
+        if current < prev {
+            return (ceil - prev) + (current - floor);
+        }
+    }
+    // other negative variants are processed later
+    current - prev
 }

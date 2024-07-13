@@ -487,6 +487,26 @@ pub struct ItemConfigData {
 }
 
 impl ItemConfigData {
+    pub fn blank(oid: &OID, sender: &str) -> Self {
+        let action = if oid.kind() == ItemKind::Unit {
+            Some(ActionConfig {
+                svc: sender.to_owned(),
+                timeout: None,
+                config: None,
+            })
+        } else {
+            None
+        };
+        Self {
+            oid: oid.clone(),
+            meta: None,
+            enabled: true,
+            logic: None,
+            action,
+            status: None,
+            value: ValueOptionOwned::No,
+        }
+    }
     pub fn from_raw_event(oid: &OID, ev: RawStateEventOwned, sender: &str) -> Self {
         let action = if oid.kind() == ItemKind::Unit {
             Some(ActionConfig {
