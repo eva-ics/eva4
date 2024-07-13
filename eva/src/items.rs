@@ -330,6 +330,7 @@ impl ItemState {
         logic: Option<&Logic>,
         oid: &OID,
         boot_id: u64,
+        time: f64,
     ) -> bool {
         let mut modified = false;
         let mut status = raw.status;
@@ -361,7 +362,7 @@ impl ItemState {
         }
         if modified || raw.force != Force::None {
             self.ieid = IEID::generate(boot_id);
-            self.t = Time::now().timestamp();
+            self.t = time;
             modified
         } else {
             false
@@ -400,6 +401,9 @@ impl ItemState {
     }
     pub fn value(&self) -> &Value {
         &self.value
+    }
+    pub fn t(&self) -> f64 {
+        self.t
     }
 }
 

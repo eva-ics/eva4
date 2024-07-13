@@ -28,6 +28,7 @@ use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_common::registry;
 use eva_common::time::monotonic_ns;
+use eva_common::time::Time;
 use eva_common::tools::format_path;
 use eva_common::ITEM_STATUS_ERROR;
 use eva_common::SLEEP_STEP;
@@ -1293,6 +1294,7 @@ impl Core {
     }
 
     #[async_recursion::async_recursion]
+    #[allow(clippy::too_many_lines)]
     async fn process_raw_state(
         &self,
         item: Item,
@@ -1321,6 +1323,7 @@ impl Core {
                 };
                 let on_modified = raw.on_modified.take();
                 let mut delta = None;
+                let now = Time::now().timestamp();
                 let ((s_state, db_st), really_modified) = {
                     let mut state = state.lock();
                     if item.oid().kind() == ItemKind::Lvar
@@ -1330,15 +1333,28 @@ impl Core {
                         // lvars with status 0 are not set from RAW
                         return Ok(());
                     }
-                    if let Some(OnModifiedOwned::SetOtherValueDelta(_)) = on_modified {
+                    if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified {
                         if let ValueOptionOwned::Value(ref value) = raw.value {
                             let current: f64 = value.try_into().unwrap_or_default();
                             let previous: f64 = state.value().try_into().unwrap_or_default();
-                            delta = Some(current - previous);
+                            if let Some(period) = om.period {
+                                let elapsed = now - state.t();
+                                if elapsed > 0.0 {
+                                    delta = Some((current - previous) / elapsed * period);
+                                } else {
+                                    warn!(
+                                        "ignoring delta for {} - non-positive time delta",
+                                        item.oid()
+                                    );
+                                }
+                            } else {
+                                // no period
+                                delta = Some(current - previous);
+                            }
                         }
                     }
                     let really_modified =
-                        state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id);
+                        state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id, now);
                     // status/value have been really modified or forced to report
                     if really_modified || force != Force::None {
                         (
