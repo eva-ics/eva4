@@ -1339,6 +1339,8 @@ impl Core {
                                         apply_delta!();
                                     }
                                 }
+                            } else {
+                                apply_delta!();
                             }
                         }
                         if let Some(rw) = rw {
@@ -1346,7 +1348,9 @@ impl Core {
                                 .await
                                 .log_ef();
                         }
-                    } else if self.auto_create && sender_allowed_auto_create(sender) {
+                        return Ok(());
+                    }
+                    if self.auto_create && sender_allowed_auto_create(sender) {
                         apply_delta!();
                         if let Some(rw) = rw {
                             self.auto_create_item_from_raw(&o.oid, rw, sender).await;
@@ -1430,7 +1434,7 @@ impl Core {
             raw.status,
             raw.value
         );
-        let _stp_lock = if lock {
+        let stp_lock = if lock {
             Some(self.state_processor_lock.lock().await)
         } else {
             None
@@ -1482,6 +1486,7 @@ impl Core {
         let rpc = self.rpc.get().unwrap();
         self.process_new_state(item.oid(), s_state, db_st, rpc)
             .await?;
+        drop(stp_lock);
         if let Some(om) = on_modified {
             self.process_modified(om, really_modified, force, delta, sender)
                 .await?;
