@@ -332,8 +332,18 @@ impl ItemState {
         boot_id: u64,
     ) -> bool {
         let mut modified = false;
-        let status = raw.status;
-        let value = raw.value;
+        let mut status = raw.status;
+        let mut value = raw.value;
+        let mut compared_match = raw.status_compare.map_or(true, |v| v == self.status);
+        if let ValueOptionOwned::Value(v) = raw.value_compare {
+            if v != self.value {
+                compared_match = false;
+            }
+        }
+        if !compared_match {
+            status = raw.status_else.unwrap_or(ITEM_STATUS_ERROR);
+            value = raw.value_else;
+        }
         if status == ITEM_STATUS_ERROR || validate_logic(value.as_ref(), logic) {
             if self.status != status {
                 self.status = status;
