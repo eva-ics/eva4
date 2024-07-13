@@ -1354,6 +1354,7 @@ impl Core {
                                 let rw = RawStateEventOwned {
                                     status: om.status,
                                     value: om.value.clone(),
+                                    force,
                                     ..RawStateEventOwned::default()
                                 };
                                 self.process_raw_state(item, rw, false).await.log_ef();
