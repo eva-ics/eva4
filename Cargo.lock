@@ -1665,9 +1665,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.65"
+version = "0.3.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e40f9195f944b7d09aaf6a3e6c2ceaeaed0682b96ef7bc240b542502f59461c3"
+checksum = "6d3c1142577de489730d56c9c17da3cadb98b31510cbc926329a810f1dddc13a"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
