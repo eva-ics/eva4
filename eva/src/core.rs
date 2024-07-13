@@ -14,7 +14,9 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
 use eva_common::dobj::{DataObject, Endianess, ObjectMap};
 use eva_common::err_logger;
+use eva_common::events;
 use eva_common::events::Force;
+use eva_common::events::OnModifiedOwned;
 use eva_common::events::{
     DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
     RemoteStateEvent, ReplicationInventoryItem, ReplicationState, ReplicationStateEvent,
@@ -1318,6 +1320,7 @@ impl Core {
                     None
                 };
                 let on_modified = raw.on_modified.take();
+                let mut delta = None;
                 let ((s_state, db_st), really_modified) = {
                     let mut state = state.lock();
                     if item.oid().kind() == ItemKind::Lvar
@@ -1326,6 +1329,13 @@ impl Core {
                     {
                         // lvars with status 0 are not set from RAW
                         return Ok(());
+                    }
+                    if let Some(OnModifiedOwned::SetOtherValueDelta(_)) = on_modified {
+                        if let ValueOptionOwned::Value(ref value) = raw.value {
+                            let current: f64 = value.try_into().unwrap_or_default();
+                            let previous: f64 = state.value().try_into().unwrap_or_default();
+                            delta = Some(current - previous);
+                        }
                     }
                     let really_modified =
                         state.set_from_raw(raw, item.logic(), item.oid(), self.boot_id);
@@ -1343,21 +1353,66 @@ impl Core {
                 let rpc = self.rpc.get().unwrap();
                 self.process_new_state(item.oid(), s_state, db_st, rpc)
                     .await?;
-                if really_modified {
-                    if let Some(om) = on_modified {
-                        for oid in om.oid {
-                            for item in self.inventory.read().await.get_items_by_mask(
-                                &oid,
-                                &Filter::default().node(NodeFilter::Local),
-                                false,
-                            ) {
-                                let rw = RawStateEventOwned {
-                                    status: om.status,
-                                    value: om.value.clone(),
-                                    force,
-                                    ..RawStateEventOwned::default()
-                                };
-                                self.process_raw_state(item, rw, false).await.log_ef();
+                if let Some(om) = on_modified {
+                    match om {
+                        events::OnModifiedOwned::SetOther(o) => {
+                            if really_modified {
+                                for oid in o.oid {
+                                    for item in self.inventory.read().await.get_items_by_mask(
+                                        &oid,
+                                        &Filter::default().node(NodeFilter::Local),
+                                        false,
+                                    ) {
+                                        let rw = RawStateEventOwned {
+                                            status: o.status,
+                                            value: o.value.clone(),
+                                            force,
+                                            ..RawStateEventOwned::default()
+                                        };
+                                        self.process_raw_state(item, rw, false).await.log_ef();
+                                    }
+                                }
+                            }
+                        }
+                        events::OnModifiedOwned::SetOtherValueDelta(o) => {
+                            if let Some(delta) = delta {
+                                for oid in o.oid {
+                                    for item in self.inventory.read().await.get_items_by_mask(
+                                        &oid,
+                                        &Filter::default().node(NodeFilter::Local),
+                                        false,
+                                    ) {
+                                        if let Some(state) = item.state() {
+                                            if state.lock().status() == ITEM_STATUS_ERROR {
+                                                match o.on_error {
+                                                    events::OnModifiedError::Skip => {}
+                                                    events::OnModifiedError::Reset => {
+                                                        let rw = RawStateEventOwned {
+                                                            status: 1,
+                                                            value: ValueOptionOwned::Value(
+                                                                Value::F64(0.0),
+                                                            ),
+                                                            force,
+                                                            ..RawStateEventOwned::default()
+                                                        };
+                                                        self.process_raw_state(item, rw, false)
+                                                            .await
+                                                            .log_ef();
+                                                        continue;
+                                                    }
+                                                    events::OnModifiedError::Process => todo!(),
+                                                }
+                                            }
+                                            let rw = RawStateEventOwned {
+                                                status: 1,
+                                                value: ValueOptionOwned::Value(Value::F64(delta)),
+                                                force,
+                                                ..RawStateEventOwned::default()
+                                            };
+                                            self.process_raw_state(item, rw, false).await.log_ef();
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
