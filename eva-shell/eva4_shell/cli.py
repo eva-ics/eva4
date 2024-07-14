@@ -1172,9 +1172,10 @@ class CLI:
         time_start = prepare_time(time_start)
         time_end = prepare_time(time_end)
         xopts_map = {}
-        for x in xopts:
-            n, v = x.split('=', 1)
-            xopts_map[n] = v
+        if xopts:
+            for x in xopts:
+                n, v = x.split('=', 1)
+                xopts_map[n] = v
         precs = None
         if fill is not None:
             if ':' in fill:
