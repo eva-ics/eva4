@@ -1456,7 +1456,7 @@ impl Core {
                         let elapsed = now - state.t();
                         if elapsed > 0.0 {
                             delta = Some(
-                                calc_delta(current, previous, om.on_negative) / elapsed * period,
+                                calc_delta(current, previous, om.on_negative) / period * elapsed,
                             );
                         } else {
                             warn!(
