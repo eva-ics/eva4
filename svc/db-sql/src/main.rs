@@ -9,7 +9,7 @@ use eva_sdk::types::{Fill, StateProp};
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{atomic, Arc};
 use std::time::Duration;
 
@@ -93,7 +93,7 @@ impl RpcHandlers for Handlers {
                     #[serde(alias = "x")]
                     prop: Option<StateProp>,
                     #[serde(alias = "o", rename = "xopts", default)]
-                    _xopts: HashMap<String, Value>,
+                    xopts: BTreeMap<String, Value>,
                     #[serde(default)]
                     compact: bool,
                 }
@@ -115,6 +115,7 @@ impl RpcHandlers for Handlers {
                                     p.precision,
                                     p.limit,
                                     p.prop,
+                                    p.xopts,
                                     p.compact,
                                 )
                                 .await
