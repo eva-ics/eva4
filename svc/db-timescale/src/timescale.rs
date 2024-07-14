@@ -3,9 +3,27 @@ use chrono::NaiveDateTime;
 use eva_common::prelude::*;
 use eva_sdk::types::{Fill, HistoricalState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
-use std::fmt::Write as _;
+use serde::Deserialize;
+use std::{collections::BTreeMap, fmt::Write as _};
 
 use sqlx::Row;
+
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+enum ValueFunction {
+    #[default]
+    Mean,
+    Sum,
+}
+
+impl ValueFunction {
+    fn as_str(&self) -> &str {
+        match self {
+            ValueFunction::Mean => "locf(avg(value)) as value",
+            ValueFunction::Sum => "sum(value) as value",
+        }
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
@@ -17,23 +35,29 @@ pub async fn state_history_filled(
     precision: Option<u32>,
     limit: Option<usize>,
     prop: Option<StateProp>,
+    mut xopts: BTreeMap<String, Value>,
     compact: bool,
 ) -> EResult<StateHistoryData> {
     let pool = crate::db::POOL.get().unwrap();
+    let vfn = if let Some(v) = xopts.remove("vfn") {
+        ValueFunction::deserialize(v)?
+    } else {
+        ValueFunction::default()
+    };
     let (cols, pq, need_status, need_value) = if let Some(p) = prop {
         match p {
             StateProp::Status => (
                 "status::smallint",
-                "locf(avg(status)) as status",
+                "locf(avg(status)) as status".to_owned(),
                 true,
                 false,
             ),
-            StateProp::Value => ("value", "locf(avg(value)) as value", false, true),
+            StateProp::Value => ("value", vfn.as_str().to_owned(), false, true),
         }
     } else {
         (
             "status::smallint,value",
-            "locf(avg(status)) as status,locf(avg(value)) as value",
+            format!("locf(avg(status)) as status,{}", vfn.as_str()),
             true,
             true,
         )

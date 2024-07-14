@@ -27,7 +27,7 @@ state_history:
       req: false
     - nam: xopts
       typ: Map<String, String>
-      des: Extra, not used for SQL databases
+      des: "Extra: vfn=fn for value grouping: mean/sum (d: mean)"
       req: false
     - nam: compact
       typ: bool
