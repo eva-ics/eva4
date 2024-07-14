@@ -1450,23 +1450,27 @@ impl Core {
             }
             if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified {
                 if let ValueOptionOwned::Value(ref value) = raw.value {
-                    let current: f64 = value.try_into().unwrap_or_default();
-                    let previous: f64 = state.value().try_into().unwrap_or_default();
-                    if let Some(period) = om.period {
-                        let elapsed = now - state.t();
-                        if elapsed > 0.0 {
-                            delta = Some(
-                                calc_delta(current, previous, om.on_negative) / period * elapsed,
-                            );
+                    let prev_value = state.value();
+                    if *prev_value != Value::Unit {
+                        let current: f64 = value.try_into().unwrap_or_default();
+                        let previous: f64 = prev_value.try_into().unwrap_or_default();
+                        if let Some(period) = om.period {
+                            let elapsed = now - state.t();
+                            if elapsed > 0.0 {
+                                delta = Some(
+                                    calc_delta(current, previous, om.on_negative) / period
+                                        * elapsed,
+                                );
+                            } else {
+                                warn!(
+                                    "ignoring delta for {} - non-positive time delta",
+                                    item.oid()
+                                );
+                            }
                         } else {
-                            warn!(
-                                "ignoring delta for {} - non-positive time delta",
-                                item.oid()
-                            );
+                            // no period
+                            delta = Some(current - previous);
                         }
-                    } else {
-                        // no period
-                        delta = Some(current - previous);
                     }
                 }
             }
