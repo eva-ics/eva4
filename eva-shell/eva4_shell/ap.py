@@ -784,6 +784,10 @@ def append_item_cli(root_sp):
         help='fill (e.g. 1T - 1 min, 2H - 2 hours), requires start time,'
         ' value precision can be specified as e.g. 1T:2 '
         'for 2 digits after comma')
+    p.add_argument('--xopts',
+                   metavar='NAME=VALUE',
+                   help='Extra query options',
+                   nargs='*')
 
     p = sp.add_parser('slog', help='item state log')
     p.add_argument('i', metavar='OID').completer = ComplOID()

@@ -1168,9 +1168,13 @@ class CLI:
             ])
 
     def item_history(self, i, db_svc, time_start, time_end, time_zone, limit,
-                     prop, fill):
+                     prop, fill, xopts):
         time_start = prepare_time(time_start)
         time_end = prepare_time(time_end)
+        xopts_map = {}
+        for x in xopts:
+            n, v = x.split('=', 1)
+            xopts_map[n] = v
         precs = None
         if fill is not None:
             if ':' in fill:
@@ -1183,7 +1187,8 @@ class CLI:
                              fill=fill,
                              precision=precs,
                              prop=prop,
-                             limit=limit),
+                             limit=limit,
+                             xopts=xopts_map),
                         target=db_svc)
         cols = []
         if prop == 'status' or prop is None:
