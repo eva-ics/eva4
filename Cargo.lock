@@ -1809,7 +1809,7 @@ dependencies = [
  "once_cell",
  "rmodbus",
  "serde",
- "simple-pool",
+ "simple-pool 0.0.18",
  "tokio",
  "tokio-serial",
  "uuid 1.7.0",
@@ -1972,7 +1972,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
- "simple-pool",
+ "simple-pool 0.0.18",
  "tokio",
  "tokio-native-tls",
  "urlencoding",
@@ -2207,7 +2207,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.1",
  "serde",
- "simple-pool",
+ "simple-pool 0.0.17",
  "tokio",
  "tokio-fd",
  "ttl_cache",
@@ -5085,6 +5085,16 @@ name = "simple-pool"
 version = "0.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eedccae0b778a8a7e1045f3d76fe936446fd9294fda313564b327b2b230d45a"
+dependencies = [
+ "object-id",
+ "parking_lot 0.12.1",
+]
+
+[[package]]
+name = "simple-pool"
+version = "0.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "073382259dbeb56c3eaab04a1d330459f6490d1e518b2a8ee441c8bd00dbc092"
 dependencies = [
  "object-id",
  "parking_lot 0.12.1",
