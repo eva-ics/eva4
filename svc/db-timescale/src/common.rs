@@ -9,6 +9,7 @@ fn default_queue_size() -> usize {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Config {
     pub db: String,
     #[serde(
