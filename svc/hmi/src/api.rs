@@ -959,9 +959,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     };
     match p.i {
         OIDsingleOrMulti::Single(oid) => {
-            if !aci.acl().check_admin() {
-                aci.acl().require_item_read(&oid.to_wildcard_oid()?)?;
-            }
+            aci.acl().require_item_mask_read(&oid)?;
             let payload = StateHistoryPayload {
                 i: &oid,
                 t_start,
@@ -1000,10 +998,8 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
             if fill.is_some() {
                 let mut data: BTreeMap<String, Value> = <_>::default();
                 let mut times: Option<Vec<f64>> = None;
-                if !aci.acl().check_admin() {
-                    for oid in &oids {
-                        aci.acl().require_item_read(&oid.to_wildcard_oid()?)?;
-                    }
+                for oid in &oids {
+                    aci.acl().require_item_mask_read(oid)?;
                 }
                 for oid in oids {
                     let payload = StateHistoryPayload {
