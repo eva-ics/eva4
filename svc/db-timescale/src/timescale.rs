@@ -1,6 +1,6 @@
 use crate::db::naive_to_ts;
 use chrono::NaiveDateTime;
-use eva_common::prelude::*;
+use eva_common::{acl::OIDMask, prelude::*};
 use eva_sdk::types::{Fill, HistoricalState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
 use serde::Deserialize;
@@ -28,7 +28,7 @@ impl ValueFunction {
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
 pub async fn state_history_filled(
-    oid: OID,
+    oid_str: &str,
     t_start: f64,
     t_end: Option<f64>,
     fill: Fill,
@@ -39,6 +39,20 @@ pub async fn state_history_filled(
     compact: bool,
 ) -> EResult<StateHistoryData> {
     let pool = crate::db::POOL.get().unwrap();
+    let mut where_oid_q = String::new();
+    // try to parse OID
+    if let Ok(oid) = oid_str.parse::<OID>() {
+        write!(where_oid_q, "WHERE oid='{}'", oid)?;
+    } else if !crate::eva_pg_enabled() {
+        return Err(Error::unsupported(
+            "OID masks are not supported without eva_pg extension",
+        ));
+    } else if let Ok(oid_mask) = oid_str.parse::<OIDMask>() {
+        // try to use OID mask
+        write!(where_oid_q, "WHERE oid_match(oid, '{}')", oid_mask)?;
+    } else {
+        return Err(Error::invalid_data("invalid OID/mask"));
+    }
     let vfn = if let Some(v) = xopts.remove("vfn") {
         ValueFunction::deserialize(v)?
     } else {
@@ -76,13 +90,13 @@ pub async fn state_history_filled(
     finish=>to_timestamp({})) AS period, {} FROM state_history_events
     JOIN state_history_oids
     ON state_history_events.oid_id=state_history_oids.id
-    WHERE oid='{}' AND t>=to_timestamp({}) and t<=to_timestamp({}) GROUP BY period"#,
+    {} AND t>=to_timestamp({}) and t<=to_timestamp({}) GROUP BY period"#,
         cols,
         fill.as_secs(),
         t_start,
         te,
         pq,
-        oid,
+        where_oid_q,
         t_start,
         te
     );

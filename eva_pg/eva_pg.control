@@ -1,0 +1,5 @@
+comment = 'eva_pg:  EVA ICS extension'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/eva_pg'
+relocatable = false
+superuser = true

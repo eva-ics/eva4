@@ -27,4 +27,6 @@ config:
   oids:
     - "#"
   oids_exclude: []
+  # enable EVA ICS PostgreSQL extension support (experimental)
+  #eva_pg: true
 user: nobody

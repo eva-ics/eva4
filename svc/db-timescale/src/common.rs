@@ -40,4 +40,6 @@ pub struct Config {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     pub panic_in: Option<Duration>,
+    #[serde(default)]
+    pub eva_pg: bool,
 }

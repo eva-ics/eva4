@@ -45,6 +45,7 @@ resolver = "1"
 
 exclude = [
   "contrib/webinfo",
+  "eva_pg",
   "svc/ffi",
   "svc/controller-system",
   "svc/svc-example-temp",

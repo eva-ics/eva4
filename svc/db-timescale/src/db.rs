@@ -1,4 +1,5 @@
 use chrono::naive::NaiveDateTime;
+use eva_common::acl::OIDMask;
 use eva_common::prelude::*;
 use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
@@ -185,7 +186,7 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
 pub async fn state_history(
-    oid: OID,
+    oid_str: &str,
     t_start: f64,
     t_end: Option<f64>,
     precision: Option<u32>,
@@ -194,7 +195,20 @@ pub async fn state_history(
     compact: bool,
 ) -> EResult<StateHistoryData> {
     let pool = POOL.get().unwrap();
-    let mut q = format!("WHERE oid='{}'", oid);
+    let mut q = String::new();
+    // try to parse OID
+    if let Ok(oid) = oid_str.parse::<OID>() {
+        write!(q, "WHERE oid='{}'", oid)?;
+    } else if !crate::eva_pg_enabled() {
+        return Err(Error::unsupported(
+            "OID masks are not supported without eva_pg extension",
+        ));
+    } else if let Ok(oid_mask) = oid_str.parse::<OIDMask>() {
+        // try to use OID mask
+        write!(q, "WHERE oid_match(oid, '{}')", oid_mask)?;
+    } else {
+        return Err(Error::invalid_data("invalid OID/mask"));
+    }
     write!(q, " and t>=to_timestamp({})", t_start).map_err(Error::failed)?;
     if let Some(te) = t_end {
         write!(q, " and t<=to_timestamp({})", te).map_err(Error::failed)?;

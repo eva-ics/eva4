@@ -33,6 +33,12 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+static EVA_PG_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
+pub fn eva_pg_enabled() -> bool {
+    EVA_PG_ENABLED.load(atomic::Ordering::Relaxed)
+}
+
 struct Handlers {
     tx: async_channel::Sender<Event>,
     info: ServiceInfo,
@@ -77,7 +83,7 @@ impl RpcHandlers for Handlers {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
                 struct StateHistoryParams {
-                    i: OID,
+                    i: String,
                     #[serde(alias = "s")]
                     t_start: Option<f64>,
                     #[serde(alias = "e")]
@@ -101,7 +107,7 @@ impl RpcHandlers for Handlers {
                     let p: StateHistoryParams = unpack(payload)?;
                     let data = if let Some(fill) = p.fill {
                         timescale::state_history_filled(
-                            p.i,
+                            &p.i,
                             p.t_start
                                 .unwrap_or_else(|| eva_common::time::now_ns_float() - 86400.0),
                             p.t_end,
@@ -116,7 +122,7 @@ impl RpcHandlers for Handlers {
                         .log_err()?
                     } else {
                         db::state_history(
-                            p.i,
+                            &p.i,
                             p.t_start
                                 .unwrap_or_else(|| eva_common::time::now_ns_float() - 86400.0),
                             p.t_end,
@@ -322,6 +328,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    EVA_PG_ENABLED.store(config.eva_pg, atomic::Ordering::Relaxed);
     SKIP_DISCONNECTED.store(config.skip_disconnected, atomic::Ordering::Relaxed);
     set_poc(config.panic_in);
     let timeout = initial.timeout();

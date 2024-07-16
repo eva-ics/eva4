@@ -871,8 +871,8 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum OIDsingleOrMulti {
-        Single(OID),
-        Multi(Vec<OID>),
+        Single(OIDMask),
+        Multi(Vec<OIDMask>),
     }
     #[derive(Deserialize, Eq, PartialEq)]
     #[serde(rename_all = "lowercase")]
@@ -909,7 +909,7 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     }
     #[derive(Serialize)]
     struct StateHistoryPayload<'a> {
-        i: &'a OID,
+        i: &'a OIDMask,
         t_start: f64,
         t_end: f64,
         fill: Option<Fill>,
@@ -959,7 +959,9 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
     };
     match p.i {
         OIDsingleOrMulti::Single(oid) => {
-            aci.acl().require_item_read(&oid)?;
+            if !aci.acl().check_admin() {
+                aci.acl().require_item_read(&oid.to_wildcard_oid()?)?;
+            }
             let payload = StateHistoryPayload {
                 i: &oid,
                 t_start,
@@ -998,8 +1000,10 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
             if fill.is_some() {
                 let mut data: BTreeMap<String, Value> = <_>::default();
                 let mut times: Option<Vec<f64>> = None;
-                for oid in &oids {
-                    aci.acl().require_item_read(oid)?;
+                if !aci.acl().check_admin() {
+                    for oid in &oids {
+                        aci.acl().require_item_read(&oid.to_wildcard_oid()?)?;
+                    }
                 }
                 for oid in oids {
                     let payload = StateHistoryPayload {
