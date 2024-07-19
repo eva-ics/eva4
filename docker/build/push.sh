@@ -7,6 +7,6 @@ if [ -z $BUILD ]; then
   exit 9
 fi
 
-docker tag altertech/eva-ics4:latest "altertech/eva-ics4:${BUILD}" || exit 1
-docker push "altertech/eva-ics4:$BUILD" || exit 1
-docker push altertech/eva-ics4:latest || exit 1
+docker tag bmauto/eva-ics4:latest "bmauto/eva-ics4:${BUILD}" || exit 1
+docker push "bmauto/eva-ics4:$BUILD" || exit 1
+docker push bmauto/eva-ics4:latest || exit 1

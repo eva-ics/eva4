@@ -3,7 +3,7 @@ services:
   eva-ics:
     container_name: eva_1
     hostname: eva_1
-    image: altertech/eva-ics4
+    image: bmauto/eva-ics4
     volumes:
         - ./data/init:/mnt/init
         - ./data/ui:/mnt/ui
