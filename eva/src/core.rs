@@ -1469,7 +1469,7 @@ impl Core {
                             }
                         } else {
                             // no period
-                            delta = Some(current - previous);
+                            delta = Some(calc_delta(current, previous, om.on_negative));
                         }
                     }
                 }
