@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-07-25 build 2024072501: Stability improvements
 * 2024-07-16 build 2024071601: Advanced EAPI RAW events, sum value function in DBs, bar charts in OpCentre
 * 2024-06-18 build 2024061801: Stability fixes, HMI improvements
 * 2024-06-12 build 2024061201: ZF-replication multiple heartbeats
