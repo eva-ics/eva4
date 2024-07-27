@@ -1445,7 +1445,7 @@ impl Core {
         };
         let on_modified = raw.on_modified.take();
         let mut delta = None;
-        let mut t = raw.t;
+        let t = raw.t;
         let now = Time::now().timestamp();
         let ((s_state, db_st), really_modified) = {
             let mut state = state.lock();
