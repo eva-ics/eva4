@@ -360,9 +360,18 @@ impl ItemState {
             mark_out_of_range!(self, oid, value);
             modified = true;
         }
+        if let Some(t) = raw.t {
+            if self.t != t {
+                self.t = t;
+                modified = true;
+            }
+        }
         if modified || raw.force != Force::None {
             self.ieid = IEID::generate(boot_id);
-            self.t = time;
+            // if the raw event time is not set, set it to the current time
+            if raw.t.is_none() {
+                self.t = time;
+            }
             modified
         } else {
             false
