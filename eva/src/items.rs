@@ -361,7 +361,7 @@ impl ItemState {
             modified = true;
         }
         if let Some(t) = raw.t {
-            if self.t != t {
+            if t != 0.0 && self.t != t {
                 self.t = t;
                 modified = true;
             }
