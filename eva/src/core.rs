@@ -725,11 +725,11 @@ impl Core {
             info!("local item destroyed: {}", item.oid());
         }
     }
+    /// Creates/recreates local items from Vec of values
+    ///
     /// # Panics
     ///
     /// Will panic if the core rpc is not set
-    ///
-    /// Creates/recreates local items from Vec of values
     #[inline]
     pub async fn deploy_local_items(&self, configs: Vec<ItemConfigData>) -> EResult<()> {
         let rpc = self.rpc.get().unwrap();
@@ -1542,6 +1542,12 @@ impl Core {
     }
 
     async fn auto_create_item_from_raw(&self, oid: &OID, raw: RawStateEventOwned, sender: &str) {
+        // do not auto-create items if event time is 0 (not modified)
+        if let Some(t) = raw.t {
+            if t == 0.0 {
+                return;
+            }
+        }
         let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
         info!("auto-creating local item {} source: {}", oid, sender);
         if let Err(e) = self.deploy_local_items(vec![item_config]).await {

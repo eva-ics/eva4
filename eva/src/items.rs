@@ -475,6 +475,7 @@ impl ActionConfig {
 pub struct StateData {
     status: Option<ItemStatus>,
     value: ValueOptionOwned,
+    t: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -493,6 +494,7 @@ pub struct ItemConfigData {
     status: Option<ItemStatus>,
     #[serde(default)]
     value: ValueOptionOwned,
+    t: Option<f64>,
 }
 
 impl ItemConfigData {
@@ -514,6 +516,7 @@ impl ItemConfigData {
             action,
             status: None,
             value: ValueOptionOwned::No,
+            t: None,
         }
     }
     pub fn from_raw_event(oid: &OID, ev: RawStateEventOwned, sender: &str) -> Self {
@@ -534,6 +537,7 @@ impl ItemConfigData {
             action,
             status: Some(ev.status),
             value: ev.value,
+            t: ev.t,
         }
     }
     pub fn split(self) -> (ItemData, StateData) {
@@ -549,6 +553,7 @@ impl ItemConfigData {
         let state_data: StateData = StateData {
             status: self.status,
             value: self.value,
+            t: self.t,
         };
         (item_data, state_data)
     }
@@ -880,6 +885,9 @@ impl Inventory {
             }
             if let ValueOptionOwned::Value(value) = sd.value {
                 state.value = value;
+            }
+            if let Some(t) = sd.t {
+                state.t = t;
             }
             data.state = Some(Mutex::new(state));
         }
