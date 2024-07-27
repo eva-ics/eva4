@@ -1261,6 +1261,7 @@ impl Core {
         really_modified: bool,
         force: Force,
         delta: Option<f64>,
+        t: Option<f64>,
         sender: &str,
     ) -> EResult<()> {
         match om {
@@ -1276,6 +1277,7 @@ impl Core {
                                 status: o.status,
                                 value: o.value.clone(),
                                 force,
+                                t,
                                 ..RawStateEventOwned::default()
                             };
                             self.process_raw_state(item, rw, false, sender)
@@ -1292,6 +1294,7 @@ impl Core {
                             status: 1,
                             value: ValueOptionOwned::Value(Value::F64($delta)),
                             force,
+                            t,
                             ..RawStateEventOwned::default()
                         }
                     };
@@ -1302,6 +1305,7 @@ impl Core {
                             status: 1,
                             value: ValueOptionOwned::Value(Value::F64(0.0)),
                             force,
+                            t,
                             ..RawStateEventOwned::default()
                         }
                     };
@@ -1441,6 +1445,7 @@ impl Core {
         };
         let on_modified = raw.on_modified.take();
         let mut delta = None;
+        let mut t = raw.t;
         let now = Time::now().timestamp();
         let ((s_state, db_st), really_modified) = {
             let mut state = state.lock();
@@ -1492,7 +1497,7 @@ impl Core {
             .await?;
         drop(stp_lock);
         if let Some(om) = on_modified {
-            self.process_modified(om, really_modified, force, delta, sender)
+            self.process_modified(om, really_modified, force, delta, t, sender)
                 .await?;
         };
         Ok(())
