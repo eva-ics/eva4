@@ -98,12 +98,12 @@ enum PvtOp {
     Write,
 }
 
-fn format_and_check_path(s: &str, acl: &Acl, op: PvtOp) -> EResult<PathBuf> {
+fn format_and_check_path(s: &str, aci: &ACI, op: PvtOp) -> EResult<PathBuf> {
     macro_rules! check_acl {
         ($path: expr) => {
             match op {
-                PvtOp::Read => acl.require_pvt_read($path)?,
-                PvtOp::Write => acl.require_pvt_write($path)?,
+                PvtOp::Read => aci.require_pvt_read($path)?,
+                PvtOp::Write => aci.require_pvt_write($path)?,
                 PvtOp::List => {}
             }
         };
@@ -1880,7 +1880,7 @@ async fn method_pvt_put(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     run_api_filter!("pvt.put", p_f, aci);
-    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
+    let path = format_and_check_path(&p.path, aci, PvtOp::Write)?;
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -1908,7 +1908,7 @@ async fn method_pvt_get(params: Value, aci: &mut ACI) -> EResult<Value> {
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = Params::deserialize(params)?;
-    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Read)?;
+    let path = format_and_check_path(&p.path, aci, PvtOp::Read)?;
     let content = match tokio::fs::read_to_string(path).await {
         Ok(v) => v,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(Error::not_found(p.path)),
@@ -1930,7 +1930,7 @@ async fn method_pvt_unlink(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Info).await.log_ef();
     aci.check_write()?;
     run_api_filter!("pvt.unlink", p_f, aci);
-    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::Write)?;
+    let path = format_and_check_path(&p.path, aci, PvtOp::Write)?;
     if let Err(e) = tokio::fs::remove_file(path).await {
         if e.kind() == std::io::ErrorKind::NotFound {
             return Err(Error::not_found(p.path));
@@ -1955,7 +1955,7 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
     }
     aci.log_request(log::Level::Debug).await.log_ef();
     let p = Params::deserialize(params)?;
-    let path = format_and_check_path(&p.path, aci.acl(), PvtOp::List)?;
+    let path = format_and_check_path(&p.path, aci, PvtOp::List)?;
     let masks: Vec<String> = if let Some(m) = p.masks {
         m.to_vec()
     } else {
@@ -1984,7 +1984,7 @@ async fn method_pvt_list(params: Value, aci: &mut ACI) -> EResult<Value> {
         .into_iter()
         .filter_map(|r| {
             let p = r.path.to_string_lossy();
-            if plen < p.len() && aci.acl().check_pvt_read(&p[plen..]) && s.len() + 1 < p.len() {
+            if plen < p.len() && aci.check_pvt_read(&p[plen..]) && s.len() + 1 < p.len() {
                 return Some(sdkfs::Entry {
                     path: Path::new(&p[s.len() + 1..]).to_owned(),
                     meta: r.meta,

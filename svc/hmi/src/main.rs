@@ -66,6 +66,7 @@ const DESCRIPTION: &str = "Default HMI service";
 lazy_static! {
     static ref UI_PATH: OnceCell<Option<String>> = <_>::default();
     static ref PVT_PATH: OnceCell<Option<String>> = <_>::default();
+    static ref USER_DIRS: OnceCell<String> = <_>::default();
     static ref VENDORED_APPS_PATH: OnceCell<String> = <_>::default();
     static ref REG: OnceCell<Registry> = <_>::default();
     static ref MIME_TYPES: OnceCell<HashMap<String, String>> = <_>::default();
@@ -167,6 +168,7 @@ struct Config {
     buf_size: usize,
     ui_path: Option<String>,
     pvt_path: Option<String>,
+    pvt_user_dirs: Option<String>,
     #[serde(default = "default_history_db_svc")]
     default_history_db_svc: String,
     #[serde(default)]
@@ -236,6 +238,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
             pvt_path
         }))
         .map_err(|_| Error::core("Unable to set PVT_PATH"))?;
+    if let Some(user_dirs) = config.pvt_user_dirs {
+        USER_DIRS
+            .set(user_dirs)
+            .map_err(|_| Error::core("Unable to set USER_DIRS"))?;
+    }
     UI_PATH
         .set(config.ui_path.as_ref().map(|p| {
             let ui_path = eva_common::tools::format_path(eva_dir, Some(p), None);

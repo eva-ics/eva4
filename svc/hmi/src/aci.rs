@@ -1,5 +1,5 @@
 use crate::aaa::{Auth, Token};
-use crate::db;
+use crate::{db, USER_DIRS};
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, Utc};
 use eva_common::acl::Acl;
 use eva_common::err_logger;
@@ -192,6 +192,55 @@ impl ACI {
             log_level: log::Level::Info,
             t: Instant::now(),
         }
+    }
+    pub fn require_pvt_read(&self, s: &str) -> EResult<()> {
+        if self.check_pvt_read(s) {
+            Ok(())
+        } else {
+            Err(Error::access(format!("read access reqired for {}", s)))
+        }
+    }
+    pub fn require_pvt_write(&self, s: &str) -> EResult<()> {
+        if self.check_pvt_write(s) {
+            Ok(())
+        } else {
+            Err(Error::access(format!("write access reqired for {}", s)))
+        }
+    }
+    pub fn user_pvt_path(&self) -> Option<String> {
+        let Some(user_dirs) = USER_DIRS.get() else {
+            return None;
+        };
+        let Some(user) = self.user() else {
+            return None;
+        };
+        Some(format!("{}/{}", user_dirs, user))
+    }
+    pub fn check_pvt_read(&self, s: &str) -> bool {
+        if let Some(user_path) = self.user_pvt_path() {
+            if s == user_path {
+                return true;
+            }
+            if let Some(x) = s.strip_prefix(&user_path) {
+                if x.starts_with('/') {
+                    return true;
+                }
+            }
+        }
+        self.acl().check_pvt_read(s)
+    }
+    pub fn check_pvt_write(&self, s: &str) -> bool {
+        if let Some(user_path) = self.user_pvt_path() {
+            if s == user_path {
+                return true;
+            }
+            if let Some(x) = s.strip_prefix(&user_path) {
+                if x.starts_with('/') {
+                    return true;
+                }
+            }
+        }
+        self.acl().check_pvt_write(s)
     }
     #[inline]
     pub fn as_extended_info(&self) -> ACIExtendedInfo {
