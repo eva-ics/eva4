@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-08-01 build 2024080101: HMI user dirs, optional time in raw events
 * 2024-07-25 build 2024072501: Stability improvements
 * 2024-07-16 build 2024071601: Advanced EAPI RAW events, sum value function in DBs, bar charts in OpCentre
 * 2024-06-18 build 2024061801: Stability fixes, HMI improvements
