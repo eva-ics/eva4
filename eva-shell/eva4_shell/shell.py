@@ -31,7 +31,9 @@ def launch():
         if not os.path.exists(common.dir_eva):
             raise RuntimeError(
                 f'EVA ICS directory not found. Consider installing EVA ICS either '
-                f'in {dir_eva_default} or specifying EVA_DIR env variable')
+                f'in {dir_eva_default} or specifying EVA_DIR env variable. '
+                f'For For a remote host, set EVA_BUS=HOST:PORT env variable'
+            )
         common.bus_path = f'{common.dir_eva}/var/bus.ipc'
         common.bus_name = f'eva-shell.{os.getpid()}'
 
