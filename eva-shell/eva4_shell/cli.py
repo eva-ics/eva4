@@ -1460,7 +1460,7 @@ class CLI:
             if current_command.json:
                 d['ip'] = ip
             else:
-                d.append({'name': 'IP address', 'value': ip})
+                d.append({'name': 'IP addr/host', 'value': ip})
         print_result(d, need_header=False, name_value=False)
 
     def mirror_set(self, mirror_url):

@@ -20,7 +20,7 @@ def check_local_shell():
 
 
 def is_local_shell():
-    return True
+    return common.dir_eva is not None
 
 
 def ok():
@@ -93,19 +93,24 @@ def remove_file_lock(name):
 
 
 def get_my_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.connect(('255.255.255.255', 0))
-        ip = s.getsockname()[0]
-        try:
-            s.close()
-        except:
-            pass
-    except:
-        ip = None
-    return ip
-
+    if common.bus_path:
+        if common.bus_path.startswith('/'):
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                s.connect(('255.255.255.255', 0))
+                ip = s.getsockname()[0]
+                try:
+                    s.close()
+                except:
+                    pass
+            except:
+                ip = None
+            return ip
+        else:
+            return common.bus_path.split(':')[0]
+    else:
+        return ''
 
 TIME_ORD = {
     'created': 0,

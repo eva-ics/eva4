@@ -5,6 +5,7 @@ from neotermcolor import colored
 from .sharedobj import common, current_command
 from .cli import CLI
 from .ap import init_ap
+from .tools import is_local_shell
 
 banner = """     _______    _____       _______________
     / ____/ |  / /   |     /  _/ ____/ ___/
@@ -19,13 +20,20 @@ dir_eva_default = '/opt/eva4'
 
 
 def launch():
-    common.dir_eva = os.environ.get('EVA_DIR', dir_eva_default)
-    if not os.path.exists(common.dir_eva):
-        raise RuntimeError(
-            f'EVA ICS directory not found. Consider installing EVA ICS either '
-            f'in {dir_eva_default} or specifying EVA_DIR env variable')
-    common.bus_path = f'{common.dir_eva}/var/bus.ipc'
-    common.bus_name = f'eva-shell.{os.getpid()}'
+    bus = os.environ.get('EVA_BUS')
+    if bus:
+        common.dir_eva = None
+        common.bus_path = bus
+        import socket
+        common.bus_name = f'eva-shell.{socket.gethostname()}.{os.getpid()}'
+    else:
+        common.dir_eva = os.environ.get('EVA_DIR', dir_eva_default)
+        if not os.path.exists(common.dir_eva):
+            raise RuntimeError(
+                f'EVA ICS directory not found. Consider installing EVA ICS either '
+                f'in {dir_eva_default} or specifying EVA_DIR env variable')
+        common.bus_path = f'{common.dir_eva}/var/bus.ipc'
+        common.bus_name = f'eva-shell.{os.getpid()}'
 
     common.cli = CLI()
 
