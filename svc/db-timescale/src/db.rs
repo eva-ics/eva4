@@ -63,31 +63,38 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     let _ = sqlx::query("DROP INDEX IF EXISTS state_history_events_t")
         .execute(&pool)
         .await;
+    let _ = sqlx::query(
+        "DROP FUNCTION IF EXISTS
+                insert_state_history_events(
+                    t TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[])",
+    )
+    .execute(&pool)
+    .await;
     sqlx::query(
-        r"CREATE OR REPLACE FUNCTION insert_state_history_events(
-t TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
+        r#"CREATE OR REPLACE FUNCTION insert_state_history_events(
+ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
- oid_id INT;
+ oid_id_x INT;
  oid_ids INT[];
 BEGIN
   LOCK TABLE state_history_oids IN SHARE UPDATE EXCLUSIVE MODE;
-  FOR i IN array_lower(t, 1)..array_upper(t, 1) LOOP
-    SELECT id FROM state_history_oids WHERE oid=oids[i] into oid_id;
-    IF oid_id IS NULL THEN
-        INSERT INTO state_history_oids(oid) VALUES(oids[i]) RETURNING id INTO oid_id;
+  FOR i IN array_lower(ts, 1)..array_upper(ts, 1) LOOP
+    SELECT id FROM state_history_oids WHERE oid=oids[i] into oid_id_x;
+    IF oid_id_x IS NULL THEN
+        INSERT INTO state_history_oids(oid) VALUES(oids[i]) RETURNING id INTO oid_id_x;
     END IF;
-    oid_ids := array_append(oid_ids, oid_id);
+    oid_ids := array_append(oid_ids, oid_id_x);
   END LOOP;
   INSERT INTO state_history_events(t, oid_id, status, value) VALUES (
-      UNNEST(t),
+      UNNEST(ts),
       UNNEST(oid_ids),
       UNNEST(statuses),
       UNNEST(vals)
-    ) ON CONFLICT DO NOTHING;
+    ) ON CONFLICT (t, oid_id) DO UPDATE SET status=EXCLUDED.status, value=EXCLUDED.value;
   END
-$$;",
+$$;"#,
     )
     .execute(&pool)
     .await?;
