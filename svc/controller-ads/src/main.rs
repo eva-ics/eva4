@@ -23,6 +23,12 @@ mod pull;
 
 use crate::adsbr::ParseAmsNetId;
 
+static CHECK_READY: atomic::AtomicBool = atomic::AtomicBool::new(true);
+
+pub fn need_check_ready() -> bool {
+    CHECK_READY.load(atomic::Ordering::Relaxed)
+}
+
 lazy_static! {
     static ref ADS_VARS: Mutex<HashMap<String, Arc<adsbr::Var>>> = <_>::default();
     static ref BRIDGE_ID: OnceCell<String> = <_>::default();
@@ -95,6 +101,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    CHECK_READY.store(config.ads.check_ready, atomic::Ordering::Relaxed);
     let payload_failed = pack(&RawStateEvent::new0(eva_common::ITEM_STATUS_ERROR))?;
     if initial.is_mode_rtf() {
         println!("marking all mapped items as failed");

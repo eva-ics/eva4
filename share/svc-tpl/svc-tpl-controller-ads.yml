@@ -18,6 +18,8 @@ config:
   # bridge on panic. This can be required to fix ADS connection/AMS routes in
   # certain cases
   #restart_bridge_on_panic: false
+  # Uncomment to disable ADS status check for the target
+  #check_ready: false
   # default retry attempts for all operations (0 - no retries, give up if the
   # first attempt fails)
   retries: 2

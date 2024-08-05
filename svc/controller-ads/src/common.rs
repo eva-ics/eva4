@@ -29,6 +29,8 @@ pub struct AdsConfig {
     pub ams_port: u16,
     #[serde(default = "eva_common::tools::default_true")]
     pub bulk_allow: bool,
+    #[serde(default = "eva_common::tools::default_true")]
+    pub check_ready: bool,
 }
 
 #[derive(Deserialize)]

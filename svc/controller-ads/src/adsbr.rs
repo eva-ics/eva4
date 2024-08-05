@@ -1217,7 +1217,7 @@ pub async fn ping() -> EResult<()> {
         .await?
         .payload(),
     )?;
-    if result.state == ads::AdsState::Run as u16 {
+    if result.state == ads::AdsState::Run as u16 || !crate::need_check_ready() {
         Ok(())
     } else {
         Err(Error::failed(format!(
