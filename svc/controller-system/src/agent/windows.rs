@@ -64,6 +64,8 @@ enum Command {
     Register,
     #[clap(about = "unregister Windows service")]
     Unregister,
+    #[clap(name = "test_fips", about = "Test FIPS-140 compliance")]
+    TestFips,
 }
 
 #[derive(Deserialize)]
@@ -138,6 +140,10 @@ fn main() -> EResult<()> {
                     eprintln!("service unregistration failed: {}", e);
                 }
             },
+            Command::TestFips => {
+                eva_common::services::enable_fips()?;
+                println!("FIPS test passed, the OpenSSL library is FIPS compliant");
+            }
         }
     } else {
         eventlog::register(SVC_ID).unwrap();
