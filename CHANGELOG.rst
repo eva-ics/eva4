@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-08-09 build 2024080901: Core fixes
 * 2024-08-08 build 2024080801: HMI login improvements, ADS improvements
 * 2024-08-01 build 2024080101: HMI user dirs, optional time in raw events
 * 2024-07-25 build 2024072501: Stability improvements
