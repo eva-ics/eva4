@@ -33,7 +33,7 @@ config:
   #ui_not_found_to_base: true
   pvt_path: pvt
   # enable private user directories (path relative to pvt, e.g. "users" for pvt/users)
-  #user_dirs: users
+  #pvt_user_dirs: users
   # default database service ID for item.state_log & item.state_history,
   # without eva.db. prefix, e.g. "db1" for eva.db.db1
   #default_history_db_svc: default
