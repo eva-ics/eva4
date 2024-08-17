@@ -17,7 +17,7 @@ eva venv add tinytuya==1.15.1
 
 Download
 [controller-tuya.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/controller-tuya.py),
-, copy-paste the service template:
+copy-paste the service template:
 
 ```yaml
 bus:
