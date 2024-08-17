@@ -1,0 +1,29 @@
+bus:
+  path: var/bus.ipc
+# service location
+command: venv/bin/python /opt/eva4/contrib/controller-tuya/controller-tuya.py
+config:
+  device:
+    # Tuya device ID
+    id: DEVICE_ID
+    # Tuya device IP address
+    addr: DEVICE_IP_ADDR
+    # Tuya device local key
+    local_key: DEVICE_LOCAL_KEY
+    # Tuya device API version
+    version: 3.3
+  # polling interval in seconds
+  pull_interval: 2
+  # DPS - EVA ICS OID map
+  map:
+    '16': 'unit:t1/switch'
+    '103': 'sensor:t1/temp'
+  # Action map
+  action_map:
+    'unit:t1/switch':
+      dps: '16'
+      # send or set_value
+      kind: 'send'
+react_to_fail: true
+user: nobody
+workers: 1
