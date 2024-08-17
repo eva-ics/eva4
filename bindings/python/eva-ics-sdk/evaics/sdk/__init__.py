@@ -1,4 +1,4 @@
-__version__ = '0.2.27'
+__version__ = '0.2.28'
 
 import busrt
 import sys
@@ -424,7 +424,7 @@ class Service:
             except:
                 self.mark_terminating()
                 break
-            if buf[0] != SERVICE_PAYLOAD_PING:
+            if buf and buf[0] != SERVICE_PAYLOAD_PING:
                 self.mark_terminating()
                 break
             time.sleep(0.1)
