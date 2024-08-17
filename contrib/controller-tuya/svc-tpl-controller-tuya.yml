@@ -10,7 +10,7 @@ config:
     addr: DEVICE_IP_ADDR
     # Tuya device local key
     local_key: DEVICE_LOCAL_KEY
-    # Tuya device API version
+    # Tuya device API version: 3.1, 3.2, 3.3, 3.4 or 3.5
     version: 3.3
   # polling interval in seconds
   pull_interval: 2

@@ -8,5 +8,6 @@ by Bohemia Automation engineers and contributors.
 * [bus-to-kafka](./bus-to-kafka) EVA ICS v4 bus to Apache Kafka bridge (Python)
 * [bus-to-raw-udp](./bus-to-raw-udp) EVA ICS to raw UDP bridge (Python)
 * [bus-to-udp](./bus-to-udp) EVA ICS v4 bus to UDP bridge (Python)
+* [controller-tuya](./controller-tuya) Tuya device controller
 * [raw-udp-to-bus](./raw-udp-to-bus) Raw UDP to EVA ICS bridge (Python)
 * [webinfo](./webinfo) RESTFul Web Info (node test, item states) (Rust)

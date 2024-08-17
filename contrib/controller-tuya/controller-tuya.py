@@ -44,10 +44,10 @@ def pull(interval, map):
                     busrt.client.Frame(payload,
                                        tp=busrt.client.OP_PUBLISH,
                                        qos=0))
-        except Exception as e:
+        except Exception:
             mark_failed(map)
             d.service.logger.error(
-                f'interval loop error: {traceback.format_exc(e)}')
+                f'interval loop error: {traceback.format_exc()}')
         elapsed = time.perf_counter() - start
         to_sleep = interval - elapsed
         if to_sleep <= 0:
@@ -90,7 +90,8 @@ def run():
     d.device = tinytuya.Device(dev_id=dev_id,
                                address=address,
                                local_key=local_key,
-                               version=api_version)
+                               version=api_version,
+                               connection_timeout=service.timeout['default'])
 
     threading.Thread(target=pull,
                      daemon=True,
