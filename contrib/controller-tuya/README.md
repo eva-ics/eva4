@@ -44,8 +44,8 @@ config:
   action_map:
     'unit:t1/switch':
       dps: '16'
-      # send or set_value
-      kind: 'send'
+      # control; or set_value
+      kind: 'control'
 react_to_fail: true
 user: nobody
 workers: 1
