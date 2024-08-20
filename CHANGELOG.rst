@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-08-20 build 2024082001: PSRT embedded fixes, stability improvements
 * 2024-08-09 build 2024080901: Core fixes
 * 2024-08-08 build 2024080801: HMI login improvements, ADS improvements
 * 2024-08-01 build 2024080101: HMI user dirs, optional time in raw events
