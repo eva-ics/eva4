@@ -46,6 +46,8 @@ config:
       dps: '16'
       # control; or set_value
       kind: 'control'
+      # convert action value to boolean
+      convert_bool: true
 react_to_fail: true
 user: nobody
 workers: 1
