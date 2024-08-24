@@ -656,7 +656,7 @@ run:
     - nam: args
       typ: Vec<Any>
       des: Arguments
-      req: true
+      req: false
     - nam: kwargs
       typ: Map<String, Any>
       des: Keyword arguments
