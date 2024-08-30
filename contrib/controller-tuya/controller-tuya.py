@@ -65,10 +65,8 @@ def handle_rpc(event):
 
 
 def update(dps):
-    for (dps, value) in dps.items():
-        oid = d.map.get(dps)
-        if oid is None:
-            continue
+    for dps_id, oid in d.map.items():
+        value = dps.get(dps_id, 0)
         if value is True:
             value = 1
         elif value is False:
