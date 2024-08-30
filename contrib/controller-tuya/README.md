@@ -38,14 +38,20 @@ config:
   pull_interval: 2
   # DPS - EVA ICS OID map
   map:
-    '16': 'unit:t1/switch'
-    '103': 'sensor:t1/temp'
+    '16':
+      oid: 'unit:t1/switch'
+    '101':
+      oid: 'sensor:t1/voltage'
+      # divide by 10
+      factor: 10
+    '103':
+      oid: 'sensor:t1/temp'
   # Action map
   action_map:
     'unit:t1/switch':
       dps: '16'
-      # control; or set_value
-      kind: 'control'
+      # control or set_value
+      kind: control
       # convert action value to boolean
       convert_bool: true
 react_to_fail: true

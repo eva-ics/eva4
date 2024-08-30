@@ -65,12 +65,15 @@ def handle_rpc(event):
 
 
 def update(dps):
-    for dps_id, oid in d.map.items():
+    for dps_id, v in d.map.items():
+        oid = v['oid']
         value = dps.get(dps_id, 0)
         if value is True:
             value = 1
         elif value is False:
             value = 0
+        factor = v.get('factor', 1)
+        value /= factor
         payload = pack({'status': 1, 'value': value})
         topic = RAW_STATE_TOPIC + oid.to_path()
         d.service.bus.send(
@@ -117,7 +120,9 @@ def run():
     d.service = service
     config = service.get_config()
 
-    d.map = {k: OID(v) for k, v in config.get('map', {}).items()}
+    for dps_id, v in config.get('map', {}).items():
+        v['oid'] = OID(v['oid'])
+        d.map[dps_id] = v
 
     service.init(info, on_rpc_call=handle_rpc)
 
