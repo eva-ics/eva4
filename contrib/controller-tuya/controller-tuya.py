@@ -104,7 +104,8 @@ def pull(interval):
 
 def mark_all_items_failed():
     payload = pack({'status': sdk.ITEM_STATUS_ERROR})
-    for oid in d.map.values():
+    for v in d.map.values():
+        oid = v['oid']
         topic = RAW_STATE_TOPIC + oid.to_path()
         d.service.bus.send(
             topic, busrt.client.Frame(payload,
