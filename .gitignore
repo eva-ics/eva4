@@ -29,3 +29,5 @@ var/mirror
 _build
 tests
 vendored-apps
+bus
+lab-eva.json
