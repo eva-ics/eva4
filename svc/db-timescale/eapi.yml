@@ -103,4 +103,4 @@ state_log:
         }
     ]
 state_push:
-  des: "push item states into db, (payload: single item state or list)"
+  des: "push item states into db, (payload: single item state or list). skips existing states"

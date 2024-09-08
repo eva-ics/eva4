@@ -98,6 +98,34 @@ $$;"#,
     )
     .execute(&pool)
     .await?;
+    sqlx::query(
+        r#"CREATE OR REPLACE FUNCTION try_insert_state_history_events(
+ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+ oid_id_x INT;
+ oid_ids INT[];
+BEGIN
+  LOCK TABLE state_history_oids IN SHARE UPDATE EXCLUSIVE MODE;
+  FOR i IN array_lower(ts, 1)..array_upper(ts, 1) LOOP
+    SELECT id FROM state_history_oids WHERE oid=oids[i] into oid_id_x;
+    IF oid_id_x IS NULL THEN
+        INSERT INTO state_history_oids(oid) VALUES(oids[i]) RETURNING id INTO oid_id_x;
+    END IF;
+    oid_ids := array_append(oid_ids, oid_id_x);
+  END LOOP;
+  INSERT INTO state_history_events(t, oid_id, status, value) VALUES (
+      UNNEST(ts),
+      UNNEST(oid_ids),
+      UNNEST(statuses),
+      UNNEST(vals)
+    ) ON CONFLICT (t, oid_id) DO NOTHING;
+  END
+$$;"#,
+    )
+    .execute(&pool)
+    .await?;
     let c: i64 = sqlx::query(
         r"SELECT COUNT(*) FROM timescaledb_information.hypertables
         WHERE hypertable_name='state_history_events'",
@@ -162,7 +190,7 @@ pub async fn submit(state: ItemState) -> EResult<()> {
     Ok(())
 }
 
-pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
+pub async fn submit_bulk(state: Vec<ItemState>, replace: bool) -> EResult<()> {
     if state.is_empty() {
         return Ok(());
     }
@@ -180,8 +208,12 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
             }
         }
     }
-    sqlx::query("SELECT insert_state_history_events($1, $2, $3, $4)")
-        .bind(ts)
+    let q = if replace {
+        sqlx::query("SELECT insert_state_history_events($1, $2, $3, $4)")
+    } else {
+        sqlx::query("SELECT try_insert_state_history_events($1, $2, $3, $4)")
+    };
+    q.bind(ts)
         .bind(oids)
         .bind(statuses)
         .bind(values)

@@ -178,7 +178,10 @@ impl RpcHandlers for Handlers {
                     Err(RpcError::params(None))
                 } else {
                     let p: Event = unpack(payload)?;
-                    notify(p).await?;
+                    match p {
+                        Event::State(v) => db::submit(v).await?,
+                        Event::BulkState(v) => db::submit_bulk(v, false).await?,
+                    };
                     Ok(None)
                 }
             }
@@ -218,7 +221,7 @@ async fn notify(event: Event) -> EResult<()> {
             res
         }
         Event::BulkState(v) => {
-            let res = db::submit_bulk(v).await;
+            let res = db::submit_bulk(v, true).await;
             if res.is_err() {
                 poc();
             }
