@@ -1,4 +1,4 @@
-__version__ = '0.2.29'
+__version__ = '0.2.30'
 
 import copy
 
@@ -301,17 +301,24 @@ class Upload(Element):
     Upload class is used to represent a file upload element
     """
 
-    def __init__(self, src, target):
+    def __init__(self, src=None, text=None, target=None):
         """
         Args:
             src - the source file path or URL
             target - the target file path
         """
         super().__init__()
-        if src.startswith('http://') or src.startswith('https://'):
-            super().set('url', src)
-        else:
-            super().set('src', src)
+        if target is None:
+            target = '/'
+        if src is not None and text is not None:
+            raise ValueError('Both src and text cannot be set')
+        if src is not None:
+            if src.startswith('http://') or src.startswith('https://'):
+                super().set('url', src)
+            else:
+                super().set('src', src)
+        if text is not None:
+            super().set('text', text)
         super().set('target', target)
 
     def element_id(self):
