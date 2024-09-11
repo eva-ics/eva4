@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-09-11 build 2024091101: Vendored app fixes, TimescaleDB fixes, Python SDK with deploy features
 * 2024-08-20 build 2024082001: PSRT embedded fixes, stability improvements
 * 2024-08-09 build 2024080901: Core fixes
 * 2024-08-08 build 2024080801: HMI login improvements, ADS improvements
