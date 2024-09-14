@@ -4,7 +4,7 @@ use eva_system_common::{
     common::{self, ReportConfig},
     metric::client,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::ffi::OsString;
