@@ -28,8 +28,6 @@ const LONG_VERSION: &str = concat!(
     include_str!("../../build.number")
 );
 
-const ERR_NO_FIPS: &str = "FIPS mode not supported";
-
 const SVC_NAME: &str = "EvaCSAgent";
 const SVC_ID: &str = "EVA.cs-agent";
 
@@ -64,8 +62,6 @@ enum Command {
     Register,
     #[clap(about = "unregister Windows service")]
     Unregister,
-    #[clap(name = "test_fips", about = "Test FIPS-140 compliance")]
-    TestFips,
 }
 
 #[derive(Deserialize)]
@@ -140,10 +136,6 @@ fn main() -> EResult<()> {
                     eprintln!("service unregistration failed: {}", e);
                 }
             },
-            Command::TestFips => {
-                eva_common::services::enable_fips()?;
-                println!("FIPS test passed, the OpenSSL library is FIPS compliant");
-            }
         }
     } else {
         eventlog::register(SVC_ID).unwrap();
@@ -166,8 +158,7 @@ fn load_config() -> EResult<Config> {
         })?)
         .map_err(Error::invalid_params)?;
     if config.client.fips {
-        error!("{}", ERR_NO_FIPS);
-        return Err(Error::failed(ERR_NO_FIPS));
+        warn!("FIPS-140 mode on Windows should be enabled by the system-wide policy");
     }
     Ok(config)
 }
