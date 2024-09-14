@@ -1,6 +1,6 @@
 client:
   server_url: http://server-host:7555/
-  # enable FIPS-140 mode
+  # enable FIPS-140 mode on Linux
   fips: false
   auth:
     name: test

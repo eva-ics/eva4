@@ -287,9 +287,9 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busrt"
-version = "0.4.8"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee5f4261ec20cb308913175a3c988b2fbc885adf56a505d9b044499d5896d9f7"
+checksum = "bfaa3ce1c559351db9f3a07bd73a0081ee27fbb91b7bc11e0f79c102b5cd7626"
 dependencies = [
  "async-channel",
  "async-io",
@@ -551,6 +551,19 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
+dependencies = [
+ "humantime",
+ "is-terminal",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
@@ -589,15 +602,15 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.43"
+version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "086be2345500d80b4cfaa5246fdce560a7d66360721575e4ca5ecf8bc0645f8c"
+checksum = "5251381458e0968989f60bb7da443f1a8ae7f483fa23664146e980fb29ba64f7"
 dependencies = [
  "async-channel",
  "async-recursion",
  "bmart",
  "busrt",
- "env_logger",
+ "env_logger 0.10.2",
  "ipnetwork",
  "lazy_static",
  "log",
@@ -626,7 +639,7 @@ dependencies = [
  "bmart",
  "busrt",
  "clap",
- "env_logger",
+ "env_logger 0.11.2",
  "eva-common",
  "eva-sdk",
  "eventlog",
@@ -654,9 +667,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.45"
+version = "0.3.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7732f8510b80708bd952133e953cac7ee7902eecce32cf2ab0c3c1a36409d571"
+checksum = "4ef70914dcd725038b4224d6cb2958747eaa0e302238005b46e1b7fa041e8bcb"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1008,7 +1021,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.5",
  "tokio",
  "tower-service",
  "tracing",
@@ -2111,9 +2124,9 @@ checksum = "5ee073c9e4cd00e28217186dbe12796d692868f432bf2e97ee73bed0c56dfa01"
 
 [[package]]
 name = "submap"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d1364afaada75e69be273c829d32be651781e68ecdd75417a459d9c94394153"
+checksum = "40139f1abb193656b34682557971d59b383465632d60671b40f3de7951c4f532"
 
 [[package]]
 name = "syn"
@@ -2235,6 +2248,15 @@ dependencies = [
  "fastrand 2.0.1",
  "rustix 0.38.31",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "termcolor"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
+dependencies = [
+ "winapi-util",
 ]
 
 [[package]]
@@ -2647,6 +2669,15 @@ name = "winapi-i686-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
+name = "winapi-util"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
+dependencies = [
+ "windows-sys 0.52.0",
+]
 
 [[package]]
 name = "winapi-x86_64-pc-windows-gnu"

@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 busrt = { version = "0.4", features = ["rpc", "ipc"], optional = true }
 eva-common = { version = "0.3.71", features = ["events", "console-logger"] }
-eva-sdk = { version = "0.3.41", features = ["controller"] }
+eva-sdk = { version = "0.3.50", features = ["controller"], optional = true }
 tokio = { version = "1.36.0", features = ["full"] }
 async-trait = { version = "0.1.77", optional = true }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
@@ -63,10 +63,10 @@ std-alloc = []
 openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 
-service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator", "procfs"]
+service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator", "procfs", "eva-sdk"]
 agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
 agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services", "procfs"]
-agent-windows = ["agent", "openssl", "eventlog", "windows-service"]
+agent-windows = ["agent", "eventlog", "windows-service"]
 
 #default = ["service"]
 #default = ["agent-windows"]
