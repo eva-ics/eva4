@@ -9,6 +9,11 @@ URI=pub.bma.ai/eva-cs-agent
 [ -z "$VERSION" ] && exit 1
 [ -z "$BUILD" ] && exit 1
 
+if [ $(git branch --show-current) != "stable" ]; then
+  echo "Not on stable branch"
+  exit 1
+fi
+
 LINUX_BINARY_X86_64=eva-cs-agent-linux-${VERSION}-${BUILD}-x86_64
 LINUX_BINARY_AARCH64=eva-cs-agent-linux-${VERSION}-${BUILD}-aarch64
 DEBIAN_PACKAGE_X86_64=eva-cs-agent-${VERSION}-${BUILD}-amd64.deb
