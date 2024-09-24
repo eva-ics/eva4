@@ -1,4 +1,4 @@
-__version__ = '0.2.30'
+__version__ = '0.2.31'
 
 import copy
 
@@ -110,6 +110,35 @@ class Deploy:
         Add a node to the deploy file
         """
         self.content.append(node)
+        return self
+
+    def merge(self, other):
+        """
+        Merge another deploy with the current one
+
+        Args:
+            other - the other deploy object or a path to a deploy file
+        """
+        if isinstance(other, str):
+            other = load_deploy(other)
+        for c in other.content:
+            node_name = c.payload['node']
+            found = False
+            for node in self.content:
+                if node.payload['node'] == node_name:
+                    found = True
+                    for item in c.payload:
+                        if item == 'node':
+                            continue
+                        c = c.clone()
+                        for (k, v) in c.payload.items():
+                            if isinstance(v, list):
+                                for e in v:
+                                    node.add(k, e)
+                            else:
+                                node.set(k, v)
+            if not found:
+                self.content.append(c)
         return self
 
     def clone(self):
