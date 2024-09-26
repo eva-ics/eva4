@@ -264,7 +264,7 @@ impl ItemState {
             true
         }
     }
-    // used by lvar functions only
+    // used by lvar functions and core source sensors only
     pub fn force_set_state(
         &mut self,
         status: Option<ItemStatus>,

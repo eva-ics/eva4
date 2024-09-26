@@ -116,6 +116,7 @@ config/core:
     #dump: *bool
     suicide_timeout: *floatpositive
     auto_create: *bool
+    source_sensors: *bool
     instant_save:
       anyOf:
         - type: boolean

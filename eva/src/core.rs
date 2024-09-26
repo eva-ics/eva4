@@ -277,6 +277,8 @@ pub struct Core {
     instant_save: InstantSave,
     #[serde(default)]
     auto_create: bool,
+    #[serde(default)]
+    source_sensors: bool,
     #[serde(
         skip_serializing,
         deserialize_with = "eva_common::tools::de_float_as_duration"
@@ -476,6 +478,7 @@ impl Core {
             system_name: system_name.to_owned(),
             pid_file: <_>::default(),
             auto_create: false,
+            source_sensors: false,
             instant_save: InstantSave::Strict(false),
             suicide_timeout,
             timeout,
@@ -1110,6 +1113,29 @@ impl Core {
         }
         true
     }
+    async fn set_source_sensor(&self, source_id: &str, online: bool) -> EResult<()> {
+        let mut inventory = self.inventory.write().await;
+        let source_sensor_oid: OID =
+            format!("sensor:{}/node/{}", self.system_name, source_id).parse()?;
+        let mut source_sensor = inventory.get_item(&source_sensor_oid);
+        let ieid = self.generate_ieid();
+        if source_sensor.is_none() {
+            source_sensor = Some(inventory.create_item(source_sensor_oid, Some(ieid), None)?);
+        }
+        let item = source_sensor.unwrap();
+        let state = item
+            .state()
+            .ok_or_else(|| Error::core("no state for src sensor"))?;
+        let (s_state, db_st) = {
+            let mut stc = state.lock();
+            stc.force_set_state(Some(1), Some(Value::U8(u8::from(online))), ieid);
+            prepare_state_data!(item, &*stc, self.instant_save)
+        };
+        let rpc = self.rpc.get().unwrap();
+        self.process_new_state(item.oid(), s_state, db_st, rpc)
+            .await?;
+        Ok(())
+    }
     #[inline]
     pub async fn mark_source_online(
         &self,
@@ -1124,6 +1150,9 @@ impl Core {
                 .read()
                 .await
                 .mark_source_online(source_id, online);
+            if self.source_sensors {
+                self.set_source_sensor(source_id, online).await.log_ef();
+            }
         } else {
             self.destroy_source(source_id).await;
         }

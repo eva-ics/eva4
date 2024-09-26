@@ -7,6 +7,9 @@ timeout: 5
 suicide_timeout: 15
 # auto-create items coming from controllers (svc ids *.controller.* or *.plc.*)
 auto_create: true
+# source (remote node) sensors with source online/offline state. can be used in
+# various logic scenarios. Have OIDs like sensor:SYSTEM_NAME/node/REMOTE_NAME
+source_sensors: false
 # instantly save item states. can be true (save), false (do not save) or
 # contain a list of OID masks for instant save. it is recommended to save at
 # least lvar states, unless they are always re-generated on the fly
