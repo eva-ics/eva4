@@ -26,6 +26,8 @@ from evaics.sdk import RAW_STATE_TOPIC
 
 from evaics.tools import dict_from_str
 
+from functools import partial
+
 _shared = {}
 _shared_lock = threading.RLock()
 
@@ -892,8 +894,12 @@ def _system(*args, **kwargs):
         raise FunctionFailed(f'command failed with exit code {code}')
 
 
-def log_trace(msg, *args, **kwargs):
-    logging.log(1, msg, *args, **kwargs)
+def log_message(level, *args, **kwargs):
+    try:
+        del kwargs['flush']
+    except KeyError:
+        pass
+    logging.log(level, ' '.join([str(s) for s in args]), **kwargs)
 
 
 api_globals = {
@@ -916,14 +922,14 @@ api_globals = {
     'set_shared': set_shared,
     'increment_shared': increment_shared,
     'decrement_shared': decrement_shared,
-    'print': logging.info,
-    'trace': log_trace,
-    'debug': logging.debug,
-    'info': logging.info,
-    'warn': logging.warning,
-    'warning': logging.warning,
-    'error': logging.error,
-    'critical': logging.critical,
+    'print': partial(log_message, logging.INFO),
+    'trace': partial(log_message, 1),
+    'debug': partial(log_message, logging.DEBUG),
+    'info': partial(log_message, logging.INFO),
+    'warn': partial(log_message, logging.WARNING),
+    'warning': partial(log_message, logging.WARNING),
+    'error': partial(log_message, logging.ERROR),
+    'critical': partial(log_message, logging.CRITICAL),
     'exit': _exit,
     '_sleep': time.sleep,
     'lock': lock,
