@@ -452,9 +452,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.43"
+version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "086be2345500d80b4cfaa5246fdce560a7d66360721575e4ca5ecf8bc0645f8c"
+checksum = "5251381458e0968989f60bb7da443f1a8ae7f483fa23664146e980fb29ba64f7"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1451,9 +1451,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "submap"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d1364afaada75e69be273c829d32be651781e68ecdd75417a459d9c94394153"
+checksum = "40139f1abb193656b34682557971d59b383465632d60671b40f3de7951c4f532"
 
 [[package]]
 name = "syn"
