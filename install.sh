@@ -12,7 +12,7 @@ MODE=0
 PREPARE_ONLY=
 HMI=
 PREFIX=/opt/eva4
-REPO=https://pub.bma.ai/eva4
+REPO=${EVA_REPOSITORY:-https://pub.bma.ai/eva4}
 INSTALL_TEST=
 ID=
 ID_LIKE=
@@ -340,22 +340,28 @@ fi
 
 rm -f /tmp/eva-dist.tgz
 
-if ! curl -Ls ${REPO}/update_info${INSTALL_TEST}.json \
-  -o /tmp/eva_update_info.json; then
-  echo "Unable to download EVA ICS update info"
-  exit 7
+echo "Using repository: ${REPO}"
+
+if [ "$EVA_VERSION" ] && [ "$EVA_BUILD" ]; then
+  VERSION=$EVA_VERSION
+  BUILD=$EVA_BUILD
+else
+  if ! curl -Ls ${REPO}/update_info${INSTALL_TEST}.json \
+    -o /tmp/eva_update_info.json; then
+    echo "Unable to download EVA ICS update info"
+    exit 7
+  fi
+  VERSION=$(jq -r .version /tmp/eva_update_info.json)
+  BUILD=$(jq -r .build /tmp/eva_update_info.json)
+  rm -f /tmp/eva_update_info.json
 fi
-
-VERSION=$(jq -r .version /tmp/eva_update_info.json)
-BUILD=$(jq -r .build /tmp/eva_update_info.json)
-rm -f /tmp/eva_update_info.json
-
-echo "Installing EVA ICS version ${VERSION} build ${BUILD}"
 
 if [ -z "$VERSION" ] || [ -z "$BUILD" ]; then
   echo "Unable to get EVA ICS version / build info"
   exit 7
 fi
+
+echo "Installing EVA ICS version ${VERSION} build ${BUILD}"
 
 if ! curl -L "${REPO}/${VERSION}/nightly/eva-${VERSION}-${BUILD}-${ARCH_SFX}.tgz" \
   -o /tmp/eva-dist.tgz; then
