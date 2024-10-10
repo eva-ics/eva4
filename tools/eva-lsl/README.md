@@ -28,13 +28,16 @@ See also: <https://info.bma.ai/en/actual/eva4/sdk/rust/service_example.html>
 * Deploy the service configuration to a EVA ICS node. The service can be
   disabled and point to any non-existing command.
 
-* Allow remote connections to the node (`eva edit config/bus`)
+* Allow remote connections to the node (`eva edit config/bus`). If a node is
+  installed on the same machine, skip this step.
 
 * Inside a Rust service project, run:
 
 ```bash
 eva-lsl run -b IP:PORT SVC_ID
 ```
+
+(for the local node but non-standard path, specify path to `bus.ipc`)
 
 The command builds the service and run it locally, connecting to the node bus.
 Log messages are printed to the local console.
