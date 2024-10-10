@@ -8,7 +8,7 @@ Allows to run and test EVA ICS services locally.
 ## Installation
 
 ```bash
-cargo insall eva-lsl
+cargo install eva-lsl
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ cargo insall eva-lsl
 * Inside a Rust service project, run:
 
 ```bash
-eva-lsl -b IP:PORT svc.id
+eva-lsl -b IP:PORT SVC_ID
 ```
 
 The command builds the service and run it locally, connecting to the node bus.
