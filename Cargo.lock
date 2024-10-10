@@ -521,7 +521,7 @@ dependencies = [
  "bmart",
  "busrt",
  "clap 3.2.25",
- "env_logger 0.11.2",
+ "env_logger 0.11.5",
  "eva-common",
  "log",
  "serde",
@@ -1477,9 +1477,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.2"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1642,7 +1642,7 @@ dependencies = [
  "chrono",
  "clap 3.2.25",
  "colored 2.1.0",
- "env_logger 0.11.2",
+ "env_logger 0.11.5",
  "eva-client",
  "eva-common",
  "expanduser",
@@ -1665,9 +1665,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.71"
+version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b58e6b55160bcbe729aab4982ecbbed02e4d30bbd0f300237febad9ea30341a"
+checksum = "71a2c2ab14142f3b0215c75b73cca31ce801d04f0e6790e20d3d8031032c59cd"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2111,6 +2111,7 @@ dependencies = [
  "ipnetwork",
  "jemallocator",
  "lazy_static",
+ "libc",
  "log",
  "multi_log",
  "nix 0.25.0",
@@ -2187,15 +2188,16 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.49"
+version = "0.3.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1018f3db36d62464aa98352850d112c9c9e44bde9198f1f9930a4ed8ecc7b0b9"
+checksum = "437a7ccdf8b7e2de1f39939f4056d051c11d5ca26e6f4fb08c4433987ee3f2e8"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "bmart",
  "busrt",
+ "env_logger 0.11.5",
  "eva-common",
  "eva-sdk-derive",
  "glob-match",
@@ -3320,9 +3322,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.153"
+version = "0.2.159"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
+checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
 
 [[package]]
 name = "libm"
@@ -3372,9 +3374,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.20"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "lru"

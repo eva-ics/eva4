@@ -292,6 +292,23 @@ svc:
       type: ["string", "null"]
     user: *strornull
     config: *any
+    realtime:
+      type: object
+      additionalProperties: false
+      properties:
+        priority:
+          anyOf:
+            - type: integer
+              minimum: 1
+              maximum: 99
+            - type: "null"
+        cpu_ids:
+          type: array
+          uniqueItems: true
+          additionalItems: false
+          items:
+            type: integer
+            minimum: 0
     timeout:
       type: object
       additionalProperties: false

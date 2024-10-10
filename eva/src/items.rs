@@ -360,6 +360,7 @@ impl ItemState {
             mark_out_of_range!(self, oid, value);
             modified = true;
         }
+        #[allow(clippy::float_cmp)]
         if let Some(t) = raw.t {
             if t != 0.0 && self.t != t {
                 self.t = t;

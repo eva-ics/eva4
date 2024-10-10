@@ -7,9 +7,9 @@ use busrt::{Frame, FrameKind, QoS};
 use eva_common::err_logger;
 use eva_common::events::SERVICE_STATUS_TOPIC;
 use eva_common::payload::{pack, unpack};
-use eva_common::services::Initial;
 use eva_common::services::SERVICE_PAYLOAD_INITIAL;
 use eva_common::services::SERVICE_PAYLOAD_PING;
+use eva_common::services::{Initial, RealtimeConfig};
 use log::{debug, error, info, warn};
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -287,12 +287,24 @@ impl Service {
     }
 }
 
-#[derive(Default)]
 struct Handlers {
     services: Arc<Mutex<HashMap<String, Arc<Service>>>>,
     rpc_server: Arc<RwLock<Option<RpcClient>>>,
     rpc: Arc<RwLock<Option<RpcClient>>>,
     topic_broker: pubsub::TopicBroker,
+    default_realtime: RealtimeConfig,
+}
+
+impl Handlers {
+    fn new(realtime: RealtimeConfig) -> Self {
+        Self {
+            services: <_>::default(),
+            rpc_server: <_>::default(),
+            rpc: <_>::default(),
+            topic_broker: <_>::default(),
+            default_realtime: realtime,
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -358,7 +370,23 @@ impl RpcHandlers for Handlers {
                     return Err(Error::failed("rpc not initialized yet").into());
                 }
                 let mut services = self.services.lock().await;
-                let p: crate::svcmgr::PayloadStartStop = unpack(event.payload())?;
+                let mut p: crate::svcmgr::PayloadStartStop = unpack(event.payload())?;
+                let mut realtime = p.initial.realtime().clone();
+                if realtime.priority.is_none() {
+                    debug!(
+                        "overriding realtime priority for {} to {:?}",
+                        p.id, self.default_realtime.priority
+                    );
+                    realtime.priority = self.default_realtime.priority;
+                }
+                if realtime.cpu_ids.is_empty() {
+                    debug!(
+                        "overriding CPU affinity for {} to {:?}",
+                        p.id, self.default_realtime.cpu_ids
+                    );
+                    realtime.cpu_ids = self.default_realtime.cpu_ids.clone();
+                }
+                p.initial = p.initial.with_realtime(realtime);
                 debug!("starting service {}", p.id);
                 stop_svc!(&p.id, services);
                 let mut service = Service::new(&p.id, p.mem_warn);
@@ -477,11 +505,16 @@ async fn mem_warn_handler(services: &Mutex<HashMap<String, Arc<Service>>>) {
     }
 }
 
-pub async fn init<C>(mut client: C, client_secondary: C, channel_size: usize) -> EResult<()>
+pub async fn init<C>(
+    mut client: C,
+    client_secondary: C,
+    channel_size: usize,
+    realtime: RealtimeConfig,
+) -> EResult<()>
 where
     C: AsyncClient + 'static,
 {
-    let mut handlers = Handlers::default();
+    let mut handlers = Handlers::new(realtime);
     let handlers_rpc = handlers.rpc.clone();
     let handlers_rpc_server = handlers.rpc_server.clone();
     let (_, rx) = handlers

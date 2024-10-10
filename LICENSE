@@ -1,5 +1,5 @@
 EVA ICS v4 is licensed under Apache License 2.0 with additional Common Clauses
-(1).
+(2).
 
 Minor modules may contain the code, developed or included under different
 non-compatible Open Source licenses. In this case, specific module license may
@@ -186,6 +186,12 @@ Copyright Bohemia Automation (www.bohemia-automation.com), Altertech Group
    Common Clause 1.
   
       Trademark usage conditions: https://info.bma.ai/en/actual/trademarks.html
+
+   Common Clause 2.
+
+      Real-time functionality of the EVA ICS core and bundled services requires
+      an Enterprise license purchased, unless used for testing, educational or
+      development purposes.
 
    END OF TERMS AND CONDITIONS
 

@@ -7,6 +7,7 @@ use crate::{ARCH_SFX, BUILD, PRODUCT_CODE, PRODUCT_NAME, VERSION};
 use busrt::rpc::{self, RpcClient};
 use eva_common::err_logger;
 use eva_common::registry;
+use eva_common::services::RealtimeConfig;
 use eva_common::tools::get_eva_dir;
 use eva_common::value::Value;
 use log::{debug, info, trace};
@@ -30,6 +31,7 @@ async fn run_regular(
     reg_db: Arc<RwLock<yedb::Database>>,
     mut broker: EvaBroker,
     mut core: Core,
+    realtime: RealtimeConfig,
 ) -> EResult<()> {
     core.init_inventory_db().await?;
     core.load_inventory_db().await?;
@@ -51,7 +53,13 @@ async fn run_regular(
         .await?;
     let launcher_client_secondary = broker.register_secondary_for(&launcher_client).await?;
     trace!("initializing the default launcher");
-    crate::launcher::init(launcher_client, launcher_client_secondary, queue_size).await?;
+    crate::launcher::init(
+        launcher_client,
+        launcher_client_secondary,
+        queue_size,
+        realtime,
+    )
+    .await?;
     let _reg_rpc = RpcClient::new(reg_client, yedb::server::BusRtApi::new(reg_db.clone()));
     let core = Arc::new(core);
     trace!("registering the core RPC (EAPI)");
@@ -97,6 +105,7 @@ pub fn launch(
     pid_file: Option<&str>,
     connection_path: Option<&str>,
     fips: bool,
+    realtime: RealtimeConfig,
 ) -> EResult<()> {
     if fips {
         eva_common::services::enable_fips()?;
@@ -157,7 +166,7 @@ pub fn launch(
             debug!("starting runtime");
             rt.block_on(async move {
                 crate::launch_sysinfo();
-                run_regular(reg_db, broker, core).await
+                run_regular(reg_db, broker, core, realtime).await
             })
         }
         Mode::SPoint => {
@@ -173,7 +182,7 @@ pub fn launch(
                     .build()?;
                 rt.block_on(async move {
                     crate::launch_sysinfo();
-                    crate::spoint::run(&dir_eva, system_name, pid_file, cpath).await
+                    crate::spoint::run(&dir_eva, system_name, pid_file, cpath, realtime).await
                 })
             } else {
                 Err(Error::invalid_params("connection path not specified"))

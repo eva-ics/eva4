@@ -107,7 +107,7 @@ async fn new(args: CommandNew) -> EResult<()> {
     std::env::set_current_dir(&args.name)?;
     add_dependency(
         "eva-common",
-        "0.3.74",
+        "0.3.75",
         &[
             "events",
             "common-payloads",

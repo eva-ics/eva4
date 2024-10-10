@@ -9,7 +9,7 @@ use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_common::registry;
-use eva_common::services::{BusConfig, CoreInfo, Initial, Timeout};
+use eva_common::services::{BusConfig, CoreInfo, Initial, RealtimeConfig, Timeout};
 use eva_common::tools::{format_path, get_eva_dir};
 use log::{debug, error, info, trace, warn};
 use once_cell::sync::OnceCell;
@@ -558,6 +558,8 @@ pub struct Params {
     #[serde(default)]
     call_tracing: bool,
     log_level: Option<String>,
+    #[serde(default)]
+    realtime: RealtimeConfig,
 }
 
 impl Params {
@@ -608,6 +610,7 @@ impl Params {
             crate::FIPS.load(atomic::Ordering::Relaxed),
             self.call_tracing,
         )
+        .with_realtime(self.realtime.clone())
     }
     fn startup_timeout(&self) -> Option<Duration> {
         self.timeout.startup()

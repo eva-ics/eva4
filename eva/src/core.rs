@@ -1284,6 +1284,7 @@ impl Core {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn process_modified(
         &self,
         om: events::OnModifiedOwned,

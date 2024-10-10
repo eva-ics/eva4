@@ -564,9 +564,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.2"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream",
  "anstyle",
@@ -602,9 +602,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.72"
+version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5251381458e0968989f60bb7da443f1a8ae7f483fa23664146e980fb29ba64f7"
+checksum = "71a2c2ab14142f3b0215c75b73cca31ce801d04f0e6790e20d3d8031032c59cd"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -639,7 +639,7 @@ dependencies = [
  "bmart",
  "busrt",
  "clap",
- "env_logger 0.11.2",
+ "env_logger 0.11.5",
  "eva-common",
  "eva-sdk",
  "eventlog",
@@ -667,14 +667,15 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.50"
+version = "0.3.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ef70914dcd725038b4224d6cb2958747eaa0e302238005b46e1b7fa041e8bcb"
+checksum = "437a7ccdf8b7e2de1f39939f4056d051c11d5ca26e6f4fb08c4433987ee3f2e8"
 dependencies = [
  "async-channel",
  "async-trait",
  "bmart",
  "busrt",
+ "env_logger 0.11.5",
  "eva-common",
  "eva-sdk-derive",
  "lazy_static",
@@ -1251,9 +1252,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.20"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "match_cfg"

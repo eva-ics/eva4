@@ -5,3 +5,4 @@
 # MODE=regular # or spoint
 # ARGS="--connection-path server:port" # secondary point connection path
 # FIPS=true # enable FIPS-140 mode
+# REALTIME="priority=50,cpu_ids=1|2|3" # core real-time mode
