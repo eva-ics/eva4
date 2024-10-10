@@ -1,11 +1,31 @@
 use clap::Parser;
+use colored::Colorize;
 use eva_common::payload::pack;
 use eva_common::{common_payloads::ParamsId, prelude::*};
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt as _;
 
+const SVC_TPL: &str = include_str!("../tpl/svc_main.rs");
+
 #[derive(Parser)]
 struct Args {
+    #[clap(subcommand)]
+    command: Command,
+}
+
+#[derive(Parser)]
+enum Command {
+    New(CommandNew),
+    Run(CommandRun),
+}
+
+#[derive(Parser)]
+struct CommandNew {
+    name: String,
+}
+
+#[derive(Parser)]
+struct CommandRun {
     #[clap()]
     service_id: String,
     #[clap(
@@ -34,9 +54,95 @@ struct Args {
     binary: Option<String>,
 }
 
-#[tokio::main]
+async fn add_dependency(
+    name: &str,
+    version: &str,
+    features: &[&str],
+    path: Option<String>,
+    disable_defaults: bool,
+) -> EResult<()> {
+    let dep = if path.is_some() {
+        name.to_owned()
+    } else {
+        format!("{}@{}", name, version)
+    };
+    println!("Adding dependency: {}", dep.green().bold());
+    let mut cmd = tokio::process::Command::new("cargo");
+    cmd.arg("-q").arg("add").arg(dep);
+    if let Some(path) = path {
+        cmd.arg("--path").arg(path);
+    }
+    for feature in features {
+        cmd.arg("--features").arg(feature);
+    }
+    if disable_defaults {
+        cmd.arg("--no-default-features");
+    }
+    let result = cmd.status().await?;
+    if !result.success() {
+        return Err(Error::failed(format!("Unable to add dependency {}", name)));
+    }
+    Ok(())
+}
+
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> EResult<()> {
+    #[cfg(target_os = "windows")]
+    let _ansi_enabled = ansi_term::enable_ansi_support();
     let args = Args::parse();
+    match args.command {
+        Command::New(c) => new(c).await,
+        Command::Run(c) => run(c).await,
+    }
+}
+
+async fn new(args: CommandNew) -> EResult<()> {
+    let result = tokio::process::Command::new("cargo")
+        .args(["new", &args.name])
+        .status()
+        .await?;
+    if !result.success() {
+        return Err(Error::io("failed to create a new project"));
+    }
+    std::env::set_current_dir(&args.name)?;
+    add_dependency(
+        "eva-common",
+        "0.3.74",
+        &[
+            "events",
+            "common-payloads",
+            "payload",
+            "acl",
+            "openssl-no-fips",
+        ],
+        None,
+        false,
+    )
+    .await?;
+    add_dependency("eva-sdk", "0.3", &["controller"], None, false).await?;
+    add_dependency("tokio", "1.36", &["full"], None, false).await?;
+    add_dependency("async-trait", "0.1", &[], None, false).await?;
+    add_dependency("serde", "1.0", &["derive", "rc"], None, false).await?;
+    add_dependency("log", "0.4", &[], None, false).await?;
+    add_dependency("jemallocator", "0.5", &[], None, false).await?;
+    add_dependency("once_cell", "1.20", &[], None, false).await?;
+    tokio::fs::write("src/main.rs", SVC_TPL).await?;
+    tokio::fs::OpenOptions::new()
+        .append(true)
+        .open("Cargo.toml")
+        .await?
+        .write_all(
+            "
+[features]
+std-alloc = []
+"
+            .as_bytes(),
+        )
+        .await?;
+    Ok(())
+}
+
+async fn run(args: CommandRun) -> EResult<()> {
     let hostname = hostname::get()?.to_string_lossy().to_string();
     let pid = std::process::id();
     let client = eva_client::EvaClient::connect(
