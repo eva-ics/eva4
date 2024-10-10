@@ -16,7 +16,11 @@ struct Args {
     id_override: Option<String>,
     #[clap(short = 'b', long, default_value = "/opt/eva4/var/bus.ipc")]
     bus: String,
-    #[clap(short = 'd', long)]
+    #[clap(
+        short = 'd',
+        long,
+        help = "Override the service data path (use a local directory)"
+    )]
     data_path: Option<String>,
     #[clap(
         short = 'u',
