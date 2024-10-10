@@ -37,7 +37,7 @@ See also: <https://info.bma.ai/en/actual/eva4/sdk/rust/service_example.html>
 eva-lsl run -b IP:PORT SVC_ID
 ```
 
-(for the local node but non-standard path, specify path to `bus.ipc`)
+(for a local node but non-standard path, specify path to `bus.ipc`)
 
 The command builds the service and run it locally, connecting to the node bus.
 Log messages are printed to the local console.
