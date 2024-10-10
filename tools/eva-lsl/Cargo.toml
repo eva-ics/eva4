@@ -1,0 +1,18 @@
+[package]
+name = "eva-lsl"
+version = "0.1.0"
+edition = "2021"
+authors = ["Serhij S. <div@altertech.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/eva-ics/eva4"
+description = "EVA ICS v4 local service launcher"
+readme = "README.md"
+keywords = ["eva-ics", "iot", "industrial", "scada", "cloud"]
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+eva-client = "0.4.0"
+eva-common = { version = "0.3.74", features = ["common-payloads", "payload", "services", "openssl-vendored"] }
+hostname = "0.4.0"
+serde = { version = "1.0.210", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["full"] }
