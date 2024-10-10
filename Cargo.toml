@@ -50,7 +50,7 @@ exclude = [
   "svc/controller-system",
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
-  "tools/eva-svc-debug",
+  "tools/eva-lsl",
 ]
 
 [workspace.package]
