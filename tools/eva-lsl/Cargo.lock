@@ -510,6 +510,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-lsl"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "eva-client",
+ "eva-common",
+ "hostname",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "eva-rjrpc"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -524,18 +536,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "url",
-]
-
-[[package]]
-name = "eva-svc-launcher"
-version = "0.1.0"
-dependencies = [
- "clap",
- "eva-client",
- "eva-common",
- "hostname",
- "serde",
- "tokio",
 ]
 
 [[package]]
