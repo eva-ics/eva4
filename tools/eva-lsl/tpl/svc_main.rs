@@ -22,7 +22,7 @@ impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();
         let method = event.parse_method()?;
-        #[allow(clippy::single_match)]
+        #[allow(clippy::single_match, clippy::match_single_binding)]
         match method {
             _ => svc_handle_default_rpc(method, &self.info),
         }
