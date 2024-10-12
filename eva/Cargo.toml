@@ -17,6 +17,10 @@ path = "src/main.rs"
 name = "init-registry"
 path = "src/init_registry.rs"
 
+[[bin]]
+name = "rt-launch"
+path = "src/rt-launch.rs"
+
 [dependencies]
 tokio = { features = ["full"] , workspace = true }
 yedb = { version = "0.4.14", features = ["server-embed", "busrt-rpc"] }

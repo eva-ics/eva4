@@ -178,7 +178,7 @@ async fn run(args: CommandRun) -> EResult<()> {
     initial.set_user(args.user.as_deref());
     let packed = pack(&initial)?;
     let mut buffer = Vec::with_capacity(1 + 4 + packed.len());
-    buffer.push(0x01);
+    buffer.push(eva_common::services::SERVICE_PAYLOAD_INITIAL);
     buffer.extend_from_slice(&u32::try_from(packed.len())?.to_le_bytes());
     buffer.extend_from_slice(&packed);
     let (cmd, cmd_args) = if let Some(ref binary) = args.binary {

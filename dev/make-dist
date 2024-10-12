@@ -212,7 +212,7 @@ cd ../..
 
 mkdir -p svc cli
 
-for svc in eva-node eva-aaa-acl eva-aaa-localauth \
+for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
   eva-aaa-otp \
   eva-controller-enip \
   eva-bridge-ads \
