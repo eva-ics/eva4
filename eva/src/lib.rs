@@ -3,10 +3,10 @@ use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
 use log::warn;
 use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use serde::Serialize;
 use std::sync::atomic;
 use std::time::Duration;
-use tokio::sync::RwLock;
 
 err_logger!();
 
@@ -30,7 +30,7 @@ pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 pub const MEMORY_WARN_DEFAULT: u64 = 134_217_728;
 use sysinfo::{System, SystemExt};
 
-pub static SYSTEM_INFO: Lazy<RwLock<System>> = Lazy::new(|| RwLock::new(System::new_all()));
+pub static SYSTEM_INFO: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new_all()));
 
 #[cfg(not(target_env = "musl"))]
 fn scheduler_param(priority: i32) -> libc::sched_param {
@@ -103,30 +103,24 @@ pub fn apply_current_thread_params(
     Ok(())
 }
 
-fn launch_sysinfo() {
-    tokio::spawn(async move {
-        let mut int = tokio::time::interval(SYSINFO_CHECK_INTERVAL);
-        let rt_config = eva_common::services::RealtimeConfig {
-            priority: Some(0),
-            cpu_ids: vec![0],
-        };
-        loop {
-            int.tick().await;
-            {
-                let mut s = SYSTEM_INFO.write().await;
-                let rt_config = rt_config.clone();
-                tokio::task::spawn_blocking(move || {
-                    apply_current_thread_params(&rt_config, true)
-                        .log_ef_with("sysinfo real-time params apply failed");
-                    //s.refresh_memory();
-                    //s.refresh_processes();
-                    //s.refresh_disks_list();
-                })
-                .await
-                .log_ef_with("sysinfo update");
+pub fn launch_sysinfo() -> EResult<()> {
+    std::thread::Builder::new()
+        .name("EVAsysinfo".to_owned())
+        .spawn(move || {
+            let mut int = rtsc::time::interval(SYSINFO_CHECK_INTERVAL);
+            let rt_config = eva_common::services::RealtimeConfig {
+                priority: Some(0),
+                cpu_ids: vec![0],
+            };
+            apply_current_thread_params(&rt_config, true)
+                .log_ef_with("sysinfo real-time params apply failed");
+            loop {
+                int.tick();
+                let s = System::new_all();
+                *SYSTEM_INFO.lock() = s;
             }
-        }
-    });
+        })?;
+    Ok(())
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, bmart::tools::EnumStr, Serialize, Default)]

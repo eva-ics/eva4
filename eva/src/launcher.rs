@@ -490,7 +490,15 @@ async fn mem_warn_handler(services: &Mutex<HashMap<String, Arc<Service>>>) {
         }
         for (id, pid, mem_warn) in to_check {
             let pid = sysinfo::Pid::from(pid as usize);
-            let system = crate::SYSTEM_INFO.read().await;
+            // safe lock
+            let system = loop {
+                let Some(system) = crate::SYSTEM_INFO.try_lock() else {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                    continue;
+                };
+                break system;
+            };
+
             let Some(process) = system.process(pid) else {
                 continue;
             };
@@ -500,6 +508,7 @@ async fn mem_warn_handler(services: &Mutex<HashMap<String, Arc<Service>>>) {
                     total_memory += process.memory();
                 }
             }
+            drop(system);
             crate::check_memory_usage(&id, total_memory, mem_warn);
         }
     }

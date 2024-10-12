@@ -61,6 +61,7 @@ num_cpus = "1.16.0"
 binrw = "0.13.3"
 submap = "0.3.0"
 libc = "0.2.159"
+rtsc = "0.3.2"
 
 [features]
 std-alloc = []
