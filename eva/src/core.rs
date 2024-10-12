@@ -1284,6 +1284,7 @@ impl Core {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn process_modified(
         &self,
         om: events::OnModifiedOwned,
@@ -2353,11 +2354,18 @@ fn spawn_mem_checker(mem_warn: u64) {
         let pid = sysinfo::Pid::from(std::process::id() as usize);
         loop {
             int.tick().await;
-            let system = crate::SYSTEM_INFO.read().await;
-            let Some(process) = system.process(pid) else {
+            // safe lock
+            let system = loop {
+                let Some(system) = crate::SYSTEM_INFO.try_lock() else {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                    continue;
+                };
+                break system;
+            };
+            let Some(total_memory) = system.process(pid).map(sysinfo::Process::memory) else {
                 continue;
             };
-            let total_memory = process.memory();
+            drop(system);
             crate::check_memory_usage("core process", total_memory, mem_warn);
         }
     });

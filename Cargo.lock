@@ -521,7 +521,7 @@ dependencies = [
  "bmart",
  "busrt",
  "clap 3.2.25",
- "env_logger 0.11.2",
+ "env_logger 0.11.5",
  "eva-common",
  "log",
  "serde",
@@ -552,6 +552,17 @@ checksum = "7ed74c5bc947ec854e93a600d51fefc5f9ea1cf84d5e8b65619c8f9ab856994d"
 dependencies = [
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "bma-ts"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c0cd34a34174c74d6984fdf7dee88fce5befb990562c1ff0bebbfdc79bd7bd1"
+dependencies = [
+ "nix 0.27.1",
+ "once_cell",
+ "thiserror",
 ]
 
 [[package]]
@@ -1204,6 +1215,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim 0.10.0",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1477,9 +1523,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.2"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c012a26a7f605efc424dd53697843a72be7dc86ad2d01f7814337794a12231d"
+checksum = "e13fa619b91fb2381732789fc5de83b45675e882f66623b7d8cb4f643017018d"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1642,7 +1688,7 @@ dependencies = [
  "chrono",
  "clap 3.2.25",
  "colored 2.1.0",
- "env_logger 0.11.2",
+ "env_logger 0.11.5",
  "eva-client",
  "eva-common",
  "expanduser",
@@ -1665,9 +1711,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.71"
+version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b58e6b55160bcbe729aab4982ecbbed02e4d30bbd0f300237febad9ea30341a"
+checksum = "71a2c2ab14142f3b0215c75b73cca31ce801d04f0e6790e20d3d8031032c59cd"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2111,6 +2157,7 @@ dependencies = [
  "ipnetwork",
  "jemallocator",
  "lazy_static",
+ "libc",
  "log",
  "multi_log",
  "nix 0.25.0",
@@ -2119,6 +2166,7 @@ dependencies = [
  "openssl",
  "parking_lot 0.12.1",
  "regex",
+ "rtsc",
  "serde",
  "serde_json",
  "serde_yaml 0.8.26",
@@ -2187,15 +2235,16 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.49"
+version = "0.3.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1018f3db36d62464aa98352850d112c9c9e44bde9198f1f9930a4ed8ecc7b0b9"
+checksum = "cbd4512b23d40fffea79de8fce625a635c6c785711e6152444990bcc134e3d70"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
  "async-trait",
  "bmart",
  "busrt",
+ "env_logger 0.11.5",
  "eva-common",
  "eva-sdk-derive",
  "glob-match",
@@ -2206,6 +2255,7 @@ dependencies = [
  "log",
  "once_cell",
  "parking_lot 0.12.1",
+ "rtsc",
  "serde",
  "simple-pool 0.0.17",
  "tokio",
@@ -3063,6 +3113,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
 name = "idna"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3320,9 +3376,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.153"
+version = "0.2.159"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
+checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
 
 [[package]]
 name = "libm"
@@ -3348,6 +3404,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
+name = "linux-futex"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca13551457f48de808024473c481e3978eb6ea5e7f345433eb0f9c3b325fc1ca"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3361,9 +3426,9 @@ checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
 
 [[package]]
 name = "lock_api"
-version = "0.4.7"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "327fa5b6a6940e4699ec49a9beae1ea4845c6bab9314e4f84ac68742139d8c53"
+checksum = "07af8b9cdd281b7915f413fa73f29ebd5d55d0d3f0155584dade1ff18cea1b17"
 dependencies = [
  "autocfg",
  "scopeguard",
@@ -3372,9 +3437,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.20"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
 name = "lru"
@@ -3613,6 +3678,17 @@ dependencies = [
  "libc",
  "memoffset 0.7.1",
  "pin-utils",
+]
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.4.1",
+ "cfg-if",
+ "libc",
 ]
 
 [[package]]
@@ -3970,6 +4046,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "parking_lot_rt"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7f9d3dba7751cf4b5ac6f3e9423cb573df1c927bb41808118ff1eb132dc9a50"
+dependencies = [
+ "lock_api",
+ "parking_lot_core 0.9.3",
+]
+
+[[package]]
 name = "parse-zoneinfo"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4138,22 +4224,22 @@ dependencies = [
 
 [[package]]
 name = "pin-project"
-version = "1.0.10"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58ad3879ad3baf4e44784bc6a718a8698867bb991f8ce24d1bcbe2cfb4c3a75e"
+checksum = "baf123a161dde1e524adf36f90bc5d8d3462824a9c43553ad07a8183161189ec"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "1.0.10"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "744b6f092ba29c3650faf274db506afd39944f48420f6c86b17cfe0ee1cb36bb"
+checksum = "a4502d8515ca9f32f1fb543d987f63d95a14934883db45bdb48060b6b69257f8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.50",
 ]
 
 [[package]]
@@ -4774,6 +4860,35 @@ dependencies = [
  "smallvec",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rtsc"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11baa465367e0b349acb185db6e9747e39be4c588f3d4410dfc2831ebfaacf12"
+dependencies = [
+ "bma-ts",
+ "libc",
+ "linux-futex",
+ "lock_api",
+ "object-id",
+ "parking_lot_rt",
+ "pin-project",
+ "rtsc-derive",
+ "thiserror",
+]
+
+[[package]]
+name = "rtsc-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "478d8d87ce09eb1fb06a75170e56123af8bd9ed5ec1b5b2ad8d0d9dac2fc6f52"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

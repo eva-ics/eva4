@@ -13,7 +13,7 @@ keywords = ["eva-ics", "iot", "industrial", "scada", "cloud"]
 clap = { version = "4.5.20", features = ["derive"] }
 colored = "2.1.0"
 eva-client = "0.4.0"
-eva-common = { version = "0.3.74", features = ["common-payloads", "payload", "services", "openssl-vendored"] }
+eva-common = { version = "0.3.75", features = ["common-payloads", "payload", "services", "openssl-vendored"] }
 hostname = "0.4.0"
 serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }

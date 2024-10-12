@@ -7,6 +7,7 @@ use eva_common::common_payloads::ParamsId;
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::registry;
+use eva_common::services::RealtimeConfig;
 use log::{info, trace, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -76,6 +77,7 @@ pub async fn run(
     system_name: Option<&str>,
     pid_file: Option<&str>,
     connection_path: &str,
+    realtime: RealtimeConfig,
 ) -> EResult<()> {
     let system_name = if let Some(name) = system_name {
         name.to_owned()
@@ -150,6 +152,7 @@ pub async fn run(
         launcher_client,
         launcher_client_secondary,
         bus_config_data.queue_size,
+        realtime,
     )
     .await?;
     core.mark_loaded().await;

@@ -1289,7 +1289,7 @@ impl RpcHandlers for BusApi {
                     la15: f64,
                 }
                 if payload.is_empty() {
-                    let system = crate::SYSTEM_INFO.read().await;
+                    let system = crate::SYSTEM_INFO.lock();
                     let d = eva_common::tools::get_eva_dir();
                     let eva_dir = Path::new(&d);
                     let mut disk_usage: Option<f64> = None;
@@ -1316,13 +1316,15 @@ impl RpcHandlers for BusApi {
                     let la1 = la.one;
                     let la5 = la.five;
                     let la15 = la.fifteen;
-                    Ok(Some(pack(&Info {
+                    let info = Info {
                         ram_usage,
                         disk_usage,
                         la1,
                         la5,
                         la15,
-                    })?))
+                    };
+                    drop(system);
+                    Ok(Some(pack(&info)?))
                 } else {
                     Err(RpcError::params(None))
                 }

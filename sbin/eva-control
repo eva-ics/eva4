@@ -19,6 +19,10 @@ if [ "$FIPS" = "true" ]; then
   ARGS="${ARGS} --fips"
 fi
 
+if [ "$REALTIME" ]; then
+  ARGS="${ARGS} --realtime '${REALTIME}'"
+fi
+
 export MODE
 
 (( MAX_START_WAIT_P=MAX_START_WAIT*2))

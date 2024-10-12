@@ -10,10 +10,10 @@ busrt = { version = "0.4", features = ["rpc", "ipc"] }
 tokio = { version = "1.36.0", features = ["full"] }
 async-trait = { version = "0.1.77" }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
-eva-common = { version = "0.3.43", features = ["events", "common-payloads"] }
+eva-common = { workspace = true, features = ["events", "common-payloads"] }
 log = "0.4.20"
 async-channel = "1.7"
-eva-sdk = { version = "0.3.45" }
+eva-sdk = { workspace = true }
 jemallocator = { version = "0.5.4" }
 once_cell = "1.19.0"
 bmart = "0.2.6"
