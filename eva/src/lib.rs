@@ -32,17 +32,95 @@ use sysinfo::{System, SystemExt};
 
 pub static SYSTEM_INFO: Lazy<RwLock<System>> = Lazy::new(|| RwLock::new(System::new_all()));
 
+#[cfg(not(target_env = "musl"))]
+fn scheduler_param(priority: i32) -> libc::sched_param {
+    libc::sched_param {
+        sched_priority: priority,
+    }
+}
+
+#[cfg(target_env = "musl")]
+fn scheduler_param(priority: i32) -> libc::sched_param {
+    libc::sched_param {
+        sched_priority: priority,
+        sched_ss_low_priority: 0,
+        sched_ss_repl_period: libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        },
+        sched_ss_init_budget: libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        },
+        sched_ss_max_repl: 0,
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub fn apply_current_thread_params(
+    params: &eva_common::services::RealtimeConfig,
+    quiet: bool,
+) -> EResult<()> {
+    let tid = unsafe { i32::try_from(libc::syscall(libc::SYS_gettid)).unwrap_or(-200) };
+    let user_id = unsafe { libc::getuid() };
+    if !params.cpu_ids.is_empty() {
+        if user_id == 0 {
+            unsafe {
+                let mut cpuset: libc::cpu_set_t = std::mem::zeroed();
+                for cpu in &params.cpu_ids {
+                    libc::CPU_SET(*cpu, &mut cpuset);
+                }
+                let res =
+                    libc::sched_setaffinity(tid, std::mem::size_of::<libc::cpu_set_t>(), &cpuset);
+                if res != 0 {
+                    return Err(Error::failed(format!("CPU affinity set error: {}", res)));
+                }
+            }
+        } else if !quiet {
+            eprintln!("Core CPU affinity is not set, the core is not launched as root");
+        }
+    }
+    if let Some(priority) = params.priority {
+        if user_id == 0 {
+            let res = unsafe {
+                let sched = if priority == 0 {
+                    libc::SCHED_OTHER
+                } else {
+                    libc::SCHED_FIFO
+                };
+                libc::sched_setscheduler(tid, sched, &scheduler_param(priority))
+            };
+            if res != 0 {
+                return Err(Error::failed(format!(
+                    "Real-time priority set error: {}",
+                    res
+                )));
+            }
+        } else if !quiet {
+            eprintln!("Core real-time priority is not set, the core is not launched as root");
+        }
+    }
+    Ok(())
+}
+
 fn launch_sysinfo() {
     tokio::spawn(async move {
         let mut int = tokio::time::interval(SYSINFO_CHECK_INTERVAL);
+        let rt_config = eva_common::services::RealtimeConfig {
+            priority: Some(0),
+            cpu_ids: vec![0],
+        };
         loop {
             int.tick().await;
             {
                 let mut s = SYSTEM_INFO.write().await;
+                let rt_config = rt_config.clone();
                 tokio::task::spawn_blocking(move || {
-                    s.refresh_memory();
-                    s.refresh_processes();
-                    s.refresh_disks_list();
+                    apply_current_thread_params(&rt_config, true)
+                        .log_ef_with("sysinfo real-time params apply failed");
+                    //s.refresh_memory();
+                    //s.refresh_processes();
+                    //s.refresh_disks_list();
                 })
                 .await
                 .log_ef_with("sysinfo update");

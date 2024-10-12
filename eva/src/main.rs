@@ -2,7 +2,7 @@ use clap::Parser;
 use eva::Mode;
 use eva::{AUTHOR, PRODUCT_NAME, VERSION};
 use eva_common::err_logger;
-use eva_common::{services, EResult, Error, ErrorKind};
+use eva_common::{services, ErrorKind};
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -30,50 +30,6 @@ struct Args {
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-
-#[cfg(target_os = "linux")]
-fn apply_thread_params(tid: libc::c_int, params: &services::RealtimeConfig) -> EResult<()> {
-    let user_id = unsafe { libc::getuid() };
-    if !params.cpu_ids.is_empty() {
-        if user_id == 0 {
-            unsafe {
-                let mut cpuset: libc::cpu_set_t = std::mem::zeroed();
-                for cpu in &params.cpu_ids {
-                    libc::CPU_SET(*cpu, &mut cpuset);
-                }
-                let res =
-                    libc::sched_setaffinity(tid, std::mem::size_of::<libc::cpu_set_t>(), &cpuset);
-                if res != 0 {
-                    return Err(Error::failed(format!("CPU affinity set error: {}", res)));
-                }
-            }
-        } else {
-            eprintln!("Core CPU affinity is not set, the core is not launched as root");
-        }
-    }
-    if let Some(priority) = params.priority {
-        if user_id == 0 {
-            let res = unsafe {
-                libc::sched_setscheduler(
-                    tid,
-                    libc::SCHED_FIFO,
-                    &libc::sched_param {
-                        sched_priority: priority,
-                    },
-                )
-            };
-            if res != 0 {
-                return Err(Error::failed(format!(
-                    "Real-time priority set error: {}",
-                    res
-                )));
-            }
-        } else {
-            eprintln!("Core real-time priority is not set, the core is not launched as root");
-        }
-    }
-    Ok(())
-}
 
 #[derive(Debug, Deserialize)]
 struct RealtimeParams {
@@ -109,8 +65,8 @@ fn main() {
     let realtime_params: RealtimeParams = eva_common::serde_keyvalue::from_key_values(realtime_str)
         .expect("Real-time parameters error");
     let realtime: services::RealtimeConfig = realtime_params.into();
-    let tid = unsafe { i32::try_from(libc::syscall(libc::SYS_gettid)).unwrap_or(-200) };
-    apply_thread_params(tid, &realtime).expect("Unable to apply real-time core parameters");
+    eva::apply_current_thread_params(&realtime, false)
+        .expect("Unable to apply real-time core parameters");
     if let Err(e) = eva::node::launch(
         args.mode,
         args.system_name.as_deref(),
