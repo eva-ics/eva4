@@ -2235,9 +2235,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.54"
+version = "0.3.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d650c984e31f7e02dda197d132969b5ca04ae387dd707a34b89eba4d0214e9f"
+checksum = "cbd4512b23d40fffea79de8fce625a635c6c785711e6152444990bcc134e3d70"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -4864,9 +4864,9 @@ dependencies = [
 
 [[package]]
 name = "rtsc"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a4c2300d8e749851980f6a39b17966ec8e640a6f62d8b152ee3e7147676f59f"
+checksum = "11baa465367e0b349acb185db6e9747e39be4c588f3d4410dfc2831ebfaacf12"
 dependencies = [
  "bma-ts",
  "libc",

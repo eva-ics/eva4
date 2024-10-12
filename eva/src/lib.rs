@@ -36,7 +36,10 @@ pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
     quiet: bool,
 ) -> EResult<()> {
-    let mut rt_params = rtsc::thread_rt::Params::default();
+    let mut rt_params = rtsc::thread_rt::Params {
+        cpu_ids: params.cpu_ids.clone(),
+        ..Default::default()
+    };
     if let Some(priority) = params.priority {
         rt_params.priority = Some(priority);
         if priority > 0 {
