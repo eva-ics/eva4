@@ -299,7 +299,7 @@ svc:
         priority:
           anyOf:
             - type: integer
-              minimum: 1
+              minimum: 0
               maximum: 99
             - type: "null"
         cpu_ids:
