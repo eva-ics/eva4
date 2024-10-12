@@ -2235,9 +2235,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.53"
+version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a11571abcd2ffbc0e1260e33fd86ca0d3163bf1843329445d39025371dc8dfe2"
+checksum = "9d650c984e31f7e02dda197d132969b5ca04ae387dd707a34b89eba4d0214e9f"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2255,6 +2255,7 @@ dependencies = [
  "log",
  "once_cell",
  "parking_lot 0.12.1",
+ "rtsc",
  "serde",
  "simple-pool 0.0.17",
  "tokio",
@@ -4863,9 +4864,9 @@ dependencies = [
 
 [[package]]
 name = "rtsc"
-version = "0.3.2"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "679c8b184bde821ebc2136ba8e598f7e2f349e8c93b96f5f551e8581e11ba453"
+checksum = "4a4c2300d8e749851980f6a39b17966ec8e640a6f62d8b152ee3e7147676f59f"
 dependencies = [
  "bma-ts",
  "libc",

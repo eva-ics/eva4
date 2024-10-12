@@ -66,8 +66,7 @@ fn main() {
         .expect("Real-time parameters error");
     eva::launch_sysinfo().expect("Unable to launch sysinfo thread");
     let realtime: services::RealtimeConfig = realtime_params.into();
-    eva::apply_current_thread_params(&realtime, false)
-        .expect("Unable to apply real-time core parameters");
+    eva::apply_current_thread_params(&realtime, false).unwrap();
     if let Err(e) = eva::node::launch(
         args.mode,
         args.system_name.as_deref(),

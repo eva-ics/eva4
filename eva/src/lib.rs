@@ -32,75 +32,30 @@ use sysinfo::{System, SystemExt};
 
 pub static SYSTEM_INFO: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new_all()));
 
-#[cfg(not(target_env = "musl"))]
-fn scheduler_param(priority: i32) -> libc::sched_param {
-    libc::sched_param {
-        sched_priority: priority,
-    }
-}
-
-#[cfg(target_env = "musl")]
-fn scheduler_param(priority: i32) -> libc::sched_param {
-    libc::sched_param {
-        sched_priority: priority,
-        sched_ss_low_priority: 0,
-        sched_ss_repl_period: libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        },
-        sched_ss_init_budget: libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        },
-        sched_ss_max_repl: 0,
-    }
-}
-
-#[cfg(target_os = "linux")]
 pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
     quiet: bool,
 ) -> EResult<()> {
-    let tid = unsafe { i32::try_from(libc::syscall(libc::SYS_gettid)).unwrap_or(-200) };
-    let user_id = unsafe { libc::getuid() };
-    if !params.cpu_ids.is_empty() {
-        if user_id == 0 {
-            unsafe {
-                let mut cpuset: libc::cpu_set_t = std::mem::zeroed();
-                for cpu in &params.cpu_ids {
-                    libc::CPU_SET(*cpu, &mut cpuset);
-                }
-                let res =
-                    libc::sched_setaffinity(tid, std::mem::size_of::<libc::cpu_set_t>(), &cpuset);
-                if res != 0 {
-                    return Err(Error::failed(format!("CPU affinity set error: {}", res)));
-                }
-            }
-        } else if !quiet {
-            eprintln!("Core CPU affinity is not set, the core is not launched as root");
-        }
-    }
+    let mut rt_params = rtsc::thread_rt::Params::default();
     if let Some(priority) = params.priority {
-        if user_id == 0 {
-            let res = unsafe {
-                let sched = if priority == 0 {
-                    libc::SCHED_OTHER
-                } else {
-                    libc::SCHED_FIFO
-                };
-                libc::sched_setscheduler(tid, sched, &scheduler_param(priority))
-            };
-            if res != 0 {
-                return Err(Error::failed(format!(
-                    "Real-time priority set error: {}",
-                    res
-                )));
-            }
-        } else if !quiet {
-            eprintln!("Core real-time priority is not set, the core is not launched as root");
+        rt_params.priority = Some(priority);
+        if priority > 0 {
+            rt_params.scheduling = rtsc::thread_rt::Scheduling::FIFO;
         }
     }
-    Ok(())
+    match rtsc::thread_rt::apply_for_current(&rt_params) {
+        Ok(()) => Ok(()),
+        Err(rtsc::Error::AccessDenied) => {
+            if !quiet {
+                eprintln!("Real-time parameters are not set, the core is not launched as root");
+            }
+            Ok(())
+        }
+        Err(e) => Err(Error::failed(format!(
+            "Real-time priority set error: {}",
+            e
+        ))),
+    }
 }
 
 pub fn launch_sysinfo() -> EResult<()> {
