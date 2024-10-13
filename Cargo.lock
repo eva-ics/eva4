@@ -671,9 +671,9 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busrt"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfaa3ce1c559351db9f3a07bd73a0081ee27fbb91b7bc11e0f79c102b5cd7626"
+checksum = "885cf6a9829f27e188434dc29410c9cc01597d619ea4c8d3aa7f023ae5ff4cf1"
 dependencies = [
  "async-channel 1.9.0",
  "async-io 1.8.0",
@@ -682,6 +682,7 @@ dependencies = [
  "log",
  "nix 0.25.0",
  "parking_lot 0.12.1",
+ "parking_lot_rt",
  "regex",
  "rmp-serde",
  "serde",
