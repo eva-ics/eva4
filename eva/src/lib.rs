@@ -36,14 +36,13 @@ pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
     quiet: bool,
 ) -> EResult<()> {
-    let mut rt_params = rtsc::thread_rt::Params {
-        cpu_ids: params.cpu_ids.clone(),
-        ..Default::default()
-    };
+    let mut rt_params = rtsc::thread_rt::Params::new()
+        .with_cpu_ids(&params.cpu_ids)
+        .with_preallocated_heap(params.prealloc_heap.unwrap_or_default());
     if let Some(priority) = params.priority {
-        rt_params.priority = Some(priority);
+        rt_params = rt_params.with_priority(Some(priority));
         if priority > 0 {
-            rt_params.scheduling = rtsc::thread_rt::Scheduling::FIFO;
+            rt_params = rt_params.with_scheduling(rtsc::thread_rt::Scheduling::FIFO);
         }
     }
     match rtsc::thread_rt::apply_for_current(&rt_params) {
@@ -69,6 +68,7 @@ pub fn launch_sysinfo() -> EResult<()> {
             let rt_config = eva_common::services::RealtimeConfig {
                 priority: Some(0),
                 cpu_ids: vec![0],
+                prealloc_heap: None,
             };
             apply_current_thread_params(&rt_config, true)
                 .log_ef_with("sysinfo real-time params apply failed");

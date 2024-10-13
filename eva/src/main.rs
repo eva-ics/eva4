@@ -35,6 +35,7 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 struct RealtimeParams {
     priority: Option<i32>,
     cpu_ids: Option<String>,
+    prealloc_heap: Option<usize>,
 }
 
 impl From<RealtimeParams> for services::RealtimeConfig {
@@ -49,6 +50,7 @@ impl From<RealtimeParams> for services::RealtimeConfig {
                         .collect()
                 })
                 .unwrap_or_default(),
+            prealloc_heap: params.prealloc_heap,
         }
     }
 }

@@ -309,6 +309,10 @@ svc:
           items:
             type: integer
             minimum: 0
+        prealloc_heap:
+          anyOf:
+            - *intzeropositive
+            - type: "null"
     timeout:
       type: object
       additionalProperties: false
