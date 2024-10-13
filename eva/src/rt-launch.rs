@@ -45,17 +45,8 @@ fn apply_current_thread_params(params: &services::RealtimeConfig) -> EResult<()>
         }
     }
     if let Some(prealloc_heap) = params.prealloc_heap {
-        #[cfg(target_env = "gnu")]
-        if let Err(e) = rtsc::thread_rt::preallocate_heap(prealloc_heap) {
-            if e == rtsc::Error::AccessDenied {
-                eprintln!("Heap preallocation failed, the service is not launched as root");
-            } else {
-                return Err(Error::failed(format!("Heap preallocation error: {}", e)));
-            }
-        }
-        #[cfg(not(target_env = "gnu"))]
         if prealloc_heap > 0 {
-            eprintln!("Heap preallocation is supported in native builds only");
+            eprintln!("Heap preallocation is not available");
         }
     }
     Ok(())
