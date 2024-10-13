@@ -36,28 +36,42 @@ pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
     quiet: bool,
 ) -> EResult<()> {
-    let mut rt_params = rtsc::thread_rt::Params::new()
-        .with_cpu_ids(&params.cpu_ids)
-        .with_preallocated_heap(params.prealloc_heap.unwrap_or_default());
+    let mut rt_params = rtsc::thread_rt::Params::new().with_cpu_ids(&params.cpu_ids);
     if let Some(priority) = params.priority {
         rt_params = rt_params.with_priority(Some(priority));
         if priority > 0 {
             rt_params = rt_params.with_scheduling(rtsc::thread_rt::Scheduling::FIFO);
         }
     }
-    match rtsc::thread_rt::apply_for_current(&rt_params) {
-        Ok(()) => Ok(()),
-        Err(rtsc::Error::AccessDenied) => {
+    if let Err(e) = rtsc::thread_rt::apply_for_current(&rt_params) {
+        if e == rtsc::Error::AccessDenied {
             if !quiet {
-                eprintln!("Real-time parameters are not set, the core is not launched as root");
+                eprintln!("Real-time parameters are not set, the service is not launched as root");
             }
-            Ok(())
+        } else {
+            return Err(Error::failed(format!(
+                "Real-time priority set error: {}",
+                e
+            )));
         }
-        Err(e) => Err(Error::failed(format!(
-            "Real-time priority set error: {}",
-            e
-        ))),
     }
+    if let Some(prealloc_heap) = params.prealloc_heap {
+        #[cfg(target_env = "gnu")]
+        if let Err(e) = rtsc::thread_rt::preallocate_heap(prealloc_heap) {
+            if e == rtsc::Error::AccessDenied {
+                if !quiet {
+                    eprintln!("Heap preallocation failed, the service is not launched as root");
+                }
+            } else {
+                return Err(Error::failed(format!("Heap preallocation error: {}", e)));
+            }
+        }
+        #[cfg(not(target_env = "gnu"))]
+        if prealloc_heap > 0 && !quiet {
+            eprintln!("Heap preallocation is supported in native builds only");
+        }
+    }
+    Ok(())
 }
 
 pub fn launch_sysinfo() -> EResult<()> {

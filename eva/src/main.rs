@@ -32,6 +32,7 @@ struct Args {
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RealtimeParams {
     priority: Option<i32>,
     cpu_ids: Option<String>,
