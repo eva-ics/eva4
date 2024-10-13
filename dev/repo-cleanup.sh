@@ -1,7 +1,7 @@
 #!/bin/sh
 
 KEEP_NIGHTLY=6
-KEEP_STABLE=3
+KEEP_STABLE=12
 
 VERSION=$(grep ^version Cargo.toml|cut -d\" -f2)
 
