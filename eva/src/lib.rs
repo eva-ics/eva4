@@ -5,8 +5,8 @@ use log::warn;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
-use std::sync::atomic;
 use std::time::Duration;
+use std::{path::Path, sync::atomic};
 
 err_logger!();
 
@@ -28,9 +28,9 @@ pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
 pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 pub const MEMORY_WARN_DEFAULT: u64 = 134_217_728;
-use sysinfo::{System, SystemExt};
+use sysinfo::{DiskExt as _, System, SystemExt};
 
-pub static SYSTEM_INFO: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new_all()));
+pub static SYSTEM_INFO: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new()));
 
 pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
@@ -74,7 +74,8 @@ pub fn apply_current_thread_params(
     Ok(())
 }
 
-pub fn launch_sysinfo() -> EResult<()> {
+pub fn launch_sysinfo(full: bool) -> EResult<()> {
+    SYSTEM_INFO.lock().refresh_disks_list();
     std::thread::Builder::new()
         .name("EVAsysinfo".to_owned())
         .spawn(move || {
@@ -88,8 +89,18 @@ pub fn launch_sysinfo() -> EResult<()> {
                 .log_ef_with("sysinfo real-time params apply failed");
             loop {
                 int.tick();
-                let s = System::new_all();
-                *SYSTEM_INFO.lock() = s;
+                let d = eva_common::tools::get_eva_dir();
+                let eva_dir = Path::new(&d);
+                let mut s = SYSTEM_INFO.lock();
+                s.refresh_memory();
+                for disk in s.disks_mut() {
+                    if eva_dir.starts_with(disk.mount_point()) {
+                        disk.refresh();
+                    }
+                }
+                if full {
+                    s.refresh_processes();
+                }
             }
         })?;
     Ok(())

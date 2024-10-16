@@ -67,8 +67,9 @@ fn main() {
         .trim_end_matches('\'');
     let realtime_params: RealtimeParams = eva_common::serde_keyvalue::from_key_values(realtime_str)
         .expect("Real-time parameters error");
-    eva::launch_sysinfo().expect("Unable to launch sysinfo thread");
     let realtime: services::RealtimeConfig = realtime_params.into();
+    eva::launch_sysinfo(realtime.priority.unwrap_or_default() == 0)
+        .expect("Unable to launch sysinfo thread");
     eva::apply_current_thread_params(&realtime, false).unwrap();
     if let Err(e) = eva::node::launch(
         args.mode,
