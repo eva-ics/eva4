@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.77"
+version = "0.3.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "248452ccd1dccdb8e1310ef8817d36f45d034e1c9cfb89b604a8c79424546ed3"
+checksum = "3f9b581f5d1d8dc24fae86643e0f8b24e6853c20ba867a75e39e991b600a0762"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -1737,7 +1737,7 @@ dependencies = [
  "once_cell",
  "openssl",
  "ordered-float",
- "parking_lot 0.12.1",
+ "parking_lot_rt",
  "rand 0.8.5",
  "regex",
  "remain",
@@ -2236,9 +2236,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.57"
+version = "0.3.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20af119f972f962f9b0b7b6290259e6b777bf41a20c72ea2298359aca15c3c63"
+checksum = "5272846a733a1a5c9d9edb1ed060fbda987913d040872bd479210d92b6ea65ea"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2255,7 +2255,7 @@ dependencies = [
  "libc",
  "log",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot_rt",
  "rtsc",
  "serde",
  "simple-pool 0.0.17",
