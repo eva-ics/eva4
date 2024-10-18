@@ -62,6 +62,10 @@ impl From<RealtimeParams> for services::RealtimeConfig {
 fn main() {
     eva_common::self_test();
     let args = Args::parse();
+    if args.mode == Mode::Info {
+        eva::node::print_info().expect("Unable to print info");
+        return;
+    }
     let realtime_str = args
         .realtime
         .as_deref()
@@ -86,6 +90,9 @@ fn main() {
     } else {
         None
     };
+    let _sys = eva::SystemConfig::new()
+        .apply()
+        .expect("Unable to apply system config");
     eva::apply_current_thread_params(&realtime, false).unwrap();
     if let Err(e) = eva::node::launch(
         args.mode,

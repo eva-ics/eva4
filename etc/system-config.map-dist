@@ -1,0 +1,4 @@
+#/proc/sys/kernel/sched_rt_runtime_us = -1 # no limit for real-time tasks (USE WITH CARE!)
+#/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor = performance # CPU 1
+#/sys/devices/system/cpu/cpu2/cpufreq/scaling_governor = performance # CPU 2
+#/sys/devices/system/cpu/cpu3/cpufreq/scaling_governor = performance # CPU 3

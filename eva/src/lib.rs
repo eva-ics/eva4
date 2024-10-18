@@ -5,6 +5,7 @@ use log::warn;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::time::Duration;
 use std::{path::Path, sync::atomic};
 
@@ -163,6 +164,72 @@ pub fn check_memory_usage(source: &str, current: u64, warn_limit: u64) {
             current,
             current as f64 / 1_073_741_824.0
         );
+    }
+}
+
+#[derive(Default)]
+pub struct SystemConfig {
+    prev_values: BTreeMap<String, String>,
+}
+
+impl SystemConfig {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn apply(mut self) -> EResult<SystemConfigGuard> {
+        let mut map_file = Path::new(&get_eva_dir()).to_owned();
+        map_file.push("etc");
+        map_file.push("system-config.map");
+        if !map_file.exists() {
+            return Ok(SystemConfigGuard { config: self });
+        }
+        let user_id = unsafe { libc::getuid() };
+        if user_id != 0 {
+            eprintln!("System config map is not applied, the core is not launched as root");
+            return Ok(SystemConfigGuard { config: self });
+        }
+        let map_s = std::fs::read_to_string(map_file)?;
+        let mut values: BTreeMap<&str, &str> = BTreeMap::new();
+        for line in map_s.split('\n') {
+            let line = line.split('#').next().unwrap().trim();
+            if line.is_empty() {
+                continue;
+            }
+            let mut sp2 = line.split('=');
+            let key = sp2.next().unwrap().trim();
+            if !key.starts_with("/proc") && !key.starts_with("/sys") {
+                return Err(Error::invalid_data(format!(
+                    "invalid system config map file, key: {}",
+                    key
+                )));
+            }
+            let value = sp2.next().ok_or_else(|| {
+                Error::invalid_data(format!("invalid system config map file, key: {}", key))
+            })?;
+            values.insert(key, value);
+        }
+        for (key, value) in values {
+            let prev_value = std::fs::read_to_string(key)?;
+            self.prev_values.insert(key.to_owned(), prev_value);
+            println!("{} = {}", key, value);
+            std::fs::write(key, value)?;
+        }
+        Ok(SystemConfigGuard { config: self })
+    }
+}
+
+pub struct SystemConfigGuard {
+    config: SystemConfig,
+}
+
+impl Drop for SystemConfigGuard {
+    fn drop(&mut self) {
+        for (key, value) in &self.config.prev_values {
+            if let Err(error) = std::fs::write(key, value) {
+                warn!("Failed to restore system config {key} = {value}: {error}");
+            }
+        }
     }
 }
 

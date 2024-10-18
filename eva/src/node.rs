@@ -99,6 +99,18 @@ async fn run_regular(
     Ok(())
 }
 
+pub fn print_info() -> EResult<()> {
+    let info = Info {
+        name: PRODUCT_NAME,
+        code: PRODUCT_CODE,
+        build: BUILD,
+        version: VERSION,
+        arch: ARCH_SFX,
+    };
+    println!("{}", serde_json::to_string(&info)?);
+    Ok(())
+}
+
 pub fn launch(
     mode: Mode,
     system_name: Option<&str>,
@@ -114,14 +126,8 @@ pub fn launch(
     }
     match mode {
         Mode::Info => {
-            let info = Info {
-                name: PRODUCT_NAME,
-                code: PRODUCT_CODE,
-                build: BUILD,
-                version: VERSION,
-                arch: ARCH_SFX,
-            };
-            println!("{}", serde_json::to_string(&info)?);
+            // unreachable if launched from main
+            print_info()?;
             Ok(())
         }
         Mode::Regular => {
