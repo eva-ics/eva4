@@ -26,7 +26,7 @@ struct Args {
     fips: bool,
     #[clap(long)]
     realtime: Option<String>,
-    #[clap(long, default_value = "1000000")]
+    #[clap(long, default_value = "100000")]
     direct_alloc_limit: usize,
 }
 

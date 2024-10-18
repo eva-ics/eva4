@@ -9,4 +9,4 @@
 #
 # core real-time mode for native systems with preallocated heap (in bytes)
 # REALTIME="priority=50,cpu_ids=1|2|3,prealloc_heap=100000000"
-# DIRECT_ALLOC_LIMIT=1000000 # direct memory allocation limit (in bytes) for real-time mode
+# DIRECT_ALLOC_LIMIT=100000 # direct memory allocation limit (in bytes) for real-time mode
