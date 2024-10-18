@@ -1,4 +1,4 @@
-use crate::bus::EvaBroker;
+use crate::bus::{EvaBroker, ThreadAsyncAllocator};
 use crate::core::Core;
 use crate::eapi;
 use crate::Mode;
@@ -106,6 +106,7 @@ pub fn launch(
     connection_path: Option<&str>,
     fips: bool,
     realtime: RealtimeConfig,
+    alloc: Option<(usize, Arc<ThreadAsyncAllocator>)>,
 ) -> EResult<()> {
     if fips {
         eva_common::services::enable_fips()?;
@@ -154,7 +155,7 @@ pub fn launch(
             core.set_boot_id(&mut db)?;
             core.log_summary();
             trace!("creating the broker");
-            let broker = EvaBroker::new_from_db(&mut db, &dir_eva)?;
+            let broker = EvaBroker::new_from_db(&mut db, &dir_eva, alloc)?;
             let rt = tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(core.workers().try_into().map_err(Error::failed)?)
                 .enable_all()

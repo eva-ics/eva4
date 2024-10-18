@@ -671,9 +671,9 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busrt"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "885cf6a9829f27e188434dc29410c9cc01597d619ea4c8d3aa7f023ae5ff4cf1"
+checksum = "c8ece8aa9af1aa66809ff3c3e52bdc9fc72462a3c179831df5d48ca1cba8bf39"
 dependencies = [
  "async-channel 1.9.0",
  "async-io 1.8.0",
@@ -2164,6 +2164,7 @@ dependencies = [
  "nix 0.25.0",
  "num_cpus",
  "once_cell",
+ "oneshot",
  "openssl",
  "parking_lot 0.12.1",
  "regex",
@@ -3883,6 +3884,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
+name = "oneshot"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e296cf87e61c9cfc1a61c3c63a0f7f286ed4554e0e22be84e8a38e1d264a2a29"
+
+[[package]]
 name = "openssl"
 version = "0.10.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4865,9 +4872,9 @@ dependencies = [
 
 [[package]]
 name = "rtsc"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68f32e6c889291c802147d03c03cf4e4de0765fa0938e2ab093689f5923f7360"
+checksum = "659a739d9e73a560aab0944815e38800f6f0a587e16e1977bf883f49332753e4"
 dependencies = [
  "bma-ts",
  "libc",
@@ -6643,9 +6650,9 @@ dependencies = [
 
 [[package]]
 name = "yedb"
-version = "0.4.14"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ea85633bb47b01b337257900b1df0737d195b25567e6baa62dd2082b3956565"
+checksum = "c8bb0fd0ed5342fabaad422dac3d333afbccdb66e0dc9ea893b260607cb78134"
 dependencies = [
  "async-trait",
  "busrt",

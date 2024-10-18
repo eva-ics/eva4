@@ -23,6 +23,10 @@ if [ "$REALTIME" ]; then
   ARGS="${ARGS} --realtime '${REALTIME}'"
 fi
 
+if [ "$DIRECT_ALLOC_LIMIT" ]; then
+  ARGS="${ARGS} --direct-alloc-limit ${DIRECT_ALLOC_LIMIT}"
+fi
+
 export MODE
 
 (( MAX_START_WAIT_P=MAX_START_WAIT*2))

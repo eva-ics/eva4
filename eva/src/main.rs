@@ -4,6 +4,7 @@ use eva::{AUTHOR, PRODUCT_NAME, VERSION};
 use eva_common::err_logger;
 use eva_common::{services, ErrorKind};
 use serde::Deserialize;
+use std::sync::Arc;
 use std::time::Duration;
 
 const SLEEP_NOT_READY: Duration = Duration::from_secs(1);
@@ -25,6 +26,8 @@ struct Args {
     fips: bool,
     #[clap(long)]
     realtime: Option<String>,
+    #[clap(long, default_value = "1000000")]
+    direct_alloc_limit: usize,
 }
 
 #[cfg(not(feature = "std-alloc"))]
@@ -70,6 +73,19 @@ fn main() {
     let realtime: services::RealtimeConfig = realtime_params.into();
     eva::launch_sysinfo(realtime.priority.unwrap_or_default() == 0)
         .expect("Unable to launch sysinfo thread");
+    let aa = if realtime.priority.is_some() {
+        let thread_async_allocator = Arc::new(eva::bus::ThreadAsyncAllocator::new());
+        let t = thread_async_allocator.clone();
+        std::thread::Builder::new()
+            .name("EvaBusAlloc".to_owned())
+            .spawn(move || {
+                t.run();
+            })
+            .expect("Unable to start async allocator thread");
+        Some((args.direct_alloc_limit, thread_async_allocator))
+    } else {
+        None
+    };
     eva::apply_current_thread_params(&realtime, false).unwrap();
     if let Err(e) = eva::node::launch(
         args.mode,
@@ -78,6 +94,7 @@ fn main() {
         args.connection_path.as_deref(),
         args.fips,
         realtime,
+        aa,
     )
     .log_err()
     {

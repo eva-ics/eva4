@@ -2,12 +2,13 @@
 ///
 /// Contains a wrapper for the bus broker
 use crate::EResult;
-use busrt::broker::{AaaMap, Broker, Client, ClientAaa, Options, ServerConfig};
+use busrt::broker::{AaaMap, AsyncAllocator, Broker, Client, ClientAaa, Options, ServerConfig};
 use eva_common::registry;
 use eva_common::tools::format_path;
 use ipnetwork::IpNetwork;
 use log::debug;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Deserialize)]
@@ -155,8 +156,58 @@ pub struct EvaBroker {
     queue_size: usize,
 }
 
+struct AllocationReq {
+    size: usize,
+    response: oneshot::Sender<Vec<u8>>,
+    client: String,
+}
+
+pub struct ThreadAsyncAllocator {
+    tx: async_channel::Sender<AllocationReq>,
+    rx: async_channel::Receiver<AllocationReq>,
+}
+
+impl ThreadAsyncAllocator {
+    pub fn new() -> Self {
+        let (tx, rx) = async_channel::bounded(32768);
+        Self { tx, rx }
+    }
+    pub fn run(&self) {
+        let rx = self.rx.clone();
+        std::thread::spawn(move || loop {
+            while let Ok(req) = rx.recv_blocking() {
+                log::warn!(
+                    "ThreadAsyncAllocator: allocating {} bytes for {}",
+                    req.size,
+                    req.client
+                );
+                let buf = vec![0; req.size];
+                req.response.send(buf).ok();
+            }
+        });
+    }
+}
+
+#[async_trait::async_trait]
+impl AsyncAllocator for ThreadAsyncAllocator {
+    async fn allocate(&self, client: &str, size: usize) -> Option<Vec<u8>> {
+        let (tx, rx) = oneshot::channel();
+        let req = AllocationReq {
+            size,
+            response: tx,
+            client: client.to_owned(),
+        };
+        self.tx.send(req).await.ok()?;
+        rx.await.ok()
+    }
+}
+
 impl EvaBroker {
-    pub fn new_from_db(db: &mut yedb::Database, dir_eva: &str) -> EResult<EvaBroker> {
+    pub fn new_from_db(
+        db: &mut yedb::Database,
+        dir_eva: &str,
+        alloc: Option<(usize, Arc<ThreadAsyncAllocator>)>,
+    ) -> EResult<EvaBroker> {
         let mut config: BusConfig =
             serde_json::from_value(db.key_get(&registry::format_config_key("bus"))?)?;
         debug!("bus.buf_size = {}", config.buf_size);
@@ -182,7 +233,11 @@ impl EvaBroker {
                 .collect::<Vec<&str>>()
                 .join(",")
         );
-        let mut broker = Broker::create(&Options::default().force_register(true));
+        let mut opts = Options::default().force_register(true);
+        if let Some((limit, aa)) = alloc {
+            opts = opts.with_async_allocator(limit, aa);
+        }
+        let mut broker = Broker::create(&opts);
         broker.set_queue_size(config.queue_size);
         let queue_size = config.queue_size;
         Ok(EvaBroker {
