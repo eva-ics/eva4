@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-10-21 build 2024102101: Low-latency real-time mode
 * 2024-10-09 build 2024100901: Vendored apps fixes
 * 2024-10-02 build 2024100201: Source sensors, further license generations support
 * 2024-09-26 build 2024092601: OpCentre trends fixes
