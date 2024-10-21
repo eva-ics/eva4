@@ -2081,3 +2081,31 @@ class CLI:
                 'trig',
             ]
         print_result(data, cols=cols)
+
+    def rt(self, sort=None, sort_rev=None):
+        data = call_rpc('task.list', None, target='eva.svc.rtmon')
+        if isinstance(data, list):
+            if sort is not None:
+                data.sort(key=lambda x: x[sort])
+            if sort_rev:
+                data.reverse()
+            data = [format_rt_line(d) for d in data]
+            print_result(data,
+                         cols=[
+                             'point',
+                             'svc_id',
+                             'name',
+                             'pid',
+                             'state',
+                             'cpu',
+                             'cpu_usage|n=cpu%',
+                             'memory_usage|n=memMB',
+                             'sched',
+                             'priority|n=prio',
+                         ])
+
+
+def format_rt_line(d):
+    d['cpu_usage'] = f'{d["cpu_usage"]:.2f}'
+    d['memory_usage'] = f'{int(d["memory_usage"] / 1024 / 1024)}'
+    return d

@@ -1640,6 +1640,18 @@ def init_ap():
                    action='store_true',
                    help='create an encrypted service request')
 
+    p = sp.add_parser('rt',
+                      help='Monitor services, threads and real-time parameters')
+    p.add_argument('--sort',
+                   help='sort by column',
+                   choices=[
+                       'point', 'svc_id', 'name', 'pid', 'state', 'cpu',
+                       'cpu_usage', 'memory_usage', 'sched', 'priority'
+                   ])
+    p.add_argument('--sort-rev',
+                   help='sort in reverse order',
+                   action='store_true')
+
     p = sp.add_parser('edit', help='edit the configuration keys and xc files')
     p.add_argument(
         'fname',
