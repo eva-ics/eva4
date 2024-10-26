@@ -9,6 +9,10 @@ send:
       typ: String/Vec<String>
       des: recipients (user accounts)
       req: false
+    - nam: sender
+      typ: String
+      des: override the default sender
+      req: false
     - nam: subject
       typ: String
       des: e-mail subject
@@ -17,8 +21,12 @@ send:
       typ: String
       des: e-mail text
       req: false
+    - nam: html
+      typ: String
+      des: e-mail html
+      req: false
     - nam: delayed
       typ: float
-      des: delay and group by sender/subject
+      des: delay and group by sender/subject (plain-text only)
       req: false
   ret:

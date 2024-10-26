@@ -2,7 +2,7 @@ use eva_common::common_payloads::ValueOrList;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use lettre::{
-    message::Mailbox,
+    message::{header::ContentType, Mailbox, MultiPart, SinglePart},
     transport::smtp::{
         authentication::Credentials,
         client::{Tls, TlsParameters},
@@ -38,13 +38,20 @@ static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
 static USER_EMAILS: Lazy<Mutex<TtlCache<String, String>>> =
     Lazy::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
 
-type DelayedEmailsMap = HashMap<(Vec<String>, Option<String>), DelayedMail>;
+type DelayedEmailsMap = HashMap<DelayedMailKey, DelayedMail>;
 
 static DELAYED_EMAILS: Lazy<Mutex<DelayedEmailsMap>> = Lazy::new(<_>::default);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[derive(Hash, Eq, PartialEq, Clone)]
+struct DelayedMailKey {
+    sender: Option<String>,
+    rcp: Vec<String>,
+    subject: Option<String>,
+}
 
 struct DelayedMail {
     delayed_until: Instant,
@@ -74,17 +81,19 @@ async fn send_delayed_emails(mailer: Arc<Mailer>) {
                 }
             }
         }
-        let mut tasks = Vec::new();
+        let mut tasks = Vec::with_capacity(emails.len());
         let pool = tokio_task_pool::Pool::bounded(MAX_PARALLEL_SENDS_DELAYED);
-        for email in emails {
+        for (email, body) in emails {
             let mailer_c = mailer.clone();
             let Ok(task) = pool
                 .spawn(async move {
                     mailer_c
                         .send(
-                            &email.0 .0.iter().map(String::as_str).collect::<Vec<&str>>(),
-                            email.0 .1.as_deref(),
-                            email.1,
+                            email.sender.as_deref(),
+                            &email.rcp.iter().map(String::as_str).collect::<Vec<&str>>(),
+                            email.subject.as_deref(),
+                            body,
+                            None,
                             None,
                         )
                         .await
@@ -221,30 +230,38 @@ impl Mailer {
     }
     async fn send(
         &self,
+        sender: Option<&str>,
         rcp: &[&str],
         subject: Option<&str>,
-        body: String,
+        text: String,
+        html: Option<String>,
         delayed: Option<Duration>,
     ) -> EResult<()> {
+        if delayed.is_some() && html.is_some() {
+            return Err(Error::unsupported("html emails cannot be combined/delayed"));
+        }
         let _permit = self.tasks_sem.acquire().await.map_err(Error::failed)?;
         if let Some(d) = delayed {
             // if the email is delayed - schedule
-            let subj = subject.map(ToOwned::to_owned);
-            let rcps = rcp.iter().map(|&v| v.to_owned()).collect::<Vec<String>>();
-            match DELAYED_EMAILS.lock().entry((rcps, subj)) {
+            let k = DelayedMailKey {
+                sender: sender.map(ToOwned::to_owned),
+                rcp: rcp.iter().map(|&v| v.to_owned()).collect::<Vec<String>>(),
+                subject: subject.map(ToOwned::to_owned),
+            };
+            match DELAYED_EMAILS.lock().entry(k) {
                 hash_map::Entry::Occupied(mut o) => {
                     let d_e = o.get_mut();
-                    if !body.is_empty() {
+                    if !text.is_empty() {
                         if !d_e.body.is_empty() && !d_e.body.ends_with('\n') {
                             writeln!(d_e.body)?;
                         }
-                        write!(d_e.body, "{}", body)?;
+                        write!(d_e.body, "{}", text)?;
                     }
                 }
                 hash_map::Entry::Vacant(v) => {
                     v.insert(DelayedMail {
                         delayed_until: Instant::now() + d,
-                        body,
+                        body: text,
                     });
                 }
             }
@@ -268,14 +285,31 @@ impl Mailer {
         if rcps.is_empty() {
             return Err(Error::failed("no rcp specified, no defaults set"));
         }
-        let mut ebuilder = Message::builder().from(self.from.clone());
+        let mut ebuilder = Message::builder().from(sender.map_or_else(
+            || Ok(self.from.clone()),
+            |s| s.parse().map_err(Error::invalid_data),
+        )?);
         for rcp in rcps {
             ebuilder = ebuilder.to(rcp);
         }
         if let Some(subj) = subject {
             ebuilder = ebuilder.subject(subj);
         }
-        let message = ebuilder.body(body).map_err(Error::invalid_data)?;
+        let message = if let Some(html) = html {
+            ebuilder
+                .multipart(
+                    MultiPart::alternative()
+                        .singlepart(SinglePart::plain(text))
+                        .singlepart(
+                            SinglePart::builder()
+                                .header(ContentType::TEXT_HTML)
+                                .body(html),
+                        ),
+                )
+                .map_err(Error::failed)?
+        } else {
+            ebuilder.body(text).map_err(Error::invalid_data)?
+        };
         tokio::time::timeout(self.timeout, self.inner.send(message))
             .await?
             .map_err(Error::failed)?;
@@ -304,11 +338,15 @@ impl RpcHandlers for Handlers {
                     struct ParamsSend {
                         i: Option<ValueOrList<String>>,
                         #[serde(default)]
+                        sender: Option<String>,
+                        #[serde(default)]
                         rcp: Option<ValueOrList<String>>,
                         #[serde(default)]
                         subject: Option<String>,
                         #[serde(default)]
                         text: Option<String>,
+                        #[serde(default)]
+                        html: Option<String>,
                         #[serde(
                             default,
                             deserialize_with = "eva_common::tools::de_opt_float_as_duration"
@@ -348,9 +386,11 @@ impl RpcHandlers for Handlers {
                     }
                     self.mailer
                         .send(
+                            p.sender.as_deref(),
                             &rcp.iter().map(String::as_str).collect::<Vec<&str>>(),
                             p.subject.as_deref(),
                             p.text.unwrap_or_default(),
+                            p.html,
                             p.delayed,
                         )
                         .await
@@ -418,6 +458,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         ServiceMethod::new("send")
             .optional("i")
             .optional("rcp")
+            .optional("sender")
             .optional("subject")
             .optional("text")
             .optional("delayed"),
