@@ -323,4 +323,8 @@ auth.user:
       typ: f64
       des: Max operation timeout
       req: false
+    - nam: xopts
+      typ: map<String/Any>
+      des: "Extra options map (e.g. otp=code for two-factor auth)"
+      req: false
   ret: The method returns errors if auth is not successful
