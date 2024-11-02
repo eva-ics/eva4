@@ -2730,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "genpass-native"
-version = "4.0.2"
+version = "0.1.1"
 dependencies = [
  "base64 0.13.1",
  "eva-common",
