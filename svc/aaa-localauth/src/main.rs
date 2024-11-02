@@ -5,7 +5,7 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use genpass_native::{random_string, Password};
+use genpass_native::{random_string, Password, PasswordPolicy};
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
@@ -37,18 +37,6 @@ static ONE_TIME_EXPIRES: OnceCell<Duration> = OnceCell::new();
 static REG: OnceCell<Registry> = OnceCell::new();
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-
-#[derive(Deserialize, Default)]
-struct PasswordPolicy {
-    #[serde(default)]
-    min_length: usize,
-    #[serde(default)]
-    required_letter: bool,
-    #[serde(default)]
-    required_mixed_case: bool,
-    #[serde(default)]
-    required_number: bool,
-}
 
 #[derive(Deserialize, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -822,7 +810,7 @@ impl RpcHandlers for Handlers {
                         return Err(Error::invalid_data("the password can not be empty").into());
                     }
                     if p.check_policy {
-                        self.check_password_policy(p.password)?;
+                        self.password_policy.check(p.password)?;
                     }
                     let reg = REG.get().unwrap();
                     let val = {
@@ -964,67 +952,6 @@ impl RpcHandlers for Handlers {
                 Ok(Some(result.payload().to_vec()))
             }
             m => svc_handle_default_rpc(m, &self.info),
-        }
-    }
-}
-
-impl Handlers {
-    fn check_password_policy(&self, p: &str) -> EResult<()> {
-        let mut err: Vec<String> = Vec::new();
-        if p.chars().count() < self.password_policy.min_length {
-            err.push(format!(
-                "min. length: {} symbols",
-                self.password_policy.min_length
-            ));
-        }
-        if self.password_policy.required_letter {
-            let mut found = false;
-            for ch in p.chars() {
-                if ch.is_alphabetic() {
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                err.push("must contain at least one letter".to_owned());
-            }
-        }
-        if self.password_policy.required_number {
-            let mut found = false;
-            for ch in p.chars() {
-                if ch.is_numeric() {
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                err.push("must contain at least one number".to_owned());
-            }
-        }
-        if self.password_policy.required_mixed_case {
-            let mut upper_found = false;
-            let mut lower_found = false;
-            for ch in p.chars() {
-                if ch.is_uppercase() {
-                    upper_found = true;
-                } else if ch.is_lowercase() {
-                    lower_found = true;
-                }
-                if upper_found && lower_found {
-                    break;
-                }
-            }
-            if !upper_found || !lower_found {
-                err.push("must contain at least one uppercase and one lowercase letter".to_owned());
-            }
-        }
-        if err.is_empty() {
-            Ok(())
-        } else {
-            Err(Error::invalid_params(format!(
-                "Invalid password: {}",
-                err.join(", ")
-            )))
         }
     }
 }

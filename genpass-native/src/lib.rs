@@ -256,6 +256,76 @@ impl Serialize for Password {
     }
 }
 
+#[derive(Deserialize, Default)]
+pub struct PasswordPolicy {
+    #[serde(default)]
+    pub min_length: usize,
+    #[serde(default)]
+    pub required_letter: bool,
+    #[serde(default)]
+    pub required_mixed_case: bool,
+    #[serde(default)]
+    pub required_number: bool,
+}
+
+impl PasswordPolicy {
+    pub fn check(&self, p: &str) -> EResult<()> {
+        let mut err: Vec<String> = Vec::new();
+        if p.chars().count() < self.min_length {
+            err.push(format!("min. length: {} symbols", self.min_length));
+        }
+        if self.required_letter {
+            let mut found = false;
+            for ch in p.chars() {
+                if ch.is_alphabetic() {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                err.push("must contain at least one letter".to_owned());
+            }
+        }
+        if self.required_number {
+            let mut found = false;
+            for ch in p.chars() {
+                if ch.is_numeric() {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                err.push("must contain at least one number".to_owned());
+            }
+        }
+        if self.required_mixed_case {
+            let mut upper_found = false;
+            let mut lower_found = false;
+            for ch in p.chars() {
+                if ch.is_uppercase() {
+                    upper_found = true;
+                } else if ch.is_lowercase() {
+                    lower_found = true;
+                }
+                if upper_found && lower_found {
+                    break;
+                }
+            }
+            if !upper_found || !lower_found {
+                err.push("must contain at least one uppercase and one lowercase letter".to_owned());
+            }
+        }
+        if err.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::invalid_params(format!(
+                "Invalid password: {}",
+                err.join(", ")
+            )))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::{aes_gcm_nonce, random_string, Password};
