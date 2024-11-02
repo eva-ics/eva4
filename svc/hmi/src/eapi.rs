@@ -113,6 +113,7 @@ impl RpcHandlers for Handlers {
                             mode: t.mode_as_str(),
                             user: t.user(),
                             source: t.ip().map(ToString::to_string),
+                            auth_svc: t.auth_svc(),
                             expires_in: t.expires_in().unwrap_or_default(),
                         })
                         .collect();

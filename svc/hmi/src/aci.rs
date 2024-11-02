@@ -40,6 +40,7 @@ pub struct ApiCallInfo {
     params: Option<Value>,
     oid: Option<OID>,
     note: Option<String>,
+    auth_svc: String,
     t: i64,
 }
 
@@ -79,6 +80,7 @@ pub async fn log_get(filter: &db::ApiLogFilter) -> EResult<Vec<ApiCallInfo>> {
                 },
                 oid: oid_str.and_then(|v| v.parse().ok()),
                 note: row.try_get("note")?,
+                auth_svc: row.try_get("auth_svc")?,
                 t,
             };
             result.push(call_info);
@@ -119,11 +121,19 @@ fn serialize_aci<S>(serializer: S, auth: &Auth, source: Option<&str>) -> Result<
 where
     S: Serializer,
 {
-    let mut map = serializer.serialize_map(Some(if source.is_some() { 5 } else { 4 }))?;
+    let mut map_len = 4;
+    if source.is_some() {
+        map_len += 1;
+    }
+    if matches!(auth, Auth::Token(_)) {
+        map_len += 1;
+    }
+    let mut map = serializer.serialize_map(Some(map_len))?;
     map.serialize_entry("auth", auth.as_str())?;
     if let Auth::Token(ref token) = auth {
         map.serialize_entry("token_mode", token.mode_as_str())?;
         map.serialize_entry("u", token.user())?;
+        map.serialize_entry("auth_svc", token.auth_svc().trim_start_matches("eva.aaa."))?;
     } else if let Auth::Key(_, _) = auth {
         map.serialize_entry("token_mode", &Value::Unit)?;
         map.serialize_entry("u", &auth.user())?;

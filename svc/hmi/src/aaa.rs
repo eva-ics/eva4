@@ -56,6 +56,7 @@ pub struct TokenInfo<'a> {
     pub mode: &'a str,
     pub user: &'a str,
     pub source: Option<String>,
+    pub auth_svc: &'a str,
     #[serde(serialize_with = "eva_common::tools::serialize_duration_as_u64")]
     pub expires_in: Duration,
 }
