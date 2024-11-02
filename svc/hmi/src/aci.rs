@@ -260,6 +260,13 @@ impl ACI {
             None
         }
     }
+    /// set login in case if overriden
+    #[inline]
+    pub fn set_login(&mut self, login: &str) {
+        if let Auth::Login(ref mut a, _) = self.auth {
+            *a = login.to_owned();
+        }
+    }
     /// set ACL ID for Auth::Login and Auth::LoginKey
     #[inline]
     pub fn set_acl_id(&mut self, acl_id: &str) {

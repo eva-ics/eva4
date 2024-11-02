@@ -288,6 +288,15 @@ async fn login(
     for svc in auth_svcs {
         match eapi_bus::call(svc, "auth.user", payload.as_slice().into()).await {
             Ok(result) => {
+                #[derive(Deserialize)]
+                struct AclAndParams {
+                    _login: Option<String>,
+                    _note: Option<String>,
+                    #[serde(flatten)]
+                    acl: Acl,
+                }
+                let acl_and_params: AclAndParams = unpack(result.payload())?;
+                let login = acl_and_params._login.as_deref().unwrap_or(login);
                 if let Some(ti) = token_id {
                     let token = aaa::get_token(ti.try_into()?, ip).await?;
                     if token.user() != login {
@@ -298,7 +307,11 @@ async fn login(
                     }
                     return Ok(to_value(AuthResult::new(token))?);
                 }
-                let acl = unpack::<Acl>(result.payload())?;
+                let acl = acl_and_params.acl;
+                aci.set_login(login);
+                if let Some(note) = acl_and_params._note {
+                    aci.log_note(&note);
+                }
                 aci.set_acl_id(acl.id());
                 let token = aaa::create_token(login, acl, svc, ip).await?;
                 aci.log_request(log::Level::Info).await.log_ef();
