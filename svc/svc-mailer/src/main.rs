@@ -461,6 +461,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("sender")
             .optional("subject")
             .optional("text")
+            .optional("html")
             .optional("delayed"),
     );
     let mailer = Arc::new(Mailer::new(
