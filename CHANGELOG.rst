@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-11-07 build 2024110701: Authentication API extensions, mailer svc multipart messages
 * 2024-10-21 build 2024102101: Low-latency real-time mode
 * 2024-10-09 build 2024100901: Vendored apps fixes
 * 2024-10-02 build 2024100201: Source sensors, further license generations support
