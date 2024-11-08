@@ -458,6 +458,7 @@ fi
 if [ "$HMI" ]; then
   echo "Deploying HMI services..."
   mkdir -p ./pvt/vendored-apps/opcentre/idc/dashboards || exit 12
+  mkdir -p ./pvt/vendored-apps/opcentre/idc/clipart || exit 12
   chown -R eva ./pvt/vendored-apps || exit 12
   [ "$ADMINKEY" ] || ADMINKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
   [ "$OPKEY" ] || OPKEY=$( (tr -cd '[:alnum:]' < /dev/urandom | head -c64) 2>/dev/null)
