@@ -348,7 +348,7 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
             false
         };
         let (encryption, compression) = psrpc::options::parse_flags(frame[2])?;
-        if is_secure && encryption == psrpc::options::Encryption::No {
+        if is_secure && encryption != psrpc::options::Encryption::Aes256Gcm {
             warn!("unencrypted frame to secure topic {}, ignoring", bulk_topic);
             return Err(Error::access("unencrypted message ignored"));
         }
