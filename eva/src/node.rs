@@ -90,7 +90,7 @@ async fn run_regular(
     let (active_trig, active_listen) = triggered::trigger();
     tokio::spawn(async move {
         active_listen.await;
-        c.announce_local().await;
+        c.announce_local_initial().await;
     });
     crate::core::start_node_checker(core.clone());
     core.mark_loaded().await;

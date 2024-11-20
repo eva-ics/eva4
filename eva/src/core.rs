@@ -385,6 +385,8 @@ pub struct Core {
     #[serde(skip)]
     scheduled_saves: parking_lot::Mutex<HashSet<OID>>,
     #[serde(skip)]
+    initial_announced: Mutex<bool>,
+    #[serde(skip)]
     action_manager: Arc<actmgr::Manager>,
     #[serde(skip)]
     service_manager: svcmgr::Manager,
@@ -556,6 +558,7 @@ impl Core {
             state_db_tx: <_>::default(),
             inv_process: <_>::default(),
             scheduled_saves: <_>::default(),
+            initial_announced: <_>::default(),
             action_manager: <_>::default(),
             service_manager: <_>::default(),
             state_processor_lock: <_>::default(),
@@ -1969,8 +1972,8 @@ impl Core {
     /// # Panics
     ///
     /// Will panic if the core rpc is not set or the mutex is poisoned
-    pub async fn announce_local(&self) {
-        sleep(Duration::from_secs(1)).await;
+    pub async fn announce_local_initial(&self) {
+        let mut initial_announced = self.initial_announced.lock().await;
         let rpc = self.rpc.get().unwrap();
         info!("announcing local states");
         let inventory = self.inventory.read().await;
@@ -1985,6 +1988,7 @@ impl Core {
                     .log_ef();
             }
         }
+        *initial_announced = true;
     }
     /// # Panics
     ///
@@ -1994,6 +1998,10 @@ impl Core {
         mask_list: &OIDMaskList,
         source_id: Option<NodeFilter<'a>>,
     ) -> EResult<()> {
+        // skip if initial announce hasn't been done yet
+        if !*self.initial_announced.lock().await {
+            return Ok(());
+        }
         let rpc = self.rpc.get().unwrap();
         let inventory = self.inventory.read().await;
         for item in inventory.list_items_with_states(mask_list, source_id) {
@@ -2022,6 +2030,10 @@ impl Core {
         source_id: Option<NodeFilter<'a>>,
         receiver: &str,
     ) -> EResult<()> {
+        // skip if initial announce hasn't been done yet
+        if !*self.initial_announced.lock().await {
+            return Ok(());
+        }
         let rpc = self.rpc.get().unwrap();
         let inventory = self.inventory.read().await;
         for item in inventory.list_items_with_states(mask_list, source_id) {
