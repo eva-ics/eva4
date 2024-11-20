@@ -1970,8 +1970,11 @@ impl Core {
     ///
     /// Will panic if the core rpc is not set or the mutex is poisoned
     pub async fn announce_local(&self) {
+        sleep(Duration::from_secs(1)).await;
         let rpc = self.rpc.get().unwrap();
-        let items = self.inventory.read().await.list_local_items();
+        info!("announcing local states");
+        let inventory = self.inventory.read().await;
+        let items = inventory.list_local_items();
         for item in items {
             if !self.is_active() {
                 break;
