@@ -167,10 +167,16 @@ pub struct ThreadAsyncAllocator {
     rx: async_channel::Receiver<AllocationReq>,
 }
 
-impl ThreadAsyncAllocator {
-    pub fn new() -> Self {
+impl Default for ThreadAsyncAllocator {
+    fn default() -> Self {
         let (tx, rx) = async_channel::bounded(32768);
         Self { tx, rx }
+    }
+}
+
+impl ThreadAsyncAllocator {
+    pub fn new() -> Self {
+        Self::default()
     }
     pub fn run(&self) {
         let rx = self.rx.clone();

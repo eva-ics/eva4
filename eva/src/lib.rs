@@ -177,6 +177,9 @@ impl SystemConfig {
     pub fn new() -> Self {
         Self::default()
     }
+    /// # Panics
+    ///
+    /// Should not panic
     pub fn apply(mut self) -> EResult<SystemConfigGuard> {
         let mut map_file = Path::new(&get_eva_dir()).to_owned();
         map_file.push("etc");

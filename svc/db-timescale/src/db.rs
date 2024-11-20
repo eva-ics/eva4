@@ -32,6 +32,7 @@ pub fn naive_to_ts(t: NaiveDateTime) -> f64 {
     t.timestamp() as f64 + f64::from(t.timestamp_subsec_nanos()) / 1_000_000_000.0
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     let mut opts = PgConnectOptions::from_str(conn)?;
     opts.log_statements(log::LevelFilter::Trace)
@@ -71,7 +72,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     .execute(&pool)
     .await;
     sqlx::query(
-        r#"CREATE OR REPLACE FUNCTION insert_state_history_events(
+        r"CREATE OR REPLACE FUNCTION insert_state_history_events(
 ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -94,12 +95,12 @@ BEGIN
       UNNEST(vals)
     ) ON CONFLICT (t, oid_id) DO UPDATE SET status=EXCLUDED.status, value=EXCLUDED.value;
   END
-$$;"#,
+$$;",
     )
     .execute(&pool)
     .await?;
     sqlx::query(
-        r#"CREATE OR REPLACE FUNCTION try_insert_state_history_events(
+        r"CREATE OR REPLACE FUNCTION try_insert_state_history_events(
 ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -122,7 +123,7 @@ BEGIN
       UNNEST(vals)
     ) ON CONFLICT (t, oid_id) DO NOTHING;
   END
-$$;"#,
+$$;",
     )
     .execute(&pool)
     .await?;
