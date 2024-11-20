@@ -245,6 +245,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     // Mark the instance ready and active
     eapi_bus::mark_ready().await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
+    // request the core to private annonce of sensor states to get the current state of sensors as
+    // soon as possible
+    eapi_bus::request_announce(&config.sensors, eva_sdk::service::EventKind::Local).await?;
     // The service is blocked until one of the following:
     // * RPC client is disconnected from the bus
     // * The service gets a termination signal
