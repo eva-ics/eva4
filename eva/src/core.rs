@@ -1992,10 +1992,8 @@ impl Core {
         source_id: Option<NodeFilter<'a>>,
     ) -> EResult<()> {
         let rpc = self.rpc.get().unwrap();
-        for item in self
-            .list_items(mask_list, None, None, source_id, false)
-            .await
-        {
+        let inventory = self.inventory.read().await;
+        for item in inventory.list_items_with_states(mask_list, source_id) {
             if let Some(state) = item.local_state_event() {
                 if let Some(src) = item.source() {
                     announce_remote_state(
@@ -2022,10 +2020,8 @@ impl Core {
         receiver: &str,
     ) -> EResult<()> {
         let rpc = self.rpc.get().unwrap();
-        for item in self
-            .list_items(mask_list, None, None, source_id, false)
-            .await
-        {
+        let inventory = self.inventory.read().await;
+        for item in inventory.list_items_with_states(mask_list, source_id) {
             if let Some(state) = item.local_state_event() {
                 if let Some(src) = item.source() {
                     announce_remote_state_for(

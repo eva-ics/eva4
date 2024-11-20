@@ -13,7 +13,7 @@ use eva_common::ITEM_STATUS_ERROR;
 use log::warn;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::str::Split;
 use std::sync::atomic;
@@ -981,6 +981,26 @@ impl Inventory {
         } else {
             None
         }
+    }
+    #[inline]
+    pub fn list_items_with_states(
+        &self,
+        mask_list: &OIDMaskList,
+        source_id: Option<NodeFilter<'_>>,
+    ) -> Vec<Item> {
+        let mut filter = Filter::default();
+        if let Some(v) = source_id {
+            filter.set_node(v);
+        }
+        #[allow(clippy::mutable_key_type)]
+        let mut h: HashSet<Item> = HashSet::default();
+        for mask in mask_list.oid_masks() {
+            let items = self.get_items_by_mask(mask, &filter, false);
+            for item in items {
+                h.insert(item);
+            }
+        }
+        h.into_iter().collect()
     }
 }
 
