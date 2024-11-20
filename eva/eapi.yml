@@ -244,6 +244,10 @@ item.announce:
       typ: String
       des: filter items by node (use .local as an alias for the local one)
       req: false
+    - nam: broadcast
+      typ: bool
+      des: "to all bus clients (default: true) or for the sender only"
+      req: false
   ret:
 item.enable:
   des: Enables local item(s)

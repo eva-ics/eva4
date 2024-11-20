@@ -844,6 +844,8 @@ impl RpcHandlers for BusApi {
                     i: Option<&'a str>, // OID or OID mask (parse later)
                     #[serde(default, alias = "src")]
                     node: Option<&'a str>, // source node (.local for local items only)
+                    #[serde(default = "eva_common::tools::default_true")]
+                    broadcast: bool,
                 }
                 need_ready!();
                 if payload.is_empty() {
@@ -862,9 +864,15 @@ impl RpcHandlers for BusApi {
                         NodeFilter::Remote(v)
                     }
                 });
-                self.core
-                    .force_announce_state(&mask.into(), node_filter)
-                    .await?;
+                if p.broadcast {
+                    self.core
+                        .force_announce_state(&mask.into(), node_filter)
+                        .await?;
+                } else {
+                    self.core
+                        .force_announce_state_for(&mask.into(), node_filter, event.primary_sender())
+                        .await?;
+                }
                 Ok(None)
             }
             "item.enable" => {

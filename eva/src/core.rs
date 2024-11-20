@@ -147,6 +147,30 @@ where
     Ok(())
 }
 
+/// Announces states for local items for a specific client
+#[inline]
+async fn announce_local_state_for<C>(
+    oid: &OID,
+    state: &LocalStateEvent,
+    receiver: &str,
+    client: &Arc<Mutex<C>>,
+) -> EResult<()>
+where
+    C: busrt::client::AsyncClient + ?Sized,
+{
+    client
+        .lock()
+        .await
+        .publish_for(
+            &format!("{}{}", LOCAL_STATE_TOPIC, oid.as_path()),
+            receiver,
+            pack(&state)?.into(),
+            QoS::No,
+        )
+        .await?;
+    Ok(())
+}
+
 /// Announces states for remote items
 #[inline]
 async fn announce_remote_state<C>(
@@ -171,6 +195,39 @@ where
                 },
                 oid.as_path()
             ),
+            pack(&state)?.into(),
+            QoS::No,
+        )
+        .await?;
+    Ok(())
+}
+
+/// Announces states for remote items for a specific client
+#[inline]
+async fn announce_remote_state_for<C>(
+    oid: &OID,
+    state: &RemoteStateEvent,
+    current: bool,
+    receiver: &str,
+    client: &Arc<Mutex<C>>,
+) -> EResult<()>
+where
+    C: busrt::client::AsyncClient + ?Sized,
+{
+    client
+        .lock()
+        .await
+        .publish_for(
+            &format!(
+                "{}{}",
+                if current {
+                    REMOTE_STATE_TOPIC
+                } else {
+                    REMOTE_ARCHIVE_STATE_TOPIC
+                },
+                oid.as_path()
+            ),
+            receiver,
             pack(&state)?.into(),
             QoS::No,
         )
@@ -1950,6 +2007,37 @@ impl Core {
                     .await?;
                 } else {
                     announce_local_state(item.oid(), &state, &rpc.client()).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+    /// # Panics
+    ///
+    /// Will panic if RPC is not set
+    pub async fn force_announce_state_for<'a>(
+        &self,
+        mask_list: &OIDMaskList,
+        source_id: Option<NodeFilter<'a>>,
+        receiver: &str,
+    ) -> EResult<()> {
+        let rpc = self.rpc.get().unwrap();
+        for item in self
+            .list_items(mask_list, None, None, source_id, false)
+            .await
+        {
+            if let Some(state) = item.local_state_event() {
+                if let Some(src) = item.source() {
+                    announce_remote_state_for(
+                        item.oid(),
+                        &RemoteStateEvent::from_local_state_event(state, src.node(), src.online()),
+                        true,
+                        receiver,
+                        &rpc.client(),
+                    )
+                    .await?;
+                } else {
+                    announce_local_state_for(item.oid(), &state, receiver, &rpc.client()).await?;
                 }
             }
         }
