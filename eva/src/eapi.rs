@@ -12,7 +12,7 @@ use busrt::{
     Frame, FrameKind,
 };
 use eva_common::acl::{OIDMask, OIDMaskList};
-use eva_common::common_payloads::{ParamsId, ParamsUuid};
+use eva_common::common_payloads::{ParamsId, ParamsUuid, ValueOrList};
 use eva_common::dobj::{DataObject, Endianess};
 use eva_common::err_logger;
 use eva_common::events::LOG_INPUT_TOPIC;
@@ -815,6 +815,8 @@ impl RpcHandlers for BusApi {
                 let node_filter = p.node.map(|v| {
                     if v == crate::LOCAL_NODE_ALIAS || v == self.core.system_name() {
                         NodeFilter::Local
+                    } else if v == crate::REMOTE_ANY_NODE_ALIAS {
+                        NodeFilter::RemoteAny
                     } else {
                         NodeFilter::Remote(v)
                     }
@@ -840,8 +842,7 @@ impl RpcHandlers for BusApi {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
                 struct ParamsList<'a> {
-                    #[serde(borrow)]
-                    i: Option<&'a str>, // OID or OID mask (parse later)
+                    i: Option<ValueOrList<OIDMask>>,
                     #[serde(default, alias = "src")]
                     node: Option<&'a str>, // source node (.local for local items only)
                     #[serde(default = "eva_common::tools::default_true")]
@@ -852,11 +853,6 @@ impl RpcHandlers for BusApi {
                     return Err(RpcError::params(None));
                 }
                 let p: ParamsList = unpack(payload).log_err()?;
-                let mask = if let Some(i) = p.i {
-                    i.parse().map_err(Into::<Error>::into)?
-                } else {
-                    OIDMask::new_any()
-                };
                 let node_filter = p.node.map(|v| {
                     if v == crate::LOCAL_NODE_ALIAS || v == self.core.system_name() {
                         NodeFilter::Local
@@ -864,13 +860,16 @@ impl RpcHandlers for BusApi {
                         NodeFilter::Remote(v)
                     }
                 });
+                let masks: OIDMaskList = match p.i {
+                    Some(ValueOrList::Single(v)) => v.into(),
+                    Some(ValueOrList::Multiple(v)) => OIDMaskList::from_iter(v),
+                    None => OIDMaskList::new_any(),
+                };
                 if p.broadcast {
-                    self.core
-                        .force_announce_state(&mask.into(), node_filter)
-                        .await?;
+                    self.core.force_announce_state(&masks, node_filter).await?;
                 } else {
                     self.core
-                        .force_announce_state_for(&mask.into(), node_filter, event.primary_sender())
+                        .force_announce_state_for(&masks, node_filter, event.primary_sender())
                         .await?;
                 }
                 Ok(None)

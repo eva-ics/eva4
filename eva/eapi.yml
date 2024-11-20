@@ -237,8 +237,8 @@ item.announce:
   des: Forces bus state announcements for selected items
   par:
     - nam: i
-      typ: String
-      des: Item OID or OID mask
+      typ: String/Vec<String>
+      des: Item OID, OID mask or list
       req: false
     - nam: "node (alias: src)"
       typ: String
