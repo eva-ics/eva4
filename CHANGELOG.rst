@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-11-20 build 2024112001: Core state announcement improvements
 * 2024-11-18 build 2024111801: OpCentre IDC bug fixes, custom cliparts
 * 2024-11-11 build 2024111101: OpCentre IDC improvements
 * 2024-11-07 build 2024110701: Authentication API extensions, mailer svc multipart messages
