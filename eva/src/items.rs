@@ -1029,6 +1029,7 @@ pub struct ItemMap {
 pub enum NodeFilter<'a> {
     Local,
     Remote(&'a str),
+    RemoteAny,
 }
 
 #[derive(Default)]
@@ -1072,6 +1073,11 @@ impl<'a> Filter<'a> {
             match node {
                 NodeFilter::Local => {
                     if item.source.is_some() {
+                        return false;
+                    }
+                }
+                NodeFilter::RemoteAny => {
+                    if item.source.is_none() {
                         return false;
                     }
                 }

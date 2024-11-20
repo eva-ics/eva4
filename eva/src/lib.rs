@@ -19,6 +19,7 @@ const ARCH_SFX: &str = env!("ARCH_SFX");
 extern crate lazy_static;
 
 pub const LOCAL_NODE_ALIAS: &str = ".local";
+pub const REMOTE_ANY_NODE_ALIAS: &str = ".remote-any";
 
 pub const PRODUCT_NAME: &str = "EVA ICS node server";
 pub const PRODUCT_CODE: &str = "eva4node";
