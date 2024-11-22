@@ -260,6 +260,10 @@ impl ACI {
         }
     }
     #[inline]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+    #[inline]
     #[allow(dead_code)]
     pub fn user(&self) -> Option<&str> {
         if let Auth::Token(ref token) = self.auth {

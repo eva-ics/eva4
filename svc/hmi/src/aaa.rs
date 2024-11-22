@@ -192,16 +192,19 @@ impl Auth {
     }
 }
 
-pub async fn auth_key(key: &str) -> EResult<Option<(Acl, &'static str)>> {
+pub async fn auth_key(key: &str, ip: Option<IpAddr>) -> EResult<Option<(Acl, &'static str)>> {
     #[derive(Serialize)]
     struct AuthPayload<'a> {
         key: &'a str,
         timeout: f64,
+        source: String,
     }
     let auth_svcs = auth_svcs();
+    let source = ip.map_or(String::new(), |i| i.to_string());
     let payload = pack(&AuthPayload {
         key,
         timeout: eapi_bus::timeout().as_secs_f64(),
+        source,
     })?;
     for svc in auth_svcs {
         match eapi_bus::call(svc, "auth.key", payload.as_slice().into()).await {
@@ -224,7 +227,7 @@ pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
         let token = get_token(token_str.try_into()?, ip).await?;
         return Ok(Auth::Token(token));
     }
-    if let Some((acl, _)) = auth_key(key).await? {
+    if let Some((acl, _)) = auth_key(key, ip).await? {
         let acl = Arc::new(acl);
         let key_id = acl
             .api_key_id()

@@ -232,7 +232,7 @@ async fn run_api_filter(
 #[allow(clippy::similar_names)]
 async fn login_key(key: &str, ip: Option<IpAddr>, source: &str) -> EResult<Arc<Token>> {
     let mut aci = ACI::new(Auth::LoginKey(None, None), "login", source.to_owned());
-    if let Some((acl, svc)) = aaa::auth_key(key).await? {
+    if let Some((acl, svc)) = aaa::auth_key(key, ip).await? {
         if let Some(id) = acl.api_key_id() {
             // API key IDs MUST be prefixed with a dot in both ACI and tokens
             let login = format!(".{}", id);
@@ -272,6 +272,7 @@ async fn login(
         password: &'a str,
         timeout: f64,
         xopts: Option<&'a BTreeMap<String, Value>>,
+        source: &'a str,
     }
     let auth_svcs = aaa::auth_svcs();
     let payload = pack(&AuthPayload {
@@ -279,6 +280,7 @@ async fn login(
         password,
         timeout: eapi_bus::timeout().as_secs_f64(),
         xopts,
+        source,
     })?;
     let mut aci = ACI::new(
         Auth::Login(login.to_owned(), None),
@@ -727,6 +729,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
         login: &'a str,
         password: &'a str,
         timeout: f64,
+        source: &'a str,
     }
     #[derive(Serialize)]
     struct PayloadIdPass<'a> {
@@ -746,6 +749,7 @@ async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
             login: token.user(),
             password: &p.current_password,
             timeout: eapi_bus::timeout().as_secs_f64(),
+            source: aci.source(),
         })?;
         eapi_bus::call(token.auth_svc(), "auth.user", payload.as_slice().into()).await?;
         let payload = pack(&PayloadIdPass {
