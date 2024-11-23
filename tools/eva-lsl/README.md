@@ -42,5 +42,8 @@ eva-lsl run -b IP:PORT SVC_ID
 The command builds the service and run it locally, connecting to the node bus.
 Log messages are printed to the local console.
 
+Use `--watch` (or `-w`) to automatically rebuild the service on source code
+changes.
+
 The command can also override, the service bus id, user, data path etc. Check
 other options with `eva-lsl --help`.
