@@ -1,7 +1,11 @@
+use std::path::PathBuf;
+use std::time::Duration;
+
 use clap::Parser;
 use colored::Colorize;
 use eva_common::payload::pack;
 use eva_common::{common_payloads::ParamsId, prelude::*};
+use notify::Watcher as _;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt as _;
 
@@ -52,6 +56,8 @@ struct CommandRun {
     release: bool,
     #[clap(long, help = "Do not use cargo, run the service binary directly")]
     binary: Option<String>,
+    #[clap(short = 'w', long, help = "Automatically restart on source changes")]
+    watch: bool,
 }
 
 async fn add_dependency(
@@ -190,16 +196,65 @@ async fn run(args: CommandRun) -> EResult<()> {
         }
         ("cargo", a)
     };
-    let mut process = tokio::process::Command::new(cmd)
-        .stdin(std::process::Stdio::piped())
-        .args(cmd_args)
-        .env("EVA_SVC_DEBUG", "1")
-        .spawn()?;
-    let mut stdin = process
-        .stdin
-        .take()
-        .ok_or_else(|| Error::io("stdin is not available"))?;
-    stdin.write_all(&buffer).await?;
-    let exitcode = process.wait().await?;
+    loop {
+        let current_dir: PathBuf = std::env::current_dir()?;
+        let mut cargo_toml = current_dir.clone();
+        cargo_toml.push("Cargo.toml");
+        if cargo_toml.exists() {
+            break;
+        }
+        let parent_dir = current_dir
+            .parent()
+            .ok_or_else(|| Error::invalid_data("no Cargo.toml found"))?;
+        std::env::set_current_dir(parent_dir)?;
+    }
+    let (watch_tx, watch_rx) = async_channel::unbounded();
+
+    let mut watcher: notify::PollWatcher = notify::Watcher::new(
+        move |ev: Result<notify::Event, notify::Error>| {
+            let Ok(event) = ev else {
+                return;
+            };
+            if args.watch
+                && matches!(
+                    event.kind,
+                    notify::EventKind::Create(_)
+                        | notify::EventKind::Modify(_)
+                        | notify::EventKind::Remove(_)
+                )
+            {
+                let _ = watch_tx.try_send(());
+            }
+        },
+        notify::Config::default().with_poll_interval(Duration::from_secs(1)),
+    )
+    .map_err(Error::io)?;
+    let mut src_dir = std::env::current_dir()?;
+    src_dir.push("src");
+    watcher
+        .watch(&src_dir, notify::RecursiveMode::Recursive)
+        .map_err(Error::io)?;
+
+    let exitcode = loop {
+        let mut process = tokio::process::Command::new(cmd)
+            .stdin(std::process::Stdio::piped())
+            .args(&cmd_args)
+            .env("EVA_SVC_DEBUG", "1")
+            .spawn()?;
+        let mut stdin = process
+            .stdin
+            .take()
+            .ok_or_else(|| Error::io("stdin is not available"))?;
+        stdin.write_all(&buffer).await?;
+        tokio::select! {
+            _ = watch_rx.recv() => {
+                let _ = process.kill().await;
+                let _ = process.wait().await;
+            }
+            exitcode = process.wait() => {
+                break exitcode?;
+            }
+        }
+    };
     std::process::exit(exitcode.code().unwrap_or(0));
 }

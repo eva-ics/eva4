@@ -1,6 +1,6 @@
 [package]
 name = "eva-lsl"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Serhij S. <div@altertech.com>"]
 license = "Apache-2.0"
@@ -10,11 +10,13 @@ readme = "README.md"
 keywords = ["eva-ics", "iot", "industrial", "scada", "cloud"]
 
 [dependencies]
+async-channel = "2.3.1"
 clap = { version = "4.5.20", features = ["derive"] }
 colored = "2.1.0"
 eva-client = "0.4.0"
 eva-common = { version = "0.3.75", features = ["common-payloads", "payload", "services", "openssl-vendored"] }
 hostname = "0.4.0"
+notify = "7.0.0"
 serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
 
