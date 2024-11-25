@@ -514,7 +514,6 @@ impl RpcHandlers for Handlers {
             }
             "auth.key" => {
                 #[derive(Deserialize)]
-                #[serde(deny_unknown_fields)]
                 struct ParamsAuthKey<'a> {
                     #[serde(borrow)]
                     key: &'a str,

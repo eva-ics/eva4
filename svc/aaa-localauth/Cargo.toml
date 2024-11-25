@@ -10,7 +10,7 @@ busrt = { features = ["rpc", "ipc"] , workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { version = "0.1.77" }
 serde = { features = ["derive", "rc"] , workspace = true }
-eva-common = { features = ["events", "common-payloads"] , workspace = true }
+eva-common = { features = ["events", "common-payloads", "workers"] , workspace = true }
 log = { workspace = true }
 async-channel = "1.7"
 eva-sdk = { version = "0.3.45" }
