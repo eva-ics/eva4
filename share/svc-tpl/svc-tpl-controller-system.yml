@@ -12,6 +12,11 @@ config:
     #max_clients: 128
     # if a front-end server or TLS terminator is used
     #real_ip_header: X-Real-IP
+    # in case if set, a remote host can be verified by an external
+    # authenticator (e.g. on a front-end server). if specified, the service
+    # MUST be run under a trusted front-end and no direct requests should be
+    # allowed
+    #trusted_system_header: X-Authenticated-System
     # host map (name/key)
     # note: the service has got an own key database
     # the keys are not related with EVA ICS API keys

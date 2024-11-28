@@ -27,6 +27,7 @@ static HOSTS: OnceCell<BTreeMap<String, String>> = OnceCell::new();
 static OID_PREFIX: OnceCell<String> = OnceCell::new();
 static PREFIX_CONTAINS_HOST: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static REAL_IP_HEADER: OnceCell<String> = OnceCell::new();
+static HEADER_TRUSTED_API_SYSTEM: OnceCell<String> = OnceCell::new();
 
 fn default_max_clients() -> usize {
     128
@@ -46,6 +47,7 @@ pub struct Config {
     pub client_oid_prefix: String,
     listen: SocketAddr,
     real_ip_header: Option<String>,
+    trusted_system_header: Option<String>,
     #[serde(default = "default_max_clients")]
     max_clients: usize,
     #[serde(default)]
@@ -73,6 +75,11 @@ fn get_real_ip(headers: &HeaderMap, remote_ip: IpAddr) -> EResult<IpAddr> {
 }
 
 fn authorize_request(headers: &HeaderMap) -> EResult<String> {
+    if let Some(trusted_api_system) = HEADER_TRUSTED_API_SYSTEM.get() {
+        if let Some(val) = headers.get(trusted_api_system) {
+            return Ok(val.to_str().map_err(Error::invalid_data)?.to_owned());
+        }
+    }
     let Some(host_header) = headers.get(HEADER_API_SYSTEM_NAME) else {
         return Err(Error::access(format!("{} not set", HEADER_API_SYSTEM_NAME)));
     };
@@ -164,6 +171,11 @@ pub async fn launch_server(config: Config, timeout: Duration) -> EResult<()> {
         REAL_IP_HEADER
             .set(real_ip_header)
             .map_err(|_| Error::core("Unable to set REAL_IP_HEADER"))?;
+    }
+    if let Some(trusted_api_system_name) = config.trusted_system_header {
+        HEADER_TRUSTED_API_SYSTEM
+            .set(trusted_api_system_name)
+            .map_err(|_| Error::core("Unable to set HEADER_TRUSTED_API_SYSTEM_NAME"))?;
     }
     let listener = TcpListener::bind(config.listen).await?;
     let client_pool =
