@@ -41,7 +41,7 @@ mod tests {
         };
         opts.timeout = Some(33.3);
         let item = std::sync::Arc::new(super::ItemData {
-            oid: "unit:tests/t1".parse().unwrap(),
+            oid: "unit:tests/t1".parse::<OID>().unwrap().into(),
             state: None,
             meta: None,
             //location: Some(loc),
