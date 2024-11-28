@@ -482,7 +482,7 @@ pub struct StateData {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct ItemConfigData {
-    pub oid: OID,
+    pub oid: Arc<OID>,
     #[serde(default)]
     meta: Option<Value>,
     #[serde(default = "default_true")]
@@ -510,7 +510,7 @@ impl ItemConfigData {
             None
         };
         Self {
-            oid: oid.clone(),
+            oid: oid.clone().into(),
             meta: None,
             enabled: true,
             logic: None,
@@ -531,7 +531,7 @@ impl ItemConfigData {
             None
         };
         Self {
-            oid: oid.clone(),
+            oid: oid.clone().into(),
             meta: None,
             enabled: true,
             logic: None,
@@ -565,7 +565,7 @@ impl ItemConfigData {
 #[sorting(id = "oid")]
 pub struct ItemData {
     //#[serde(deserialize_with = "eva_common::deserialize_oid")]
-    oid: OID,
+    oid: Arc<OID>,
     #[serde(skip_serializing)]
     state: Option<Mutex<ItemState>>, // None for macros
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -629,7 +629,7 @@ impl ItemData {
             )))
         };
         Ok(Self {
-            oid: i.oid,
+            oid: i.oid.into(),
             state,
             meta: i.meta,
             source: Some(source),
@@ -839,7 +839,7 @@ impl Inventory {
         boot_id: u64,
     ) -> EResult<Item> {
         let mut data: ItemData = serde_json::from_value(config_value)?;
-        if &data.oid != oid {
+        if data.oid.as_ref() != oid {
             return Err(Error::invalid_data("oid does not match"));
         }
         check_item_data(&data)?;
@@ -910,7 +910,7 @@ impl Inventory {
             }
         });
         let item = Arc::new(ItemData {
-            oid,
+            oid: oid.into(),
             state: if tp == ItemKind::Lmacro {
                 None
             } else {
@@ -940,10 +940,10 @@ impl Inventory {
         self.items.append(item.clone(), replace)?;
         let mut node = source.as_ref().map(|i| i.node.clone());
         if let Some(items) = self.items_by_source.get_mut(&node) {
-            items.insert(Arc::new(item.oid.clone()), item.clone());
+            items.insert(item.oid.clone(), item.clone());
         } else {
             let mut items = HashMap::new();
-            items.insert(Arc::new(item.oid.clone()), item.clone());
+            items.insert(item.oid.clone(), item.clone());
             if let Some(s) = source {
                 self.items_by_source.insert(node.clone(), items);
                 self.sources.insert(node.take().unwrap(), s);
@@ -1008,8 +1008,8 @@ impl Inventory {
 struct ItemTree {
     childs: HashMap<String, ItemTree>,
     childs_any: Option<Box<ItemTree>>,
-    members: HashMap<OID, Item>,
-    members_wildcard: HashMap<OID, Item>,
+    members: HashMap<Arc<OID>, Item>,
+    members_wildcard: HashMap<Arc<OID>, Item>,
 }
 
 impl ItemTree {
@@ -1098,7 +1098,7 @@ impl<'a> Filter<'a> {
             }
         }
         if let Some(f) = self.exclude {
-            !f.matches(&item.oid)
+            !f.matches(item.oid.as_ref())
         } else {
             true
         }

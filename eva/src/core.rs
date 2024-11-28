@@ -1092,10 +1092,10 @@ impl Core {
         #[serde(untagged)]
         enum ItemOrOid {
             Item(Box<items::ItemConfigData>),
-            Oid(OID),
+            Oid(Arc<OID>),
         }
         let rpc = self.rpc.get().unwrap();
-        let mut oids: Vec<OID> = Vec::new();
+        let mut oids: Vec<Arc<OID>> = Vec::new();
         for c in configs {
             let d = ItemOrOid::deserialize(c)?;
             oids.push(match d {
@@ -1104,13 +1104,13 @@ impl Core {
             });
         }
         if inventory_db::is_initialized() {
-            let mut oids_to_destroy = Vec::new();
+            let mut oids_to_destroy: Vec<OID> = Vec::new();
             for oid in oids {
                 let result = self.inventory.write().await.remove_item(&oid);
                 if result.is_some() {
                     info!("local item destroyed: {}", oid);
                     self.unschedule_save(&oid);
-                    oids_to_destroy.push(oid);
+                    oids_to_destroy.push(oid.as_ref().clone());
                 }
             }
             inventory_db::destroy_items_bulk(oids_to_destroy)
