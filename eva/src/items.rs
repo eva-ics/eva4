@@ -1007,7 +1007,6 @@ impl Inventory {
 #[derive(Default, Debug)]
 struct ItemTree {
     childs: HashMap<String, ItemTree>,
-    childs_any: Option<Box<ItemTree>>,
     members: HashMap<Arc<OID>, Item>,
     members_wildcard: HashMap<Arc<OID>, Item>,
 }
@@ -1238,12 +1237,6 @@ fn remove_item_rec(tree: &mut ItemTree, mut sp: Split<char>, oid: &OID) -> Optio
         } else {
             return None;
         };
-        if let Some(ref mut c) = tree.childs_any {
-            remove_item_rec(c, sp, oid)?;
-            if c.is_empty() {
-                tree.childs_any = None;
-            }
-        }
         Some(item)
     } else {
         tree.members.remove(oid)
@@ -1266,8 +1259,8 @@ fn get_item_by_mask_rec(
                     .collect::<Vec<Item>>(),
             );
         } else if *chunk == "+" {
-            if let Some(ref child) = tree.childs_any {
-                get_item_by_mask_rec(child, iter, result, filter);
+            for child in tree.childs.values() {
+                get_item_by_mask_rec(child, iter.clone(), result, filter);
             }
         } else if let Some(f) = chunk.strip_prefix('!') {
             for child in tree.childs.values_match_key_formula(f) {
@@ -1308,14 +1301,7 @@ fn append_item_rec(
             append_item_rec(&mut child, sp.clone(), item, replace)?;
             tree.childs.insert(chunk.to_owned(), child);
         }
-        if let Some(ref mut c) = tree.childs_any {
-            append_item_rec(c, sp, item, replace)
-        } else {
-            let mut child = ItemTree::default();
-            append_item_rec(&mut child, sp, item, replace)?;
-            tree.childs_any.replace(Box::new(child));
-            Ok(())
-        }
+        Ok(())
     } else if tree.members.contains_key(&item.oid) && !replace {
         Err(Error::duplicate(format!(
             "item {} is already registered",
