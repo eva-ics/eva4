@@ -106,6 +106,10 @@ fn service_main(_arguments: Vec<OsString>) -> Result<(), windows_service::Error>
 
 fn main() -> EResult<()> {
     let args = Args::parse();
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .map_err(|_| Error::failed("failed to install the default crypto provider"))?;
+
     if let Some(cmd) = args.command {
         match cmd {
             Command::Run => {

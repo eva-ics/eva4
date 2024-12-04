@@ -3,8 +3,15 @@ client:
   # enable FIPS-140 mode on Linux
   fips: false
   auth:
+    # name-key authentication
     name: test
     key: xxx
+    # X509 authentication on Linux (PEM)
+    #cert_file: /path/to/cert.pem
+    #key_file: /path/to/key.pem
+    # X509 authentication on Windows (Local machine certificate store)
+    #store: Trust # Trust for `Enterprise Trust` store, My for `Personal` store
+    #cert: hostname # certificate common name
 report:
   system:
     enabled: true

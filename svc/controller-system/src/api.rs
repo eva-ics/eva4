@@ -77,7 +77,19 @@ fn get_real_ip(headers: &HeaderMap, remote_ip: IpAddr) -> EResult<IpAddr> {
 fn authorize_request(headers: &HeaderMap) -> EResult<String> {
     if let Some(trusted_api_system) = HEADER_TRUSTED_API_SYSTEM.get() {
         if let Some(val) = headers.get(trusted_api_system) {
-            return Ok(val.to_str().map_err(Error::invalid_data)?.to_owned());
+            let host = val.to_str().map_err(Error::invalid_data)?;
+            if host.contains('=') {
+                let mut parts = host.splitn(2, '=');
+                let key = parts.next().unwrap();
+                if key.trim() != "CN" {
+                    return Err(Error::access("invalid trusted system common name"));
+                }
+                let value = parts
+                    .next()
+                    .ok_or_else(|| Error::invalid_data("missing common name value"))?;
+                return Ok(value.trim().to_owned());
+            }
+            return Ok(host.trim().to_owned());
         }
     }
     let Some(host_header) = headers.get(HEADER_API_SYSTEM_NAME) else {
