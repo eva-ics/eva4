@@ -1,6 +1,6 @@
 client:
   server_url: http://server-host:7555/
-  # enable FIPS-140 mode on Linux
+  # enable FIPS-140 mode on Linux, check FIPS-140-compatible binary on Windows
   fips: false
   auth:
     # name-key authentication
