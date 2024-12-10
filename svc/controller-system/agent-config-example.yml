@@ -33,8 +33,8 @@ report:
       #- /
       #- /var
   # block device info (Linux only)
-  blk:
-    enabled: true
+  #blk:
+    #enabled: true
     # enable specific devices only
     # note: for automatic device list reporting unavailable is not supported,
     # loop devices in auto-list are omitted
