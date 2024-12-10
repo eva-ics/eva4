@@ -17,7 +17,7 @@ compile-windows:
 	rm -rf _build/eva-cs-agent
 	mkdir -p ./_build/eva-cs-agent
 	ssh -t lab-w1 "cd /src/eva4/svc/controller-system && git checkout stable && git pull"
-	ssh -t lab-w1 "cmd /C c:/src/eva4/svc/controller/system/build-win.bat"
+	ssh -t lab-w1 "cmd /C c:/src/eva4/svc/controller-system/build-win.bat"
 	scp lab-w1:/src/eva4/svc/controller-system/target/release/eva-cs-agent-windows.exe ./_build/eva-cs-agent/eva-cs-agent.exe
 	cp agent-config-example.yml ./_build/eva-cs-agent/config.yml
 
