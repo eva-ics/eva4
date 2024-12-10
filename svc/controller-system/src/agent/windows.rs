@@ -106,6 +106,10 @@ fn service_main(_arguments: Vec<OsString>) -> Result<(), windows_service::Error>
 
 fn main() -> EResult<()> {
     let args = Args::parse();
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .map_err(|_| Error::failed("failed to install the default crypto provider"))?;
+
     if let Some(cmd) = args.command {
         match cmd {
             Command::Run => {
@@ -158,7 +162,10 @@ fn load_config() -> EResult<Config> {
         })?)
         .map_err(Error::invalid_params)?;
     if config.client.fips {
-        warn!("FIPS-140 mode on Windows should be enabled by the system-wide policy");
+        #[cfg(feature = "fips")]
+        info!("FIPS-140 binary is active. Also make sure FIPS-140 mode is enabled in the system");
+        #[cfg(not(feature = "fips"))]
+        return Err(Error::failed("Not a FIPS-140 binary"));
     }
     Ok(config)
 }

@@ -1,3 +1,4 @@
+#[cfg(not(target_os = "windows"))]
 pub mod blk;
 pub mod cpu;
 pub mod disks;

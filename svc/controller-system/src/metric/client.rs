@@ -8,6 +8,70 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
+mod cert_resolver {
+    use eva_common::prelude::*;
+    use rustls::{
+        client::ResolvesClientCert, pki_types::CertificateDer, sign::CertifiedKey, SignatureScheme,
+    };
+    use rustls_cng::{signer::CngSigningKey, store::CertStore};
+    use std::sync::Arc;
+
+    #[derive(Debug)]
+    pub struct ClientCertResolver {
+        pub store: CertStore,
+        pub cert_name: String,
+        pub pin: Option<String>,
+    }
+
+    fn get_chain(
+        store: &CertStore,
+        name: &str,
+    ) -> EResult<(Vec<CertificateDer<'static>>, CngSigningKey)> {
+        let contexts = store.find_by_subject_name(name).map_err(Error::failed)?;
+        let context = contexts
+            .first()
+            .ok_or_else(|| Error::failed("No client certificate"))?;
+        let key = context.acquire_key().map_err(Error::failed)?;
+        let signing_key = CngSigningKey::new(key).map_err(Error::failed)?;
+        let chain = context
+            .as_chain_der()
+            .map_err(Error::failed)?
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        Ok((chain, signing_key))
+    }
+
+    impl ResolvesClientCert for ClientCertResolver {
+        fn resolve(
+            &self,
+            _acceptable_issuers: &[&[u8]],
+            sigschemes: &[SignatureScheme],
+        ) -> Option<Arc<CertifiedKey>> {
+            let (chain, signing_key) = get_chain(&self.store, &self.cert_name).ok()?;
+            if let Some(ref pin) = self.pin {
+                signing_key.key().set_pin(pin).ok()?;
+            }
+            for scheme in signing_key.supported_schemes() {
+                if sigschemes.contains(scheme) {
+                    return Some(Arc::new(CertifiedKey {
+                        cert: chain,
+                        key: Arc::new(signing_key),
+                        ocsp: None,
+                    }));
+                }
+            }
+            log::warn!("client cert NOT FOUND");
+            None
+        }
+
+        fn has_certs(&self) -> bool {
+            true
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -19,10 +83,111 @@ pub struct Config {
 }
 
 #[derive(Deserialize)]
+#[serde(untagged)]
+enum Auth {
+    NameKey(NameKeyAuth),
+    X509(X509Auth),
+}
+
+impl Auth {
+    fn add_request_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match self {
+            Auth::NameKey(auth) => req
+                .header(crate::HEADER_API_SYSTEM_NAME, &auth.name)
+                .header(crate::HEADER_API_AUTH_KEY, &auth.key),
+            Auth::X509(_) => req,
+        }
+    }
+    async fn build_client(&self) -> EResult<reqwest::Client> {
+        match self {
+            Auth::NameKey(_) => Ok(reqwest::Client::new()),
+            #[cfg(target_os = "windows")]
+            Auth::X509(auth) => {
+                let store = rustls_cng::store::CertStore::open(
+                    rustls_cng::store::CertStoreType::LocalMachine,
+                    auth.store.as_str(),
+                )
+                .map_err(Error::failed)?;
+
+                let mut root_store = rustls::RootCertStore::empty();
+
+                let load_results = rustls_native_certs::load_native_certs();
+                for cert in load_results.certs {
+                    if let Err(e) = root_store.add(cert.into()) {
+                        warn!("rustls failed to parse DER certificate: {e:?}");
+                    }
+                }
+
+                let client_config = rustls::ClientConfig::builder()
+                    .with_root_certificates(root_store)
+                    .with_client_cert_resolver(std::sync::Arc::new(
+                        cert_resolver::ClientCertResolver {
+                            store,
+                            cert_name: format!("CN = {}", auth.cert),
+                            pin: None,
+                        },
+                    ));
+
+                reqwest::ClientBuilder::new()
+                    .use_preconfigured_tls(client_config)
+                    .build()
+                    .map_err(Error::failed)
+            }
+            #[cfg(not(target_os = "windows"))]
+            Auth::X509(auth) => {
+                let mut builder = reqwest::Client::builder();
+                info!("Loading client TLS certificate from {}", auth.cert_file);
+                let cert = tokio::fs::read(&auth.cert_file).await?;
+                info!("Loading client TLS key from {}", auth.key_file);
+                let key = tokio::fs::read(&auth.key_file).await?;
+                builder =
+                    builder.identity(reqwest::Identity::from_pkcs8_pem(&cert, &key).map_err(
+                        |e| Error::failed(format!("Unable to create TLS idenity: {}", e)),
+                    )?);
+                builder.build().map_err(Error::failed)
+            }
+        }
+    }
+}
+
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Auth {
+struct NameKeyAuth {
     name: String,
     key: String,
+}
+
+#[cfg(target_os = "windows")]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct X509Auth {
+    store: WindowsCertStore,
+    cert: String,
+}
+
+#[cfg(target_os = "windows")]
+#[derive(Deserialize, Copy, Clone, Debug)]
+enum WindowsCertStore {
+    My,
+    Trust,
+}
+
+#[cfg(target_os = "windows")]
+impl WindowsCertStore {
+    fn as_str(self) -> &'static str {
+        match self {
+            WindowsCertStore::My => "My",
+            WindowsCertStore::Trust => "Trust",
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct X509Auth {
+    cert_file: String,
+    key_file: String,
 }
 
 const CLIENT_STEP: Duration = Duration::from_millis(200);
@@ -99,25 +264,18 @@ async fn submit_worker(config: &Config) -> EResult<()> {
     let server_url_full = format!("{}/report", server_url);
     let mut int = tokio::time::interval(CLIENT_STEP);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let client = reqwest::Client::new();
+    let client = config.auth.build_client().await?;
     loop {
         int.tick().await;
         let data = EVENT_BUFFER.take();
         if data.is_empty() {
             continue;
         }
-        let response = tokio::time::timeout(
-            timeout,
-            client
-                .post(&server_url_full)
-                .header(crate::HEADER_API_SYSTEM_NAME, &config.auth.name)
-                .header(crate::HEADER_API_AUTH_KEY, &config.auth.key)
-                .json(&data)
-                .send(),
-        )
-        .await
-        .map_err(|_| Error::timeout())?
-        .map_err(Error::failed)?;
+        let req = config.auth.add_request_auth(client.post(&server_url_full));
+        let response = tokio::time::timeout(timeout, req.json(&data).send())
+            .await
+            .map_err(|_| Error::timeout())?
+            .map_err(Error::failed)?;
         if !response.status().is_success() {
             return Err(Error::failed(format!(
                 "server error HTTP code {}: {}",

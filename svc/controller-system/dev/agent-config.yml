@@ -1,9 +1,11 @@
 client:
-  server_url: http://localhost:7555/
+  server_url: http://127.0.0.1:7555
   #fips: true
   auth:
     name: test
     key: xxx
+    #store: Trust
+    #cert: mws1
 report:
   system:
     enabled: true
@@ -24,12 +26,12 @@ report:
     mount_points:
       - /
       #- /var
-  blk:
-    enabled: true
+  #blk:
+    #enabled: true
     # enable specific mount points only
     # note: for automatic mountpoint list reporting unavailable is not supported
-    devices:
-      - nvme1n1
+    #devices:
+      #- nvme1n1
   # network info
   network:
     enabled: false
