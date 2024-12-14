@@ -1,0 +1,15 @@
+{
+  "name": "eva-ics-cli",
+  "version": "0.0.1",
+  "description": "",
+  "bin": {
+    "eva-ics-cli": "./index.js"
+  },
+  "files": [ "index.js" ],
+  "author": "Bohemia Automation",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@eva-ics/webengine": "^0.9.10",
+    "minimist": "^1.2.8"
+  }
+}
