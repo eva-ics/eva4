@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2024-12-14 build 2024121401: OpCentre IDC improvements
 * 2024-12-10 build 2024121002: OpCentre further improvements, System controller X509 auth
 * 2024-12-03 build 2024120301: Memory optimizations, IDC dashboard variables
 * 2024-11-25 build 2024112501: OpCentre IDC improvements (undo/redo, general fixes)
