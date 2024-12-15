@@ -1,8 +1,0 @@
-{
-    "engine": {
-        "api_uri": "http://127.0.0.1:7727",
-        "apikey": "mykey",
-        "state_updates": false,
-        "debug": false
-    }
-}

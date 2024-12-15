@@ -32,6 +32,11 @@ const usage = () => {
   console.log("  Specify argument as arg=@file");
 };
 
+if (argv.help || argv.h) {
+  usage();
+  process.exit(0);
+}
+
 if (!command) {
   error("Command not specified");
   usage();
@@ -76,17 +81,6 @@ for (const arg of argv._.slice(1)) {
     }
   }
   parameters[key] = value;
-}
-
-if (!command) {
-  error("No command specified");
-  usage();
-  process.exit(1);
-}
-
-if (argv.help || argv.h) {
-  usage();
-  process.exit(0);
 }
 
 const config_file = argv.config || "config.json";
