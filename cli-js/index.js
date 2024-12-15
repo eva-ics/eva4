@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 
 const fs = require("fs");
-
+const { log, yellow, green } = require("console-log-colors");
+const { Eva } = require("@eva-ics/webengine");
 const argv = require("minimist")(process.argv.slice(2));
+
 const silent = argv.s || false;
 const command = argv._[0];
 
-const log = (...args) => {
+const info = (...args) => {
   if (!silent) {
-    console.log(...args);
+    log(...args);
   }
+};
+
+const error = (msg) => {
+  log(msg, "red");
 };
 
 const usage = () => {
@@ -19,20 +25,22 @@ const usage = () => {
   console.log("  -s               Silent mode");
   console.log("  -h, --help       Display this help");
   console.log("Commands:");
-  console.log("  See https://info.bma.ai/en/actual/eva4/svc/eva-hmi.html#http-api");
+  console.log(
+    "  See https://info.bma.ai/en/actual/eva4/svc/eva-hmi.html#http-api"
+  );
   console.log("Getting argument value from a file:");
   console.log("  Specify argument as arg=@file");
 };
 
 if (!command) {
-  console.error("Command not specified");
+  error("Command not specified");
   usage();
   process.exit(1);
 }
 
 const pos = command.indexOf("=");
 if (pos > 0) {
-  console.error("Command not specified");
+  error("Command not specified");
   usage();
   process.exit(1);
 }
@@ -42,14 +50,14 @@ const parameters = {};
 for (const arg of argv._.slice(1)) {
   const pos = arg.indexOf("=");
   if (!pos) {
-    console.error("Invalid argument: " + arg);
+    error("Invalid argument: " + arg);
     usage();
     process.exit(1);
   }
   const key = arg.slice(0, pos);
   let value = arg.slice(pos + 1);
   if (value.startsWith("@")) {
-    log(`Reading file ${value.slice(1)}...`);
+    info(`Reading file ${value.slice(1)}...`);
     value = fs.readFileSync(value.slice(1), "utf8");
   } else if (value === "null") {
     value = null;
@@ -71,7 +79,7 @@ for (const arg of argv._.slice(1)) {
 }
 
 if (!command) {
-  console.error("No command specified");
+  error("No command specified");
   usage();
   process.exit(1);
 }
@@ -85,12 +93,10 @@ const config_file = argv.config || "config.json";
 
 const config = JSON.parse(fs.readFileSync(config_file, "utf8"));
 
-const Eva = require("@eva-ics/webengine").Eva;
-
 const eva = new Eva();
 eva.apply_config(config);
 
-let command_processed = false;
+let command_exitcode = null;
 eva.ws_mode = false;
 eva.state_updates = false;
 
@@ -98,27 +104,27 @@ const error_str = (e) => {
   return `${e.message} (${e.code})`;
 };
 
-const process_command = async (argv) => {
+const process_command = async () => {
   try {
     const result = await eva.call(command, parameters);
     console.log(JSON.stringify(result, null, 2));
+    command_exitcode = 0;
   } catch (e) {
-    console.error(`API call failed: ${error_str(e)}`);
-    process.exit(1);
+    error(`🗙 API call failed: ${error_str(e)}`);
+    command_exitcode = 2;
   }
-  command_processed = true;
 };
 
-log(`Connecting to ${config.engine.api_uri}...`);
+info(`🌐 Connecting to ${yellow(config.engine.api_uri)}...`);
 
 if (config.engine.login) {
-  log("Logging in...");
+  info("🔐 Logging in...");
   eva.on("login.success", () => {
-    log("Authenticated successfully");
+    info(green("🔑 Authenticated successfully"));
     process_command(argv);
   });
   eva.on("login.failed", (e) => {
-    console.error(`Login failed: ${error_str(e)}`);
+    error(`🗙 Login failed: ${error_str(e)}`);
     process.exit(1);
   });
   eva.start();
@@ -127,15 +133,19 @@ if (config.engine.login) {
 }
 
 setInterval(() => {
-  if (command_processed) {
-    log("Command processed");
+  if (command_exitcode !== null) {
+    if (command_exitcode == 0) {
+      info(green("✓ Command completed"));
+    } else {
+      error("🗙 Command failed");
+    }
     if (eva.logged_in) {
       eva.stop().then(() => {
-        log("Logging out");
-        process.exit(0);
+        info("🔐 Logging out");
+        process.exit(command_exitcode);
       });
     } else {
-      process.exit(0);
+      process.exit(command_exitcode);
     }
   }
 }, 100);
