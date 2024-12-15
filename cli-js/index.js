@@ -57,7 +57,7 @@ for (const arg of argv._.slice(1)) {
   const key = arg.slice(0, pos);
   let value = arg.slice(pos + 1);
   if (value.startsWith("@")) {
-    info(`Reading file ${value.slice(1)}...`);
+    info(`🖹 Reading file ${yellow(value.slice(1))}...`);
     value = fs.readFileSync(value.slice(1), "utf8");
   } else if (value === "null") {
     value = null;
