@@ -486,7 +486,7 @@ async fn eva_svc_main(mut initial: Initial) -> EResult<()> {
     TIMEOUT
         .set(timeout)
         .map_err(|_| Error::core("unable to set TIMEOUT"))?;
-    eva_sdk::service::set_poc(Some(Duration::from_secs(0)));
+    eva_sdk::service::set_poc(Some(Duration::from_secs(1)));
     macro_rules! call_maybe_ufn {
         ($f: expr) => {
             if let Some(f) = $f {

@@ -43,7 +43,7 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {
-    set_poc(Some(Duration::from_secs(0)));
+    set_poc(Some(Duration::from_secs(1)));
     let timeout = initial.timeout();
     TIMEOUT
         .set(timeout)
