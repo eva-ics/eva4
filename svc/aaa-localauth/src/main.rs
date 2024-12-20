@@ -874,6 +874,72 @@ impl RpcHandlers for Handlers {
                     }
                 }
             }
+            "reset.user" => {
+                #[derive(Deserialize)]
+                struct ParamsResetUser<'a> {
+                    #[serde(borrow)]
+                    login: &'a str,
+                    #[serde(borrow)]
+                    password: &'a str,
+                    xopts: Option<HashMap<String, Value>>,
+                }
+                #[derive(Serialize)]
+                struct ParamsOtpCheck<'a> {
+                    login: &'a str,
+                    otp: Option<&'a Value>,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsResetUser = unpack(payload)?;
+                if p.login.starts_with(ONE_TIME_USER_PREFIX) {
+                    return Err(Error::access("one-time user can not be reset").into());
+                } else if let Some(user) = USERS.lock().await.get(p.login) {
+                    if !user.password.verify(p.password).await? {
+                        debug!("user {} authentication failed: invalid password", p.login);
+                        return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                    }
+                    debug!("user authenticated: {}", p.login);
+                } else {
+                    debug!("user {} authentication failed: not found", p.login);
+                    return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
+                };
+                let rpc = RPC.get().unwrap();
+                if let Some(otp_svc) = self.otp_svc.as_ref() {
+                    safe_rpc_call(
+                        rpc,
+                        otp_svc,
+                        "otp.check",
+                        pack(&ParamsOtpCheck {
+                            login: p.login,
+                            otp: if let Some(xopts) = p.xopts.as_ref() {
+                                xopts.get("otp")
+                            } else {
+                                None
+                            },
+                        })?
+                        .into(),
+                        QoS::Processed,
+                        *TIMEOUT.get().unwrap(),
+                    )
+                    .await?;
+                    if let Err(e) = safe_rpc_call(
+                        rpc,
+                        otp_svc,
+                        "otp.destroy",
+                        pack(&ParamsId { i: p.login })?.into(),
+                        QoS::Processed,
+                        *TIMEOUT.get().unwrap(),
+                    )
+                    .await
+                    {
+                        if e.kind() != ErrorKind::ResourceNotFound {
+                            return Err(e.into());
+                        }
+                    }
+                }
+                Ok(None)
+            }
             "auth.user" => {
                 #[derive(Deserialize)]
                 struct ParamsAuthUser<'a> {
