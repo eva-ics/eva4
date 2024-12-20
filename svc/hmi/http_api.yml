@@ -53,6 +53,20 @@ login:
             "user": "admin"
         }
     }
+user.reset:
+  des: Reset account (e.g. clear 2FA), the user must be logged in
+  par:
+    - nam: password
+      typ: String
+      des: User password (plain), if required
+      req: false
+    - nam: xopts
+      typ: Map<String, Any>
+      des: Extra auth options
+      req: false
+  ret:
+  http_req:
+    password: secret
 logout:
   des: Ends the user session and destroys the token
   par:

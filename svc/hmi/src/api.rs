@@ -565,6 +565,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "test" => method_test(params, &mut aci).await,
                         "ping" => method_ping(params, &mut aci).await,
                         "set_password" => method_set_password(params, &mut aci).await,
+                        "user.reset" => method_reset_user(params, &mut aci).await,
                         "profile.get_field" => method_get_profile_field(params, &mut aci).await,
                         "profile.set_field" => method_set_profile_field(params, &mut aci).await,
                         "item.state" | "state" => method_item_state(params, &mut aci).await,
@@ -716,6 +717,37 @@ async fn method_ping(params: Value, aci: &mut ACI) -> EResult<Value> {
     aci.log_request(log::Level::Debug).await.log_ef();
     ParamsEmpty::deserialize(params)?;
     Ok(Value::Unit)
+}
+
+async fn method_reset_user(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    struct ParamsResetUser {
+        password: String,
+        xopts: Option<BTreeMap<String, Value>>,
+    }
+    #[derive(Serialize)]
+    struct PayloadResetUser<'a> {
+        #[serde(borrow)]
+        login: &'a str,
+        #[serde(borrow)]
+        password: &'a str,
+        xopts: Option<&'a BTreeMap<String, Value>>,
+    }
+    aci.log_request(log::Level::Warn).await.log_ef();
+    demo_mode_abort!();
+    if let Some(token) = aci.token() {
+        aci.check_write()?;
+        let p = ParamsResetUser::deserialize(params)?;
+        let payload = pack(&PayloadResetUser {
+            login: token.user(),
+            password: &p.password,
+            xopts: p.xopts.as_ref(),
+        })?;
+        eapi_bus::call(token.auth_svc(), "reset.user", payload.as_slice().into()).await?;
+        ok!()
+    } else {
+        Err(Error::access("not authenticated with login/password"))
+    }
 }
 
 async fn method_set_password(params: Value, aci: &mut ACI) -> EResult<Value> {
