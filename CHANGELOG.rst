@@ -4,6 +4,7 @@ EVA ICS CHANGELOG
 4.0.2-stable
 ============
 
+* 2025-01-02 build 2025010201: "user.reset" HTTP API method
 * 2024-12-17 build 2024121701: OpCentre IDC improvements
 * 2024-12-14 build 2024121401: OpCentre IDC improvements
 * 2024-12-10 build 2024121002: OpCentre further improvements, System controller X509 auth
