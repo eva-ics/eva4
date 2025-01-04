@@ -44,7 +44,12 @@ impl Job {
     }
     pub async fn scheduler(&self) -> EResult<()> {
         let timeout = *crate::TIMEOUT.get().unwrap();
-        let params = ParamsRun::new(&self.run, &self.args, &self.kwargs, timeout);
+        let params = ParamsRun::new(
+            &self.run,
+            self.args.as_deref(),
+            self.kwargs.as_ref(),
+            timeout,
+        );
         let rpc = crate::RPC.get().unwrap();
         for next_launch in self.schedule.upcoming(Local) {
             let now: DateTime<Local> = Local::now();

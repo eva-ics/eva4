@@ -217,11 +217,6 @@ impl From<LogLevel> for Level {
     }
 }
 
-trait LevelX {
-    fn as_code(&self) -> u8;
-    fn as_str_lower(&self) -> &str;
-}
-
 #[derive(bmart::tools::EnumStr)]
 enum LogFormat {
     Regular,
@@ -554,7 +549,7 @@ struct LogRecordS<'a> {
     msg: &'a str,
 }
 
-impl<'a> Serialize for LogRecordS<'a> {
+impl Serialize for LogRecordS<'_> {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -587,7 +582,7 @@ trait RecordX {
     fn to_log_record(&self, system_name: &str) -> LogRecord;
 }
 
-impl<'a> RecordX for Record<'a> {
+impl RecordX for Record<'_> {
     #[inline]
     fn as_json(&self, system_name: &str) -> String {
         let record = LogRecordS {
@@ -842,8 +837,8 @@ pub async fn start() -> EResult<()> {
         "logmem",
         cleanup_memory_log,
         INTERVAL_CLEAN_MEMORY_LOGS,
-        KEEP_MEM.get().map(Clone::clone),
-        KEEP_MEM_MAX_RECORDS.get().map(Clone::clone)
+        KEEP_MEM.get().copied(),
+        KEEP_MEM_MAX_RECORDS.get().copied()
     );
     Ok(())
 }

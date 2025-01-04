@@ -29,13 +29,14 @@ struct W1DeviceInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     attrs: Option<Vec<&'a str>>,
 }
-impl<'a> PartialEq for W1DeviceInfo<'a> {
+impl PartialEq for W1DeviceInfo<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path
     }
 }
-impl<'a> Eq for W1DeviceInfo<'a> {}
-impl<'a> Ord for W1DeviceInfo<'a> {
+impl Eq for W1DeviceInfo<'_> {}
+
+impl Ord for W1DeviceInfo<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.tp.cmp(&other.tp) {
             std::cmp::Ordering::Equal => self.path.cmp(other.path),
@@ -43,12 +44,12 @@ impl<'a> Ord for W1DeviceInfo<'a> {
         }
     }
 }
-impl<'a> PartialOrd for W1DeviceInfo<'a> {
+impl PartialOrd for W1DeviceInfo<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<'a> W1DeviceInfo<'a> {
+impl W1DeviceInfo<'_> {
     #[inline]
     fn prepared(mut self) -> Self {
         if let Some(ref attrs) = self.attrs {

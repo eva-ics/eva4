@@ -339,7 +339,7 @@ impl Default for TrId {
 impl TrId {
     fn generate(&mut self) -> u16 {
         let curr = self.0;
-        let tr_id = if curr == std::u16::MAX { 1 } else { curr + 1 };
+        let tr_id = if curr == u16::MAX { 1 } else { curr + 1 };
         self.0 = curr;
         tr_id
     }

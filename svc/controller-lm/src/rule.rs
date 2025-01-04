@@ -129,8 +129,8 @@ async fn process_chillout(
             kwargs.insert("source".to_owned(), to_value(event)?);
             let params = pack(&ParamsRun::new(
                 &macro_oid,
-                &macro_args,
-                &Some(kwargs),
+                macro_args.as_deref(),
+                Some(&kwargs),
                 timeout,
             ))?;
             Some(params)
@@ -208,8 +208,8 @@ impl Rule {
             kwargs.insert("source".to_owned(), to_value(Source::new(oid, state))?);
             let params = pack(&ParamsRun::new(
                 &self.run,
-                &self.args,
-                &Some(kwargs),
+                self.args.as_deref(),
+                Some(&kwargs),
                 timeout,
             ))?;
             if self.block {

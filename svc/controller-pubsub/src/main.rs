@@ -695,11 +695,7 @@ async fn connect(
                 .set_timeout(timeout)
                 .set_queue_size(pubsub_config.queue_size);
             if let Some(ref username) = pubsub_config.username {
-                let password = if let Some(ref password) = pubsub_config.password {
-                    password
-                } else {
-                    ""
-                };
+                let password = pubsub_config.password.as_deref().unwrap_or_default();
                 psrt_config = psrt_config.set_auth(username, password);
             }
             if let Some(ref ca_certs) = pubsub_config.ca_certs {
@@ -734,11 +730,7 @@ async fn connect(
                 .keep_alive_interval(pubsub_config.ping_interval * 2)
                 .connect_timeout(timeout);
             if let Some(ref username) = pubsub_config.username {
-                let password = if let Some(ref password) = pubsub_config.password {
-                    password
-                } else {
-                    ""
-                };
+                let password = pubsub_config.password.as_deref().unwrap_or_default();
                 mqtt_config = mqtt_config.user_name(username).password(password);
             }
             if let Some(ref ca_certs) = pubsub_config.ca_certs {

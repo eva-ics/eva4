@@ -384,7 +384,7 @@ impl RpcHandlers for Handlers {
                         "overriding CPU affinity for {} to {:?}",
                         p.id, self.default_realtime.cpu_ids
                     );
-                    realtime.cpu_ids = self.default_realtime.cpu_ids.clone();
+                    realtime.cpu_ids.clone_from(&self.default_realtime.cpu_ids);
                 }
                 p.initial = p.initial.with_realtime(realtime);
                 debug!("starting service {}", p.id);

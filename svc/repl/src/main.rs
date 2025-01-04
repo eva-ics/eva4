@@ -381,11 +381,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 .set_timeout(timeout)
                 .set_queue_size(config.pubsub.queue_size);
             if let Some(ref username) = config.pubsub.username {
-                let password = if let Some(ref password) = config.pubsub.password {
-                    password
-                } else {
-                    ""
-                };
+                let password = config.pubsub.password.as_deref().unwrap_or_default();
                 psrt_config = psrt_config.set_auth(username, password);
             }
             if let Some(ref ca_certs) = config.pubsub.ca_certs {
@@ -422,11 +418,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 .keep_alive_interval(config.pubsub.ping_interval * 2)
                 .connect_timeout(timeout);
             if let Some(ref username) = config.pubsub.username {
-                let password = if let Some(ref password) = config.pubsub.password {
-                    password
-                } else {
-                    ""
-                };
+                let password = config.pubsub.password.as_deref().unwrap_or_default();
                 mqtt_config = mqtt_config.user_name(username).password(password);
             }
             if let Some(ca_certs) = config.pubsub.ca_certs {

@@ -169,7 +169,7 @@ impl Options {
         let result = match self.encryption {
             Encryption::No => data,
             Encryption::Aes128Gcm => {
-                let key_hash = self.key_hash.as_ref().cloned().unwrap();
+                let key_hash = self.key_hash.clone().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
                     let cip = openssl::symm::Cipher::aes_128_gcm();
                     encrypt!(cip, &key_hash)
@@ -179,7 +179,7 @@ impl Options {
                 encr?
             }
             Encryption::Aes256Gcm => {
-                let key_hash = self.key_hash.as_ref().cloned().unwrap();
+                let key_hash = self.key_hash.clone().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
                     let cip = openssl::symm::Cipher::aes_256_gcm();
                     encrypt!(cip, &key_hash)
@@ -218,7 +218,7 @@ impl Options {
         let data = match self.encryption {
             Encryption::No => message.data()[payload_pos..].to_vec(),
             Encryption::Aes128Gcm => {
-                let key_hash = self.key_hash.as_ref().cloned().unwrap();
+                let key_hash = self.key_hash.clone().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
                     let cip = openssl::symm::Cipher::aes_128_gcm();
                     let payload = &message.data()[payload_pos..];
@@ -228,7 +228,7 @@ impl Options {
                 encr?
             }
             Encryption::Aes256Gcm => {
-                let key_hash = self.key_hash.as_ref().cloned().unwrap();
+                let key_hash = self.key_hash.clone().unwrap();
                 let encr: EResult<Vec<u8>> = tokio::task::spawn_blocking(move || {
                     let cip = openssl::symm::Cipher::aes_256_gcm();
                     let payload = &message.data()[payload_pos..];

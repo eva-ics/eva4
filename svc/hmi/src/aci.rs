@@ -154,7 +154,7 @@ pub struct ACIExtendedInfo<'a> {
     source: &'a str,
 }
 
-impl<'a> Serialize for ACIExtendedInfo<'a> {
+impl Serialize for ACIExtendedInfo<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -218,12 +218,8 @@ impl ACI {
         }
     }
     pub fn user_pvt_path(&self) -> Option<String> {
-        let Some(user_dirs) = USER_DIRS.get() else {
-            return None;
-        };
-        let Some(user) = self.user() else {
-            return None;
-        };
+        let user_dirs = USER_DIRS.get()?;
+        let user = self.user()?;
         Some(format!("{}/{}", user_dirs, user))
     }
     pub fn check_pvt_read(&self, s: &str) -> bool {
@@ -278,7 +274,7 @@ impl ACI {
     #[inline]
     pub fn set_login(&mut self, login: &str) {
         if let Auth::Login(ref mut a, _) = self.auth {
-            *a = login.to_owned();
+            login.clone_into(a);
         }
     }
     /// set ACL ID for Auth::Login and Auth::LoginKey
@@ -399,7 +395,7 @@ impl ACI {
         ev.u = self.auth.user();
         ev.src = Some(&self.source);
         ev.subj = Some(&self.method);
-        ev.oid = self.oid.clone();
+        ev.oid.clone_from(&self.oid);
         if let Some(ref p) = self.params {
             ev.data = to_value(p).unwrap_or_default();
         }

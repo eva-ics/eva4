@@ -167,7 +167,7 @@ fn read_tag_sync(
                 $vt($fn(id, 0))
             } else {
                 let mut values: Vec<Value> = Vec::new();
-                let sb = tp.size_bytes() as i32;
+                let sb = i32::from(tp.size_bytes());
                 for c in 0..cnt {
                     let val = $vt($fn(id, sb * c as i32));
                     values.push(val);
@@ -181,7 +181,7 @@ fn read_tag_sync(
             let offset = bit.unwrap();
             let cnt = count.unwrap_or(1);
             if cnt == 1 {
-                if offset > std::i32::MAX as u32 {
+                if offset > i32::MAX as u32 {
                     return Err(Error::invalid_params("bit index overflow"));
                 }
                 Value::U8(safe_get_bit(id, offset as i32)?)
@@ -189,7 +189,7 @@ fn read_tag_sync(
                 let mut values: Vec<Value> = Vec::new();
                 for c in 0..cnt {
                     let bit_no = c + offset;
-                    if bit_no > std::i32::MAX as u32 {
+                    if bit_no > i32::MAX as u32 {
                         return Err(Error::invalid_params("bit index overflow"));
                     }
                     let val = safe_get_bit(id, bit_no as i32)?;
@@ -298,7 +298,7 @@ fn write_tag_sync(
     match tp {
         EipType::Bit => {
             let bit_no = bit.unwrap();
-            if bit_no > std::i32::MAX as u32 {
+            if bit_no > i32::MAX as u32 {
                 return Err(Error::invalid_params(format!(
                     "bit index overflow for {}",
                     path

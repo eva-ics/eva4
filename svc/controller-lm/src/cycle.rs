@@ -85,7 +85,7 @@ impl Cycle {
         macro_rules! run_err {
             ($e: expr) => {
                 if let Some(ref on_error) = self.on_error {
-                    if let Err(e) = run_err_macro(rpc, on_error, $e, &None, timeout).await {
+                    if let Err(e) = run_err_macro(rpc, on_error, $e, None, timeout).await {
                         error!("Cycle {} error handler macro failed: {}", self.id, e);
                     }
                 }
@@ -108,7 +108,12 @@ impl Cycle {
                     ));
                 }
             }
-            let params = ParamsRun::new(&self.run, &self.args, &self.kwargs, self.interval);
+            let params = ParamsRun::new(
+                &self.run,
+                self.args.as_deref(),
+                self.kwargs.as_ref(),
+                self.interval,
+            );
             trace!("cycle {} run", self.id);
             if let Err(e) = safe_run_macro(rpc, ParamsCow::Params(params), self.interval).await {
                 self.iters_err.fetch_add(1, atomic::Ordering::SeqCst);

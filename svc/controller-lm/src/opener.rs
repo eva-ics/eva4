@@ -432,12 +432,7 @@ async fn terminate_seq(u: Uuid) -> EResult<()> {
 }
 
 pub async fn terminate(u: Uuid) -> EResult<()> {
-    let seq_uuid = ACTIVE
-        .lock()
-        .unwrap()
-        .by_action_uuid
-        .get(&u)
-        .map(Clone::clone);
+    let seq_uuid = ACTIVE.lock().unwrap().by_action_uuid.get(&u).copied();
     if let Some(u) = seq_uuid {
         terminate_seq(u).await
     } else {
@@ -446,7 +441,7 @@ pub async fn terminate(u: Uuid) -> EResult<()> {
 }
 
 pub async fn kill(oid: &OID) -> EResult<()> {
-    let seq_uuid = ACTIVE.lock().unwrap().by_oid.get(oid).map(Clone::clone);
+    let seq_uuid = ACTIVE.lock().unwrap().by_oid.get(oid).copied();
     if let Some(u) = seq_uuid {
         terminate_seq(u).await
     } else {

@@ -811,7 +811,7 @@ impl Inventory {
     pub fn get_items_by_source(&self, source_id: &str) -> Option<HashMap<Arc<OID>, Item>> {
         self.items_by_source
             .get(&Some(source_id.to_owned()))
-            .map(Clone::clone)
+            .cloned()
     }
     #[inline]
     pub fn list_local_items(&self) -> Vec<Item> {

@@ -100,7 +100,7 @@ macro_rules! insert {
         sqlx::query(q)
             .bind(TryInto::<i64>::try_into(ts_to_ns($state.set_time)).map_err(Error::failed)?)
             .bind($state.oid.as_str())
-            .bind($state.status as i32)
+            .bind(i32::from($state.status))
             .bind(if let Some(v) = $state.value {
                 Some(v.to_string_or_pack().unwrap_or_default())
             } else {

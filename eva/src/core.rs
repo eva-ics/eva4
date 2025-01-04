@@ -977,7 +977,7 @@ impl Core {
                             params: a_params,
                             timeout: Some(action_params.timeout().unwrap_or(self.timeout)),
                             priority,
-                            config: action_params.config().map(Clone::clone),
+                            config: action_params.config().cloned(),
                             node: None,
                             target: action_params.svc().to_owned(),
                             wait: None,
@@ -2091,7 +2091,7 @@ impl Core {
     }
     #[inline]
     fn update_paths(&mut self, dir_eva: &str, pid_file: Option<&str>) {
-        self.dir_eva = dir_eva.to_owned();
+        dir_eva.clone_into(&mut self.dir_eva);
         self.pid_file = format_path(dir_eva, pid_file, Some("var/eva.pid"));
     }
     #[inline]

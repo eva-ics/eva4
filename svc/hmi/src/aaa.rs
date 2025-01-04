@@ -218,11 +218,6 @@ pub async fn auth_key(key: &str, ip: Option<IpAddr>) -> EResult<Option<(Acl, &'s
 }
 
 pub async fn authenticate(key: &str, ip: Option<IpAddr>) -> EResult<Auth> {
-    #[derive(Serialize)]
-    struct AuthPayload<'a> {
-        key: &'a str,
-        timeout: f64,
-    }
     if let Some(token_str) = key.strip_prefix("token:") {
         let token = get_token(token_str.try_into()?, ip).await?;
         return Ok(Auth::Token(token));

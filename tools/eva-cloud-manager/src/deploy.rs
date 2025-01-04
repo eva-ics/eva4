@@ -137,8 +137,8 @@ async fn execute_extra(
     Ok(())
 }
 
-#[allow(clippy::module_name_repetitions)]
-#[allow(clippy::too_many_lines)]
+#[allow(dependency_on_unit_never_type_fallback)]
+#[allow(clippy::module_name_repetitions, clippy::too_many_lines)]
 pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
     let connection_path = opts
         .connection_path
@@ -220,7 +220,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 file.src.as_deref()
             })?;
             if file.svc.is_empty() {
-                file.svc = node.params.filemgr_svc.clone();
+                file.svc.clone_from(&node.params.filemgr_svc);
             }
             if let Some(ref mut src) = file.src {
                 if !src.is_absolute() && !src.is_url() {

@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 busrt = { version = "0.4.12", features = ["rpc", "ipc", "rt"], optional = true }
-eva-common = { version = "0.3.78", features = ["events", "console-logger"] }
+eva-common = { version = "0.3.84", features = ["events", "console-logger"] }
 eva-sdk = { version = "0.3.58", features = ["controller"], optional = true }
 tokio = { version = "1.36.0", features = ["full"] }
 async-trait = { version = "0.1.77", optional = true }

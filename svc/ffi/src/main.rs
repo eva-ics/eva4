@@ -125,7 +125,8 @@ thread_local! {
 #[allow(
     clippy::ptr_as_ptr,
     clippy::transmute_ptr_to_ref,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::cast_ptr_alignment
 )]
 unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
     macro_rules! log_message {
@@ -291,6 +292,7 @@ struct EFrame<'a> {
 }
 
 impl<'a> From<&'a Frame> for EFrame<'a> {
+    #[allow(clippy::cast_ptr_alignment)]
     fn from(frame: &'a Frame) -> Self {
         let sender_s = CString::new(frame.primary_sender()).unwrap_or_default();
         let topic_s = CString::new(frame.topic().unwrap_or_default()).unwrap_or_default();
@@ -320,6 +322,7 @@ struct ERpcEvent<'a> {
 }
 
 impl<'a> From<&'a RpcEvent> for ERpcEvent<'a> {
+    #[allow(clippy::cast_ptr_alignment)]
     fn from(ev: &'a RpcEvent) -> Self {
         let sender_s = CString::new(ev.primary_sender()).unwrap_or_default();
         let payload = ev.payload();
@@ -410,6 +413,7 @@ impl IntoResult for i16 {
 }
 
 impl IntoResultVec for i32 {
+    #[allow(clippy::cast_ptr_alignment)]
     fn into_result_vec(self) -> EResult<Option<Vec<u8>>> {
         let code = self;
         match code.cmp(&0) {

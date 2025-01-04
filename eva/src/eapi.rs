@@ -82,7 +82,7 @@ enum SvcOrId<'a> {
     Svc(Box<ServiceDeploy<'a>>),
 }
 
-impl<'a> SvcOrId<'a> {
+impl SvcOrId<'_> {
     fn as_str(&self) -> &str {
         match self {
             Self::Id(i) => i,

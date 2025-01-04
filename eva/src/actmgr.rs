@@ -654,7 +654,7 @@ async fn perform_remote(
         error!("invalid action info received from {}: {}", target, e);
         e
     })?;
-    info.svc = target.to_owned();
+    target.clone_into(&mut info.svc);
     Ok(info)
 }
 

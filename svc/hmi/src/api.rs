@@ -81,7 +81,7 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
         ))?)
     } else if let Some(creds) = meta.credentials() {
         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
-        login(&creds.0, &creds.1, None, None, ip, &source).await
+        Box::pin(login(&creds.0, &creds.1, None, None, ip, &source)).await
     } else {
         if let Some(agent) = meta.agent() {
             if agent.starts_with("evaHI ") {
@@ -445,14 +445,14 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                 let p = ParamsLogin::deserialize(params)?;
                 match p {
                     ParamsLogin::UserAuth(creds) => {
-                        login(
+                        Box::pin(login(
                             &creds.user,
                             &creds.password,
                             creds.xopts.as_ref(),
                             None,
                             ip,
                             &source,
-                        )
+                        ))
                         .await
                     }
                     ParamsLogin::KeyAuth(creds) => Ok(to_value(AuthResult::new(
@@ -463,20 +463,20 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         Ok(to_value(AuthResult::new(token))?)
                     }
                     ParamsLogin::TokenSetNormal(creds) => {
-                        login(
+                        Box::pin(login(
                             &creds.user,
                             &creds.password,
                             creds.xopts.as_ref(),
                             Some(creds.token),
                             ip,
                             &source,
-                        )
+                        ))
                         .await
                     }
-                    ParamsLogin::Empty(_) => login_meta(meta, ip).await,
+                    ParamsLogin::Empty(_) => Box::pin(login_meta(meta, ip)).await,
                 }
             } else {
-                login_meta(meta, ip).await
+                Box::pin(login_meta(meta, ip)).await
             }
         }
         "logout" => {

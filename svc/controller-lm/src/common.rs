@@ -7,9 +7,9 @@ use std::time::Duration;
 #[derive(Serialize, Debug, Copy, Clone)]
 struct LParams<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    args: &'a Option<Vec<Value>>,
+    args: Option<&'a [Value]>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    kwargs: &'a Option<HashMap<String, Value>>,
+    kwargs: Option<&'a HashMap<String, Value>>,
 }
 
 #[derive(Serialize, Debug, Copy, Clone)]
@@ -24,8 +24,8 @@ impl<'a> ParamsRun<'a> {
     #[inline]
     pub fn new(
         oid: &'a OID,
-        args: &'a Option<Vec<Value>>,
-        kwargs: &'a Option<HashMap<String, Value>>,
+        args: Option<&'a [Value]>,
+        kwargs: Option<&'a HashMap<String, Value>>,
         wait: Duration,
     ) -> Self {
         Self {
@@ -85,11 +85,11 @@ pub async fn run_err_macro(
     rpc: &RpcClient,
     oid: &OID,
     err: MacroErr,
-    kwargs: &Option<HashMap<String, Value>>,
+    kwargs: Option<&HashMap<String, Value>>,
     timeout: Duration,
 ) -> EResult<()> {
-    let args = Some(vec![Value::String(err.0), err.1.unwrap_or_default()]);
-    let params = ParamsRun::new(oid, &args, kwargs, timeout);
+    let args = vec![Value::String(err.0), err.1.unwrap_or_default()];
+    let params = ParamsRun::new(oid, Some(&args), kwargs, timeout);
     let result: MacroResult = unpack(
         safe_rpc_call(
             rpc,
