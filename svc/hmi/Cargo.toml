@@ -11,7 +11,7 @@ busrt = { features = ["rpc", "ipc"] , workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 async-channel = { workspace = true }
-submap = { version = "0.2.7" }
+submap = { version = "0.3.1" }
 serde = { features = ["derive", "rc"] , workspace = true }
 eva-common = { features = [
 "events", "workers", "acl", "dataconv", "time", "data-objects",

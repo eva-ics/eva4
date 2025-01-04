@@ -1,5 +1,6 @@
 use crate::{EResult, Error};
 use eva_common::acl::{OIDMask, OIDMaskList};
+use eva_common::err_logger;
 use eva_common::events::{
     DbState, Force, FullItemStateAndInfo, ItemStateAndInfo, LocalStateEvent, RawStateEventOwned,
     ReplicationInventoryItem, ReplicationState,
@@ -9,7 +10,7 @@ use eva_common::prelude::*;
 use eva_common::time::monotonic_ns;
 use eva_common::time::Time;
 use eva_common::tools::default_true;
-use eva_common::ITEM_STATUS_ERROR;
+use eva_common::{ITEM_STATUS_ERROR, OID_MASK_PREFIX_FORMULA, OID_MASK_PREFIX_REGEX};
 use log::warn;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,8 @@ use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
 use submap::mkmf::MapKeysMatchFormula as _;
+
+err_logger!();
 
 #[cfg(test)]
 mod tests {
@@ -1262,9 +1265,17 @@ fn get_item_by_mask_rec(
             for child in tree.childs.values() {
                 get_item_by_mask_rec(child, iter.clone(), result, filter);
             }
-        } else if let Some(f) = chunk.strip_prefix('!') {
+        } else if let Some(f) = chunk.strip_prefix(OID_MASK_PREFIX_FORMULA) {
             for child in tree.childs.values_match_key_formula(f) {
                 get_item_by_mask_rec(child, iter.clone(), result, filter);
+            }
+        } else if let Some(regex) = chunk.strip_prefix(OID_MASK_PREFIX_REGEX) {
+            if let Ok(re) = regex::Regex::new(regex).log_err_with("invalid regex") {
+                for (name, child) in &tree.childs {
+                    if re.is_match(name) {
+                        get_item_by_mask_rec(child, iter.clone(), result, filter);
+                    }
+                }
             }
         } else if let Some(child) = tree.childs.get(*chunk) {
             get_item_by_mask_rec(child, iter, result, filter);
