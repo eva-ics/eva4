@@ -4,6 +4,7 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::hyper_response;
 use eva_common::hyper_tools::HResultX;
 use eva_common::prelude::*;
+use eva_common::{OID_MASK_PREFIX_FORMULA, OID_MASK_PREFIX_REGEX};
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullRemoteItemState;
 use futures::{
@@ -56,9 +57,14 @@ lazy_static! {
         s
     };
     pub static ref WS_SUB: Mutex<SubMap<Arc<WsTx>>> =
-        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#"));
+        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#")
+                .formula_prefix(OID_MASK_PREFIX_FORMULA)
+        .regex_prefix(OID_MASK_PREFIX_REGEX));
     pub static ref WS_SUB_LOG: Mutex<SubMap<Arc<WsTx>>> =
-        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#"));
+        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#")
+                .formula_prefix(OID_MASK_PREFIX_FORMULA)
+        .regex_prefix(OID_MASK_PREFIX_REGEX));
+
     // web sockets not registered with any token
     pub static ref WS_STANDALONE: tokio::sync::Mutex<HashMap<Uuid, WebSocket>> = <_>::default();
 }

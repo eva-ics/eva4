@@ -1270,7 +1270,7 @@ fn get_item_by_mask_rec(
                 get_item_by_mask_rec(child, iter.clone(), result, filter);
             }
         } else if let Some(regex) = chunk.strip_prefix(OID_MASK_PREFIX_REGEX) {
-            if let Ok(re) = regex::Regex::new(regex).log_err_with("invalid regex") {
+            if let Ok(re) = regex::Regex::new(regex).log_err() {
                 for (name, child) in &tree.childs {
                     if re.is_match(name) {
                         get_item_by_mask_rec(child, iter.clone(), result, filter);
