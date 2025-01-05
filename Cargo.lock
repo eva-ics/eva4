@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.84"
+version = "0.3.85"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a5cc0f08268f7a54552b161527c29167f2aa887442ecf5cc377e02731faffa0"
+checksum = "d0cb89b55922e8afdbfbf151f05b5526ad6f8dd3ae39e9d4a0b15d41bfb2aef5"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -1748,7 +1748,7 @@ dependencies = [
  "serde_repr",
  "serde_yaml 0.8.26",
  "sqlx",
- "submap 0.3.2",
+ "submap 0.3.3",
  "thiserror",
  "tokio",
  "uuid 1.7.0",
@@ -2124,7 +2124,7 @@ dependencies = [
  "serde_yaml 0.8.26",
  "shlex",
  "sqlx",
- "submap 0.3.2",
+ "submap 0.3.3",
  "tera",
  "tokio",
  "url 2.5.0",
@@ -2173,7 +2173,7 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.8.26",
  "sqlx",
- "submap 0.3.2",
+ "submap 0.3.3",
  "sysinfo 0.29.2",
  "syslog",
  "tokio",
@@ -2237,9 +2237,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.58"
+version = "0.3.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5272846a733a1a5c9d9edb1ed060fbda987913d040872bd479210d92b6ea65ea"
+checksum = "a209a21a4eb78a05613dacb6c5a1e0f6299cf92a6951ae439cc7f7df543c41d8"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -5473,9 +5473,9 @@ dependencies = [
 
 [[package]]
 name = "submap"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71bbf89dc8eac6f319f7264980ba97086a9c8e670a61a5eb15225c13ce449194"
+checksum = "f8380cc55f85f41a2f4cf2ba9132ac8e861d783cdf5d3619d03e2be3c977c786"
 dependencies = [
  "regex",
  "thiserror",
