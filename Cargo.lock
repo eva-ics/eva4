@@ -2237,9 +2237,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.61"
+version = "0.3.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a209a21a4eb78a05613dacb6c5a1e0f6299cf92a6951ae439cc7f7df543c41d8"
+checksum = "e6d8c6f3ed4b7995de4a1ce6f2456b731b1dc0d0c3d3f1cef8cc4cd507951b02"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -4872,9 +4872,9 @@ dependencies = [
 
 [[package]]
 name = "rtsc"
-version = "0.3.10"
+version = "0.3.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "659a739d9e73a560aab0944815e38800f6f0a587e16e1977bf883f49332753e4"
+checksum = "e37e39231e2dd7aa0b4ac08c95e46a32afaa67ba57bf2c05fc3547b9e352edbc"
 dependencies = [
  "bma-ts",
  "libc",
@@ -4885,6 +4885,7 @@ dependencies = [
  "pin-project",
  "rtsc-derive",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
@@ -5915,7 +5916,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3523ab5a71916ccf420eebdf5521fcef02141234bbc0b8a49f2fdc4544364ef"
 dependencies = [
  "pin-project-lite",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "395ae124c09f9e6918a2310af6038fba074bcf474ac352496d5910dd59a2226d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.50",
 ]
 
 [[package]]

@@ -35,7 +35,7 @@ fn apply_current_thread_params(params: &services::RealtimeConfig) -> EResult<()>
         }
     }
     if let Err(e) = rtsc::thread_rt::apply_for_current(&rt_params) {
-        if e == rtsc::Error::AccessDenied {
+        if matches!(e, rtsc::Error::AccessDenied) {
             eprintln!("Real-time parameters are not set, the service is not launched as root");
         } else {
             return Err(Error::failed(format!(

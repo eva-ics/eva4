@@ -46,7 +46,7 @@ pub fn apply_current_thread_params(
         }
     }
     if let Err(e) = rtsc::thread_rt::apply_for_current(&rt_params) {
-        if e == rtsc::Error::AccessDenied {
+        if matches!(e, rtsc::Error::AccessDenied) {
             if !quiet {
                 eprintln!("Real-time parameters are not set, the service is not launched as root");
             }
@@ -60,7 +60,7 @@ pub fn apply_current_thread_params(
     if let Some(prealloc_heap) = params.prealloc_heap {
         #[cfg(target_env = "gnu")]
         if let Err(e) = rtsc::thread_rt::preallocate_heap(prealloc_heap) {
-            if e == rtsc::Error::AccessDenied {
+            if matches!(e, rtsc::Error::AccessDenied) {
                 if !quiet {
                     eprintln!("Heap preallocation failed, the service is not launched as root");
                 }
