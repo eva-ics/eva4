@@ -65,7 +65,7 @@ num_cpus = "1.16.0"
 binrw = "0.13.3"
 submap = "0.3.3"
 libc = "0.2.159"
-rtsc = "0.3.12"
+rtsc = "0.3.13"
 oneshot = "0.1.8"
 
 [features]
