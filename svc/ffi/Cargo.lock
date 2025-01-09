@@ -577,9 +577,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.78"
+version = "0.3.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9b581f5d1d8dc24fae86643e0f8b24e6853c20ba867a75e39e991b600a0762"
+checksum = "35b95fdf3519e102853e27682b287b830ef8f7ae1cf8a9032ee5b492d5770c2d"
 dependencies = [
  "async-channel",
  "async-recursion",
@@ -1395,9 +1395,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.10.3"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62dbe01f0b06f9d8dc7d49e05a0785f153b00b2c227856282f671e0318c9b15"
+checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1407,9 +1407,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.5"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bb987efffd3c6d0d8f5f89510bb458559eab11e4f869acb20bf845e016259cd"
+checksum = "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1418,9 +1418,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
+checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "rend"
@@ -1687,9 +1687,13 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "submap"
-version = "0.2.8"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40139f1abb193656b34682557971d59b383465632d60671b40f3de7951c4f532"
+checksum = "f8380cc55f85f41a2f4cf2ba9132ac8e861d783cdf5d3619d03e2be3c977c786"
+dependencies = [
+ "regex",
+ "thiserror",
+]
 
 [[package]]
 name = "syn"

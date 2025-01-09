@@ -792,9 +792,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.84"
+version = "0.3.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a5cc0f08268f7a54552b161527c29167f2aa887442ecf5cc377e02731faffa0"
+checksum = "35b95fdf3519e102853e27682b287b830ef8f7ae1cf8a9032ee5b492d5770c2d"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -860,9 +860,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.60"
+version = "0.3.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a1fafa67c83b6abad66f054d96586429cb85bfeff421b72a65f54368cca18e7"
+checksum = "84c846e10984303d16911ba1fb0b0151ab3b07de26a8e3303be31f84c21f88a8"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
@@ -2405,9 +2405,9 @@ dependencies = [
 
 [[package]]
 name = "rtsc"
-version = "0.3.10"
+version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "659a739d9e73a560aab0944815e38800f6f0a587e16e1977bf883f49332753e4"
+checksum = "b1c836914b02cc20a42aa8e1e0473d1116f58aac3db794fb5d5f60160e71bd36"
 dependencies = [
  "bma-ts",
  "libc",
@@ -2418,6 +2418,7 @@ dependencies = [
  "pin-project",
  "rtsc-derive",
  "thiserror 1.0.69",
+ "tracing",
 ]
 
 [[package]]
@@ -2808,9 +2809,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "submap"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71bbf89dc8eac6f319f7264980ba97086a9c8e670a61a5eb15225c13ce449194"
+checksum = "f8380cc55f85f41a2f4cf2ba9132ac8e861d783cdf5d3619d03e2be3c977c786"
 dependencies = [
  "regex",
  "thiserror 1.0.69",
@@ -3188,7 +3189,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
  "pin-project-lite",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "395ae124c09f9e6918a2310af6038fba074bcf474ac352496d5910dd59a2226d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.94",
 ]
 
 [[package]]
