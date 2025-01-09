@@ -78,6 +78,15 @@ mission-critical projects under an additional agreement):
 
 * **eva-aaa-accounting** Event accounting and audit
 
+## Troubleshooting
+
+- If the build fails with "could not find `fips` in `openssl`", add `-F
+  eva-common/openssl3` to enable FIPS on OpenSSL v3, or `-F
+  eva-common/openssl-no-fips` to disable FIPS in OpenSSL completely.
+
+- For any OpenSSL build errors, use `-F openssl-vendored` to build with the
+  vendored OpenSSL.
+
 ## About the authors
 
 [Bohemia Automation](https://www.bohemia-automation.com) /
