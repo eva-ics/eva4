@@ -1,13 +1,15 @@
-# Tuya controller
+# Tuya services
+
+## Tuya controller
 
 [Tuya controller](https://www.tuya.com)
 
-## What does it do
+### What does it do
 
 Tuya controller allows to connect Tuya devices to [EVA
 ICS](https://www.eva-ics.com).
 
-## Setup
+### Setup
 
 Install required modules:
 
@@ -59,9 +61,39 @@ user: nobody
 workers: 1
 ```
 
-## Configuration
+### Configuration
 
 * Each Tuya device requires own service instance
 
 * The service requires Tuya local key for the device. The key can be obtained
   using [Tuya Cloud Explorer](https://eu.platform.tuya.com/cloud/explorer)
+
+## Tuya discovery service
+
+### Setup
+
+Install required modules:
+
+```
+eva venv add pycryptodomex==3.11.0
+```
+
+Download
+[controller-tuya.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/tuya-discover.py),
+
+The service does not require any configuration, use a dummy template:
+
+```shell
+eva svc create eva.svc.tuya /opt/eva4/share/svc-tpl/svc-tpl-dummy.yml
+```
+
+(replace "command" field to `venv/bin/python /path/to/tuya-discover.py`)
+
+### Usage
+
+The service responds to `discover` command and returns a list of Tuya devices
+in the local network:
+
+```shell
+eva -T15 -J svc call eva.svc.tuya discover discovery_timeout=10
+```
