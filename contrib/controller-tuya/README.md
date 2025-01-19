@@ -79,7 +79,7 @@ eva venv add pycryptodomex==3.11.0
 ```
 
 Download
-[controller-tuya.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/tuya-discover.py),
+[tuya-discover.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/tuya-discover.py),
 
 The service does not require any configuration, use a dummy template:
 
