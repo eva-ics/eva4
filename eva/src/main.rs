@@ -32,7 +32,7 @@ struct Args {
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

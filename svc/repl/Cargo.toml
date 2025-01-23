@@ -14,7 +14,7 @@ async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 psrpc = { workspace = true }
 psrt = "0.2"
 paho-mqtt = "0.12.3"

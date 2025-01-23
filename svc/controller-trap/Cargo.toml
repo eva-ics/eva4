@@ -15,7 +15,7 @@ serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 lazy_static = { workspace = true }
 async-channel = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 ipnetwork = "0.20.0"
 snmp-parser = "0.8"
 snmptools = { version = "0.0.11", features = ["static"] }

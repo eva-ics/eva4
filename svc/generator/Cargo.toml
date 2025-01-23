@@ -12,7 +12,7 @@ eva-sdk = { workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 once_cell = { workspace = true }
 busrt = { features = ["rpc", "ipc"] , workspace = true }
 rand = "0.8.5"

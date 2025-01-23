@@ -18,7 +18,7 @@ eva-common = { features = [
 "db", "hyper-tools", "common-payloads"] , workspace = true }
 log = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 once_cell = { workspace = true }
 lazy_static = { workspace = true }
 hyper = { features = ["server", "http1", "http2"] , workspace = true }

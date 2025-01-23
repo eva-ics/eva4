@@ -56,7 +56,7 @@ static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 // standard one.
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 // The notification map, keeps info which sensors were already processed
 static NOTIFIED: Lazy<Mutex<HashMap<OID, bool>>> = Lazy::new(<_>::default);

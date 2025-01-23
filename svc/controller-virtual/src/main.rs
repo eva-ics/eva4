@@ -21,7 +21,7 @@ const DESCRIPTION: &str = "Virtual controller";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 static ITEMS: Lazy<Mutex<BTreeMap<OID, VirtualItem>>> = Lazy::new(<_>::default);
 static VARS: Lazy<Mutex<TagMap>> = Lazy::new(<_>::default);

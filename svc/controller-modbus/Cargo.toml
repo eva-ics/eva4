@@ -15,7 +15,7 @@ eva-common = { features = ["events", "common-payloads"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 once_cell = { workspace = true }
 itertools = { workspace = true }
 lazy_static = { workspace = true }

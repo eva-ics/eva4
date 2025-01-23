@@ -14,7 +14,7 @@ eva-common = { workspace = true, features = ["events", "common-payloads"] }
 log = "0.4.20"
 async-channel = "1.7"
 eva-sdk = { workspace = true }
-jemallocator = { version = "0.5.4" }
+mimalloc = { workspace = true }
 once_cell = "1.19.0"
 bmart = "0.2.6"
 

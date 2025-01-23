@@ -26,7 +26,7 @@ const DESCRIPTION: &str = "InfluxDB database service";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static CLIENT_POOL: OnceCell<ResourcePool<influx::InfluxClient>> = OnceCell::new();

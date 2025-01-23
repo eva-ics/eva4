@@ -109,7 +109,7 @@ fn demo_mode() -> bool {
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]

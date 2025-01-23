@@ -18,7 +18,7 @@ async-channel = { workspace = true }
 serde_yaml = { workspace = true }
 hex = { workspace = true }
 parse_int = "0.6.0"
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 tempfile = "3.10.0"
 bmart = { workspace = true }
 openssl = { workspace = true }

@@ -20,7 +20,7 @@ sqlx = { version = "0.6.3", features = [
 "runtime-tokio-native-tls", "postgres", "chrono" ] }
 futures = { workspace = true }
 chrono = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 
 [features]
 std-alloc = []

@@ -16,7 +16,7 @@ const DESCRIPTION: &str = "Item state expiration checker";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 struct ItemWatch {
     oid: OID,

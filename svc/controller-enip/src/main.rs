@@ -45,7 +45,7 @@ static DEFAULT_RETRIES: atomic::AtomicU8 = atomic::AtomicU8::new(0);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {

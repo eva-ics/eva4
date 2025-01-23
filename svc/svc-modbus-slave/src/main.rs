@@ -59,7 +59,7 @@ mod server {
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 lazy_static! {
     pub static ref CONTEXT: RwLock<rmodbus::server::context::ModbusContext> =

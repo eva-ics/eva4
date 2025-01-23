@@ -14,7 +14,7 @@ const DESCRIPTION: &str = "Sensor state manipulations";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 // BUS/RT RPC handlers
 struct Handlers {

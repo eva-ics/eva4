@@ -29,7 +29,7 @@ const CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TS_EXTENSION: OnceCell<Option<TsExtension>> = OnceCell::new();

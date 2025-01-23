@@ -14,7 +14,7 @@ eva-common = { features = ["common-payloads"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
 eva-sdk = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 hex = "0.4.3"
 once_cell = { workspace = true }
 lazy_static = "1.4.0"

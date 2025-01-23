@@ -147,7 +147,7 @@ const CSV_ESCAPED_CHARS: &str = ",\r\n\"";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[inline]
 fn sha256sum(data: &[u8]) -> [u8; 32] {

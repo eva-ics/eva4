@@ -87,7 +87,7 @@ paho-mqtt = "^0.12.3"
 psrt = "^0.2"
 serde_json = "^1.0.113"
 sqlx = "^0.6.3"
-jemallocator = "^0.5.4"
+mimalloc = "^0.1.43"
 triggered = "^0.1.2"
 eva-sdk = "^0.3.62"
 busrt = { version = "^0.4.13", features = ["rt"] }

@@ -12,7 +12,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 async-trait = { version = "0.1.77", optional = true }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 log = "0.4.20"
-jemallocator = { version = "0.5.4", optional = true }
+mimalloc = { version = "0.1.43", optional = true }
 once_cell = "1.19.0"
 sysinfo = "0.30.5"
 parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }
@@ -68,9 +68,9 @@ openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 fips = ["rustls?/fips", "rustls-cng?/fips"]
 
-service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "jemallocator", "procfs", "eva-sdk"]
+service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "mimalloc", "procfs", "eva-sdk"]
 agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
-agent-linux = ["agent", "syslog", "is-terminal", "openssl", "jemallocator", "eva-common/services", "procfs", "reqwest/native-tls"]
+agent-linux = ["agent", "syslog", "is-terminal", "openssl", "mimalloc", "eva-common/services", "procfs", "reqwest/native-tls"]
 agent-windows = ["agent", "eventlog", "windows-service", "reqwest/rustls-tls", "rustls", "rustls-cng", "rustls-native-certs"]
 
 #default = ["service"]

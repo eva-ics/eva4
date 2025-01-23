@@ -44,7 +44,7 @@ static DELAYED_EMAILS: Lazy<Mutex<DelayedEmailsMap>> = Lazy::new(<_>::default);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Hash, Eq, PartialEq, Clone)]
 struct DelayedMailKey {

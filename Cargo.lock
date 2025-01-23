@@ -1591,8 +1591,8 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "tokio",
@@ -1610,8 +1610,8 @@ dependencies = [
  "eva-sdk",
  "genpass-native",
  "hex 0.4.3",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "openssl",
  "serde",
@@ -1631,9 +1631,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "hex 0.4.3",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "openssl",
  "serde",
@@ -1652,9 +1652,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "itertools 0.12.1",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "tokio",
@@ -1767,9 +1767,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "itertools 0.12.1",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "tokio",
@@ -1787,8 +1787,8 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "tokio",
@@ -1805,9 +1805,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "itertools 0.12.1",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "plctag",
  "serde",
@@ -1828,9 +1828,9 @@ dependencies = [
  "eva-common",
  "eva-robots",
  "eva-sdk",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "submap 0.2.8",
@@ -1850,9 +1850,9 @@ dependencies = [
  "eva-sdk",
  "ieee754",
  "itertools 0.12.1",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "rmodbus",
  "serde",
@@ -1872,9 +1872,9 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "rplc_opcua",
  "serde",
@@ -1892,8 +1892,8 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "paho-mqtt",
  "parking_lot 0.12.1",
@@ -1914,8 +1914,8 @@ dependencies = [
  "bmart",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "shlex",
@@ -1932,9 +1932,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "ipnetwork",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "psrpc",
  "serde",
@@ -1952,8 +1952,8 @@ dependencies = [
  "bmart",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "tagmap",
@@ -1972,9 +1972,9 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "itertools 0.12.1",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "owfs",
  "serde",
@@ -1991,8 +1991,8 @@ dependencies = [
  "bmart",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "serde_yaml 0.8.26",
@@ -2014,8 +2014,8 @@ dependencies = [
  "futures",
  "hyper",
  "hyper-tls",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "serde_json",
@@ -2036,8 +2036,8 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "futures",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "sqlx",
@@ -2056,8 +2056,8 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "futures",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "sqlx",
@@ -2076,9 +2076,9 @@ dependencies = [
  "eva-sdk",
  "glob-match",
  "hex 0.4.3",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "openssl",
  "parse_int",
@@ -2112,9 +2112,9 @@ dependencies = [
  "hyper",
  "hyper-static",
  "hyper-tungstenite",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "multer",
  "once_cell",
  "openssl",
@@ -2156,10 +2156,10 @@ dependencies = [
  "hex 0.4.3",
  "hostname",
  "ipnetwork",
- "jemallocator",
  "lazy_static",
  "libc",
  "log",
+ "mimalloc",
  "multi_log",
  "nix 0.25.0",
  "num_cpus",
@@ -2192,8 +2192,8 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "openssl",
  "paho-mqtt",
@@ -2286,9 +2286,9 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "serde",
  "tokio",
 ]
@@ -2304,8 +2304,8 @@ dependencies = [
  "cron",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "once_cell",
  "openssl",
  "parking_lot_rt",
@@ -2324,9 +2324,9 @@ dependencies = [
  "chrono",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
  "meval",
+ "mimalloc",
  "once_cell",
  "rand 0.8.5",
  "serde",
@@ -2342,8 +2342,8 @@ dependencies = [
  "bmart",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "serde",
  "tokio",
 ]
@@ -2356,9 +2356,9 @@ dependencies = [
  "async-trait",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "lettre",
  "log",
+ "mimalloc",
  "once_cell",
  "parking_lot_rt",
  "serde",
@@ -2377,9 +2377,9 @@ dependencies = [
  "eva-sdk",
  "hyper",
  "hyper-static",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "serde",
  "serde_yaml 0.8.26",
@@ -2394,9 +2394,9 @@ dependencies = [
  "async-trait",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "lazy_static",
  "log",
+ "mimalloc",
  "once_cell",
  "rmodbus",
  "serde",
@@ -2413,8 +2413,8 @@ dependencies = [
  "busrt",
  "eva-common",
  "eva-sdk",
- "jemallocator",
  "log",
+ "mimalloc",
  "serde",
  "tokio",
 ]
@@ -3271,27 +3271,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
-name = "jemalloc-sys"
-version = "0.5.1+5.3.0-patched"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7c2b313609b95939cb0c5a5c6917fb9b7c9394562aa3ef44eb66ffa51736432"
-dependencies = [
- "cc",
- "fs_extra",
- "libc",
-]
-
-[[package]]
-name = "jemallocator"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0de374a9f8e63150e6f5e8a60cc14c668226d7a347d8aee1a45766e3c4dd3bc"
-dependencies = [
- "jemalloc-sys",
- "libc",
-]
-
-[[package]]
 name = "jobserver"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3387,6 +3366,16 @@ name = "libm"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
+
+[[package]]
+name = "libmimalloc-sys"
+version = "0.1.39"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23aa6811d3bd4deb8a84dde645f943476d13b248d818edcf8ce0b2f37f036b44"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "libsqlite3-sys"
@@ -3529,6 +3518,15 @@ checksum = "f79496a5651c8d57cd033c5add8ca7ee4e3d5f7587a4777484640d9cb60392d9"
 dependencies = [
  "fnv",
  "nom 1.2.4",
+]
+
+[[package]]
+name = "mimalloc"
+version = "0.1.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68914350ae34959d83f732418d51e2427a794055d0b9529f48259ac07af65633"
+dependencies = [
+ "libmimalloc-sys",
 ]
 
 [[package]]

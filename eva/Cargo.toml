@@ -42,7 +42,7 @@ syslog = "6.1.0"
 hex = { workspace = true }
 regex = "1.10.3"
 bytes = "1.5.0"
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 async-trait = { workspace = true }
 async-recursion = { workspace = true }
 async-channel = { workspace = true }

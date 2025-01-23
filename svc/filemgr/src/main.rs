@@ -29,7 +29,7 @@ const DEFAULT_MIME: &str = "application/octet-stream";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]

@@ -28,7 +28,7 @@ static BUS_PATH: OnceCell<String> = OnceCell::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 struct Handlers {
     info: ServiceInfo,

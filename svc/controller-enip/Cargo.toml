@@ -16,7 +16,7 @@ async-channel = { workspace = true }
 eva-sdk = { features = ["controller"] , workspace = true }
 eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
 once_cell = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 plctag = { path = "./plctag" }
 bmart = { workspace = true }
 uuid = { features = ["v4"] , workspace = true }

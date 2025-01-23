@@ -27,7 +27,7 @@ const CONFIG_PATH: &str = "/etc/eva-cs-agent/config.yml";
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

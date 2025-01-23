@@ -87,7 +87,7 @@ static RESTART_BRIDGE_ON_PANIC: atomic::AtomicBool = atomic::AtomicBool::new(fal
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {

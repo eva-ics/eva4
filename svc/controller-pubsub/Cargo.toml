@@ -15,7 +15,7 @@ serde = { features = ["derive", "rc"] , workspace = true }
 ttl_cache = { version = "0.5.1" }
 log = { workspace = true }
 async-channel = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 psrpc = { path = "../../psrpc" }
 psrt = "0.2"
 paho-mqtt = "0.12.3"

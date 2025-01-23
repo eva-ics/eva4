@@ -32,7 +32,7 @@ const DEFAULT_PING_INTERVAL: Duration = Duration::from_secs(10);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 static BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = OnceCell::new();
 static BULK_STATE_TOPIC: OnceCell<String> = OnceCell::new();

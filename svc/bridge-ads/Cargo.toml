@@ -16,7 +16,7 @@ async-channel = { workspace = true }
 eva-sdk = { workspace = true }
 eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
 once_cell = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 bmart = { workspace = true }
 uuid = { version = "1.7.0", features = ["v4"] }
 itertools = "0.12.1"

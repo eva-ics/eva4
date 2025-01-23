@@ -12,7 +12,7 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 bmart = { workspace = true }
 
 [features]

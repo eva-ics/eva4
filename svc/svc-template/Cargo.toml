@@ -14,7 +14,7 @@ async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
-jemallocator = { workspace = true }
+mimalloc = { workspace = true }
 
 [features]
 std-alloc = []
