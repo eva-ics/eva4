@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::atomic;
 use std::time::Duration;
 
-use crate::aaa;
+use crate::{aaa, ReplicationData};
 use crate::nodes;
 
 err_logger!();
@@ -364,12 +364,12 @@ async fn notify(data: Data<'_>) -> EResult<()> {
 pub async fn sender(rx: async_channel::Receiver<FullItemState>, buf_ttl: Option<Duration>) {
     if let Some(bttl) = buf_ttl {
         let mut buf_interval = tokio::time::interval(bttl);
-        let mut data_buf: Vec<FullItemState> = Vec::new();
+        let mut data_buf: Vec<ReplicationData> = Vec::new();
         loop {
             tokio::select! {
                 f = rx.recv() => {
                     if let Ok(state) = f {
-                        data_buf.push(state);
+                        data_buf.push(state.into());
                     } else {
                         break;
                     }
@@ -392,7 +392,7 @@ pub async fn sender(rx: async_channel::Receiver<FullItemState>, buf_ttl: Option<
 
 enum Data<'a> {
     Single(FullItemState),
-    Bulk(&'a Vec<FullItemState>),
+    Bulk(&'a Vec<ReplicationData>),
 }
 
 async fn process_local_state(

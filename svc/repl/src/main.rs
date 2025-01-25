@@ -2,19 +2,78 @@ use busrt::QoS;
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{
-    NodeInfo, NodeStateEvent, NodeStatus, AAA_ACL_TOPIC, AAA_KEY_TOPIC,
-    REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    NodeInfo, NodeStateEvent, NodeStatus, ReplicationInventoryItem, ReplicationStateEvent,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_ITEM_STATE_TOPIC, PS_NODE_STATE_TOPIC};
+use eva_sdk::types::FullItemState;
 use once_cell::sync::OnceCell;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum ReplicationStateEventExtended {
+    Basic(ReplicationStateEvent),
+    Inventory(ReplicationNodeInventoryItem),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ReplicationNodeInventoryItem {
+    pub node: String,
+    #[serde(flatten)]
+    pub item: ReplicationInventoryItem,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ReplicationData {
+    State(FullItemState),
+    Inventory(ReplicationInventoryItem),
+}
+
+impl ReplicationData {
+    pub fn oid(&self) -> &OID {
+        match self {
+            ReplicationData::State(v) => &v.oid,
+            ReplicationData::Inventory(v) => &v.oid,
+        }
+    }
+    pub fn into_replication_state_event_extended(
+        self,
+        system_name: &str,
+    ) -> ReplicationStateEventExtended {
+        match self {
+            ReplicationData::State(v) => {
+                ReplicationStateEventExtended::Basic(v.into_replication_state_event(system_name))
+            }
+            ReplicationData::Inventory(v) => {
+                ReplicationStateEventExtended::Inventory(ReplicationNodeInventoryItem {
+                    node: system_name.to_owned(),
+                    item: v,
+                })
+            }
+        }
+    }
+}
+
+impl From<FullItemState> for ReplicationData {
+    fn from(v: FullItemState) -> Self {
+        ReplicationData::State(v)
+    }
+}
+
+impl From<ReplicationInventoryItem> for ReplicationData {
+    fn from(v: ReplicationInventoryItem) -> Self {
+        ReplicationData::Inventory(v)
+    }
+}
 
 mod aaa;
 mod eapi;

@@ -6,14 +6,13 @@ use eva_common::events::{
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::pubsub::PS_ITEM_BULK_STATE_TOPIC;
-use eva_sdk::types::FullItemState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::aaa;
 use crate::nodes;
+use crate::{aaa, ReplicationData};
 
 err_logger!();
 
@@ -362,7 +361,6 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
             sname,
             msg.topic()
         );
-        let mut force_accept = false;
         let mut need_mark_online = false;
         {
             if let Some(node) = nodes::NODES.read().await.get(sname) {
@@ -371,7 +369,6 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
                     return Ok(());
                 }
                 if !node.api_enabled {
-                    force_accept = true;
                     node.update_last_event();
                     if !node.online() {
                         need_mark_online = true;
@@ -412,17 +409,16 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
         };
         let len = key_id_buf.len() + system_name_buf.len() + 7;
         let p = opts.unpack_payload(msg.message, len).await?;
-        let data: Vec<FullItemState> = unpack(&p)?;
+        let data: Vec<ReplicationData> = unpack(&p)?;
         for d in data {
             if let Some((ref acl, ref key_id)) = auth {
-                if !acl.check_item_write(&d.oid) {
-                    warn!("key {} is not allowed to replicate {}", key_id, d.oid);
+                if !acl.check_item_write(d.oid()) {
+                    warn!("key {} is not allowed to replicate {}", key_id, d.oid());
                     continue;
                 }
             }
-            let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid.as_path());
-            let mut rse = d.into_replication_state_event(&system_name);
-            rse.force_accept = force_accept;
+            let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid().as_path());
+            let rse = d.into_replication_state_event_extended(&system_name);
             crate::RPC
                 .get()
                 .unwrap()
