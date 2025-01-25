@@ -278,10 +278,12 @@ async fn discovery_handler(
     rx: &mut async_channel::Receiver<psrpc::tools::Publication>,
 ) -> EResult<()> {
     while let Ok(message) = rx.recv().await {
-        let p: eva_sdk::pubsub::PsNodeStatus = serde_json::from_slice(message.data())?;
+        let mut p: eva_sdk::pubsub::PsNodeStatus = serde_json::from_slice(message.data())?;
         let name = message.subtopic();
         match p.status() {
-            eva_sdk::pubsub::NodeStatus::Running => nodes::append_discovered_node(name).await?,
+            eva_sdk::pubsub::NodeStatus::Running => {
+                nodes::append_discovered_node(name, p.take_info(), p.is_api_enabled()).await?
+            }
             eva_sdk::pubsub::NodeStatus::Terminating => {
                 nodes::mark_node(name, false, None, false, None).await?;
             }
@@ -360,6 +362,29 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
             sname,
             msg.topic()
         );
+        let mut force_accept = false;
+        let mut need_mark_online = false;
+        {
+            if let Some(node) = nodes::NODES.read().await.get(sname) {
+                if !node.enabled {
+                    trace!("node {} disabled, ignoring", sname);
+                    return Ok(());
+                }
+                if !node.api_enabled {
+                    force_accept = true;
+                    node.update_last_event();
+                    if !node.online() {
+                        need_mark_online = true;
+                    }
+                }
+            } else {
+                trace!("node {} unknown, ignoring", sname);
+                return Ok(());
+            }
+        }
+        if need_mark_online {
+            nodes::mark_node(sname, true, None, false, None).await?;
+        }
         if sname == crate::SYSTEM_NAME.get().unwrap() {
             return Ok(());
         }
@@ -396,7 +421,8 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
                 }
             }
             let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid.as_path());
-            let rse = d.into_replication_state_event(&system_name);
+            let mut rse = d.into_replication_state_event(&system_name);
+            rse.force_accept = force_accept;
             crate::RPC
                 .get()
                 .unwrap()

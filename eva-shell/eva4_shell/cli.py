@@ -947,18 +947,22 @@ class CLI:
             print_result(data,
                          cols=[
                              'name', 'svc', 'type', 'online', 'timeout',
-                             'version', 'build'
+                             'ver', 'build'
                          ])
         else:
             data = call_rpc('node.list', target=repl_svc)
+            for d in data:
+                if d.get('api_enabled') is False:
+                    d['ping_interval'] = ''
+                    d['reload_interval'] = ''
+                    d['managed'] = ''
             print_result(data,
                          cols=[
                              'name', 'timeout', 'compress|n=compr',
-                             'ping_interval|n=ping int',
-                             'reload_interval|n=rel.int', 'static', 'enabled',
+                             'ping_interval|n=ping', 'reload_interval|n=rel',
+                             'static', 'enabled', 'api_enabled|n=api',
                              'managed', 'trusted', 'online',
-                             'link_uptime|n=link upt|f=round:0', 'version',
-                             'build'
+                             'link_uptime|n=upt|f=round:0', 'ver', 'build'
                          ])
 
     def node_append(self, i, repl_svc, untrusted):

@@ -55,6 +55,10 @@ static SUBSCRIBE_EACH: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static NODES_LOADED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+fn discovery_enabled() -> bool {
+    DISCOVERY_ENABLED.load(atomic::Ordering::Relaxed)
+}
+
 #[derive(Deserialize, Copy, Clone, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 enum SubscribeKind {
@@ -243,7 +247,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     PULL_DATA
         .set(pull_data)
         .map_err(|_| Error::core("unable to set PULL_DATA"))?;
-    DISCOVERY_ENABLED.store(config.discovery_enabled, atomic::Ordering::SeqCst);
+    DISCOVERY_ENABLED.store(config.discovery_enabled, atomic::Ordering::Relaxed);
     SUBSCRIBE_EACH.store(
         config.subscribe == SubscribeKind::Each,
         atomic::Ordering::SeqCst,
@@ -523,6 +527,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
         } else {
             let client = ps_rpc.client();
             let announce_topic = format!("{}{}", PS_NODE_STATE_TOPIC, initial.system_name());
+            let node_info = NodeInfo {
+                build: initial.eva_build(),
+                version: initial.eva_version().to_owned(),
+            };
+            let mut status = eva_sdk::pubsub::PsNodeStatus::new_running().with_info(node_info);
+            if !config.api_enabled {
+                status = status.with_api_disabled();
+            }
+            let serialized_status = serde_json::to_vec(&status)?;
             let announce_fut = tokio::spawn(async move {
                 let mut interval = tokio::time::interval(announce_interval);
                 interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -530,12 +543,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                     interval.tick().await;
                     trace!("announcing node state");
                     client
-                        .publish(
-                            &announce_topic,
-                            serde_json::to_vec(&eva_sdk::pubsub::PsNodeStatus::new_running())
-                                .unwrap(),
-                            qos,
-                        )
+                        .publish(&announce_topic, serialized_status.clone(), qos)
                         .await
                         .log_ef();
                 }
@@ -545,6 +553,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     } else {
         None
     };
+    tokio::spawn(nodes::state_checker());
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     mark_all_offline().await?;

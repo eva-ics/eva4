@@ -16,6 +16,8 @@ use crate::aaa;
 
 err_logger!();
 
+const STATE_CHECKER_INTERVAL: Duration = Duration::from_secs(5);
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct PullData {
     pub info: NodeInfo,
@@ -69,7 +71,7 @@ async fn reload_node(
         node.last_reload = Some(Instant::now());
         node.info.replace(res.info.clone());
         if let Some(ref items) = res.items {
-            if crate::SUBSCRIBE_EACH.load(atomic::Ordering::SeqCst) {
+            if crate::SUBSCRIBE_EACH.load(atomic::Ordering::Relaxed) {
                 let mut oids: HashSet<&OID> = HashSet::new();
                 for item in items {
                     oids.insert(&item.oid);
@@ -274,7 +276,7 @@ pub struct Node {
     )]
     reload_interval: Duration,
     compress: bool,
-    enabled: bool,
+    pub(crate) enabled: bool,
     #[serde(
         deserialize_with = "eva_common::tools::de_float_as_duration",
         serialize_with = "eva_common::tools::serialize_duration_as_f64"
@@ -302,6 +304,10 @@ pub struct Node {
     reloader_fut: Option<JoinHandle<()>>,
     #[serde(skip)]
     pinger_fut: Option<JoinHandle<()>>,
+    #[serde(default = "eva_common::tools::default_true")]
+    pub(crate) api_enabled: bool,
+    #[serde(skip)]
+    last_event: atomic::AtomicU64,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -319,6 +325,7 @@ pub struct NodeI<'a> {
     #[serde(rename = "static")]
     sttc: bool,
     enabled: bool,
+    api_enabled: bool,
     managed: bool,
     trusted: bool,
     online: bool,
@@ -329,7 +336,7 @@ pub struct NodeI<'a> {
 }
 
 impl Node {
-    pub fn new(name: &str, sttc: bool, trusted: bool) -> Self {
+    pub fn new(name: &str, sttc: bool, trusted: bool, api_enabled: bool) -> Self {
         Self {
             name: name.to_owned(),
             ping_interval: crate::DEFAULT_PING_INTERVAL,
@@ -349,6 +356,8 @@ impl Node {
             info: None,
             reloader_fut: None,
             pinger_fut: None,
+            api_enabled,
+            last_event: <_>::default(),
         }
     }
     fn stop_tasks(&self) {
@@ -369,6 +378,7 @@ impl Node {
             trusted: self.trusted,
             sttc: self.sttc,
             enabled: self.enabled,
+            api_enabled: self.api_enabled,
             managed: self.admin_key_id.is_some(),
             online: self.online(),
             link_uptime: self.link_uptime.as_ref().map(Instant::elapsed),
@@ -376,9 +386,15 @@ impl Node {
             build: self.info.as_ref().map(|i| i.build),
         }
     }
+    /// used by nodes with API disabled only
+    #[inline]
+    pub fn update_last_event(&self) {
+        let now = eva_common::time::monotonic_ns();
+        self.last_event.store(now, atomic::Ordering::Relaxed);
+    }
     #[inline]
     pub fn online(&self) -> bool {
-        self.online.load(atomic::Ordering::SeqCst)
+        self.online.load(atomic::Ordering::Relaxed)
     }
     #[inline]
     pub fn name(&self) -> &str {
@@ -418,7 +434,7 @@ impl Drop for Node {
 
 async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResult<()> {
     debug!("appending node {}", node.name);
-    let (tx, trig, p_trig) = if node.enabled {
+    let (tx, trig, p_trig) = if node.enabled && node.api_enabled {
         let (trig, ready) = triggered::trigger();
         let (tx, rx) = async_channel::bounded::<bool>(1024);
         let name = node.name.clone();
@@ -484,29 +500,49 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
     Ok(())
 }
 
-pub async fn append_discovered_node(name: &str) -> EResult<()> {
+pub async fn append_discovered_node(
+    name: &str,
+    info: Option<NodeInfo>,
+    api_enabled: bool,
+) -> EResult<()> {
     if name == crate::SYSTEM_NAME.get().unwrap() {
         return Ok(());
     }
     trace!("starting append for discovered node {}", name);
     let mut nodes = NODES.write().await;
-    if let Some(n) = nodes.get(name) {
-        if n.enabled && !n.online() {
-            trace!(
-                "node {} already exists and is offline, triggering reload",
-                name
-            );
-            if let Some(tx) = RELOAD_TRIGGERS.read().await.get(name) {
-                tx.send(false).await.log_ef();
-            } else {
-                error!("core error: no reload trigger for {}", name);
-            }
+    let mut recreate = false;
+    if let Some(n) = nodes.get_mut(name) {
+        if n.api_enabled != api_enabled {
+            recreate = true;
         } else {
-            trace!("node {} already exists and is online, ignoring", name);
+            if crate::discovery_enabled() {
+                if let Some(node_info) = info {
+                    n.info.replace(node_info);
+                }
+            }
+            if n.enabled && n.api_enabled && !n.online() {
+                trace!(
+                    "node {} already exists and is offline, triggering reload",
+                    name
+                );
+                if let Some(tx) = RELOAD_TRIGGERS.read().await.get(name) {
+                    tx.send(false).await.log_ef();
+                } else {
+                    error!("core error: no reload trigger for {}", name);
+                }
+            } else {
+                trace!("node {} already exists and is online, ignoring", name);
+            }
+            return Ok(());
         }
-    } else if crate::DISCOVERY_ENABLED.load(atomic::Ordering::SeqCst) {
+    }
+    if crate::discovery_enabled() {
+        if recreate {
+            remove_node(name, &mut nodes).await?;
+        }
         info!("appending discovered node: {}", name);
-        let node = Node::new(name, false, true);
+        let mut node = Node::new(name, false, true, api_enabled);
+        node.info = info;
         append_node(node, &mut nodes).await?;
     }
     Ok(())
@@ -619,4 +655,26 @@ pub async fn mark_node(
         )
         .await?;
     Ok(())
+}
+
+pub async fn state_checker() {
+    let mut int = tokio::time::interval(STATE_CHECKER_INTERVAL);
+    loop {
+        int.tick().await;
+        let mut nodes_set_offline = Vec::new();
+        let now = eva_common::time::monotonic_ns();
+        for (name, node) in &*NODES.read().await {
+            if !node.api_enabled
+                && node.online()
+                && node.last_event.load(atomic::Ordering::Relaxed)
+                    + u64::try_from(node.timeout.as_nanos()).unwrap()
+                    < now
+            {
+                nodes_set_offline.push(name.clone());
+            }
+        }
+        for node in nodes_set_offline {
+            mark_node(&node, false, None, false, None).await.log_ef();
+        }
+    }
 }

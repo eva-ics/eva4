@@ -116,7 +116,7 @@ impl RpcHandlers for Handlers {
                 } else {
                     let p: ParamsAppend = unpack(payload)?;
                     not_local!(&p.i);
-                    let node = nodes::Node::new(&p.i, true, p.trusted);
+                    let node = nodes::Node::new(&p.i, true, p.trusted, true);
                     let nval = to_value(&node)?;
                     nodes::append_static_node(node, &mut *nodes::NODES.write().await).await?;
                     crate::REG

@@ -1890,12 +1890,30 @@ impl Core {
             }
             ItemKind::Unit => {}
         }
-        let item = self
-            .inventory
-            .read()
-            .await
-            .get_item(oid)
-            .ok_or_else(|| Error::not_found(oid))?;
+        let maybe_item = self.inventory.read().await.get_item(oid);
+        let item = if rse.force_accept {
+            if let Some(item) = maybe_item {
+                item
+            } else {
+                let mut inventory = self.inventory.write().await;
+                let source = inventory.get_or_create_source(&rse.node, sender);
+                inventory.append_remote_item(
+                    ReplicationInventoryItem {
+                        oid: oid.clone(),
+                        act: rse.act,
+                        enabled: true,
+                        ieid: Some(IEID::new(0, 0)),
+                        meta: None,
+                        status: None,
+                        value: ValueOptionOwned::No,
+                        t: Some(0.),
+                    },
+                    source,
+                )?
+            }
+        } else {
+            maybe_item.ok_or_else(|| Error::not_found(oid))?
+        };
         if let Some(state) = item.state() {
             debug!("setting state from repl event for {}, from {}", oid, sender);
             if let Some(source) = item.source() {

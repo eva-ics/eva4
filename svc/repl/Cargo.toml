@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 busrt = { features = ["rpc", "ipc"] , workspace = true }
 eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
-eva-sdk = { features = ["pubsub", "http"] , workspace = true }
+eva-sdk = { features = ["pubsub", "http"], workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
