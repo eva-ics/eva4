@@ -262,6 +262,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
         })
         .collect::<Vec<&NodeDataN>>();
     let mut update_candidates = Vec::new();
+    let mut managed = HashSet::new();
     for node in nodes {
         if let Some(svc) = node.data.svc() {
             let ns = match bus_client
@@ -277,6 +278,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
             if let Some(ns) = ns {
                 if ns.managed {
                     node_map.insert(node.name.clone(), svc.to_owned());
+                    managed.insert(node.name.clone());
                     if update_all || requested_nodes.contains(&node.name) {
                         if let Some(i) = node.data.info() {
                             if info.ver.major_matches(&i.version).unwrap_or_default()
@@ -296,7 +298,9 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     let mut spoint_update_candidates: Vec<SPointDataFull> = Vec::new();
     let client = EvaCloudClient::new(&system_name, bus_client, node_map);
     for node in &nodes_all {
-        if update_all || requested_spoint_nodes.contains(&node.name) {
+        if (update_all && managed.contains(&node.name))
+            || requested_spoint_nodes.contains(&node.name)
+        {
             let spoint_node_data: Vec<SPointDataFull> = match client
                 .call::<Vec<SPointDataS>>(&node.name, "eva.core", "spoint.list", None)
                 .await
