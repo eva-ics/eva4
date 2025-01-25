@@ -1,8 +1,6 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ParamsIdOwned;
-use eva_common::events::{
-    FullItemStateAndInfoOwned, ReplicationStateEvent, REPLICATION_STATE_TOPIC,
-};
+use eva_common::events::{FullItemStateAndInfoOwned, REPLICATION_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::pubsub::PS_ITEM_BULK_STATE_TOPIC;
@@ -11,8 +9,8 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::nodes;
 use crate::{aaa, ReplicationData};
+use crate::{nodes, ReplicationStateEventExtended};
 
 err_logger!();
 
@@ -281,7 +279,7 @@ async fn discovery_handler(
         let name = message.subtopic();
         match p.status() {
             eva_sdk::pubsub::NodeStatus::Running => {
-                nodes::append_discovered_node(name, p.take_info(), p.is_api_enabled()).await?
+                nodes::append_discovered_node(name, p.take_info(), p.is_api_enabled()).await?;
             }
             eva_sdk::pubsub::NodeStatus::Terminating => {
                 nodes::mark_node(name, false, None, false, None).await?;
@@ -306,13 +304,13 @@ pub async fn ps_state_handler(rx: psrpc::tools::PublicationReceiver) -> EResult<
 }
 
 async fn ps_process_state(msg: psrpc::tools::Publication) -> EResult<()> {
-    let state: ReplicationStateEvent = serde_json::from_slice(msg.data())?;
-    if &state.node == crate::SYSTEM_NAME.get().unwrap() {
+    let data: ReplicationStateEventExtended = serde_json::from_slice(msg.data())?;
+    if data.node() == crate::SYSTEM_NAME.get().unwrap() {
         return Ok(());
     }
     trace!(
         "pub/sub state push from {}, topic {}",
-        state.node,
+        data.node(),
         msg.topic()
     );
     let oid: OID = OID::from_path(msg.subtopic())?;
@@ -324,7 +322,7 @@ async fn ps_process_state(msg: psrpc::tools::Publication) -> EResult<()> {
         .await
         .publish(
             &format!("{}{}", REPLICATION_STATE_TOPIC, oid.as_path()),
-            pack(&state)?.into(),
+            pack(&data)?.into(),
             QoS::No,
         )
         .await?;

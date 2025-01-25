@@ -1,18 +1,19 @@
+use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ParamsId;
 use eva_common::events::{
-    LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC, LOCAL_STATE_TOPIC,
-    REMOTE_STATE_TOPIC,
+    FullItemStateAndInfoOwned, LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC,
+    LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullItemState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::atomic;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
-use crate::{aaa, ReplicationData};
 use crate::nodes;
+use crate::{aaa, ReplicationData};
 
 err_logger!();
 
@@ -496,5 +497,51 @@ async fn call_remote_method(
         call!(None)
     } else {
         call!(Some(&to_value(params)?))
+    }
+}
+
+pub async fn submit_periodic(
+    interval: Duration,
+    oids: &OIDMaskList,
+    oids_exclude: &OIDMaskList,
+    replicate_remote: bool,
+) -> EResult<()> {
+    #[derive(Serialize)]
+    struct Request<'a> {
+        i: &'a OIDMaskList,
+        exclude: &'a OIDMaskList,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        node: Option<&'a str>,
+    }
+    let payload = busrt::borrow::Cow::Referenced(Arc::new(pack(&Request {
+        i: oids,
+        exclude: oids_exclude,
+        node: if replicate_remote {
+            None
+        } else {
+            Some(".local")
+        },
+    })?));
+    let mut int = tokio::time::interval(interval);
+    loop {
+        int.tick().await;
+        let res: Vec<FullItemStateAndInfoOwned> = unpack(
+            safe_rpc_call(
+                crate::RPC.get().unwrap(),
+                "eva.core",
+                "item.list",
+                payload.clone(),
+                QoS::Processed,
+                *crate::TIMEOUT.get().unwrap(),
+            )
+            .await?
+            .payload(),
+        )?;
+        notify(Data::Bulk(
+            &res.into_iter()
+                .map(|v| ReplicationData::Inventory(v.into()))
+                .collect::<Vec<ReplicationData>>(),
+        ))
+        .await?;
     }
 }

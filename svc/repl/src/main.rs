@@ -2,8 +2,9 @@ use busrt::QoS;
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{
-    NodeInfo, NodeStateEvent, NodeStatus, ReplicationInventoryItem, ReplicationStateEvent,
-    AAA_ACL_TOPIC, AAA_KEY_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    NodeInfo, NodeStateEvent, NodeStatus, ReplicationInventoryItem, ReplicationNodeInventoryItem,
+    ReplicationStateEventExtended, AAA_ACL_TOPIC, AAA_KEY_TOPIC, REPLICATION_INVENTORY_TOPIC,
+    REPLICATION_NODE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -17,25 +18,11 @@ use std::sync::atomic;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(untagged)]
-pub enum ReplicationStateEventExtended {
-    Basic(ReplicationStateEvent),
-    Inventory(ReplicationNodeInventoryItem),
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ReplicationNodeInventoryItem {
-    pub node: String,
-    #[serde(flatten)]
-    pub item: ReplicationInventoryItem,
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ReplicationData {
-    State(FullItemState),
     Inventory(ReplicationInventoryItem),
+    State(FullItemState),
 }
 
 impl ReplicationData {
@@ -211,6 +198,11 @@ struct Config {
     announce_interval: Option<Duration>,
     #[serde(default)]
     api_enabled: bool,
+    #[serde(
+        default,
+        deserialize_with = "eva_common::tools::de_opt_float_as_duration"
+    )]
+    interval: Option<Duration>,
     #[serde(default)]
     discovery_enabled: bool,
     #[serde(default = "default_cloud_key")]
@@ -577,6 +569,26 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     }
     NODES_LOADED.store(true, atomic::Ordering::SeqCst);
+    if let Some(interval) = config.interval {
+        if config.api_enabled {
+            warn!("API is enabled, reloads are handled by remotes, the submit interval is ignored");
+        } else {
+            let oids = config.oids.clone();
+            let oids_exclude = config.oids_exclude.clone();
+            let replicate_remote = config.replicate_remote;
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) =
+                        eapi::submit_periodic(interval, &oids, &oids_exclude, replicate_remote)
+                            .await
+                    {
+                        error!("eapi submit periodic error: {}", e);
+                    }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            });
+        }
+    }
     tokio::spawn(async move {
         eapi::sender(sender_rx, buf_ttl).await;
     });

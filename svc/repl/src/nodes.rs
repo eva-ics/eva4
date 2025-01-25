@@ -512,9 +512,7 @@ pub async fn append_discovered_node(
     let mut nodes = NODES.write().await;
     let mut recreate = false;
     if let Some(n) = nodes.get_mut(name) {
-        if n.api_enabled != api_enabled {
-            recreate = true;
-        } else {
+        if n.api_enabled == api_enabled {
             if crate::discovery_enabled() {
                 if let Some(node_info) = info {
                     n.info.replace(node_info);
@@ -535,6 +533,7 @@ pub async fn append_discovered_node(
             }
             return Ok(());
         }
+        recreate = true;
     }
     if crate::discovery_enabled() {
         if recreate {

@@ -15,13 +15,13 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::{ParamsId, ParamsUuid, ValueOrList};
 use eva_common::dobj::{DataObject, Endianess};
 use eva_common::err_logger;
-use eva_common::events::LOG_INPUT_TOPIC;
 use eva_common::events::{
     FullItemStateAndInfo, ItemStateAndInfo, NodeInfo, NodeStateEvent, NodeStatus,
-    RawStateBulkEventOwned, RawStateEventOwned, ReplicationInventoryItem, ReplicationStateEvent,
-    RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
-    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC,
+    RawStateBulkEventOwned, RawStateEventOwned, ReplicationInventoryItem, RAW_STATE_BULK_TOPIC,
+    RAW_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    REPLICATION_STATE_TOPIC,
 };
+use eva_common::events::{ReplicationStateEventExtended, LOG_INPUT_TOPIC};
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use log::{trace, warn};
@@ -247,7 +247,7 @@ async fn replication_state_handler(core: &Core, rx: async_channel::Receiver<pubs
     while let Ok(frame) = rx.recv().await {
         if core.is_active() {
             match OID::from_path(frame.subtopic()) {
-                Ok(oid) => match unpack::<ReplicationStateEvent>(frame.payload()) {
+                Ok(oid) => match unpack::<ReplicationStateEventExtended>(frame.payload()) {
                     Ok(rpl) => {
                         core.update_state_from_repl(&oid, rpl, frame.primary_sender())
                             .await
@@ -282,6 +282,7 @@ async fn replication_inventory_handler(
                             remote_inv,
                             frame.subtopic(),
                             frame.primary_sender(),
+                            false,
                         )
                         .await
                         .log_ef();

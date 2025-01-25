@@ -28,6 +28,9 @@ config:
   announce_interval: 10
   # respond to API calls
   api_enabled: true
+  # interval to submit all items. if api is enabled, the option is ignored as
+  # reload process is handled by remotes.
+  interval: 30
   # enable discovery of secondary nodes
   discovery_enabled: true
   # key (id) to use for auto-discovered nodes

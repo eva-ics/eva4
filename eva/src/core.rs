@@ -17,12 +17,13 @@ use eva_common::err_logger;
 use eva_common::events;
 use eva_common::events::Force;
 use eva_common::events::OnModifiedOwned;
+use eva_common::events::ReplicationStateEventExtended;
 use eva_common::events::{
     DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
-    RemoteStateEvent, ReplicationInventoryItem, ReplicationState, ReplicationStateEvent,
-    LOCAL_STATE_TOPIC, LOG_INPUT_TOPIC, RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC,
-    REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
-    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC, SERVICE_STATUS_TOPIC,
+    RemoteStateEvent, ReplicationInventoryItem, ReplicationState, LOCAL_STATE_TOPIC,
+    LOG_INPUT_TOPIC, RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC,
+    REMOTE_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    REPLICATION_STATE_TOPIC, SERVICE_STATUS_TOPIC,
 };
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
@@ -1670,6 +1671,8 @@ impl Core {
         remote_inv: HashMap<OID, ReplicationInventoryItem>,
         source_id: &str,
         sender: &str,
+        // do not remove missing items, do not lock the source
+        quick: bool,
     ) -> EResult<()> {
         #[inline]
         fn check_state(item: &ReplicationInventoryItem) -> bool {
@@ -1706,7 +1709,7 @@ impl Core {
                 "source ids starting with dots are reserved, ignoring incoming payload",
             ));
         }
-        if !self.lock_source(source_id) {
+        if !quick && !self.lock_source(source_id) {
             warn!(
                 "source {} inventory processor is busy. ignoring incoming payload",
                 source_id
@@ -1724,16 +1727,18 @@ impl Core {
         let rpc = self.rpc.get().unwrap();
         if let Some(existing) = existing_items {
             // remove deleted items
-            for oid in existing.keys() {
-                if source.is_destroyed() {
-                    break;
-                }
-                if !remote_inv.contains_key(oid.as_ref()) {
-                    debug!(
-                        "removing remote item {}, node: {} from rpl {}",
-                        oid, source_id, sender
-                    );
-                    let _r = self.inventory.write().await.remove_item(oid);
+            if !quick {
+                for oid in existing.keys() {
+                    if source.is_destroyed() {
+                        break;
+                    }
+                    if !remote_inv.contains_key(oid.as_ref()) {
+                        debug!(
+                            "removing remote item {}, node: {} from rpl {}",
+                            oid, source_id, sender
+                        );
+                        let _r = self.inventory.write().await.remove_item(oid);
+                    }
                 }
             }
             // append new and modified items, for non-modified - update state only
@@ -1865,7 +1870,9 @@ impl Core {
             }
         }
         debug!("source inventory processed: {}", source_id);
-        self.unlock_source(source_id);
+        if !quick {
+            self.unlock_source(source_id);
+        }
         Ok(())
     }
     /// # Panics
@@ -1874,9 +1881,19 @@ impl Core {
     pub async fn update_state_from_repl(
         &self,
         oid: &OID,
-        rse: ReplicationStateEvent,
+        rsex: ReplicationStateEventExtended,
         sender: &str,
     ) -> EResult<()> {
+        let rse = match rsex {
+            ReplicationStateEventExtended::Basic(rse) => rse,
+            ReplicationStateEventExtended::Inventory(i) => {
+                let mut map = HashMap::new();
+                map.insert(oid.clone(), i.item);
+                return self
+                    .process_remote_inventory(map, &i.node, sender, true)
+                    .await;
+            }
+        };
         let tp = oid.kind();
         match tp {
             ItemKind::Lmacro => return Err(Error::not_implemented(ERR_MSG_STATE_LMACRO)),
