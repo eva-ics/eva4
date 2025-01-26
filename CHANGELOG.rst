@@ -1,6 +1,22 @@
 EVA ICS CHANGELOG
 *****************
 
+Some builds are marked with special warning symbols. When a node is updated
+thru several builds, the warnings are accumulated.
+
+Mark symbols and their meanings:
+
+⚠  The build contains serious code changes which can break some functionality.
+It is recommended to create a system backup and roll back to the previous
+working build in case of issues.
+
+⛔ The build contains serious code changes which can destroy data or lead to an
+accident. It is highly recommended to test the build in a sandbox before
+applying to production.
+
+Note that for mission-critical systems it is recommended to test every update
+before applying to production despite of the absence of warning marks.
+
 4.0.2-stable
 ============
 
