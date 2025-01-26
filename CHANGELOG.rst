@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* TBA:⚠  Allocator switch to mimalloc, one-way pub/sub replication with no API
 * 2025-01-07 build 2025010701: Stability improvements
 * 2025-01-02 build 2025010201: "user.reset" HTTP API method
 * 2024-12-17 build 2024121701: OpCentre IDC improvements
