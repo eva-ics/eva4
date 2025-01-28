@@ -1,5 +1,13 @@
 # Tuya services
 
+## Prepare
+
+Install required modules:
+
+```
+eva venv add tinytuya==1.15.1
+```
+
 ## Tuya controller
 
 [Tuya controller](https://www.tuya.com)
@@ -10,12 +18,6 @@ Tuya controller allows to connect Tuya devices to [EVA
 ICS](https://www.eva-ics.com).
 
 ### Setup
-
-Install required modules:
-
-```
-eva venv add tinytuya==1.15.1
-```
 
 Download
 [controller-tuya.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/controller-tuya.py),
@@ -71,12 +73,6 @@ workers: 1
 ## Tuya discovery service
 
 ### Setup
-
-Install required modules:
-
-```
-eva venv add pycryptodomex==3.11.0
-```
 
 Download
 [tuya-discover.py](https://github.com/eva-ics/eva4/blob/main/contrib/controller-tuya/tuya-discover.py),
