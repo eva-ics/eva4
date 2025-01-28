@@ -2,7 +2,7 @@ EVA ICS CHANGELOG
 *****************
 
 Some builds are marked with special warning symbols. When a node is updated
-thru several builds, the warnings are accumulated.
+through several builds, the warnings are accumulated.
 
 Mark symbols and their meanings:
 
