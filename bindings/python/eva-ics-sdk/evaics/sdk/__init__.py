@@ -1,4 +1,4 @@
-__version__ = '0.2.31'
+__version__ = '0.2.32'
 
 import busrt
 import sys
@@ -122,6 +122,7 @@ class LocalProxy(threading.local):
     """
     Simple proxy for threading.local namespace
     """
+
     def get(self, attr, default=None):
         """
         Get thread-local attribute
@@ -185,6 +186,7 @@ class OID:
     """
     Base item OID class
     """
+
     def __init__(self, s, from_path=False):
         """
         Constructs a new OID from string
@@ -192,8 +194,7 @@ class OID:
         Args:
             from_path: construct OID from a path (kind/group(s)/id)
         """
-        self.kind, self.full_id = s.split('/' if from_path else ':',
-                                          maxsplit=1)
+        self.kind, self.full_id = s.split('/' if from_path else ':', maxsplit=1)
         self.oid = f'{self.kind}:{self.full_id}'
         self.id = s.rsplit('/', 1)[-1] if '/' in s else self.full_id
 
@@ -220,6 +221,7 @@ class ServiceInfo:
     """
     Service info helper class
     """
+
     def __init__(self, author='', description='', version=''):
         """
         Args:
@@ -265,6 +267,7 @@ class Action:
     """
     Item action from bus event
     """
+
     def __init__(self, event):
         a = unpack(event.get_payload())
         self.uuid = uuid.UUID(bytes=a['uuid'])
@@ -278,6 +281,7 @@ class Controller:
     """
     Action handler helper class for controllers
     """
+
     def __init__(self, bus):
         self.bus = bus
 
@@ -310,12 +314,11 @@ class Controller:
     def event_failed(self, action, out=None, err=None, exitcode=None):
         self.bus.send(
             f'ACT/{action.i.to_path()}',
-            busrt.client.Frame(payload=_action_event_payload(
-                action.uuid,
-                ACTION_FAILED,
-                out=out,
-                err=err,
-                exitcode=exitcode),
+            busrt.client.Frame(payload=_action_event_payload(action.uuid,
+                                                             ACTION_FAILED,
+                                                             out=out,
+                                                             err=err,
+                                                             exitcode=exitcode),
                                tp=busrt.client.OP_PUBLISH,
                                qos=0))
 
@@ -337,6 +340,7 @@ class Controller:
 
 
 class EvaLogHandler(logging.Handler):
+
     def __init__(self, bus):
         self.bus = bus
         super().__init__()
@@ -358,14 +362,149 @@ class EvaLogHandler(logging.Handler):
             msg = f'CRITICAL: {msg}'
         self.bus.send(
             topic,
-            busrt.client.Frame(msg.encode(), tp=busrt.client.OP_PUBLISH,
-                               qos=0))
+            busrt.client.Frame(msg.encode(), tp=busrt.client.OP_PUBLISH, qos=0))
+
+
+class Registry:
+    """
+    Service registry helper class. All key names are relative to
+    eva/svc_data/<service_id>
+    """
+
+    def __init__(self, service):
+        self.service = service
+        self.key_prefix = f'eva/svc_data/{service.id}'
+        self.registry_svc = 'eva.registry'
+        print(self.service.id, flush=True)
+
+    def key_set(self, key, value):
+        """
+        Set key value
+
+        Args:
+            key: key name
+            value: key value
+        """
+        self.service.rpc.call(
+            self.registry_svc,
+            busrt.rpc.Request(
+                'key_set',
+                pack({
+                    'key': self.format_key_path(key),
+                    'value': value
+                }))).wait_completed()
+
+    def key_get(self, key):
+        """
+        Get key value
+        
+        Args:
+            key: key name
+
+        Returns:
+            key value
+        """
+        return unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_get',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())
+
+    def key_increment(self, key):
+        """
+        Increment key value
+
+        Args:
+            key: key name
+
+        Returns:
+            new key value
+        """
+        return unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_increment',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())
+
+    def key_decrement(self, key):
+        """
+        Decrement key value
+
+        Args:
+            key: key name
+
+        Returns:
+            new key value
+        """
+        return unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_decrement',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())
+
+    def key_delete(self, key):
+        """
+        Delete key
+
+        Args:
+            key: key name
+        """
+        return unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_delete',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())
+
+    def key_get_recursive(self, key):
+        """
+        Get all key-value pairs
+
+        Args:
+            key: key name
+
+        Returns:
+            list of [key, value] pairs
+        """
+        return [[k[len(self.key_prefix) + 1:len(k)], v] for [k, v] in unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_get_recursive',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())]
+
+    def key_delete_recursive(self, key):
+        """
+        Delete key and all subkeys
+
+        Args:
+            key: key name
+        """
+        return unpack(
+            self.service.rpc.call(
+                self.registry_svc,
+                busrt.rpc.Request('key_delete_recursive',
+                                  pack({'key': self.format_key_path(key)
+                                       }))).wait_completed().get_payload())
+
+    def format_key_path(self, key):
+        return f'{self.key_prefix}/{key}'
 
 
 class Service:
     """
     The primary service class
+
+    Useful varibles:
+
+    self.data_path - service data path (None for nobody user)
+
+    self.registry - service registry manager (available after init)
     """
+
     def __init__(self):
         self.svc_info = None
         self.logger = None
@@ -505,6 +644,7 @@ class Service:
         self._svc_info_packed = pack(svc_info.serialize())
         self.rpc = busrt.rpc.Rpc(self.bus)
         self.rpc.on_call = self._handle_rpc_call
+        self.registry = Registry(self)
 
     def wait_core(self, timeout=None, wait_forever=True):
         """
@@ -685,8 +825,7 @@ class Service:
             payload['err'] = err
         self.bus.send(
             AAA_ACCOUNTING_TOPIC,
-            busrt.client.Frame(pack(payload),
-                               tp=busrt.client.OP_PUBLISH,
+            busrt.client.Frame(pack(payload), tp=busrt.client.OP_PUBLISH,
                                qos=1))
 
     def subscribe_oids(self, oids, event_kind='any'):
@@ -765,8 +904,7 @@ class Service:
                 busrt.rpc.Request(
                     'item.deploy',
                     pack({
-                        'items':
-                        items if isinstance(items, list) else [items],
+                        'items': items if isinstance(items, list) else [items],
                     }))).wait_completed()
         except Exception as e:
             raise rpc_e2e(e)
@@ -791,6 +929,7 @@ class ACI:
     """
     ACI (API Call Info) helper class
     """
+
     def __init__(self, aci_payload):
         self.auth = aci_payload.get('auth')
         self.token_mode = aci_payload.get('token_mode')
@@ -809,6 +948,7 @@ class XCall:
     """
     HMI X calls helper class
     """
+
     def __init__(self, payload):
         self.method = payload.get('method')
         self.params = payload.get('params', {})
@@ -860,11 +1000,11 @@ class XCall:
         """
         return self.is_admin() or (
             (oid_match(oid,
-                       self.acl.get('read', {}).get('items', []))
-             or oid_match(oid,
-                          self.acl.get('write', {}).get('items', [])))
-            and not oid_match(oid,
-                              self.acl.get('deny_read', {}).get('items', [])))
+                       self.acl.get('read', {}).get('items', [])) or
+             oid_match(oid,
+                       self.acl.get('write', {}).get('items', []))) and
+            not oid_match(oid,
+                          self.acl.get('deny_read', {}).get('items', [])))
 
     def is_item_writable(self, oid):
         """
@@ -872,13 +1012,13 @@ class XCall:
         """
         return self.is_admin() or (
             oid_match(oid,
-                      self.acl.get('write', {}).get('items', []))
-            and not oid_match(oid,
-                              self.acl.get('deny_read', {}).get('items', []))
-            and not oid_match(oid,
-                              self.acl.get('deny_write', {}).get('items', []))
-            and not oid_match(oid,
-                              self.acl.get('deny', {}).get('items', [])))
+                      self.acl.get('write', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny_read', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny_write', {}).get('items', [])) and
+            not oid_match(oid,
+                          self.acl.get('deny', {}).get('items', [])))
 
     def is_pvt_readable(self, path):
         """
@@ -886,9 +1026,9 @@ class XCall:
         """
         return self.is_admin() or (
             path_match(path,
-                       self.acl.get('read', {}).get('pvt', []))
-            and not path_match(path,
-                               self.acl.get('deny_read', {}).get('pvt', [])))
+                       self.acl.get('read', {}).get('pvt', [])) and
+            not path_match(path,
+                           self.acl.get('deny_read', {}).get('pvt', [])))
 
     def require_writable(self):
         if not self.is_writable():
@@ -925,6 +1065,7 @@ class XCallDefault:
     """
     HMI X calls mocker for no ACI/ACL
     """
+
     def __init__(self, aci=None, acl=None):
         self.aci = ACI(aci if aci else {})
         self.acl = acl if acl else {}
