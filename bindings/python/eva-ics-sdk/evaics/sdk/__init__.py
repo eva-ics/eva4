@@ -896,7 +896,7 @@ class Service:
         See also https://info.bma.ai/en/actual/eva4/iac.html#items
 
         Args:
-            oids: list of items to create
+            items: list of items to create
         """
         try:
             self.rpc.call(
