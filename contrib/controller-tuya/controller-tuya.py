@@ -17,7 +17,8 @@ d = SimpleNamespace(device=None,
                     controller=None,
                     action_lock=threading.Lock(),
                     map=dict(),
-                    action_map=dict())
+                    action_map=dict(),
+                    after_pull=None)
 
 
 def run_action(action):
@@ -90,6 +91,18 @@ def pull(interval):
             with d.action_lock:
                 dps = d.device.status()['dps']
             update(dps)
+            if d.after_pull:
+                d.service.rpc.call(
+                    'eva.core',
+                    busrt.rpc.Request(
+                        'run',
+                        pack({
+                            'i': d.after_pull['i'],
+                            'params': {
+                                'args': d.after_pull.get('args', []),
+                                'kwargs': d.after_pull.get('kwargs', {})
+                            }
+                        }))).wait_completed()
         except Exception:
             mark_all_items_failed()
             d.service.logger.error(
@@ -135,6 +148,7 @@ def run():
     address = config['device']['addr']
     local_key = config['device']['local_key']
     api_version = config['device']['version']
+    d.after_pull = config.get('after_pull')
 
     d.action_map = {OID(k): v for k, v in config.get('action_map', {}).items()}
 
