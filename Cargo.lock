@@ -568,9 +568,9 @@ dependencies = [
 
 [[package]]
 name = "bmart"
-version = "0.2.8"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da18c8bdb9276c1ee2b0eea908b525f2093f98cbb9414dd7ee491c9515a61330"
+checksum = "c29e3309233d1fc291cfe1c22bfe95553da9690a9b02903be0f15cda5779914c"
 dependencies = [
  "async-channel 2.2.1",
  "bmart-derive",

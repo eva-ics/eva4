@@ -87,7 +87,12 @@ impl TerminalProcess {
         Err(Error::timeout())
     }
     async fn sync(self: Arc<Self>, input: Vec<u8>) -> Vec<terminal::Output> {
-        if !input.is_empty() {
+        if input.len() == 1 && input[0] == 3 {
+            let pid = self.pid.load(atomic::Ordering::SeqCst);
+            if pid > 0 {
+                bmart::process::kill_pstree_with_signal(pid, bmart::process::Signal::SIGINT, true);
+            }
+        } else if !input.is_empty() {
             self.api_input_tx.send(Some(input)).await.log_ef();
         }
         let mut data = self.data.lock().await;
@@ -408,7 +413,7 @@ impl RpcHandlers for Handlers {
                 }
                 #[derive(Serialize)]
                 struct Output {
-                    id: String,
+                    i: String,
                 }
                 if payload.is_empty() {
                     return Err(RpcError::params(None));
@@ -420,13 +425,13 @@ impl RpcHandlers for Handlers {
                 let terminal = TerminalProcess::create(p.dimensions).await?;
                 let id = Uuid::new_v4();
                 TERMINALS.lock().await.insert(id, terminal);
-                Ok(Some(pack(&Output { id: id.to_string() })?))
+                Ok(Some(pack(&Output { i: id.to_string() })?))
             }
             "terminal.sync" => {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
                 struct Params {
-                    id: String,
+                    i: String,
                     #[serde(default)]
                     input: TerminalInput,
                 }
@@ -438,7 +443,7 @@ impl RpcHandlers for Handlers {
                     return Err(RpcError::params(None));
                 }
                 let p: Params = unpack(payload)?;
-                let id = Uuid::parse_str(&p.id).map_err(|_| Error::invalid_data("invalid id"))?;
+                let id = Uuid::parse_str(&p.i).map_err(|_| Error::invalid_data("invalid id"))?;
                 let terminal = TERMINALS
                     .lock()
                     .await
@@ -452,13 +457,13 @@ impl RpcHandlers for Handlers {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
                 struct Params {
-                    id: String,
+                    i: String,
                 }
                 if payload.is_empty() {
                     return Err(RpcError::params(None));
                 }
                 let p: Params = unpack(payload)?;
-                let id = Uuid::parse_str(&p.id).map_err(|_| Error::invalid_data("invalid id"))?;
+                let id = Uuid::parse_str(&p.i).map_err(|_| Error::invalid_data("invalid id"))?;
                 if let Some(terminal) = TERMINALS.lock().await.remove(&id) {
                     terminal.terminate().await;
                 }
@@ -870,10 +875,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("terminal.create").required("dimensions"));
     info.add_method(
         ServiceMethod::new("terminal.sync")
-            .required("id")
+            .required("i")
             .required("input"),
     );
-    info.add_method(ServiceMethod::new("terminal.kill").required("id"));
+    info.add_method(ServiceMethod::new("terminal.kill").required("i"));
     info.add_method(
         ServiceMethod::new("file.get")
             .required("path")
