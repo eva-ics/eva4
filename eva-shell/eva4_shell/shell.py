@@ -1,4 +1,5 @@
 import sys
+import signal
 import os
 from neotermcolor import colored
 
@@ -32,8 +33,7 @@ def launch():
             raise RuntimeError(
                 f'EVA ICS directory not found. Consider installing EVA ICS either '
                 f'in {dir_eva_default} or specifying EVA_DIR env variable. '
-                f'For For a remote host, set EVA_BUS=HOST:PORT env variable'
-            )
+                f'For For a remote host, set EVA_BUS=HOST:PORT env variable')
         common.bus_path = f'{common.dir_eva}/var/bus.ipc'
         common.bus_name = f'eva-shell.{os.getpid()}'
 
@@ -62,5 +62,19 @@ def launch():
         print()
         common.cli.version()
         common.interactive = True
+
+        def handle_signal(signum, frame):
+            import readline
+            if ap.interactive_history_file:
+                try:
+                    readline.write_history_file(
+                        os.path.expanduser(ap.interactive_history_file))
+                except:
+                    pass
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, handle_signal)
+        signal.signal(signal.SIGHUP, handle_signal)
+
         ap.interactive()
         print('Bye')
