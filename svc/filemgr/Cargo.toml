@@ -12,7 +12,6 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 once_cell = { workspace = true }
 async-channel = { workspace = true }
 serde_yaml = { workspace = true }
@@ -24,6 +23,9 @@ bmart = { workspace = true }
 openssl = { workspace = true }
 glob-match = "0.2.1"
 async-recursion = { workspace = true }
+uuid = { workspace = true }
+termios = "0.3.3"
+libc = "0.2.169"
 
 [features]
 std-alloc = []

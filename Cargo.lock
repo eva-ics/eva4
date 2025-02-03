@@ -568,9 +568,9 @@ dependencies = [
 
 [[package]]
 name = "bmart"
-version = "0.2.8"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da18c8bdb9276c1ee2b0eea908b525f2093f98cbb9414dd7ee491c9515a61330"
+checksum = "c29e3309233d1fc291cfe1c22bfe95553da9690a9b02903be0f15cda5779914c"
 dependencies = [
  "async-channel 2.2.1",
  "bmart-derive",
@@ -2077,7 +2077,7 @@ dependencies = [
  "eva-sdk",
  "glob-match",
  "hex 0.4.3",
- "lazy_static",
+ "libc",
  "log",
  "mimalloc",
  "once_cell",
@@ -2086,7 +2086,9 @@ dependencies = [
  "serde",
  "serde_yaml 0.8.26",
  "tempfile",
+ "termios",
  "tokio",
+ "uuid 1.7.0",
 ]
 
 [[package]]
@@ -3358,9 +3360,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.159"
+version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
+checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "libm"
@@ -5669,6 +5671,15 @@ checksum = "633c1a546cee861a1a6d0dc69ebeca693bf4296661ba7852b9d21d159e0506df"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "termios"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411c5bf740737c7918b8b1fe232dca4dc9f8e754b8ad5e20966814001ed0ac6b"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
