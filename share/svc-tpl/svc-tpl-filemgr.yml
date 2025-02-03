@@ -7,6 +7,7 @@ config:
     - registry
     - svc_data
   mime_types: share/mime.yml
+  terminal: true
 # the file manager service usually works under root, however may be restricted
 # for higher security
-user: eva
+#user: eva
