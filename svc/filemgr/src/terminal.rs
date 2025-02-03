@@ -77,15 +77,6 @@ pub struct Process {
     pid: Option<u32>,
 }
 
-impl Drop for Process {
-    fn drop(&mut self) {
-        if let Some(pid) = self.pid {
-            #[allow(clippy::cast_possible_wrap)]
-            bmart::process::kill_pstree_sync(pid, true);
-        }
-    }
-}
-
 impl Process {
     #[allow(clippy::too_many_arguments)]
     pub async fn run<C, A, D, S, ENV, EnvK, EnvV>(

@@ -728,6 +728,7 @@ async fn terminal_handler(global_input_rx: async_channel::Receiver<Option<Vec<u8
                         match v {
                             terminal::Output::Pid(pid) => {
                                 info!("terminal process id: {}", pid);
+                                terminal_process().lock().await.pid = Some(pid);
                             }
                             terminal::Output::Stdout(_) | terminal::Output::Stderr(_) => {
                                 terminal_process().lock().await.output.push(v);
