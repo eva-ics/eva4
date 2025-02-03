@@ -7,18 +7,25 @@ use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
+use std::mem;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::Mutex;
+
+mod terminal;
 
 err_logger!();
 
 lazy_static::lazy_static! {
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
+    static ref TERMINAL: OnceCell<Mutex<TerminalProcess>> = <_>::default();
+    static ref TERMINAL_GLOBAL_INPUT_TX: OnceCell<async_channel::Sender<Option<Vec<u8>>>> = <_>::default();
 }
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -27,9 +34,34 @@ const DESCRIPTION: &str = "File management service";
 
 const DEFAULT_MIME: &str = "application/octet-stream";
 
+const TERMINAL_BUFFER_SIZE: usize = 500_000;
+
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[derive(Default)]
+struct TerminalProcess {
+    pid: Option<u32>,
+    output: Vec<terminal::Output>,
+    input_tx: Option<async_channel::Sender<Vec<u8>>>,
+}
+
+impl TerminalProcess {
+    async fn terminate(&mut self) {
+        {
+            self.input_tx.take();
+        }
+        self.output.clear();
+        if let Some(pid) = self.pid {
+            bmart::process::kill_pstree(pid, Some(Duration::from_secs(1)), true).await;
+        }
+    }
+}
+
+fn terminal_process() -> &'static Mutex<TerminalProcess> {
+    TERMINAL.get().unwrap()
+}
 
 #[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
 #[serde(rename_all = "lowercase")]
@@ -211,6 +243,47 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
+            "terminal.send_input" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Params {
+                        input: Vec<u8>,
+                    }
+                    let p: Params = unpack(payload)?;
+                    if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
+                        tx.send(Some(p.input)).await.map_err(Error::failed)?;
+                        Ok(None)
+                    } else {
+                        Err(Error::unsupported("terminal is not enabled").into())
+                    }
+                }
+            }
+            "terminal.restart" => {
+                if !payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
+                    tx.send(None).await.map_err(Error::failed)?;
+                    Ok(None)
+                } else {
+                    Err(Error::unsupported("terminal is not enabled").into())
+                }
+            }
+            "terminal.take_output" => {
+                if payload.is_empty() {
+                    #[derive(Serialize)]
+                    struct Output {
+                        output: Vec<terminal::Output>,
+                    }
+                    let output = mem::take(&mut terminal_process().lock().await.output);
+                    terminal_process().lock().await.output.clear();
+                    Ok(Some(pack(&Output { output })?))
+                } else {
+                    Err(RpcError::params(None))
+                }
+            }
             "sh" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))
@@ -559,6 +632,86 @@ struct Config {
     protected: HashSet<PathBuf>,
     #[serde(default)]
     mime_types: Option<String>,
+    #[serde(default)]
+    terminal: bool,
+}
+
+async fn terminal_handler(global_input_rx: async_channel::Receiver<Option<Vec<u8>>>) {
+    let mut cmd = Path::new(&eva_common::tools::get_eva_dir()).join("venv/bin/eva");
+    if cmd.exists() {
+        cmd = Path::new(&eva_common::tools::get_eva_dir()).join("bin/eva");
+    } else {
+        info!("eva-shell not installed, falling back to the system shell");
+        cmd =
+            std::env::var("SHELL").map_or_else(|_| Path::new("/bin/sh").to_owned(), PathBuf::from);
+    }
+    if !cmd.exists() {
+        error!("unable to find a working shell, aborting terminal handler");
+        return;
+    }
+    loop {
+        let cmd = cmd.clone();
+        let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        info!("starting terminal process: {}", cmd.to_string_lossy());
+        let terminal_fut = tokio::spawn(async move {
+            terminal::Process::default()
+                .run(
+                    cmd,
+                    &[] as &[&str],
+                    BTreeMap::<&str, &str>::new(),
+                    eva_common::tools::get_eva_dir(),
+                    "xterm-256color",
+                    (160, 48),
+                    out_tx,
+                    in_rx,
+                )
+                .await;
+        });
+        loop {
+            tokio::select! {
+                v = global_input_rx.recv() => {
+                    if let Ok(input) = v {
+                        let need_terminate = input.is_none();
+                        if let Err(e) = in_tx.send(input).await {
+                            error!("unable to send input to terminal: {}", e);
+                            break;
+                        }
+                        if need_terminate {
+                            info!("Terminal process terminated by request");
+                            break;
+                        }
+                    }
+                }
+                o = out_rx.recv() => {
+                    match o {
+                      Ok(v) => {
+                        match v {
+                            terminal::Output::Pid(pid) => {
+                                info!("terminal process id: {}", pid);
+                            }
+                            terminal::Output::Stdout(_) | terminal::Output::Stderr(_) => {
+                                terminal_process().lock().await.output.push(v);
+                            }
+                            terminal::Output::Error(e) => {
+                                error!("Terminal process error: {}", e);
+                                break;
+                            }
+                            terminal::Output::Terminated(code) => {
+                                warn!("Terminal process terminated with code: {:?}", code);
+                                terminal_process().lock().await.output.push(v);
+                            }
+                        }
+                    }
+                      Err(_) => break,
+                    }
+                }
+            }
+        }
+        terminal_fut.abort();
+        terminal_process().lock().await.terminate().await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -572,6 +725,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     TIMEOUT
         .set(initial.timeout())
         .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
+    TERMINAL
+        .set(TerminalProcess::default().into())
+        .map_err(|_| Error::core("Unable to set TERMINAL"))?;
     let eva_dir = Path::new(initial.eva_dir());
     let mut runtime_dir = PathBuf::from(&eva_dir);
     runtime_dir.push("runtime");
@@ -611,6 +767,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("timeout")
             .optional("stdin"),
     );
+    info.add_method(ServiceMethod::new("terminal.send_input").required("input"));
+    info.add_method(ServiceMethod::new("terminal.take_output"));
+    info.add_method(ServiceMethod::new("terminal.restart"));
     info.add_method(
         ServiceMethod::new("file.get")
             .required("path")
@@ -642,9 +801,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
+    if config.terminal {
+        let (global_tx, global_rx) = async_channel::bounded(200_000);
+        TERMINAL_GLOBAL_INPUT_TX
+            .set(global_tx)
+            .map_err(|_| Error::core("Unable to set TERMINAL_GLOBAL_INPUT_TX"))?;
+        tokio::spawn(terminal_handler(global_rx));
+    }
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
+    terminal_process().lock().await.terminate().await;
     Ok(())
 }

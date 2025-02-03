@@ -24,6 +24,8 @@ bmart = { workspace = true }
 openssl = { workspace = true }
 glob-match = "0.2.1"
 async-recursion = { workspace = true }
+termios = "0.3.3"
+libc = "0.2.169"
 
 [features]
 std-alloc = []
