@@ -22,8 +22,6 @@ const BUF_SIZE: usize = 8192;
 
 fn create_pty(
     term_size: (usize, usize),
-    // todo fix certain program (mc) after maybe remove
-    ce: bool,
 ) -> Result<(File, Stdio), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let ws = libc::winsize {
         ws_row: u16::try_from(term_size.1)?,
@@ -60,15 +58,13 @@ fn create_pty(
         return Err("pty ioctl".into());
     }
 
-    if !ce {
-        let mut termios = Termios::from_fd(pty_master)?;
-        termios.c_lflag &= !(termios::ICANON | termios::ECHO);
-        termios::tcsetattr(pty_master, TCSANOW, &termios)?;
+    let mut termios = Termios::from_fd(pty_master)?;
+    termios.c_lflag &= !termios::ICANON;
+    termios::tcsetattr(pty_master, TCSANOW, &termios)?;
 
-        let mut termios = Termios::from_fd(pty_slave)?;
-        termios.c_lflag &= !(termios::ICANON | termios::ECHO);
-        termios::tcsetattr(pty_slave, TCSANOW, &termios)?;
-    }
+    let mut termios = Termios::from_fd(pty_slave)?;
+    termios.c_lflag &= !termios::ICANON;
+    termios::tcsetattr(pty_slave, TCSANOW, &termios)?;
 
     let f = unsafe { File::from_raw_fd(pty_master) };
     let stdio = unsafe { Stdio::from_raw_fd(pty_slave) };
@@ -154,9 +150,9 @@ impl Process {
         EnvK: AsRef<OsStr>,
         EnvV: AsRef<OsStr>,
     {
-        let (mut stdin, stdin_stdio) = create_pty(terminal_size, true)?;
-        let (mut stdout, stdout_stdio) = create_pty(terminal_size, true)?;
-        let (mut stderr, stderr_stdio) = create_pty(terminal_size, true)?;
+        let (mut stdin, stdin_stdio) = create_pty(terminal_size)?;
+        let (mut stdout, stdout_stdio) = create_pty(terminal_size)?;
+        let (mut stderr, stderr_stdio) = create_pty(terminal_size)?;
 
         let mut child = Command::new(command)
             .current_dir(work_dir)
