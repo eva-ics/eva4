@@ -1,3 +1,30 @@
+terminal.create:
+  des: Creates a terminal
+  par:
+    - nam: dimensions
+      typ: (u16, u16)
+      des: Columns, Rows
+      req: true
+  ret: Terminal ID (UUID packed as String)
+terminal.kill:
+  des: Kills a terminal
+  par:
+    - nam: id
+      typ: String
+      des: Terminal ID (UUID packed as String)
+      req: true
+terminal.sync:
+  des: Syncs terminal output
+  par:
+    - nam: id
+      typ: String
+      des: Terminal ID (UUID packed as String)
+      req: true
+    - nam: input
+      typ: String/Vec<u8>
+      des: Input data
+      req: false
+  ret: Terminal output buffer
 list:
   des: List files/directories in runtime directory
   par:

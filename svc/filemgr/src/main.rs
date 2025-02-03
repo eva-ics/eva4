@@ -4,9 +4,9 @@ use eva_common::time::Time;
 use eva_sdk::fs as sdkfs;
 use eva_sdk::http;
 use eva_sdk::prelude::*;
+use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
-use parking_lot::Mutex as SyncMutex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
@@ -14,24 +14,24 @@ use std::iter::FromIterator;
 use std::mem;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic;
+use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 mod terminal;
 
 err_logger!();
 
-const DEFAULT_COLS: usize = 120;
-const DEFAULT_ROWS: usize = 38;
+static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static TERMINALS: Lazy<Mutex<BTreeMap<Uuid, Arc<TerminalProcess>>>> = Lazy::new(<_>::default);
 
-lazy_static::lazy_static! {
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref TERMINAL: OnceCell<Mutex<TerminalProcess>> = <_>::default();
-    static ref TERMINAL_GLOBAL_INPUT_TX: OnceCell<async_channel::Sender<Option<Vec<u8>>>> = <_>::default();
-    static ref TERMINAL_DIMENSIONS: SyncMutex<(usize, usize)> = SyncMutex::new((DEFAULT_COLS, DEFAULT_ROWS));
-}
+static TERMINALS_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -39,42 +39,163 @@ const DESCRIPTION: &str = "File management service";
 
 const DEFAULT_MIME: &str = "application/octet-stream";
 
-const TERMINAL_BUFFER_SIZE: usize = 500_000;
+const TERMINAL_BUFFER_SIZE: usize = 20_000;
+
+const TERMINAL_CLEANUP_INTERVAL: Duration = Duration::from_secs(30);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 struct TerminalProcess {
-    pid: Option<u32>,
-    output: Vec<terminal::Output>,
-    input_tx: Option<async_channel::Sender<Vec<u8>>>,
+    pid: atomic::AtomicU32,
+    // cols/rows
+    dimensions: (usize, usize),
+    api_input_tx: async_channel::Sender<Option<Vec<u8>>>,
+    data: Mutex<TerminalProcessData>,
 }
 
-impl Default for TerminalProcess {
-    fn default() -> Self {
-        TerminalProcess {
-            pid: None,
-            output: Vec::new(),
-            input_tx: None,
-        }
-    }
+struct TerminalProcessData {
+    output: Vec<terminal::Output>,
+    last_sync: Instant,
+    handler_fut: Option<JoinHandle<()>>,
 }
 
 impl TerminalProcess {
-    async fn terminate(&mut self) {
-        {
-            self.input_tx.take();
+    async fn create(dimensions: (usize, usize)) -> EResult<Arc<Self>> {
+        let (api_input_tx, api_input_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        let process = Arc::new(TerminalProcess {
+            pid: atomic::AtomicU32::new(0),
+            dimensions,
+            api_input_tx,
+            data: Mutex::new(TerminalProcessData {
+                output: Vec::new(),
+                last_sync: Instant::now(),
+                handler_fut: None,
+            }),
+        });
+        let handler_fut = tokio::spawn(process.clone().handler(api_input_rx));
+        process.data.lock().await.handler_fut = Some(handler_fut);
+        let op = eva_common::op::Op::new(*TIMEOUT.get().unwrap());
+        while !op.is_timed_out() {
+            if process.pid.load(atomic::Ordering::SeqCst) > 0 {
+                return Ok(process);
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        self.output.clear();
-        if let Some(pid) = self.pid {
-            bmart::process::kill_pstree(pid, Some(Duration::from_secs(1)), true).await;
+        tokio::spawn(process.clone().terminate());
+        Err(Error::timeout())
+    }
+    async fn sync(self: Arc<Self>, input: Vec<u8>) -> Vec<terminal::Output> {
+        if !input.is_empty() {
+            self.api_input_tx.send(Some(input)).await.log_ef();
         }
+        let mut data = self.data.lock().await;
+        data.last_sync = Instant::now();
+        mem::take(&mut data.output)
+    }
+    async fn terminate(self: Arc<Self>) {
+        self.api_input_tx.send(None).await.ok();
+        let mut data = self.data.lock().await;
+        data.output.clear();
+        if let Some(fut) = data.handler_fut.take() {
+            fut.abort();
+        }
+        self.terminate_process();
+    }
+    fn terminate_process(&self) {
+        let pid = self.pid.swap(0, atomic::Ordering::SeqCst);
+        if pid > 0 {
+            tokio::spawn(bmart::process::kill_pstree(
+                pid,
+                Some(Duration::from_secs(1)),
+                true,
+            ));
+        }
+    }
+    async fn handler(self: Arc<Self>, api_input_rx: async_channel::Receiver<Option<Vec<u8>>>) {
+        let mut cmd = Path::new(&eva_common::tools::get_eva_dir()).join("venv/bin/eva");
+        if cmd.exists() {
+            cmd = Path::new(&eva_common::tools::get_eva_dir()).join("bin/eva");
+        } else {
+            info!("eva-shell not installed, falling back to the system shell");
+            cmd = std::env::var("SHELL")
+                .map_or_else(|_| Path::new("/bin/sh").to_owned(), PathBuf::from);
+        }
+        if !cmd.exists() {
+            error!("unable to find a working shell, aborting terminal handler");
+            return;
+        }
+        let cmd = cmd.clone();
+        let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        info!("starting terminal process: {}", cmd.to_string_lossy());
+        let dimensions = self.dimensions;
+        let terminal_fut = tokio::spawn(async move {
+            terminal::Process::default()
+                .run(
+                    cmd,
+                    &[] as &[&str],
+                    BTreeMap::<&str, &str>::new(),
+                    eva_common::tools::get_eva_dir(),
+                    "xterm-256color",
+                    dimensions,
+                    out_tx,
+                    in_rx,
+                )
+                .await;
+        });
+        loop {
+            tokio::select! {
+                v = api_input_rx.recv() => {
+                    if let Ok(input) = v {
+                        let need_terminate = input.is_none();
+                        if let Err(e) = in_tx.send(input).await {
+                            error!("unable to send input to terminal: {}", e);
+                            break;
+                        }
+                        if need_terminate {
+                            info!("Terminal process terminated by request");
+                            break;
+                        }
+                    }
+                }
+                o = out_rx.recv() => {
+                    match o {
+                      Ok(v) => {
+                        match v {
+                            terminal::Output::Pid(pid) => {
+                                info!("terminal process id: {}", pid);
+                                self.pid.store(pid, atomic::Ordering::SeqCst);
+                            }
+                            terminal::Output::Stdout(_) | terminal::Output::Stderr(_) => {
+                                self.data.lock().await.output.push(v);
+                            }
+                            terminal::Output::Error(e) => {
+                                error!("Terminal process error: {}", e);
+                                break;
+                            }
+                            terminal::Output::Terminated(code) => {
+                                warn!("Terminal process terminated with code: {:?}", code);
+                                self.data.lock().await.output.push(v);
+                                break;
+                            }
+                        }
+                    }
+                      Err(_) => break,
+                    }
+                }
+            }
+        }
+        terminal_fut.abort();
+        self.clone().terminate().await;
     }
 }
 
-fn terminal_process() -> &'static Mutex<TerminalProcess> {
-    TERMINAL.get().unwrap()
+impl Drop for TerminalProcess {
+    fn drop(&mut self) {
+        self.terminate_process();
+    }
 }
 
 #[derive(Deserialize, Eq, PartialEq, Copy, Clone, Default)]
@@ -94,6 +215,12 @@ enum Extract {
 enum TerminalInput {
     Text(String),
     Binary(Vec<u8>),
+}
+
+impl Default for TerminalInput {
+    fn default() -> Self {
+        TerminalInput::Binary(Vec::new())
+    }
 }
 
 impl From<TerminalInput> for Vec<u8> {
@@ -273,54 +400,69 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
-            "terminal.send_input" => {
+            "terminal.create" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Payload {
+                    dimensions: (usize, usize),
+                }
+                #[derive(Serialize)]
+                struct Output {
+                    id: String,
+                }
                 if payload.is_empty() {
-                    Err(RpcError::params(None))
-                } else {
-                    #[derive(Deserialize)]
-                    #[serde(deny_unknown_fields)]
-                    struct Params {
-                        input: TerminalInput,
-                    }
-                    let p: Params = unpack(payload)?;
-                    if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
-                        tx.send(Some(p.input.into())).await.map_err(Error::failed)?;
-                        Ok(None)
-                    } else {
-                        Err(Error::unsupported("terminal is not enabled").into())
-                    }
+                    return Err(RpcError::params(None));
                 }
-            }
-            "terminal.restart" => {
-                if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
-                    #[derive(Deserialize)]
-                    #[serde(deny_unknown_fields)]
-                    struct Payload {
-                        dimensions: Option<(usize, usize)>,
-                    }
-                    if !payload.is_empty() {
-                        let p: Payload = unpack(payload)?;
-                        *TERMINAL_DIMENSIONS.lock() =
-                            p.dimensions.unwrap_or((DEFAULT_COLS, DEFAULT_ROWS));
-                    }
-                    tx.send(None).await.map_err(Error::failed)?;
-                    Ok(None)
-                } else {
-                    Err(Error::unsupported("terminal is not enabled").into())
+                if !TERMINALS_ENABLED.load(atomic::Ordering::Relaxed) {
+                    return Err(Error::unsupported("terminals are disabled").into());
                 }
+                let p: Payload = unpack(payload)?;
+                let terminal = TerminalProcess::create(p.dimensions).await?;
+                let id = Uuid::new_v4();
+                TERMINALS.lock().await.insert(id, terminal);
+                Ok(Some(pack(&Output { id: id.to_string() })?))
             }
-            "terminal.take_output" => {
+            "terminal.sync" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Params {
+                    id: String,
+                    #[serde(default)]
+                    input: TerminalInput,
+                }
+                #[derive(Serialize)]
+                struct Output {
+                    output: Vec<terminal::Output>,
+                }
                 if payload.is_empty() {
-                    #[derive(Serialize)]
-                    struct Output {
-                        output: Vec<terminal::Output>,
-                    }
-                    let output = mem::take(&mut terminal_process().lock().await.output);
-                    terminal_process().lock().await.output.clear();
-                    Ok(Some(pack(&Output { output })?))
-                } else {
-                    Err(RpcError::params(None))
+                    return Err(RpcError::params(None));
                 }
+                let p: Params = unpack(payload)?;
+                let id = Uuid::parse_str(&p.id).map_err(|_| Error::invalid_data("invalid id"))?;
+                let terminal = TERMINALS
+                    .lock()
+                    .await
+                    .get(&id)
+                    .ok_or_else(|| Error::not_found(format!("terminal {} not found", id)))?
+                    .clone();
+                let output = terminal.sync(p.input.into()).await;
+                Ok(Some(pack(&Output { output })?))
+            }
+            "terminal.kill" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Params {
+                    id: String,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: Params = unpack(payload)?;
+                let id = Uuid::parse_str(&p.id).map_err(|_| Error::invalid_data("invalid id"))?;
+                if let Some(terminal) = TERMINALS.lock().await.remove(&id) {
+                    terminal.terminate().await;
+                }
+                Ok(None)
             }
             "sh" => {
                 if payload.is_empty() {
@@ -674,86 +816,6 @@ struct Config {
     terminal: bool,
 }
 
-async fn terminal_handler(global_input_rx: async_channel::Receiver<Option<Vec<u8>>>) {
-    let mut cmd = Path::new(&eva_common::tools::get_eva_dir()).join("venv/bin/eva");
-    if cmd.exists() {
-        cmd = Path::new(&eva_common::tools::get_eva_dir()).join("bin/eva");
-    } else {
-        info!("eva-shell not installed, falling back to the system shell");
-        cmd =
-            std::env::var("SHELL").map_or_else(|_| Path::new("/bin/sh").to_owned(), PathBuf::from);
-    }
-    if !cmd.exists() {
-        error!("unable to find a working shell, aborting terminal handler");
-        return;
-    }
-    loop {
-        let cmd = cmd.clone();
-        let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
-        let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
-        info!("starting terminal process: {}", cmd.to_string_lossy());
-        let dimensions = *TERMINAL_DIMENSIONS.lock();
-        let terminal_fut = tokio::spawn(async move {
-            terminal::Process::default()
-                .run(
-                    cmd,
-                    &[] as &[&str],
-                    BTreeMap::<&str, &str>::new(),
-                    eva_common::tools::get_eva_dir(),
-                    "xterm-256color",
-                    dimensions,
-                    out_tx,
-                    in_rx,
-                )
-                .await;
-        });
-        loop {
-            tokio::select! {
-                v = global_input_rx.recv() => {
-                    if let Ok(input) = v {
-                        let need_terminate = input.is_none();
-                        if let Err(e) = in_tx.send(input).await {
-                            error!("unable to send input to terminal: {}", e);
-                            break;
-                        }
-                        if need_terminate {
-                            info!("Terminal process terminated by request");
-                            break;
-                        }
-                    }
-                }
-                o = out_rx.recv() => {
-                    match o {
-                      Ok(v) => {
-                        match v {
-                            terminal::Output::Pid(pid) => {
-                                info!("terminal process id: {}", pid);
-                                terminal_process().lock().await.pid = Some(pid);
-                            }
-                            terminal::Output::Stdout(_) | terminal::Output::Stderr(_) => {
-                                terminal_process().lock().await.output.push(v);
-                            }
-                            terminal::Output::Error(e) => {
-                                error!("Terminal process error: {}", e);
-                                break;
-                            }
-                            terminal::Output::Terminated(code) => {
-                                warn!("Terminal process terminated with code: {:?}", code);
-                                terminal_process().lock().await.output.push(v);
-                            }
-                        }
-                    }
-                      Err(_) => break,
-                    }
-                }
-            }
-        }
-        terminal_fut.abort();
-        terminal_process().lock().await.terminate().await;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-    }
-}
-
 #[allow(clippy::too_many_lines)]
 #[svc_main]
 async fn main(mut initial: Initial) -> EResult<()> {
@@ -765,9 +827,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     TIMEOUT
         .set(initial.timeout())
         .map_err(|_| Error::core("Unable to set TIMEOUT"))?;
-    TERMINAL
-        .set(TerminalProcess::default().into())
-        .map_err(|_| Error::core("Unable to set TERMINAL"))?;
+    TERMINALS_ENABLED.store(config.terminal, atomic::Ordering::Relaxed);
     let eva_dir = Path::new(initial.eva_dir());
     let mut runtime_dir = PathBuf::from(&eva_dir);
     runtime_dir.push("runtime");
@@ -807,9 +867,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("timeout")
             .optional("stdin"),
     );
-    info.add_method(ServiceMethod::new("terminal.send_input").required("input"));
-    info.add_method(ServiceMethod::new("terminal.take_output"));
-    info.add_method(ServiceMethod::new("terminal.restart").optional("dimensions"));
+    info.add_method(ServiceMethod::new("terminal.create").required("dimensions"));
+    info.add_method(
+        ServiceMethod::new("terminal.sync")
+            .required("id")
+            .required("input"),
+    );
+    info.add_method(ServiceMethod::new("terminal.kill").required("id"));
     info.add_method(
         ServiceMethod::new("file.get")
             .required("path")
@@ -842,16 +906,32 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
     if config.terminal {
-        let (global_tx, global_rx) = async_channel::bounded(200_000);
-        TERMINAL_GLOBAL_INPUT_TX
-            .set(global_tx)
-            .map_err(|_| Error::core("Unable to set TERMINAL_GLOBAL_INPUT_TX"))?;
-        tokio::spawn(terminal_handler(global_rx));
+        tokio::spawn(async move {
+            let mut int = tokio::time::interval(TERMINAL_CLEANUP_INTERVAL);
+            let timeout = *TIMEOUT.get().unwrap();
+            loop {
+                int.tick().await;
+                let mut terminals = TERMINALS.lock().await;
+                let mut to_remove = Vec::new();
+                for (id, terminal) in terminals.iter() {
+                    if terminal.data.lock().await.last_sync.elapsed() > timeout {
+                        terminal.clone().terminate().await;
+                        to_remove.push(*id);
+                        info!("terminal {} terminated due to inactivity", id);
+                    }
+                }
+                for id in to_remove {
+                    terminals.remove(&id);
+                }
+            }
+        });
     }
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     svc_block(&rpc).await;
     svc_mark_terminating(&client).await?;
-    terminal_process().lock().await.terminate().await;
+    for terminal in TERMINALS.lock().await.values() {
+        terminal.clone().terminate().await;
+    }
     Ok(())
 }

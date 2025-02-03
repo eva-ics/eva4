@@ -2077,19 +2077,18 @@ dependencies = [
  "eva-sdk",
  "glob-match",
  "hex 0.4.3",
- "lazy_static",
  "libc",
  "log",
  "mimalloc",
  "once_cell",
  "openssl",
- "parking_lot_rt",
  "parse_int",
  "serde",
  "serde_yaml 0.8.26",
  "tempfile",
  "termios",
  "tokio",
+ "uuid 1.7.0",
 ]
 
 [[package]]
