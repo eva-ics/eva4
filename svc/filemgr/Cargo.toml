@@ -15,6 +15,7 @@ log = { workspace = true }
 lazy_static = { workspace = true }
 once_cell = { workspace = true }
 async-channel = { workspace = true }
+parking_lot = { workspace = true }
 serde_yaml = { workspace = true }
 hex = { workspace = true }
 parse_int = "0.6.0"

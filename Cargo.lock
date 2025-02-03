@@ -2083,6 +2083,7 @@ dependencies = [
  "mimalloc",
  "once_cell",
  "openssl",
+ "parking_lot_rt",
  "parse_int",
  "serde",
  "serde_yaml 0.8.26",

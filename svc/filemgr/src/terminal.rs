@@ -9,6 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Output {
     Pid(u32),
     Stdout(Vec<u8>),
@@ -153,16 +154,14 @@ impl Process {
         EnvK: AsRef<OsStr>,
         EnvV: AsRef<OsStr>,
     {
-        let (mut stdin, stdin_stdio) = create_pty(terminal_size, false)?;
-        let (mut stdout, stdout_stdio) = create_pty(terminal_size, false)?;
-        let (mut stderr, stderr_stdio) = create_pty(terminal_size, false)?;
+        let (mut stdin, stdin_stdio) = create_pty(terminal_size, true)?;
+        let (mut stdout, stdout_stdio) = create_pty(terminal_size, true)?;
+        let (mut stderr, stderr_stdio) = create_pty(terminal_size, true)?;
 
         let mut child = Command::new(command)
             .current_dir(work_dir)
             .args(args)
             .envs(env)
-            .env("INVOCATION_ID", "0")
-            .env("ROBOPLC_MODE", "exec")
             .env("COLUMNS", terminal_size.0.to_string())
             .env("LINES", terminal_size.1.to_string())
             .env("TERM", terminal_name)

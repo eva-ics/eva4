@@ -6,6 +6,7 @@ use eva_sdk::http;
 use eva_sdk::prelude::*;
 use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
+use parking_lot::Mutex as SyncMutex;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::collections::{HashMap, HashSet};
@@ -22,10 +23,14 @@ mod terminal;
 
 err_logger!();
 
+const DEFAULT_COLS: usize = 120;
+const DEFAULT_ROWS: usize = 38;
+
 lazy_static::lazy_static! {
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
     static ref TERMINAL: OnceCell<Mutex<TerminalProcess>> = <_>::default();
     static ref TERMINAL_GLOBAL_INPUT_TX: OnceCell<async_channel::Sender<Option<Vec<u8>>>> = <_>::default();
+    static ref TERMINAL_DIMENSIONS: SyncMutex<(usize, usize)> = SyncMutex::new((DEFAULT_COLS, DEFAULT_ROWS));
 }
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -40,11 +45,20 @@ const TERMINAL_BUFFER_SIZE: usize = 500_000;
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-#[derive(Default)]
 struct TerminalProcess {
     pid: Option<u32>,
     output: Vec<terminal::Output>,
     input_tx: Option<async_channel::Sender<Vec<u8>>>,
+}
+
+impl Default for TerminalProcess {
+    fn default() -> Self {
+        TerminalProcess {
+            pid: None,
+            output: Vec::new(),
+            input_tx: None,
+        }
+    }
 }
 
 impl TerminalProcess {
@@ -73,6 +87,22 @@ enum Extract {
     Tgz,
     Tbz2,
     Zip,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum TerminalInput {
+    Text(String),
+    Binary(Vec<u8>),
+}
+
+impl From<TerminalInput> for Vec<u8> {
+    fn from(input: TerminalInput) -> Self {
+        match input {
+            TerminalInput::Text(v) => v.into_bytes(),
+            TerminalInput::Binary(v) => v,
+        }
+    }
 }
 
 struct Handlers {
@@ -250,11 +280,11 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct Params {
-                        input: Vec<u8>,
+                        input: TerminalInput,
                     }
                     let p: Params = unpack(payload)?;
                     if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
-                        tx.send(Some(p.input)).await.map_err(Error::failed)?;
+                        tx.send(Some(p.input.into())).await.map_err(Error::failed)?;
                         Ok(None)
                     } else {
                         Err(Error::unsupported("terminal is not enabled").into())
@@ -262,9 +292,17 @@ impl RpcHandlers for Handlers {
                 }
             }
             "terminal.restart" => {
-                if !payload.is_empty() {
-                    Err(RpcError::params(None))
-                } else if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
+                if let Some(tx) = TERMINAL_GLOBAL_INPUT_TX.get() {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Payload {
+                        dimensions: Option<(usize, usize)>,
+                    }
+                    if !payload.is_empty() {
+                        let p: Payload = unpack(payload)?;
+                        *TERMINAL_DIMENSIONS.lock() =
+                            p.dimensions.unwrap_or((DEFAULT_COLS, DEFAULT_ROWS));
+                    }
                     tx.send(None).await.map_err(Error::failed)?;
                     Ok(None)
                 } else {
@@ -654,6 +692,7 @@ async fn terminal_handler(global_input_rx: async_channel::Receiver<Option<Vec<u8
         let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
         let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
         info!("starting terminal process: {}", cmd.to_string_lossy());
+        let dimensions = *TERMINAL_DIMENSIONS.lock();
         let terminal_fut = tokio::spawn(async move {
             terminal::Process::default()
                 .run(
@@ -662,7 +701,7 @@ async fn terminal_handler(global_input_rx: async_channel::Receiver<Option<Vec<u8
                     BTreeMap::<&str, &str>::new(),
                     eva_common::tools::get_eva_dir(),
                     "xterm-256color",
-                    (160, 48),
+                    dimensions,
                     out_tx,
                     in_rx,
                 )
@@ -769,7 +808,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     );
     info.add_method(ServiceMethod::new("terminal.send_input").required("input"));
     info.add_method(ServiceMethod::new("terminal.take_output"));
-    info.add_method(ServiceMethod::new("terminal.restart"));
+    info.add_method(ServiceMethod::new("terminal.restart").optional("dimensions"));
     info.add_method(
         ServiceMethod::new("file.get")
             .required("path")
