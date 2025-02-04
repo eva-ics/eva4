@@ -9,14 +9,14 @@ terminal.create:
 terminal.kill:
   des: Kills a terminal
   par:
-    - nam: id
+    - nam: i
       typ: String
       des: Terminal ID (UUID packed as String)
       req: true
 terminal.sync:
   des: Syncs terminal output
   par:
-    - nam: id
+    - nam: i
       typ: String
       des: Terminal ID (UUID packed as String)
       req: true
