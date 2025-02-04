@@ -22,7 +22,7 @@ const BUF_SIZE: usize = 8192;
 
 fn create_pty(
     term_size: (usize, usize),
-) -> Result<(File, Stdio), Box<dyn std::error::Error + Send + Sync + 'static>> {
+) -> Result<(File, Stdio, i32), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let ws = libc::winsize {
         ws_row: u16::try_from(term_size.1)?,
         ws_col: u16::try_from(term_size.0)?,
@@ -59,17 +59,17 @@ fn create_pty(
     }
 
     let mut termios = Termios::from_fd(pty_master)?;
-    termios.c_lflag &= !termios::ICANON;
+    //termios.c_lflag |= termios::ICANON;
     termios::tcsetattr(pty_master, TCSANOW, &termios)?;
 
     let mut termios = Termios::from_fd(pty_slave)?;
-    termios.c_lflag &= !termios::ICANON;
+    //termios.c_lflag |= termios::ICANON;
     termios::tcsetattr(pty_slave, TCSANOW, &termios)?;
 
     let f = unsafe { File::from_raw_fd(pty_master) };
     let stdio = unsafe { Stdio::from_raw_fd(pty_slave) };
 
-    Ok((f, stdio))
+    Ok((f, stdio, pty_master))
 }
 
 #[derive(Default)]
@@ -141,9 +141,9 @@ impl Process {
         EnvK: AsRef<OsStr>,
         EnvV: AsRef<OsStr>,
     {
-        let (mut stdin, stdin_stdio) = create_pty(terminal_size)?;
-        let (mut stdout, stdout_stdio) = create_pty(terminal_size)?;
-        let (mut stderr, stderr_stdio) = create_pty(terminal_size)?;
+        let (mut stdin, stdin_stdio, stdin_master) = create_pty(terminal_size)?;
+        let (mut stdout, stdout_stdio, stdout_master) = create_pty(terminal_size)?;
+        let (mut stderr, stderr_stdio, _) = create_pty(terminal_size)?;
 
         let mut child = Command::new(command)
             .current_dir(work_dir)
@@ -163,6 +163,8 @@ impl Process {
 
         let tx_stdout = out_tx.clone();
         let tx_stderr = out_tx.clone();
+
+        let tx_echo = out_tx.clone();
 
         let out = tokio::spawn(async move {
             let mut buf = [0u8; BUF_SIZE];
@@ -201,8 +203,36 @@ impl Process {
                 let Some(data) = data else {
                     break;
                 };
+                let mut termios_stdin = Termios::from_fd(stdin_master).unwrap();
+                let termios_stdout = Termios::from_fd(stdout_master).unwrap();
+                let input_mode = termios_stdin.c_lflag & termios::ECHO != 0
+                    && termios_stdout.c_lflag & termios::ECHO != 0;
+                if !input_mode {
+                    // set non-canonical mode
+                    termios_stdin.c_lflag &= !termios::ICANON;
+                    termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin).unwrap();
+                } else {
+                    // set canonical mode
+                    termios_stdin.c_lflag |= termios::ICANON;
+                    termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin).unwrap();
+                }
                 if stdin.write_all(&data).await.is_err() || stdin.flush().await.is_err() {
                     break;
+                }
+                if input_mode {
+                    // echo is enabled, so we need to read the data back
+                    // replace '\r' with '\r\n'
+                    let data = data
+                        .iter()
+                        .flat_map(|&c| {
+                            if c == b'\r' {
+                                vec![b'\r', b'\n']
+                            } else {
+                                vec![c]
+                            }
+                        })
+                        .collect();
+                    tx_echo.send(Output::Stdout(data)).await.ok();
                 }
             }
         });
