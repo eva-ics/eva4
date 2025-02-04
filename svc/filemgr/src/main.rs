@@ -160,7 +160,7 @@ impl TerminalProcess {
                             break;
                         }
                         if need_terminate {
-                            info!("Terminal process terminated by request");
+                            info!("terminal process terminated by request");
                             break;
                         }
                     }
