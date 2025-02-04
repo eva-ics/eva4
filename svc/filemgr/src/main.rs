@@ -192,6 +192,8 @@ impl TerminalProcess {
                 }
             }
         }
+        // allow the terminal process to send the last output and exit code
+        tokio::time::sleep(Duration::from_secs(1)).await;
         terminal_fut.abort();
         self.clone().terminate().await;
     }
