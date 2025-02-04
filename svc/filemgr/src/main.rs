@@ -39,7 +39,7 @@ const DESCRIPTION: &str = "File management service";
 
 const DEFAULT_MIME: &str = "application/octet-stream";
 
-const TERMINAL_BUFFER_SIZE: usize = 20_000;
+const TERMINAL_BUFFER_SIZE: usize = 100_000;
 
 const TERMINAL_CLEANUP_INTERVAL: Duration = Duration::from_secs(30);
 
