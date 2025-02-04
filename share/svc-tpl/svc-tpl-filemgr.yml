@@ -8,6 +8,5 @@ config:
     - svc_data
   mime_types: share/mime.yml
   terminal: true
-# the file manager service usually works under root, however may be restricted
-# for higher security
-user: eva
+# the file manager service works under root (or the core super user) only,
+# field "user" is ignored if set
