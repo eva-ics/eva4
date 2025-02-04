@@ -3,10 +3,12 @@ command: target/debug/eva-filemgr
 bus:
   path: var/bus.ipc
 config:
+  # disable file management for certain entries in "runtime" folder
   protected:
     - registry
     - svc_data
   mime_types: share/mime.yml
+  # enable terminal API
   terminal: true
 # the file manager service works under root (or the core super user) only,
 # field "user" is ignored if set
