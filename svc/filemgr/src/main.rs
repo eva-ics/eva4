@@ -181,7 +181,7 @@ impl TerminalProcess {
                                 break;
                             }
                             terminal::Output::Terminated(code) => {
-                                warn!("Terminal process terminated with code: {:?}", code);
+                                info!("Terminal process terminated with code: {:?}", code);
                                 self.data.lock().await.output.push(v);
                                 break;
                             }
