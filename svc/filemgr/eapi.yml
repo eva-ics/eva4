@@ -14,7 +14,7 @@ terminal.kill:
       des: Terminal ID (UUID packed as String)
       req: true
 terminal.sync:
-  des: Syncs terminal output
+  des: Syncs terminal I/O
   par:
     - nam: i
       typ: String
