@@ -187,7 +187,7 @@ impl TerminalProcess {
                                 info!("terminal process id: {}", pid);
                                 self.pid.store(pid, atomic::Ordering::SeqCst);
                             }
-                            terminal::Output::Stdout(_) | terminal::Output::Stderr(_) => {
+                            terminal::Output::Stdout(_) => {
                                 self.data.lock().await.output.push(v);
                             }
                             terminal::Output::Error(e) => {

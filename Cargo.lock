@@ -259,7 +259,7 @@ dependencies = [
  "futures-lite 2.2.0",
  "parking",
  "polling 3.5.0",
- "rustix 0.38.31",
+ "rustix 0.38.44",
  "slab",
  "tracing",
  "windows-sys 0.52.0",
@@ -360,7 +360,7 @@ dependencies = [
  "http 0.2.9",
  "http-body",
  "hyper",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "matchit",
  "memchr",
  "mime",
@@ -1202,7 +1202,7 @@ dependencies = [
  "cfg-if",
  "csv-core",
  "futures",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "ryu",
  "serde",
 ]
@@ -1555,9 +1555,9 @@ dependencies = [
 
 [[package]]
 name = "errno"
-version = "0.3.8"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a258e46cdc063eb8519c00b9fc845fc47bcfca4130e2f08e88665ceda8474245"
+checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -2083,10 +2083,11 @@ dependencies = [
  "once_cell",
  "openssl",
  "parse_int",
+ "rustix 0.38.44",
+ "rustix-openpty",
  "serde",
  "serde_yaml 0.8.26",
  "tempfile",
- "termios",
  "tokio",
  "tracing",
  "uuid 1.7.0",
@@ -2976,7 +2977,7 @@ checksum = "bd6effc99afb63425aff9b05836f029929e345a6148a14b7ecd5ab67af944482"
 dependencies = [
  "bytes",
  "fnv",
- "itoa 1.0.10",
+ "itoa 1.0.14",
 ]
 
 [[package]]
@@ -2987,7 +2988,7 @@ checksum = "b32afd38673a8016f7c9ae69e5af41a58f81b1d31689040f2f1959594ce194ea"
 dependencies = [
  "bytes",
  "fnv",
- "itoa 1.0.10",
+ "itoa 1.0.14",
 ]
 
 [[package]]
@@ -3043,7 +3044,7 @@ dependencies = [
  "http-body",
  "httparse",
  "httpdate",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "pin-project-lite",
  "socket2 0.5.5",
  "tokio",
@@ -3270,9 +3271,9 @@ checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 
 [[package]]
 name = "itoa"
-version = "1.0.10"
+version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
+checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 
 [[package]]
 name = "jobserver"
@@ -3307,7 +3308,7 @@ dependencies = [
  "fraction",
  "getrandom 0.2.12",
  "iso8601",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "memchr",
  "num-cmp",
  "once_cell",
@@ -3415,9 +3416,9 @@ checksum = "f051f77a7c8e6957c0696eac88f26b0117e54f52d3fc682ab19397a8812846a4"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.4.13"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
+checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
 
 [[package]]
 name = "lock_api"
@@ -4323,7 +4324,7 @@ dependencies = [
  "cfg-if",
  "concurrent-queue 2.4.0",
  "pin-project-lite",
- "rustix 0.38.31",
+ "rustix 0.38.44",
  "tracing",
  "windows-sys 0.52.0",
 ]
@@ -4962,15 +4963,27 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.31"
+version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ea3e1a662af26cd7a3ba09c0297a31af215563ecf42817c98df621387f4e949"
+checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
 dependencies = [
  "bitflags 2.4.1",
- "errno 0.3.8",
+ "errno 0.3.10",
+ "itoa 1.0.14",
  "libc",
- "linux-raw-sys 0.4.13",
+ "linux-raw-sys 0.4.15",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rustix-openpty"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a25c3aad9fc1424eb82c88087789a7d938e1829724f3e4043163baf0d13cfc12"
+dependencies = [
+ "errno 0.3.10",
+ "libc",
+ "rustix 0.38.44",
 ]
 
 [[package]]
@@ -5094,7 +5107,7 @@ version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5f09b1bd632ef549eaa9f60a1f8de742bdbc698e6cee2095fc84dde5f549ae0"
 dependencies = [
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "ryu",
  "serde",
 ]
@@ -5117,7 +5130,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3491c14715ca2294c4d6a88f15e84739788c1d030eed8c110436aafdaa2f3fd"
 dependencies = [
  "form_urlencoded",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "ryu",
  "serde",
 ]
@@ -5141,7 +5154,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd075d994154d4a774f95b51fb96bdc2832b0ea48425c92546073816cda1f2f"
 dependencies = [
  "indexmap 2.2.3",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "ryu",
  "serde",
  "unsafe-libyaml",
@@ -5373,7 +5386,7 @@ dependencies = [
  "hkdf",
  "hmac",
  "indexmap 1.9.3",
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "libc",
  "libsqlite3-sys",
  "log",
@@ -5618,7 +5631,7 @@ checksum = "a365e8cd18e44762ef95d87f284f4b5cd04107fec2ff3052bd6a3e6069669e67"
 dependencies = [
  "cfg-if",
  "fastrand 2.0.1",
- "rustix 0.38.31",
+ "rustix 0.38.44",
  "windows-sys 0.52.0",
 ]
 
@@ -5675,15 +5688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "termios"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "411c5bf740737c7918b8b1fe232dca4dc9f8e754b8ad5e20966814001ed0ac6b"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5735,7 +5739,7 @@ version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2702e08a7a860f005826c6815dcac101b19b5eb330c27fe4a5928fec1d20ddd"
 dependencies = [
- "itoa 1.0.10",
+ "itoa 1.0.14",
  "libc",
  "num_threads",
  "time-macros",
