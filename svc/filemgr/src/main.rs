@@ -49,9 +49,7 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 struct TerminalProcess {
     pid: atomic::AtomicU32,
-    // cols/rows
-    dimensions: (usize, usize),
-    api_input_tx: async_channel::Sender<Option<Vec<u8>>>,
+    api_input_tx: async_channel::Sender<terminal::Input>,
     data: Mutex<TerminalProcessData>,
 }
 
@@ -66,7 +64,6 @@ impl TerminalProcess {
         let (api_input_tx, api_input_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
         let process = Arc::new(TerminalProcess {
             pid: atomic::AtomicU32::new(0),
-            dimensions,
             api_input_tx,
             data: Mutex::new(TerminalProcessData {
                 output: Vec::new(),
@@ -74,7 +71,7 @@ impl TerminalProcess {
                 handler_fut: None,
             }),
         });
-        let handler_fut = tokio::spawn(process.clone().handler(api_input_rx));
+        let handler_fut = tokio::spawn(process.clone().handler(api_input_rx, dimensions));
         process.data.lock().await.handler_fut = Some(handler_fut);
         let op = eva_common::op::Op::new(*TIMEOUT.get().unwrap());
         while !op.is_timed_out() {
@@ -93,14 +90,28 @@ impl TerminalProcess {
                 bmart::process::kill_pstree_with_signal(pid, bmart::process::Signal::SIGINT, true);
             }
         } else if !input.is_empty() {
-            self.api_input_tx.send(Some(input)).await.log_ef();
+            self.api_input_tx
+                .send(terminal::Input::Data(input))
+                .await
+                .log_ef();
         }
         let mut data = self.data.lock().await;
         data.last_sync = Instant::now();
         mem::take(&mut data.output)
     }
+
+    async fn resize(self: Arc<Self>, dimensions: (usize, usize)) {
+        self.api_input_tx
+            .send(terminal::Input::Resize(dimensions))
+            .await
+            .log_ef();
+    }
+
     async fn terminate(self: Arc<Self>) {
-        self.api_input_tx.send(None).await.ok();
+        self.api_input_tx
+            .send(terminal::Input::Terminate)
+            .await
+            .ok();
         let mut data = self.data.lock().await;
         data.output.clear();
         if let Some(fut) = data.handler_fut.take() {
@@ -118,7 +129,11 @@ impl TerminalProcess {
             ));
         }
     }
-    async fn handler(self: Arc<Self>, api_input_rx: async_channel::Receiver<Option<Vec<u8>>>) {
+    async fn handler(
+        self: Arc<Self>,
+        api_input_rx: async_channel::Receiver<terminal::Input>,
+        dimensions: (usize, usize),
+    ) {
         let mut cmd = Path::new(&eva_common::tools::get_eva_dir()).join("venv/bin/eva");
         if cmd.exists() {
             cmd = Path::new(&eva_common::tools::get_eva_dir()).join("bin/eva");
@@ -135,7 +150,6 @@ impl TerminalProcess {
         let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
         let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
         info!("starting terminal process: {}", cmd.to_string_lossy());
-        let dimensions = self.dimensions;
         let terminal_fut = tokio::spawn(async move {
             terminal::Process::default()
                 .run(
@@ -154,7 +168,7 @@ impl TerminalProcess {
             tokio::select! {
                 v = api_input_rx.recv() => {
                     if let Ok(input) = v {
-                        let need_terminate = input.is_none();
+                        let need_terminate = input == terminal::Input::Terminate;
                         if let Err(e) = in_tx.send(input).await {
                             error!("unable to send input to terminal: {}", e);
                             break;
@@ -428,6 +442,23 @@ impl RpcHandlers for Handlers {
                 let id = Uuid::new_v4();
                 TERMINALS.lock().await.insert(id, terminal);
                 Ok(Some(pack(&Output { i: id.to_string() })?))
+            }
+            "terminal.resize" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct Payload {
+                    i: String,
+                    dimensions: (usize, usize),
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: Payload = unpack(payload)?;
+                let id = Uuid::parse_str(&p.i).map_err(|_| Error::invalid_data("invalid id"))?;
+                if let Some(terminal) = TERMINALS.lock().await.get(&id) {
+                    terminal.clone().resize(p.dimensions).await;
+                }
+                Ok(None)
             }
             "terminal.sync" => {
                 #[derive(Deserialize)]

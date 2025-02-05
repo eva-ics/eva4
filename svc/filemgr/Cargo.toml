@@ -26,6 +26,7 @@ async-recursion = { workspace = true }
 uuid = { workspace = true }
 termios = "0.3.3"
 libc = "0.2.169"
+tracing = { version = "0.1.41", features = ["log"] }
 
 [features]
 std-alloc = []

@@ -6,6 +6,17 @@ terminal.create:
       des: Columns, Rows
       req: true
   ret: Terminal ID (UUID packed as String)
+terminal.resize:
+  des: Resizes a terminal
+  par:
+    - nam: i
+      typ: String
+      des: Terminal ID (UUID packed as String)
+      req: true
+    - nam: dimensions
+      typ: (u16, u16)
+      des: Columns, Rows
+      req: true
 terminal.kill:
   des: Kills a terminal
   par:

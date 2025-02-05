@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::os::fd::FromRawFd as _;
 use std::path::Path;
@@ -7,6 +7,7 @@ use termios::{Termios, TCSANOW};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
+use tracing::{trace, warn};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -18,11 +19,33 @@ pub enum Output {
     Terminated(Option<i32>),
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+pub enum Input {
+    Data(Vec<u8>),
+    Resize((usize, usize)),
+    Terminate,
+}
+
 const BUF_SIZE: usize = 8192;
 
-fn create_pty(
+fn ansi_to_readable(input: &[u8]) -> Vec<u8> {
+    let mut result = Vec::with_capacity(input.len());
+    for b in input {
+        match b {
+            0x1b => result.push(b'^'),
+            0x7f => result.extend("\x1b[1D \x1b[1D".as_bytes()),
+            0x15 => result.extend("\x1b[2K\x1b[0G".as_bytes()),
+            b'\r' => result.extend([b'\r', b'\n']),
+            _ => result.push(*b),
+        }
+    }
+    result
+}
+
+fn set_term_size(
+    fd: i32,
     term_size: (usize, usize),
-) -> Result<(File, Stdio, i32), Box<dyn std::error::Error + Send + Sync + 'static>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let ws = libc::winsize {
         ws_row: u16::try_from(term_size.1)?,
         ws_col: u16::try_from(term_size.0)?,
@@ -30,6 +53,16 @@ fn create_pty(
         ws_ypixel: 0,
     };
 
+    if unsafe { libc::ioctl(fd, libc::TIOCSWINSZ, &ws) } != 0 {
+        return Err("ioctl".into());
+    }
+
+    Ok(())
+}
+
+fn create_pty(
+    term_size: (usize, usize),
+) -> Result<(File, Stdio, i32), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let pty_master = unsafe { libc::posix_openpt(libc::O_RDWR | libc::O_NOCTTY) };
 
     if pty_master < 0 {
@@ -54,16 +87,14 @@ fn create_pty(
         return Err("pty open".into());
     }
 
-    if unsafe { libc::ioctl(pty_master, libc::TIOCSWINSZ, &ws) } != 0 {
-        return Err("pty ioctl".into());
-    }
+    set_term_size(pty_master, term_size)?;
 
     let mut termios = Termios::from_fd(pty_master)?;
-    //termios.c_lflag |= termios::ICANON;
+    termios.c_lflag |= termios::ICANON;
     termios::tcsetattr(pty_master, TCSANOW, &termios)?;
 
     let mut termios = Termios::from_fd(pty_slave)?;
-    //termios.c_lflag |= termios::ICANON;
+    termios.c_lflag |= termios::ICANON;
     termios::tcsetattr(pty_slave, TCSANOW, &termios)?;
 
     let f = unsafe { File::from_raw_fd(pty_master) };
@@ -88,7 +119,7 @@ impl Process {
         terminal_name: &str,
         terminal_size: (usize, usize),
         out_tx: async_channel::Sender<Output>,
-        stdin_rx: async_channel::Receiver<Option<Vec<u8>>>,
+        in_rx: async_channel::Receiver<Input>,
     ) where
         C: AsRef<OsStr>,
         D: AsRef<Path>,
@@ -107,7 +138,7 @@ impl Process {
                 terminal_name,
                 terminal_size,
                 out_tx.clone(),
-                stdin_rx,
+                in_rx,
             )
             .await
         {
@@ -120,7 +151,7 @@ impl Process {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
     async fn run_subprocess<C, A, D, S, ENV, EnvK, EnvV>(
         &mut self,
         command: C,
@@ -130,7 +161,7 @@ impl Process {
         terminal_name: &str,
         terminal_size: (usize, usize),
         out_tx: async_channel::Sender<Output>,
-        stdin_rx: async_channel::Receiver<Option<Vec<u8>>>,
+        in_rx: async_channel::Receiver<Input>,
     ) -> Result<Option<i32>, Box<dyn std::error::Error + Send + Sync + 'static>>
     where
         C: AsRef<OsStr>,
@@ -143,7 +174,7 @@ impl Process {
     {
         let (mut stdin, stdin_stdio, stdin_master) = create_pty(terminal_size)?;
         let (mut stdout, stdout_stdio, stdout_master) = create_pty(terminal_size)?;
-        let (mut stderr, stderr_stdio, _) = create_pty(terminal_size)?;
+        let (mut stderr, stderr_stdio, _stderr_master) = create_pty(terminal_size)?;
 
         let mut child = Command::new(command)
             .current_dir(work_dir)
@@ -199,39 +230,60 @@ impl Process {
         });
 
         tokio::spawn(async move {
-            while let Ok(data) = stdin_rx.recv().await {
-                let Some(data) = data else {
-                    break;
+            while let Ok(input) = in_rx.recv().await {
+                let mut data = match input {
+                    Input::Data(d) => d,
+                    Input::Resize(size) => {
+                        set_term_size(stdin_master, size).ok();
+                        bmart::process::kill_pstree_with_signal(
+                            pid,
+                            bmart::process::Signal::SIGWINCH,
+                            true,
+                        );
+                        continue;
+                    }
+                    Input::Terminate => {
+                        break;
+                    }
                 };
-                let mut termios_stdin = Termios::from_fd(stdin_master).unwrap();
-                let termios_stdout = Termios::from_fd(stdout_master).unwrap();
+                let Ok(mut termios_stdin) = Termios::from_fd(stdin_master) else {
+                    warn!(fd = stdin_master, "unable to get stdin termios");
+                    continue;
+                };
+                let Ok(termios_stdout) = Termios::from_fd(stdout_master) else {
+                    warn!(fd = stdout_master, "unable to get stdout termios");
+                    continue;
+                };
                 let input_mode = termios_stdin.c_lflag & termios::ECHO != 0
                     && termios_stdout.c_lflag & termios::ECHO != 0;
-                if !input_mode {
-                    // set non-canonical mode
-                    termios_stdin.c_lflag &= !termios::ICANON;
-                    termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin).unwrap();
-                } else {
+                if input_mode {
                     // set canonical mode
                     termios_stdin.c_lflag |= termios::ICANON;
-                    termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin).unwrap();
+                    termios_stdin.c_lflag |= termios::ECHO;
+                    termios_stdin.c_iflag |= termios::ICRNL;
+                    if let Err(error) = termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin) {
+                        warn!(fd = stdin_master, ?error, "unable to set stdin termios");
+                        continue;
+                    }
+                    trace!("input mode");
+                } else {
+                    // set non-canonical mode
+                    termios_stdin.c_lflag &= !termios::ICANON;
+                    termios_stdin.c_iflag &= !termios::ICRNL;
+                    if data == [0x0a] {
+                        data[0] = 0x0d;
+                    }
+                    if let Err(e) = termios::tcsetattr(stdin_master, TCSANOW, &termios_stdin) {
+                        warn!(fd = stdin_master, ?e, "unable to set stdin termios");
+                        continue;
+                    }
+                    trace!("non-input mode");
                 }
-                if stdin.write_all(&data).await.is_err() || stdin.flush().await.is_err() {
+                if stdin.write_all(&data).await.is_err() {
                     break;
                 }
                 if input_mode {
-                    // echo is enabled, so we need to read the data back
-                    // replace '\r' with '\r\n'
-                    let data = data
-                        .iter()
-                        .flat_map(|&c| {
-                            if c == b'\r' {
-                                vec![b'\r', b'\n']
-                            } else {
-                                vec![c]
-                            }
-                        })
-                        .collect();
+                    let data = ansi_to_readable(&data);
                     tx_echo.send(Output::Stdout(data)).await.ok();
                 }
             }
