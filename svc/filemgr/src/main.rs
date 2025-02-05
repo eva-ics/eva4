@@ -907,6 +907,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
     );
     info.add_method(ServiceMethod::new("terminal.create").required("dimensions"));
     info.add_method(
+        ServiceMethod::new("terminal.resize")
+            .required("i")
+            .required("dimensions"),
+    );
+    info.add_method(
         ServiceMethod::new("terminal.sync")
             .required("i")
             .required("input"),
