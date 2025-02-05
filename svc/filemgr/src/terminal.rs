@@ -174,7 +174,7 @@ impl Process {
     {
         let (mut stdin, stdin_stdio, stdin_master) = create_pty(terminal_size)?;
         let (mut stdout, stdout_stdio, stdout_master) = create_pty(terminal_size)?;
-        let (mut stderr, stderr_stdio, _stderr_master) = create_pty(terminal_size)?;
+        let (mut stderr, stderr_stdio, stderr_master) = create_pty(terminal_size)?;
 
         let mut child = Command::new(command)
             .current_dir(work_dir)
@@ -235,6 +235,8 @@ impl Process {
                     Input::Data(d) => d,
                     Input::Resize(size) => {
                         set_term_size(stdin_master, size).ok();
+                        set_term_size(stdout_master, size).ok();
+                        set_term_size(stderr_master, size).ok();
                         bmart::process::kill_pstree_with_signal(
                             pid,
                             bmart::process::Signal::SIGWINCH,
