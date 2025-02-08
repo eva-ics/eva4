@@ -17,7 +17,9 @@ config:
   key_svc: eva.aaa.localauth
   # set null to turn off announcements
   announce_interval: 10
-  # interval to submit all items, should be lower than the node timeout on the remote side
+  # interval to submit all items, should be lower than the node timeout on the
+  # remote side or there should be at least a single item which state is
+  # updated more frequently than the remote node timeout
   interval: 20
   send:
     topic: all

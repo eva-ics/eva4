@@ -10,8 +10,8 @@ use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::pubsub_publish;
 use crate::{aaa, ReplicationData};
+use crate::{get_mtu, pubsub_publish};
 
 err_logger!();
 
@@ -66,7 +66,37 @@ impl RpcHandlers for Handlers {
     }
 }
 
+async fn send_frame(
+    mut data: Vec<u8>,
+    count: usize,
+    cfg: &crate::BulkSendConfig,
+    opts: &psrpc::options::Options,
+) -> EResult<()> {
+    let len = data.len();
+    if len < 6 || count == 0 {
+        return Ok(());
+    }
+    data[1..5].copy_from_slice(&(u32::try_from(count)?).to_be_bytes());
+    let mut frame = vec![0x00, psrpc::PROTO_VERSION, opts.flags(), 0x00, 0x00];
+    frame.extend(crate::SYSTEM_NAME.get().unwrap().as_bytes());
+    frame.push(0x00);
+    if let Some(ref key_id) = cfg.encryption_key {
+        frame.extend(key_id.as_bytes().to_vec());
+    }
+    frame.push(0x00);
+    frame.extend(opts.pack_payload(data).await?);
+    pubsub_publish(crate::BULK_STATE_TOPIC.get().unwrap(), &frame)
+        .await
+        .map_err(Error::io)?;
+    Ok(())
+}
+
 async fn notify(data: &[ReplicationData]) -> EResult<()> {
+    let mtu = get_mtu();
+    let mut packet = Vec::with_capacity(mtu);
+    let mut count = 0;
+    packet.extend([0xdd, 0x00, 0x00, 0x00, 0x00]);
+    let max_size = mtu - 5;
     let cfg = crate::BULK_SEND_CONFIG.get().unwrap();
     let mut opts = if let Some(ref key_id) = cfg.encryption_key {
         aaa::get_enc_opts(crate::RPC.get().unwrap(), key_id).await?
@@ -76,17 +106,26 @@ async fn notify(data: &[ReplicationData]) -> EResult<()> {
     if cfg.compress {
         opts = opts.compression(psrpc::options::Compression::Bzip2);
     }
-    let mut frame = vec![0x00, psrpc::PROTO_VERSION, opts.flags(), 0x00, 0x00];
-    frame.extend(crate::SYSTEM_NAME.get().unwrap().as_bytes());
-    frame.push(0x00);
-    if let Some(ref key_id) = cfg.encryption_key {
-        frame.extend(key_id.as_bytes().to_vec());
+    for d in data {
+        let packed_data = pack(d)?;
+        if packet.len() + packed_data.len() > max_size {
+            send_frame(
+                std::mem::replace(&mut packet, Vec::with_capacity(mtu)),
+                count,
+                cfg,
+                &opts,
+            )
+            .await?;
+            packet.clear();
+            packet.extend([0xdd, 0x00, 0x00, 0x00, 0x00]);
+            count = 1;
+            packet.extend(packed_data);
+        } else {
+            packet.extend(packed_data);
+            count += 1;
+        }
     }
-    frame.push(0x00);
-    frame.extend(opts.pack_payload(pack(data)?).await?);
-    pubsub_publish(crate::BULK_STATE_TOPIC.get().unwrap(), &frame)
-        .await
-        .map_err(Error::io)?;
+    send_frame(packet, count, cfg, &opts).await?;
     Ok(())
 }
 

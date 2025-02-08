@@ -84,8 +84,12 @@ static PUBSUB_CLIENT: OnceCell<psrt::client::UdpClient> = OnceCell::new();
 
 static MTU: atomic::AtomicUsize = atomic::AtomicUsize::new(1200);
 
+fn get_mtu() -> usize {
+    MTU.load(atomic::Ordering::Relaxed)
+}
+
 async fn pubsub_publish(topic: &str, data: &[u8]) -> EResult<()> {
-    let mtu = MTU.load(atomic::Ordering::Relaxed);
+    let mtu = get_mtu();
     if data.len() > mtu {
         warn!(
             "data size exceeds MTU, the packet may be dropped, size: {}, mtu: {}",
@@ -93,6 +97,11 @@ async fn pubsub_publish(topic: &str, data: &[u8]) -> EResult<()> {
             mtu
         );
     }
+    info!(
+        "publishing to topic: {}, data length: {}",
+        topic,
+        data.len()
+    );
     PUBSUB_CLIENT
         .get()
         .unwrap()
