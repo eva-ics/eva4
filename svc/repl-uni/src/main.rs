@@ -97,11 +97,11 @@ async fn pubsub_publish(topic: &str, data: &[u8]) -> EResult<()> {
             mtu
         );
     }
-    info!(
-        "publishing to topic: {}, data length: {}",
-        topic,
-        data.len()
-    );
+    //info!(
+    //"publishing to topic: {}, data length: {}",
+    //topic,
+    //data.len()
+    //);
     PUBSUB_CLIENT
         .get()
         .unwrap()

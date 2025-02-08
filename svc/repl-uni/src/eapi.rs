@@ -91,6 +91,15 @@ async fn send_frame(
     Ok(())
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+fn estimate_compressed_size(data: &[u8]) -> usize {
+    (f64::from(entropy::shannon_entropy(data)) * data.len() as f64 / 8.0 * 0.8).ceil() as usize
+}
+
 async fn notify(data: &[ReplicationData]) -> EResult<()> {
     let mtu = get_mtu();
     let mut packet = Vec::with_capacity(mtu);
@@ -108,21 +117,27 @@ async fn notify(data: &[ReplicationData]) -> EResult<()> {
     }
     for d in data {
         let packed_data = pack(d)?;
-        if packet.len() + packed_data.len() > max_size {
+        let pos = packet.len();
+        packet.extend(&packed_data);
+        count += 1;
+        let est_size = if cfg.compress {
+            estimate_compressed_size(&packet)
+        } else {
+            packet.len()
+        };
+        if est_size > max_size {
+            packet.truncate(pos);
             send_frame(
                 std::mem::replace(&mut packet, Vec::with_capacity(mtu)),
-                count,
+                count - 1,
                 cfg,
                 &opts,
             )
             .await?;
             packet.clear();
             packet.extend([0xdd, 0x00, 0x00, 0x00, 0x00]);
+            packet.extend(packed_data);
             count = 1;
-            packet.extend(packed_data);
-        } else {
-            packet.extend(packed_data);
-            count += 1;
         }
     }
     send_frame(packet, count, cfg, &opts).await?;

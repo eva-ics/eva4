@@ -24,6 +24,7 @@ openssl = { workspace = true }
 psrt = { workspace = true }
 psrpc = { path = "../../psrpc" }
 hex = { workspace = true }
+entropy = "0.4.2"
 
 [features]
 std-alloc = []
