@@ -463,6 +463,9 @@ async fn call_remote_method(
             let node = nodes
                 .get(&s)
                 .ok_or_else(|| Error::failed("node not connected"))?;
+            if !node.api_enabled {
+                return Err(Error::access("Pub/Sub API is disabled"));
+            }
             let key_id = if admin {
                 if let Some(key) = node.admin_key_id() {
                     key.to_owned()
