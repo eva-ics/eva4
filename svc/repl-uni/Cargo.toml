@@ -1,0 +1,31 @@
+[package]
+name = "eva-repl-uni"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+busrt = { features = ["rpc", "ipc"] , workspace = true }
+eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
+eva-sdk = { features = ["pubsub"], workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { workspace = true }
+serde = { features = ["derive", "rc"] , workspace = true }
+log = { workspace = true }
+async-channel = { workspace = true }
+mimalloc = { workspace = true }
+serde_json = { workspace = true }
+once_cell = { workspace = true }
+bmart = { workspace = true }
+triggered = "0.1.2"
+uuid = { features = ["serde", "v4"] , workspace = true }
+openssl = { workspace = true }
+psrt = { workspace = true }
+psrpc = { path = "../../psrpc" }
+hex = { workspace = true }
+entropy = "0.4.2"
+
+[features]
+std-alloc = []
+openssl-vendored = ["eva-common/openssl-vendored"]

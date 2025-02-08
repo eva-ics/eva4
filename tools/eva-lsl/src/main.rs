@@ -119,7 +119,6 @@ async fn new(args: CommandNew) -> EResult<()> {
             "common-payloads",
             "payload",
             "acl",
-            "openssl-no-fips",
         ],
         None,
         false,
@@ -130,7 +129,7 @@ async fn new(args: CommandNew) -> EResult<()> {
     add_dependency("async-trait", "0.1", &[], None, false).await?;
     add_dependency("serde", "1.0", &["derive", "rc"], None, false).await?;
     add_dependency("log", "0.4", &[], None, false).await?;
-    add_dependency("jemallocator", "0.5", &[], None, false).await?;
+    add_dependency("mimalloc", "0.1", &[], None, false).await?;
     add_dependency("once_cell", "1.20", &[], None, false).await?;
     tokio::fs::write("src/main.rs", SVC_TPL).await?;
     tokio::fs::OpenOptions::new()
