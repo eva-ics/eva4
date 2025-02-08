@@ -1,0 +1,34 @@
+# EVA ICS unidirectional UDP replication service (PSRT)
+command: target/debug/eva-repl-uni
+workers: 1
+bus:
+  path: var/bus.ipc
+config:
+  pubsub:
+    # PSRT UDP host/port
+    host: 127.0.0.1:2873
+    # MTU, should be about 100 bytes less than the actual network MTU
+    mtu: 1200
+    username: null
+    key: null
+    # pub/sub queue size
+    queue_size: 1024
+  # the local key service, required both to make and process API calls via PubSub
+  key_svc: eva.aaa.localauth
+  # set null to turn off announcements
+  announce_interval: 10
+  # interval to submit all items, should be lower than the node timeout on the remote side
+  interval: 20
+  send:
+    topic: all
+    # enable compression, recommended
+    compress: true
+    encryption_key: default # set (key id) to enable bulk encryption
+    buf_ttl_sec: 0.5
+  # subscribed OIDs
+  oids:
+    - "#"
+  oids_exclude: []
+  # DANGEROUS, enable for multi-level clusters only
+  #replicate_remote: true
+user: nobody
