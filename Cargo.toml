@@ -29,6 +29,7 @@ members = [
   "svc/hmi",
   "svc/mirror",
   "svc/repl",
+  "svc/repl-uni",
   "svc/generator",
   "svc/svc-locker",
   "svc/svc-mailer",
@@ -38,8 +39,9 @@ members = [
   "psrpc",
   "genpass-native",
   "crypto-tools",
-  "benchmarks/bm-primary"
-, "crypto-tools", "dobj-codegen"]
+  "benchmarks/bm-primary",
+  "crypto-tools",
+  "dobj-codegen"]
 
 resolver = "1"
 
@@ -84,7 +86,7 @@ serde = "^1.0.196"
 base64 = "^0.13"
 lazy_static = "^1.4.0"
 paho-mqtt = "^0.12.3"
-psrt = "^0.2"
+psrt = "^0.2.8"
 serde_json = "^1.0.113"
 sqlx = "^0.6.3"
 mimalloc = "^0.1.43"

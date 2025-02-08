@@ -2212,6 +2212,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-repl-uni"
+version = "4.0.2"
+dependencies = [
+ "async-channel 1.9.0",
+ "async-trait",
+ "bmart",
+ "busrt",
+ "eva-common",
+ "eva-sdk",
+ "hex 0.4.3",
+ "log",
+ "mimalloc",
+ "once_cell",
+ "openssl",
+ "psrpc",
+ "psrt",
+ "serde",
+ "serde_json",
+ "tokio",
+ "triggered",
+ "uuid 1.7.0",
+]
+
+[[package]]
 name = "eva-rjrpc"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3882,9 +3906,9 @@ checksum = "e2cc39400f90d40005acab7690867f2585f356dcceeefdb2981b910483ac7bb3"
 
 [[package]]
 name = "once_cell"
-version = "1.19.0"
+version = "1.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+checksum = "945462a4b81e43c4e3ba96bd7b49d834c6f61198356aa858733bc4acf3cbe62e"
 
 [[package]]
 name = "oneshot"
@@ -4422,19 +4446,18 @@ dependencies = [
 
 [[package]]
 name = "psrt"
-version = "0.2.0"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8afb77c9734707b1516d56db37df40d2248e67a39dc6a72aa5006ac277af5e18"
+checksum = "edc145818817f7d0937e1404bf13a15d658f77d1dba37aebd30c8ba43a37af09"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
- "eva-sdk",
  "hex 0.4.3",
- "lazy_static",
  "log",
  "nix 0.25.0",
+ "once_cell",
  "openssl",
- "parking_lot 0.12.1",
+ "parking_lot_rt",
  "serde",
  "serde_yaml 0.8.26",
  "tokio",
