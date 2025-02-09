@@ -1,8 +1,8 @@
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 import evaics.sdk as sdk
 
-from evaics.sdk import (pack, unpack, OID, LOCAL_STATE_TOPIC,
+from evaics.sdk import (pack, unpack, OID, LOCAL_STATE_TOPIC, RAW_STATE_TOPIC,
                         REMOTE_STATE_TOPIC, rpc_e2e)
 
 from types import SimpleNamespace
@@ -31,25 +31,53 @@ def unpack_json(data):
     return json.loads(data)
 
 
+def handle_serve_command(data):
+    method = data.get('method')
+    if method is None:
+        # state packet
+        oid = data.get('oid')
+        if oid is None:
+            raise ValueError('oid/method not specified')
+        status = data['status']
+        payload = {'status': status}
+        if 'value' in data:
+            payload['value'] = data['value']
+        if 't' in data:
+            payload['t'] = data['t']
+        oid = OID(oid)
+        topic = f'{RAW_STATE_TOPIC}{oid.to_path()}'
+        print(topic, flush=True)
+        d.service.bus.send(
+            topic,
+            busrt.client.Frame(payload=pack(payload),
+                               tp=busrt.client.OP_PUBLISH,
+                               qos=0))
+
+    else:
+        params = data.get('params')
+        target = data.get('target', 'eva.core')
+        d.service.logger.info(f'{target}::{method} {params}')
+        try:
+            result = d.service.rpc.call(
+                target,
+                busrt.rpc.Request(method,
+                                  pack(params) if params else None))
+        except busrt.rpc.RpcException as e:
+            raise rpc_e2e(e)
+
+
 def serve(sock):
     while True:
         try:
             data = d.unpacker(sock.recv(UDP_BUF_SIZE))
-            method = data.get('method')
-            if method is None:
-                raise ValueError('method not specified')
-            params = data.get('params')
-            target = data.get('target', 'eva.core')
-            d.service.logger.info(f'{target}::{method} {params}')
-            try:
-                result = d.service.rpc.call(
-                    target,
-                    busrt.rpc.Request(method,
-                                      pack(params) if params else None))
-            except busrt.rpc.RpcException as e:
-                raise rpc_e2e(e)
         except Exception as e:
             d.service.logger.error(e)
+            return
+        for ev in data if isinstance(data, list) else [data]:
+            try:
+                handle_serve_command(ev)
+            except Exception as e:
+                d.service.logger.error(e)
 
 
 def on_frame(frame):
