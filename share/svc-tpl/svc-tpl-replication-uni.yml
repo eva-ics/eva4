@@ -5,7 +5,7 @@ bus:
   path: var/bus.ipc
 config:
   pubsub:
-    # PSRT UDP host/port
+    # PSRT UDP host/port, a single value, clusters are not supported
     host: 127.0.0.1:2873
     # MTU, should be about 100 bytes less than the actual network MTU
     mtu: 1200
