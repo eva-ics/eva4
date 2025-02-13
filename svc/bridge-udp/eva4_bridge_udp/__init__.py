@@ -1,4 +1,4 @@
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 import evaics.sdk as sdk
 
@@ -46,7 +46,6 @@ def handle_serve_command(data):
             payload['t'] = data['t']
         oid = OID(oid)
         topic = f'{RAW_STATE_TOPIC}{oid.to_path()}'
-        print(topic, flush=True)
         d.service.bus.send(
             topic,
             busrt.client.Frame(payload=pack(payload),
