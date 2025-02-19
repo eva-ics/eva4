@@ -502,7 +502,7 @@ class CLI:
         print(f'{len(users)} user(s) undeployed')
         print()
 
-    def user_create(self, i, auth_svc):
+    def user_create(self, i, auth_svc, acl):
         import pwinput
         password = pwinput.pwinput()
         try:
@@ -515,7 +515,7 @@ class CLI:
             from hashlib import sha256
             pwhash = sha256(password.encode()).hexdigest()
         call_rpc('user.deploy',
-                 dict(users=[dict(login=i, password=pwhash)]),
+                 dict(users=[dict(login=i, password=pwhash, acls=acl or [])]),
                  target=auth_svc)
         ok()
 
@@ -946,8 +946,8 @@ class CLI:
                         pass
             print_result(data,
                          cols=[
-                             'name', 'svc', 'type', 'online', 'timeout',
-                             'ver', 'build'
+                             'name', 'svc', 'type', 'online', 'timeout', 'ver',
+                             'build'
                          ])
         else:
             data = call_rpc('node.list', target=repl_svc)

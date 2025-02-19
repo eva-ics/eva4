@@ -716,6 +716,8 @@ def append_user_cli(root_sp):
         help=f'Authentication service (default: {DEFAULT_AUTH_SERVICE})',
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
 
+    p.add_argument('--acl', metavar='ACL', action='append', help=f'Uer ACL')
+
     p = sp.add_parser('destroy', help='destroy user')
     p.add_argument('i', metavar='user')
     p.add_argument(
