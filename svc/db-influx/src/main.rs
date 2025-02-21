@@ -223,10 +223,6 @@ async fn notify(data: Data<'_>) -> EResult<()> {
             if let Some(ref val) = $state.value {
                 if let Ok(v) = TryInto::<f64>::try_into(val) {
                     write!(batch_q, ",value={}", v).map_err(Error::failed)?;
-                } else if let Value::String(v) = val {
-                    if !v.is_empty() {
-                        write!(batch_q, ",value=\"{}\"", v).map_err(Error::failed)?;
-                    }
                 }
             }
             write!(batch_q, " {}", t).map_err(Error::failed)?;
