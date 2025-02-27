@@ -298,6 +298,12 @@ async fn login(
                     acl: Acl,
                 }
                 let acl_and_params: AclAndParams = unpack(result.payload())?;
+                if !acl_and_params.acl.check_admin()
+                    && !aaa::concurrent_allowed()
+                    && db::is_active_session_for(login).await?
+                {
+                    return Err(Error::access("concurrent login not allowed"));
+                }
                 let login = acl_and_params._login.as_deref().unwrap_or(login);
                 if let Some(ti) = token_id {
                     let token = aaa::get_token(ti.try_into()?, ip).await?;

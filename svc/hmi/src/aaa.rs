@@ -28,6 +28,7 @@ err_logger!();
 static SESSION_PROLONG: atomic::AtomicBool = atomic::AtomicBool::new(true);
 static SESSION_STICK_IP: atomic::AtomicBool = atomic::AtomicBool::new(true);
 static SESSION_ALLOW_LIST_NEIGHBORS: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static SESSION_ALLOW_CONCURRENT: atomic::AtomicBool = atomic::AtomicBool::new(true);
 
 const TOKEN_MODE_NORMAL: u8 = 1;
 const TOKEN_MODE_READONLY: u8 = 2;
@@ -97,6 +98,7 @@ pub fn set_session_config(
     prolong: bool,
     stick_ip: bool,
     allow_list_neighbors: bool,
+    allow_concurrent: bool,
 ) {
     debug!("session.timeout: {:?}", timeout);
     if let Some(timeout) = timeout {
@@ -110,6 +112,12 @@ pub fn set_session_config(
     SESSION_ALLOW_LIST_NEIGHBORS.store(allow_list_neighbors, atomic::Ordering::Relaxed);
     debug!("session.allow_list_neighbors: {}", allow_list_neighbors);
     SESSION_STICK_IP.store(stick_ip, atomic::Ordering::Relaxed);
+    debug!("session.allow_concurrent: {}", allow_concurrent);
+    SESSION_ALLOW_CONCURRENT.store(allow_concurrent, atomic::Ordering::Relaxed);
+}
+
+pub fn concurrent_allowed() -> bool {
+    SESSION_ALLOW_CONCURRENT.load(atomic::Ordering::Relaxed)
 }
 
 #[derive(Debug, Clone)]

@@ -425,6 +425,27 @@ fn parse_token_id(row: AnyRow) -> EResult<TokenId> {
     id.as_str().try_into()
 }
 
+pub async fn is_active_session_for(login: &str) -> EResult<bool> {
+    let pool = DB_POOL.get().unwrap();
+    let kind = DB_KIND.get().unwrap();
+    let mut rows = match kind {
+        AnyKind::Sqlite | AnyKind::MySql => {
+            sqlx::query("SELECT COUNT(id) FROM tokens WHERE login=?")
+                .bind(login)
+                .fetch(pool)
+        }
+        AnyKind::Postgres => sqlx::query("SELECT COUNT(id) FROM tokens WHERE login=$1")
+            .bind(login)
+            .fetch(pool),
+    };
+    if let Some(row) = rows.try_next().await? {
+        let count: i64 = row.try_get(0)?;
+        Ok(count > 0)
+    } else {
+        Ok(false)
+    }
+}
+
 pub async fn load_all_tokens() -> EResult<Vec<Token>> {
     let pool = DB_POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();

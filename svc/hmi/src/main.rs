@@ -135,6 +135,8 @@ struct SessionConfig {
     stick_ip: bool,
     #[serde(default)]
     allow_list_neighbors: bool,
+    #[serde(default = "eva_common::tools::default_true")]
+    allow_concurrent: bool,
 }
 
 #[inline]
@@ -307,6 +309,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         config.session.prolong,
         config.session.stick_ip,
         config.session.allow_list_neighbors,
+        config.session.allow_concurrent,
     );
     let db_path = if let Some(path) = config.db {
         path
