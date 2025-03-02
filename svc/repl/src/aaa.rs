@@ -11,7 +11,7 @@ pub static ENC_OPTS: Lazy<Mutex<HashMap<String, psrpc::options::Options>>> =
     Lazy::new(<_>::default);
 pub static ACLS: Lazy<Mutex<HashMap<String, Arc<Acl>>>> = Lazy::new(<_>::default);
 
-pub async fn get_acl(rpc: &RpcClient, key_id: &str) -> EResult<Arc<Acl>> {
+pub async fn get_acl(key_id: &str) -> EResult<Arc<Acl>> {
     #[derive(Serialize)]
     struct AuthPayload<'a> {
         key: &'a str,
@@ -21,7 +21,7 @@ pub async fn get_acl(rpc: &RpcClient, key_id: &str) -> EResult<Arc<Acl>> {
         trace!("using cached ACL for {}", key_id);
         return Ok(acl.clone());
     }
-    let key_value = get_key(rpc, key_id).await?;
+    let key_value = get_key(key_id).await?;
     let timeout = crate::TIMEOUT.get().unwrap();
     let payload = pack(&AuthPayload {
         key: &key_value,
@@ -29,26 +29,18 @@ pub async fn get_acl(rpc: &RpcClient, key_id: &str) -> EResult<Arc<Acl>> {
     })?;
     let key_svc = crate::KEY_SVC.get().unwrap();
     trace!("fetching ACL from {} for key {}", key_svc, key_id);
-    let res = safe_rpc_call(
-        rpc,
-        key_svc,
-        "auth.key",
-        payload.as_slice().into(),
-        QoS::Processed,
-        *timeout,
-    )
-    .await?;
+    let res = eapi_bus::call(key_svc, "auth.key", payload.as_slice().into()).await?;
     let acl = Arc::new(unpack::<Acl>(res.payload())?);
     ACLS.lock().unwrap().insert(key_id.to_owned(), acl.clone());
     Ok(acl)
 }
 
-pub async fn get_enc_opts(rpc: &RpcClient, key_id: &str) -> EResult<psrpc::options::Options> {
+pub async fn get_enc_opts(key_id: &str) -> EResult<psrpc::options::Options> {
     if let Some(opts) = ENC_OPTS.lock().unwrap().get(key_id) {
         trace!("using cached encryption options for {}", key_id);
         return Ok(opts.clone());
     }
-    let key_value = get_key(rpc, key_id).await?;
+    let key_value = get_key(key_id).await?;
     let enc_key = psrpc::options::EncryptionKey::new(key_id, &key_value);
     let opts =
         psrpc::options::Options::new().encryption(psrpc::options::Encryption::Aes256Gcm, &enc_key);
@@ -59,7 +51,7 @@ pub async fn get_enc_opts(rpc: &RpcClient, key_id: &str) -> EResult<psrpc::optio
     Ok(opts)
 }
 
-pub async fn get_key(rpc: &RpcClient, key_id: &str) -> EResult<String> {
+pub async fn get_key(key_id: &str) -> EResult<String> {
     #[derive(Serialize)]
     struct Params<'a> {
         i: &'a str,
@@ -74,15 +66,7 @@ pub async fn get_key(rpc: &RpcClient, key_id: &str) -> EResult<String> {
     }
     let key_svc = crate::KEY_SVC.get().unwrap();
     trace!("fetching key data from {} for key {}", key_svc, key_id);
-    let data = safe_rpc_call(
-        rpc,
-        key_svc,
-        "key.get",
-        pack(&Params { i: key_id })?.into(),
-        QoS::Processed,
-        *crate::TIMEOUT.get().unwrap(),
-    )
-    .await?;
+    let data = eapi_bus::call(key_svc, "key.get", pack(&Params { i: key_id })?.into()).await?;
     let result: Payload = unpack(data.payload())?;
     KEYS.lock()
         .unwrap()

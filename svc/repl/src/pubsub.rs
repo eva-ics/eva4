@@ -6,7 +6,6 @@ use eva_sdk::prelude::*;
 use eva_sdk::pubsub::PS_ITEM_BULK_STATE_TOPIC;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{aaa, ReplicationData};
@@ -32,14 +31,12 @@ impl PubSubHandlers {
             replicate_remote,
         }
     }
-    pub fn start(&mut self, queue_size: usize, timeout: Duration) -> EResult<()> {
+    pub fn start(&mut self, queue_size: usize) -> EResult<()> {
         let (_, mut rx) = self
             .topic_broker
             .register_prefix(crate::PS_NODE_STATE_TOPIC, queue_size)?;
         tokio::spawn(async move {
-            svc_wait_core(crate::RPC.get().unwrap(), timeout, true)
-                .await
-                .log_ef();
+            eapi_bus::wait_core(true).await.log_ef();
             while !svc_is_terminating() {
                 discovery_handler(&mut rx).await.log_ef();
             }
@@ -79,8 +76,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                             include: Vec<String>,
                             exclude: Vec<&'a str>,
                         }
-                        let rpc = crate::RPC.get().unwrap();
-                        let acl = aaa::get_acl(rpc, key_id).await?;
+                        let acl = aaa::get_acl(key_id).await?;
                         let mut data = crate::PULL_DATA.get().unwrap().clone();
                         let (allow, deny) = acl.get_items_allow_deny_reading();
                         let mut exclude = deny.iter().map(String::as_str).collect::<Vec<_>>();
@@ -102,16 +98,9 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                             exclude,
                         };
                         let items: Vec<FullItemStateAndInfoOwned> = unpack(
-                            safe_rpc_call(
-                                rpc,
-                                "eva.core",
-                                "item.list",
-                                pack(&payload)?.into(),
-                                QoS::Processed,
-                                *crate::TIMEOUT.get().unwrap(),
-                            )
-                            .await?
-                            .payload(),
+                            eapi_bus::call("eva.core", "item.list", pack(&payload)?.into())
+                                .await?
+                                .payload(),
                         )?;
                         data.items
                             .replace(items.into_iter().map(Into::into).collect());
@@ -126,8 +115,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                 if let Some(key_id) = key_id {
                     if let Some(p) = params {
                         let params: BTreeMap<String, Value> = BTreeMap::deserialize(p)?;
-                        let rpc = crate::RPC.get().unwrap();
-                        let acl = aaa::get_acl(rpc, key_id).await?;
+                        let acl = aaa::get_acl(key_id).await?;
                         let i: Value = params
                             .get("i")
                             .ok_or_else(|| Error::invalid_params("oid not provided"))?
@@ -137,15 +125,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                         } else {
                             return Err(Error::invalid_params("oid is not a string"));
                         }
-                        let res = safe_rpc_call(
-                            rpc,
-                            "eva.core",
-                            method,
-                            pack(&params)?.into(),
-                            QoS::Processed,
-                            *crate::TIMEOUT.get().unwrap(),
-                        )
-                        .await?;
+                        let res = eapi_bus::call("eva.core", method, pack(&params)?.into()).await?;
                         let res_p = res.payload();
                         Ok(if res_p.is_empty() {
                             Value::Unit
@@ -163,8 +143,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                 if let Some(key_id) = key_id {
                     if let Some(p) = params {
                         let params = ParamsIdOwned::deserialize(p)?;
-                        let rpc = crate::RPC.get().unwrap();
-                        let acl = aaa::get_acl(rpc, key_id).await?;
+                        let acl = aaa::get_acl(key_id).await?;
                         acl.require_rpvt_read(&params.i)?;
                         let mut sp = params.i.splitn(2, '/');
                         let node = sp.next().unwrap();
@@ -192,20 +171,12 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                 }
                 if let Some(key_id) = key_id {
                     if let Some(p) = params {
-                        let rpc = crate::RPC.get().unwrap();
-                        let acl = aaa::get_acl(rpc, key_id).await?;
+                        let acl = aaa::get_acl(key_id).await?;
                         let p: ParamsResult = ParamsResult::deserialize(p)?;
                         let result: BTreeMap<String, Value> = unpack(
-                            safe_rpc_call(
-                                crate::RPC.get().unwrap(),
-                                "eva.core",
-                                "action.result",
-                                pack(&p)?.into(),
-                                QoS::Processed,
-                                *crate::TIMEOUT.get().unwrap(),
-                            )
-                            .await?
-                            .payload(),
+                            eapi_bus::call("eva.core", "action.result", pack(&p)?.into())
+                                .await?
+                                .payload(),
                         )?;
                         let oid_c = result
                             .get("oid")
@@ -227,8 +198,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
             _ => {
                 if let Some(bus_call) = method.strip_prefix("bus::") {
                     if let Some(key_id) = key_id {
-                        let rpc = crate::RPC.get().unwrap();
-                        let acl = aaa::get_acl(rpc, key_id).await?;
+                        let acl = aaa::get_acl(key_id).await?;
                         acl.require_admin()?;
                         let mut sp = bus_call.splitn(2, "::");
                         let target = sp
@@ -242,15 +212,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                         } else {
                             busrt::empty_payload!()
                         };
-                        let res = safe_rpc_call(
-                            rpc,
-                            target,
-                            bus_method,
-                            payload,
-                            QoS::Processed,
-                            *crate::TIMEOUT.get().unwrap(),
-                        )
-                        .await?;
+                        let res = eapi_bus::call(target, bus_method, payload).await?;
                         let res_p = res.payload();
                         Ok(if res_p.is_empty() {
                             Value::Unit
@@ -267,7 +229,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
         }
     }
     async fn get_key(&self, key_id: &str) -> EResult<String> {
-        aaa::get_key(crate::RPC.get().unwrap(), key_id).await
+        aaa::get_key(key_id).await
     }
 }
 
@@ -314,18 +276,11 @@ async fn ps_process_state(msg: psrpc::tools::Publication) -> EResult<()> {
         msg.topic()
     );
     let oid: OID = OID::from_path(msg.subtopic())?;
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
-        .lock()
-        .await
-        .publish(
-            &format!("{}{}", REPLICATION_STATE_TOPIC, oid.as_path()),
-            pack(&data)?.into(),
-            QoS::No,
-        )
-        .await?;
+    eapi_bus::publish(
+        &format!("{}{}", REPLICATION_STATE_TOPIC, oid.as_path()),
+        pack(&data)?.into(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -390,7 +345,6 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
         let _payload = sp
             .next()
             .ok_or_else(|| Error::invalid_data("bulk frame is missing payload"))?;
-        let rpc = crate::RPC.get().unwrap();
         let (opts, auth) = if encryption == psrpc::options::Encryption::No {
             (
                 psrpc::options::Options::new().compression(compression),
@@ -399,10 +353,8 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
         } else {
             let key_id = std::str::from_utf8(key_id_buf)?;
             (
-                aaa::get_enc_opts(rpc, key_id)
-                    .await?
-                    .compression(compression),
-                Some((aaa::get_acl(rpc, key_id).await?, key_id.to_owned())),
+                aaa::get_enc_opts(key_id).await?.compression(compression),
+                Some((aaa::get_acl(key_id).await?, key_id.to_owned())),
             )
         };
         let len = key_id_buf.len() + system_name_buf.len() + 7;
@@ -417,14 +369,7 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
             }
             let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid().as_path());
             let rse = d.into_replication_state_event_extended(&system_name);
-            crate::RPC
-                .get()
-                .unwrap()
-                .client()
-                .lock()
-                .await
-                .publish(&topic, pack(&rse)?.into(), QoS::No)
-                .await?;
+            eapi_bus::publish(&topic, pack(&rse)?.into()).await?;
         }
     }
     Ok(())

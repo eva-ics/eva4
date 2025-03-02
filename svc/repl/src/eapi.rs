@@ -120,9 +120,7 @@ impl RpcHandlers for Handlers {
                     let node = nodes::Node::new(&p.i, true, p.trusted, true);
                     let nval = to_value(&node)?;
                     nodes::append_static_node(node, &mut *nodes::NODES.write().await).await?;
-                    crate::REG
-                        .get()
-                        .unwrap()
+                    eapi_bus::registry()
                         .key_set(&format!("node/{}", p.i), nval)
                         .await?;
                     Ok(None)
@@ -143,9 +141,7 @@ impl RpcHandlers for Handlers {
                         let name = node.name().to_owned();
                         let nval = to_value(&node)?;
                         nodes::append_static_node(node, &mut *nodes::NODES.write().await).await?;
-                        crate::REG
-                            .get()
-                            .unwrap()
+                        eapi_bus::registry()
                             .key_set(&format!("node/{}", name), nval)
                             .await?;
                     }
@@ -165,9 +161,7 @@ impl RpcHandlers for Handlers {
                     for node in p.nodes {
                         let name = node.name();
                         nodes::remove_node(name, &mut *nodes::NODES.write().await).await?;
-                        crate::REG
-                            .get()
-                            .unwrap()
+                        eapi_bus::registry()
                             .key_delete(&format!("node/{}", name))
                             .await?;
                     }
@@ -227,9 +221,7 @@ impl RpcHandlers for Handlers {
                     let p: ParamsId = unpack(payload)?;
                     not_local!(p.i);
                     nodes::remove_node(p.i, &mut *nodes::NODES.write().await).await?;
-                    crate::REG
-                        .get()
-                        .unwrap()
+                    eapi_bus::registry()
                         .key_delete(&format!("node/{}", p.i))
                         .await?;
                     Ok(None)
@@ -337,7 +329,7 @@ async fn notify(data: Data<'_>) -> EResult<()> {
         Data::Bulk(state) => {
             let cfg = crate::BULK_SEND_CONFIG.get().unwrap();
             let mut opts = if let Some(ref key_id) = cfg.encryption_key {
-                aaa::get_enc_opts(crate::RPC.get().unwrap(), key_id).await?
+                aaa::get_enc_opts(key_id).await?
             } else {
                 psrpc::options::Options::new()
             };
@@ -483,7 +475,7 @@ async fn call_remote_method(
             return Err(Error::invalid_params("node is not a string"));
         }
     };
-    let mut opts = aaa::get_enc_opts(crate::RPC.get().unwrap(), &key_id).await?;
+    let mut opts = aaa::get_enc_opts(&key_id).await?;
     opts = opts.compression(if compress {
         psrpc::options::Compression::Bzip2
     } else {
@@ -529,16 +521,9 @@ pub async fn submit_periodic(
     loop {
         int.tick().await;
         let res: Vec<FullItemStateAndInfoOwned> = unpack(
-            safe_rpc_call(
-                crate::RPC.get().unwrap(),
-                "eva.core",
-                "item.list",
-                payload.clone(),
-                QoS::Processed,
-                *crate::TIMEOUT.get().unwrap(),
-            )
-            .await?
-            .payload(),
+            eapi_bus::call("eva.core", "item.list", payload.clone())
+                .await?
+                .payload(),
         )?;
         notify(Data::Bulk(
             &res.into_iter()

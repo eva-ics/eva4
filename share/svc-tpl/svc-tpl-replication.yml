@@ -57,6 +57,8 @@ config:
   oids:
     - "#"
   oids_exclude: []
+  # Node state lvars prefix
+  #state_lvar: lvar:${system_name}/remotes
   # DANGEROUS, enable for multi-level clusters only
   #replicate_remote: true
 user: nobody

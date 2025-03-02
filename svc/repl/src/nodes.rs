@@ -1,5 +1,6 @@
 use eva_common::events::{
-    NodeInfo, NodeStateEvent, NodeStatus, ReplicationInventoryItem, REPLICATION_NODE_STATE_TOPIC,
+    NodeInfo, NodeStateEvent, NodeStatus, RawStateEventOwned, ReplicationInventoryItem,
+    RAW_STATE_TOPIC, REPLICATION_NODE_STATE_TOPIC,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -29,6 +30,41 @@ pub static NODES: Lazy<RwLock<HashMap<String, Node>>> = Lazy::new(<_>::default);
 pub static RELOAD_TRIGGERS: Lazy<RwLock<HashMap<String, async_channel::Sender<bool>>>> =
     Lazy::new(<_>::default);
 
+#[derive(Serialize)]
+struct NodeStateLvar {
+    oid: OID,
+}
+
+pub async fn deploy_undeploy_node_state_sensors(name: &str, deploy: bool) -> EResult<()> {
+    let Some(lvar_prefix) = crate::STATE_LVAR.get() else {
+        return Ok(());
+    };
+    let inv = vec![NodeStateLvar {
+        oid: format!("{}/{}/connected", lvar_prefix, name).parse()?,
+    }];
+    if deploy {
+        eapi_bus::deploy_items(&inv).await?;
+    } else {
+        eapi_bus::undeploy_items(&inv).await?;
+    }
+    Ok(())
+}
+
+pub async fn publish_node_state(name: &str, svc_ok: bool, online: bool) -> EResult<()> {
+    let Some(lvar_prefix) = crate::STATE_LVAR.get() else {
+        return Ok(());
+    };
+    let topic = format!(
+        "{}{}/{}/connected",
+        RAW_STATE_TOPIC,
+        lvar_prefix.as_path(),
+        name
+    );
+    let ev = RawStateEventOwned::new(if svc_ok { 1 } else { -1 }, Value::U8(online.into()));
+    eapi_bus::publish(&topic, pack(&ev)?.into()).await?;
+    Ok(())
+}
+
 #[allow(clippy::too_many_lines)]
 async fn reload_node(
     name: &str,
@@ -38,9 +74,8 @@ async fn reload_node(
     trusted: bool,
 ) -> EResult<()> {
     debug!("reloading node {}", name);
-    let rpc = crate::RPC.get().unwrap();
     let ps_rpc = crate::PUBSUB_RPC.get().unwrap();
-    let mut opts = aaa::get_enc_opts(rpc, key_id).await?;
+    let mut opts = aaa::get_enc_opts(key_id).await?;
     opts = opts.compression(if compress {
         psrpc::options::Compression::Bzip2
     } else {
@@ -50,7 +85,7 @@ async fn reload_node(
         tokio::time::timeout(timeout, ps_rpc.call(name, "pull", None, &opts)).await??,
     )?;
     if !trusted {
-        let acl = aaa::get_acl(rpc, key_id).await?;
+        let acl = aaa::get_acl(key_id).await?;
         if let Some(items) = res.items.take() {
             let mut allowed_items = Vec::with_capacity(items.len());
             for item in items {
@@ -131,10 +166,7 @@ async fn reload_node(
             }
         }
     }
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
+    eapi_bus::client()
         .lock()
         .await
         .publish(
@@ -149,9 +181,8 @@ async fn reload_node(
 
 async fn ping_node(name: &str, key_id: &str, compress: bool, timeout: Duration) -> EResult<()> {
     trace!("pinging node {}", name);
-    let rpc = crate::RPC.get().unwrap();
     let ps_rpc = crate::PUBSUB_RPC.get().unwrap();
-    let mut opts = aaa::get_enc_opts(rpc, key_id).await?;
+    let mut opts = aaa::get_enc_opts(key_id).await?;
     opts = opts.compression(if compress {
         psrpc::options::Compression::Bzip2
     } else {
@@ -446,27 +477,22 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
         let pinger_fut = tokio::spawn(async move {
             pinger(&name, p_ready).await.log_ef();
         });
+        deploy_undeploy_node_state_sensors(&node.name, true).await?;
         node.reloader_fut.replace(reloader_fut);
         node.pinger_fut.replace(pinger_fut);
         (Some(tx), Some(trig), Some(p_trig))
     } else {
-        crate::RPC
-            .get()
-            .unwrap()
-            .client()
-            .lock()
-            .await
-            .publish(
-                &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, node.name),
-                pack(&NodeStateEvent {
-                    status: NodeStatus::Removed,
-                    info: None,
-                    timeout: None,
-                })?
-                .into(),
-                QoS::No,
-            )
-            .await?;
+        eapi_bus::publish(
+            &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, node.name),
+            pack(&NodeStateEvent {
+                status: NodeStatus::Removed,
+                info: None,
+                timeout: None,
+            })?
+            .into(),
+        )
+        .await?;
+        deploy_undeploy_node_state_sensors(&node.name, false).await?;
         (None, None, None)
     };
     let name = node.name.clone();
@@ -474,23 +500,16 @@ async fn append_node(mut node: Node, nodes: &mut HashMap<String, Node>) -> EResu
     if let Some(txch) = tx {
         RELOAD_TRIGGERS.write().await.insert(name.clone(), txch);
     }
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
-        .lock()
-        .await
-        .publish(
-            &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
-            pack(&NodeStateEvent {
-                status: NodeStatus::Offline,
-                info: None,
-                timeout: None,
-            })?
-            .into(),
-            QoS::No,
-        )
-        .await?;
+    eapi_bus::publish(
+        &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
+        pack(&NodeStateEvent {
+            status: NodeStatus::Offline,
+            info: None,
+            timeout: None,
+        })?
+        .into(),
+    )
+    .await?;
     if let Some(t) = trig {
         t.trigger();
     }
@@ -585,23 +604,17 @@ pub async fn remove_node(name: &str, nodes: &mut HashMap<String, Node>) -> EResu
     } else {
         return Err(Error::not_found(format!("no such node: {}", name)));
     }
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
-        .lock()
-        .await
-        .publish(
-            &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
-            pack(&NodeStateEvent {
-                status: NodeStatus::Removed,
-                info: None,
-                timeout: None,
-            })?
-            .into(),
-            QoS::No,
-        )
-        .await?;
+    eapi_bus::publish(
+        &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
+        pack(&NodeStateEvent {
+            status: NodeStatus::Removed,
+            info: None,
+            timeout: None,
+        })?
+        .into(),
+    )
+    .await?;
+    deploy_undeploy_node_state_sensors(name, false).await?;
     Ok(())
 }
 
@@ -632,27 +645,21 @@ pub async fn mark_node(
             return Ok(());
         }
     };
-    crate::RPC
-        .get()
-        .unwrap()
-        .client()
-        .lock()
-        .await
-        .publish(
-            &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
-            pack(&NodeStateEvent {
-                status: if online {
-                    NodeStatus::Online
-                } else {
-                    NodeStatus::Offline
-                },
-                info,
-                timeout,
-            })?
-            .into(),
-            QoS::No,
-        )
-        .await?;
+    eapi_bus::publish(
+        &format!("{}{}", REPLICATION_NODE_STATE_TOPIC, name),
+        pack(&NodeStateEvent {
+            status: if online {
+                NodeStatus::Online
+            } else {
+                NodeStatus::Offline
+            },
+            info,
+            timeout,
+        })?
+        .into(),
+    )
+    .await?;
+    publish_node_state(name, true, online).await?;
     Ok(())
 }
 

@@ -1,4 +1,3 @@
-use busrt::QoS;
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{
@@ -83,12 +82,11 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 static BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = OnceCell::new();
 static BULK_STATE_TOPIC: OnceCell<String> = OnceCell::new();
 static PUBSUB_RPC: OnceCell<Arc<psrpc::RpcClient>> = OnceCell::new();
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static KEY_SVC: OnceCell<String> = OnceCell::new();
 static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static STATE_LVAR: OnceCell<OID> = OnceCell::new();
 static DEFAULT_KEY_ID: OnceCell<String> = OnceCell::new();
-static REG: OnceCell<Registry> = OnceCell::new();
 static HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = OnceCell::new();
 static PULL_DATA: OnceCell<nodes::PullData> = OnceCell::new();
 static BULK_SECURE_TOPICS: OnceCell<HashSet<String>> = OnceCell::new();
@@ -216,15 +214,21 @@ struct Config {
     oids_exclude: OIDMaskList,
     #[serde(default)]
     replicate_remote: bool,
+    state_lvar: Option<String>,
 }
 
 async fn mark_all_offline() -> EResult<()> {
-    let client = RPC.get().unwrap().client();
-    let node_topics: Vec<(String, bool)> = nodes::NODES
+    let node_topics: Vec<(String, String, bool)> = nodes::NODES
         .read()
         .await
         .iter()
-        .map(|(k, v)| (format!("{REPLICATION_NODE_STATE_TOPIC}{k}"), v.is_static()))
+        .map(|(k, v)| {
+            (
+                format!("{REPLICATION_NODE_STATE_TOPIC}{k}"),
+                k.to_owned(),
+                v.is_static(),
+            )
+        })
         .collect();
     let offline_payload: Vec<u8> = pack(&NodeStateEvent {
         status: NodeStatus::Offline,
@@ -236,21 +240,22 @@ async fn mark_all_offline() -> EResult<()> {
         info: None,
         timeout: None,
     })?;
-    for t in node_topics {
-        client
-            .lock()
-            .await
-            .publish(
-                &t.0,
-                if t.1 {
-                    offline_payload.as_slice()
-                } else {
-                    remove_payload.as_slice()
-                }
-                .into(),
-                QoS::No,
-            )
-            .await?;
+    for (topic, name, is_static) in node_topics {
+        eapi_bus::publish(
+            &topic,
+            if is_static {
+                offline_payload.as_slice()
+            } else {
+                remove_payload.as_slice()
+            }
+            .into(),
+        )
+        .await?;
+        if is_static {
+            nodes::publish_node_state(&name, false, false).await?;
+        } else {
+            nodes::deploy_undeploy_node_state_sensors(&name, false).await?;
+        }
     }
     Ok(())
 }
@@ -314,6 +319,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
     OIDS_EXCLUDE
         .set(oids_exclude_s)
         .map_err(|_| Error::core("unable to set OIDS_EXCLUDE"))?;
+    if let Some(state_lvar) = config.state_lvar {
+        let state_lvar_oid_prefix: OID = state_lvar
+            .replace("${system_name}", initial.system_name())
+            .parse()?;
+        STATE_LVAR
+            .set(state_lvar_oid_prefix)
+            .map_err(|_| Error::core("unable to set STATE_LVAR"))?;
+    }
     let qos = config.pubsub.qos;
     let (sender_tx, sender_rx) = async_channel::bounded(config.pubsub.queue_size);
     let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
@@ -329,12 +342,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
     info.add_method(ServiceMethod::new("node.mtest").required("i"));
     info.add_method(ServiceMethod::new("node.remove").required("i"));
     let handlers = eapi::Handlers::new(sender_tx, info, config.replicate_remote);
-    let rpc = initial.init_rpc(handlers).await?;
-    let registry = initial.init_registry(&rpc);
-    RPC.set(rpc.clone())
-        .map_err(|_| Error::core("unable to set RPC"))?;
-    eva_sdk::service::exclude_oids(
-        rpc.as_ref(),
+    eapi_bus::init(&initial, handlers).await?;
+    let registry = eapi_bus::registry();
+    eva_sdk::eapi_bus::exclude_oids(
         &config.oids_exclude,
         if config.replicate_remote {
             eva_sdk::service::EventKind::Actual
@@ -343,8 +353,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         },
     )
     .await?;
-    eva_sdk::service::subscribe_oids(
-        rpc.as_ref(),
+    eva_sdk::eapi_bus::subscribe_oids(
         &config.oids,
         if config.replicate_remote {
             eva_sdk::service::EventKind::Actual
@@ -371,18 +380,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
         n
     };
-    REG.set(registry)
-        .map_err(|_| Error::core("unable to set registry object"))?;
-    let client = rpc.client().clone();
-    client
-        .lock()
-        .await
-        .subscribe_bulk(
-            &[&format!("{AAA_KEY_TOPIC}#"), &format!("{AAA_ACL_TOPIC}#")],
-            QoS::No,
-        )
-        .await?;
-    svc_init_logs(&initial, client.clone())?;
+    eapi_bus::subscribe_bulk(&[&format!("{AAA_KEY_TOPIC}#"), &format!("{AAA_ACL_TOPIC}#")]).await?;
+    eapi_bus::init_logs(&initial)?;
     if config.replicate_remote {
         warn!(
             "Remote item replication is on. Use a proper cloud structure only to avoid event loops"
@@ -461,7 +460,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 }
             }
             if let Some(c) = client.take() {
-                pubsub_rpc_handlers.start(config.pubsub.queue_size, initial.startup_timeout())?;
+                pubsub_rpc_handlers.start(config.pubsub.queue_size)?;
                 psrpc::RpcClient::create(c, pubsub_rpc_handlers, pubsub_rpc_config).await?
             } else {
                 return Err(Error::failed("Unable to find working psrt host"));
@@ -496,7 +495,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 }
             }
             if let Some(c) = client.take() {
-                pubsub_rpc_handlers.start(config.pubsub.queue_size, initial.startup_timeout())?;
+                pubsub_rpc_handlers.start(config.pubsub.queue_size)?;
                 psrpc::RpcClient::create(c, pubsub_rpc_handlers, pubsub_rpc_config).await?
             } else {
                 return Err(Error::failed("Unable to find working mqtt host"));
@@ -558,10 +557,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
         pubsub_fatal.await;
         eva_sdk::service::poc();
     });
-    svc_mark_ready(&client).await?;
-    svc_wait_core(&rpc, initial.startup_timeout(), true)
-        .await
-        .log_ef();
+    eapi_bus::mark_ready().await?;
+    eapi_bus::wait_core(true).await.log_ef();
     {
         let mut nodes = nodes::NODES.write().await;
         for node in static_nodes {
@@ -626,7 +623,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     };
     tokio::spawn(nodes::state_checker());
     info!("{} started ({})", DESCRIPTION, initial.id());
-    svc_block(&rpc).await;
+    eapi_bus::block().await;
     mark_all_offline().await?;
     if let Some(fut) = announce_fut {
         fut.abort();
@@ -643,7 +640,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .await
             .log_ef();
     }
-    svc_mark_terminating(&client).await?;
+    eapi_bus::mark_terminating().await?;
     ps_rpc.client().bye().await?;
     Ok(())
 }
