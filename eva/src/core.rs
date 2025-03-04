@@ -795,7 +795,11 @@ impl Core {
     ///
     /// Will panic if the core rpc is not set
     #[inline]
-    pub async fn deploy_local_items(&self, configs: Vec<ItemConfigData>) -> EResult<()> {
+    pub async fn deploy_local_items(
+        &self,
+        configs: Vec<ItemConfigData>,
+        lock: bool,
+    ) -> EResult<()> {
         let rpc = self.rpc.get().unwrap();
         if inventory_db::is_initialized() {
             let mut configs_to_save: Vec<(OID, Value)> = Vec::with_capacity(configs.len());
@@ -816,7 +820,11 @@ impl Core {
             for oid in oids {
                 if let Some(item) = self.inventory.read().await.get_item(&oid) {
                     if let Some(stc) = item.state() {
-                        let _stp_lock = self.state_processor_lock.lock().await;
+                        let _stp_lock = if lock {
+                            Some(self.state_processor_lock.lock().await)
+                        } else {
+                            None
+                        };
                         let (s_state, db_st) =
                             prepare_state_data!(item, &*stc.lock(), self.instant_save);
                         //process new state without db_st, manually save
@@ -840,7 +848,11 @@ impl Core {
                 trace!("saving config for {}", oid);
                 save_item_config(oid, item.config()?, rpc).await?;
                 if let Some(stc) = item.state() {
-                    let _stp_lock = self.state_processor_lock.lock().await;
+                    let _stp_lock = if lock {
+                        Some(self.state_processor_lock.lock().await)
+                    } else {
+                        None
+                    };
                     let (s_state, db_st) =
                         prepare_state_data!(item, &*stc.lock(), self.instant_save);
                     self.process_new_state(item.oid(), s_state, db_st, rpc)
@@ -1492,7 +1504,7 @@ impl Core {
                 .log_efd();
         }
         if !item_events_to_create.is_empty() {
-            self.auto_create_item_from_raw_bulk(item_events_to_create, sender)
+            self.auto_create_item_from_raw_bulk(item_events_to_create, sender, false)
                 .await;
         }
     }
@@ -1626,7 +1638,7 @@ impl Core {
                 "auto-creating local item {} (blank) source: {}",
                 oid, sender
             );
-            if let Err(e) = self.deploy_local_items(vec![item_config]).await {
+            if let Err(e) = self.deploy_local_items(vec![item_config], true).await {
                 error!("auto-creation failed for {}: {}", oid, e);
             }
         }
@@ -1641,12 +1653,17 @@ impl Core {
         }
         let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
         info!("auto-creating local item {} source: {}", oid, sender);
-        if let Err(e) = self.deploy_local_items(vec![item_config]).await {
+        if let Err(e) = self.deploy_local_items(vec![item_config], true).await {
             error!("auto-creation failed for {}: {}", oid, e);
         }
     }
 
-    async fn auto_create_item_from_raw_bulk(&self, raw: Vec<RawStateBulkEventOwned>, sender: &str) {
+    async fn auto_create_item_from_raw_bulk(
+        &self,
+        raw: Vec<RawStateBulkEventOwned>,
+        sender: &str,
+        lock: bool,
+    ) {
         let item_configs = raw
             .into_iter()
             .map(|r| {
@@ -1655,7 +1672,7 @@ impl Core {
                 ItemConfigData::from_raw_event(&oid, rseo, sender)
             })
             .collect();
-        if let Err(e) = self.deploy_local_items(item_configs).await {
+        if let Err(e) = self.deploy_local_items(item_configs, lock).await {
             error!("auto-creation failed for bulk bus frame: {}", e);
         }
     }

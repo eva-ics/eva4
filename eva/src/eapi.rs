@@ -747,7 +747,7 @@ impl RpcHandlers for BusApi {
                         items: Vec<ItemConfigData>,
                     }
                     let params: ParamsDeploy = unpack(event.payload()).log_err()?;
-                    self.core.deploy_local_items(params.items).await?;
+                    self.core.deploy_local_items(params.items, true).await?;
                     Ok(None)
                 }
             }
