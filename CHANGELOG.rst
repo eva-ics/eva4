@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* 2025-03-06 build 2025030601: Stability improvements, service replication sensors
 * 2025-02-10 build 2025021001: Data diodes support
 * 2025-02-07 build 2025020701: Terminal improvements
 * 2025-02-04 build 2025020401: Terminal API, local terminal in System Dashboard
