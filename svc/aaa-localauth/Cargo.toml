@@ -18,7 +18,7 @@ mimalloc = { workspace = true }
 hex = "0.4.3"
 once_cell = "1.19.0"
 bmart = { workspace = true }
-openssl = "0.10.63"
+openssl = "0.10.70"
 genpass-native = { path = "../../genpass-native" }
 
 [features]
