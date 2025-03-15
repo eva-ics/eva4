@@ -39,6 +39,7 @@ async fn pull(
         .collect::<Vec<Option<&str>>>();
     match crate::comm::read_multi(vars, ranges, timeout, retries).await {
         Ok(result) => {
+            logreducer::clear_error!("pull");
             for (res, node) in result.into_iter().zip(nodes.iter()) {
                 if let Some(val) = res.value.and_then(|v| {
                     v.into_eva_value()
@@ -110,7 +111,7 @@ async fn pull(
             }
         }
         Err(e) => {
-            error!("pull error: {}", e);
+            logreducer::error!("pull", "pull error: {}", e);
             poc();
         }
     }

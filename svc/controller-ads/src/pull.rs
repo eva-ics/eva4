@@ -39,10 +39,19 @@ async fn pull(
     .await
     {
         Ok(result) => {
+            logreducer::clear_error!("pull");
             for (res, symbol) in result.into_iter().zip(symbols.iter()) {
                 match res {
                     Ok(val) => {
+                        logreducer::clear_error!(format!("pull::{}", symbol.symbol()));
                         for task in symbol.map() {
+                            macro_rules! report_error {
+                            ($($arg:tt)*) => {
+                                logreducer::error!(
+                                    format!("pull::{}", task.oid()),
+                                    $($arg)*);
+                                };
+                            }
                             macro_rules! save_value {
                                 ($val: expr) => {
                                     let raw_state = RawStateEventOwned::new(1, $val);
@@ -59,16 +68,21 @@ async fn pull(
                                 ($val: expr) => {
                                     if task.need_transform() {
                                         if let Ok(val) = TryInto::<f64>::try_into($val) {
+                                            logreducer::clear_error!(format!(
+                                                "pull::{}",
+                                                task.oid()
+                                            ));
                                             if let Ok(n) = task.transform_value(val).log_err() {
                                                 save_value!(Value::F64(n));
                                             } else {
                                                 oids_failed.insert(task.oid());
                                             }
                                         } else {
-                                            error!("{} value parse error", task.oid());
+                                            report_error!("{} value parse error", task.oid());
                                             oids_failed.insert(task.oid());
                                         }
                                     } else {
+                                        logreducer::clear_error!(format!("pull::{}", task.oid()));
                                         save_value!($val.clone());
                                     }
                                 };
@@ -78,7 +92,7 @@ async fn pull(
                                     if let Some(value) = vals.get(idx) {
                                         process!(value);
                                     } else {
-                                        warn!(
+                                        report_error!(
                                             "{} pull error: array does not contain the required index",
                                             task.oid()
                                         );
@@ -87,7 +101,7 @@ async fn pull(
                                 } else if idx == 0 {
                                     process!(val.clone());
                                 } else {
-                                    error!(
+                                    report_error!(
                                         "{} pull error: {} value is not an array",
                                         task.oid(),
                                         symbol.symbol()
@@ -100,7 +114,12 @@ async fn pull(
                         }
                     }
                     Err(e) => {
-                        error!("{} pull error: {}", symbol.symbol(), e);
+                        logreducer::error!(
+                            format!("pull::{}", symbol.symbol()),
+                            "{} pull error: {}",
+                            symbol.symbol(),
+                            e
+                        );
                         for task in symbol.map() {
                             oids_failed.insert(task.oid());
                         }
@@ -109,7 +128,7 @@ async fn pull(
             }
         }
         Err(e) => {
-            error!("pull error: {}", e);
+            logreducer::error!("pull", "pull error: {}", e);
             crate::poc().await;
         }
     }

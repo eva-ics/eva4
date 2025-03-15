@@ -19,6 +19,7 @@ mimalloc = { workspace = true }
 once_cell = { workspace = true }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
+logreducer = { path = "../../logreducer" }
 bmart = { workspace = true }
 rmodbus = { version = "0.6", features = [ "std" ] }
 simple-pool = { workspace = true }

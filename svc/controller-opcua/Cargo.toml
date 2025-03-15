@@ -12,6 +12,7 @@ async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 lazy_static = { workspace = true }
+logreducer = { path = "../../logreducer" }
 async-channel = { workspace = true }
 eva-sdk = { features = ["controller"] , workspace = true }
 eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }

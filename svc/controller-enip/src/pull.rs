@@ -30,12 +30,14 @@ fn pull_plc(
     let retries = crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst);
     for tag in tags {
         trace!("pulling tag {}", tag.path());
-        if enip::pull_tag(tag.path(), tag.id(), timeout, retries).is_err() {
+        if let Err(e) = enip::pull_tag(tag.path(), tag.id(), timeout, retries) {
+            logreducer::error!("pull", "Unable to pull: {}", e);
             poc();
             for task in tag.map() {
                 oids_failed.insert(task.oid());
             }
         } else {
+            logreducer::clear_error!("pull");
             for task in tag.map() {
                 macro_rules! save_val {
                     ($val: expr) => {{
@@ -68,16 +70,22 @@ fn pull_plc(
                         // bit task offset is already bit offset
                         let bit_no = task.offset() + task.bit();
                         if bit_no > i32::MAX as u32 {
-                            error!("bit index overflow for {}", tag.path());
+                            logreducer::error!(
+                                format!("pull::{}", tag.path()),
+                                "bit index overflow for {}",
+                                tag.path()
+                            );
                             poc();
                         } else {
                             match enip::safe_get_bit(tag.id(), bit_no as i32) {
                                 Ok(v) => {
+                                    logreducer::clear_error!(format!("pull::{}", tag.path()));
                                     let value = Value::U8(v);
                                     save_val!(value);
                                 }
                                 Err(e) => {
-                                    error!(
+                                    logreducer::error!(
+                                        format!("pull::{}", tag.path()),
                                         "Unable to process PLC tag {}, bit get error: {}",
                                         tag.path(),
                                         e
@@ -142,10 +150,22 @@ fn pull_plc(
         match pack(&raw_state) {
             Ok(payload) => {
                 if let Err(e) = tx.try_send((format_raw_state_topic(oid), payload)) {
-                    error!("state queue error for {}: {}", oid, e);
+                    logreducer::error!(
+                        format!("pull::{}", oid),
+                        "state queue error for {}: {}",
+                        oid,
+                        e
+                    );
+                } else {
+                    logreducer::clear_error!(format!("pull::{}", oid));
                 }
             }
-            Err(e) => error!("state serialization error for {}: {}", oid, e),
+            Err(e) => logreducer::error!(
+                format!("pull::{}", oid),
+                "state serialization error for {}: {}",
+                oid,
+                e
+            ),
         }
     }
 }

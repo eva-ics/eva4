@@ -12,8 +12,9 @@ eva-sdk = { features = ["controller"] , workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
-ttl_cache = { version = "0.5.1" }
+ttl_cache = { workspace = true }
 log = { workspace = true }
+logreducer = { path = "../../logreducer" }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 psrpc = { path = "../../psrpc" }

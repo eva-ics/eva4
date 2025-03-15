@@ -487,6 +487,7 @@ async fn process_input_payload(
     );
     match mapping.packer.unpack(data) {
         Ok(value) => {
+            logreducer::clear_error!(format!("input::{}", topic));
             let mut states = HashMap::<&OID, RawStateEventPreparedOwned>::new();
             for m in &mapping.map {
                 debug!("looking up for {}", m.path);
@@ -500,24 +501,40 @@ async fn process_input_payload(
                         }
                         if !m.transform.is_empty() {
                             let f = match f64::try_from(v) {
-                                Ok(n) => n,
+                                Ok(n) => {
+                                    logreducer::clear_error!(format!(
+                                        "input::{}::{}",
+                                        topic, m.path
+                                    ));
+                                    n
+                                }
                                 Err(e) => {
-                                    error!(
+                                    logreducer::error!(
+                                        format!("input::{}::{}", topic, m.path),
                                         "{} unable to parse value for transform ({}): {}",
-                                        topic, value, e
+                                        topic,
+                                        value,
+                                        e
                                     );
                                     continue;
                                 }
                             };
                             match transform::transform(&m.transform, &m.oid, f) {
                                 Ok(n) => {
+                                    logreducer::clear_error!(format!(
+                                        "input::{}::{}",
+                                        topic, m.path
+                                    ));
                                     value_transformed.replace(Value::F64(n));
                                     v = value_transformed.as_ref().unwrap();
                                 }
                                 Err(e) => {
-                                    error!(
+                                    logreducer::error!(
+                                        format!("input::{}::{}", topic, m.path),
                                         "{} unable to transform the value ({}): {}",
-                                        topic, value, e
+                                        topic,
+                                        value,
+                                        e
                                     );
                                     continue;
                                 }
@@ -561,8 +578,17 @@ async fn process_input_payload(
                             }
                         }
                     }
-                    Ok(None) => {}
-                    Err(e) => error!("{} value process error: {}", topic, e),
+                    Ok(None) => {
+                        logreducer::clear_error!(format!("input::{}", topic));
+                    }
+                    Err(e) => {
+                        logreducer::error!(
+                            format!("input::{}", topic),
+                            "{} value process error: {}",
+                            topic,
+                            e
+                        )
+                    }
                 }
             }
             let tx = BUS_TX.get().unwrap();
@@ -578,7 +604,12 @@ async fn process_input_payload(
                 }
             }
         }
-        Err(e) => error!("{} unable to unpack the value: {}", topic, e),
+        Err(e) => logreducer::error!(
+            format!("input::{}", topic),
+            "{} unable to unpack the value: {}",
+            topic,
+            e
+        ),
     }
 }
 

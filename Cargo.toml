@@ -36,6 +36,7 @@ members = [
   "tools/eva-cloud-manager",
   "tools/gen-intl",
   "dobj-codegen",
+  "logreducer",
   "psrpc",
   "genpass-native",
   "crypto-tools",
@@ -83,6 +84,7 @@ bmart = "^0.2.11"
 uuid = "^1.7.0"
 futures = "^0.3.30"
 serde = "^1.0.196"
+ttl_cache = "0.5"
 base64 = "^0.13"
 lazy_static = "^1.4.0"
 paho-mqtt = "^0.12.3"

@@ -48,9 +48,12 @@ async fn pull(
                 if svc_is_terminating() {
                     return Ok(());
                 }
-                error!(
+                logreducer::error!(
+                    format!("pull::{}", pull_reg.reg),
                     "block pull failed for {} / {}: {}",
-                    pull_reg.reg, pull_reg.count, $err
+                    pull_reg.reg,
+                    pull_reg.count,
+                    $err
                 );
                 for task in pull_reg.map() {
                     oids_failed.insert(task.oid());
@@ -69,6 +72,7 @@ async fn pull(
                     .await
                 {
                     Ok(data) => {
+                        logreducer::clear_error!(format!("pull::{}", pull_reg.reg));
                         for task in pull_reg.map() {
                             if let Some(val) = data.get(task.block_offset() as usize) {
                                 let value = Value::U8(u8::from(*val));
@@ -76,18 +80,31 @@ async fn pull(
                                     if let Ok(val) = TryInto::<f64>::try_into(value).log_err() {
                                         if let Ok(n) = task.transform_value(val).log_err() {
                                             save_val!(task, Value::F64(n));
+                                            logreducer::clear_error!(format!(
+                                                "pull::{}",
+                                                task.oid()
+                                            ));
                                         } else {
                                             oids_failed.insert(task.oid());
                                         }
                                     } else {
-                                        error!("unable to parse value for {}", task.oid());
+                                        logreducer::error!(
+                                            format!("pull::{}", task.oid()),
+                                            "unable to parse value for {}",
+                                            task.oid()
+                                        );
                                         oids_failed.insert(task.oid());
                                     }
                                 } else {
                                     save_val!(task, value);
+                                    logreducer::clear_error!(format!("pull::{}", task.oid()));
                                 }
                             } else {
-                                error!("the block does not contain data for {}", task.oid(),);
+                                logreducer::error!(
+                                    format!("pull::{}", task.oid()),
+                                    "the block does not contain data for {}",
+                                    task.oid(),
+                                );
                                 mark_task_failed!(task);
                             }
                         }
@@ -113,14 +130,24 @@ async fn pull(
                                         if let Ok(val) = TryInto::<f64>::try_into(value).log_err() {
                                             if let Ok(n) = task.transform_value(val).log_err() {
                                                 save_val!(task, Value::F64(n));
+                                                logreducer::clear_error!(format!(
+                                                    "pull::{}",
+                                                    task.oid()
+                                                ));
                                             }
                                         }
                                     } else {
                                         save_val!(task, value);
+                                        logreducer::clear_error!(format!("pull::{}", task.oid()));
                                     }
                                 }
                                 Err(e) => {
-                                    error!("parse error for {}: {}", task.oid(), e);
+                                    logreducer::error!(
+                                        format!("pull::{}", task.oid()),
+                                        "parse error for {}: {}",
+                                        task.oid(),
+                                        e
+                                    );
                                     mark_task_failed!(task);
                                 }
                             }
@@ -151,7 +178,14 @@ async fn pull(
         match pack(&raw_state) {
             Ok(payload) => {
                 if let Err(e) = tx.try_send((format_raw_state_topic(oid), payload)) {
-                    error!("state queue error for {}: {}", oid, e);
+                    logreducer::error!(
+                        format!("pull::{}", oid),
+                        "state queue error for {}: {}",
+                        oid,
+                        e
+                    );
+                } else {
+                    logreducer::clear_error!(format!("pull::{}", oid));
                 }
             }
             Err(e) => error!("state serialization error for {}: {}", oid, e),
@@ -181,9 +215,11 @@ pub async fn launch(
             }
         }
         if let Err(e) = pull(&regs, tx.clone(), raw_state_cache.clone(), timeout).await {
-            error!("PLC error: {}", e);
+            logreducer::error!("pull", "PLC error: {}", e);
             poc();
             tokio::time::sleep(crate::SLEEP_ON_ERROR_INTERVAL).await;
+        } else {
+            logreducer::clear_error!("pull");
         }
         last_ticked.replace(t);
     }

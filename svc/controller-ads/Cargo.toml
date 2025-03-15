@@ -18,6 +18,7 @@ eva-common = { features = ["events", "time", "common-payloads"] , workspace = tr
 once_cell = { workspace = true }
 mimalloc = { workspace = true }
 bmart = { workspace = true }
+logreducer = { path = "../../logreducer" }
 uuid = { version = "1.7.0", features = ["v4"] }
 itertools = "0.12.1"
 ads = "0.4.3"
