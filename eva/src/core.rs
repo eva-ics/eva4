@@ -459,7 +459,7 @@ macro_rules! handle_term_signal {
                     }
                 }
                 if $can_log {
-                    debug!("got termination signal");
+                    info!("got termination signal");
                 } else {
                     crate::logs::disable_console_log();
                 }
