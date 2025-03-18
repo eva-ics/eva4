@@ -28,6 +28,7 @@ libc = "0.2.169"
 tracing = { version = "0.1.41", features = ["log"] }
 rustix-openpty = "0.1.1"
 rustix = "0.38.44"
+virtual-terminal = "0.1.1"
 
 [features]
 std-alloc = []

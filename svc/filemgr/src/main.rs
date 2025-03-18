@@ -23,8 +23,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
-
-mod terminal;
+use virtual_terminal as terminal;
 
 err_logger!();
 
@@ -147,23 +146,13 @@ impl TerminalProcess {
             return;
         }
         let cmd = cmd.clone();
-        let (out_tx, out_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
-        let (in_tx, in_rx) = async_channel::bounded(TERMINAL_BUFFER_SIZE);
+        let t_cmd = terminal::Command::new(&cmd)
+            .current_dir(eva_common::tools::get_eva_dir())
+            .terminal_size(dimensions);
+        let in_tx = t_cmd.in_tx();
+        let out_rx = t_cmd.out_rx();
         info!("starting terminal process: {}", cmd.to_string_lossy());
-        let terminal_fut = tokio::spawn(async move {
-            terminal::Process::default()
-                .run(
-                    cmd,
-                    &[] as &[&str],
-                    BTreeMap::<&str, &str>::new(),
-                    eva_common::tools::get_eva_dir(),
-                    "xterm-256color",
-                    dimensions,
-                    out_tx,
-                    in_rx,
-                )
-                .await;
-        });
+        let terminal_fut = tokio::spawn(t_cmd.run());
         loop {
             tokio::select! {
                 v = api_input_rx.recv() => {

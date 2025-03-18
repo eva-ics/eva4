@@ -208,20 +208,19 @@ version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81953c529336010edd6d8e358f886d9581267795c61b19475b71314bffa46d35"
 dependencies = [
- "concurrent-queue 2.4.0",
+ "concurrent-queue 2.5.0",
  "event-listener 2.5.3",
  "futures-core",
 ]
 
 [[package]]
 name = "async-channel"
-version = "2.2.1"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "136d4d23bcc79e27423727b36823d86233aad06dfea531837b038394d11e9928"
+checksum = "89b47800b0be77592da0afd425cc03468052844aff33b84e33cc696f64e77b6a"
 dependencies = [
- "concurrent-queue 2.4.0",
- "event-listener 5.3.0",
- "event-listener-strategy 0.5.1",
+ "concurrent-queue 2.5.0",
+ "event-listener-strategy 0.5.3",
  "futures-core",
  "pin-project-lite",
 ]
@@ -254,7 +253,7 @@ checksum = "8f97ab0c5b00a7cdbe5a371b9a782ee7be1316095885c8a4ea1daf490eb0ef65"
 dependencies = [
  "async-lock",
  "cfg-if",
- "concurrent-queue 2.4.0",
+ "concurrent-queue 2.5.0",
  "futures-io",
  "futures-lite 2.2.0",
  "parking",
@@ -572,7 +571,7 @@ version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c29e3309233d1fc291cfe1c22bfe95553da9690a9b02903be0f15cda5779914c"
 dependencies = [
- "async-channel 2.2.1",
+ "async-channel 2.3.1",
  "bmart-derive",
  "colored 1.9.4",
  "log",
@@ -1021,9 +1020,9 @@ dependencies = [
 
 [[package]]
 name = "concurrent-queue"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d16048cd947b08fa32c24458a22f5dc5e835264f689f4f5653210c69fd107363"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -2096,13 +2095,14 @@ dependencies = [
  "openssl",
  "parse_int",
  "rustix 0.38.44",
- "rustix-openpty",
+ "rustix-openpty 0.1.1",
  "serde",
  "serde_yaml 0.8.26",
  "tempfile",
  "tokio",
  "tracing",
  "uuid 1.7.0",
+ "virtual-terminal",
 ]
 
 [[package]]
@@ -2473,7 +2473,7 @@ version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b215c49b2b248c855fb73579eb1f4f26c38ffdc12973e20e07b91d78d5646e"
 dependencies = [
- "concurrent-queue 2.4.0",
+ "concurrent-queue 2.5.0",
  "parking",
  "pin-project-lite",
 ]
@@ -2484,7 +2484,7 @@ version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d9944b8ca13534cdfb2800775f8dd4902ff3fc75a50101466decadfdf322a24"
 dependencies = [
- "concurrent-queue 2.4.0",
+ "concurrent-queue 2.5.0",
  "parking",
  "pin-project-lite",
 ]
@@ -2501,9 +2501,9 @@ dependencies = [
 
 [[package]]
 name = "event-listener-strategy"
-version = "0.5.1"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "332f51cb23d20b0de8458b86580878211da09bcd4503cb579c225b3d124cabb3"
+checksum = "3c3e4e0dd3673c1139bf041f3008816d9cf2946bbfac2945c09e523b8d7b05b2"
 dependencies = [
  "event-listener 5.3.0",
  "pin-project-lite",
@@ -3458,6 +3458,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
 
 [[package]]
+name = "linux-raw-sys"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe7db12097d22ec582439daf8618b8fdd1a7bef6270e9af3b1ebcd30893cf413"
+
+[[package]]
 name = "lock_api"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4369,7 +4375,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24f040dee2588b4963afb4e420540439d126f73fdacf4a9c486a96d840bac3c9"
 dependencies = [
  "cfg-if",
- "concurrent-queue 2.4.0",
+ "concurrent-queue 2.5.0",
  "pin-project-lite",
  "rustix 0.38.44",
  "tracing",
@@ -5021,6 +5027,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustix"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7178faa4b75a30e269c71e61c353ce2748cf3d76f0c44c393f4e60abf49b825"
+dependencies = [
+ "bitflags 2.4.1",
+ "errno 0.3.10",
+ "libc",
+ "linux-raw-sys 0.9.3",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "rustix-openpty"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5029,6 +5048,17 @@ dependencies = [
  "errno 0.3.10",
  "libc",
  "rustix 0.38.44",
+]
+
+[[package]]
+name = "rustix-openpty"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1de16c7c59892b870a6336f185dc10943517f1327447096bbb7bb32cd85e2393"
+dependencies = [
+ "errno 0.3.10",
+ "libc",
+ "rustix 1.0.2",
 ]
 
 [[package]]
@@ -6275,6 +6305,21 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "virtual-terminal"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a15b7b7db95f99f66a7c9e1bc6fdaa5c18614cce709cf5566ec49e9934fe9207"
+dependencies = [
+ "async-channel 2.3.1",
+ "bmart",
+ "libc",
+ "rustix 1.0.2",
+ "rustix-openpty 0.2.0",
+ "serde",
+ "tokio",
+]
 
 [[package]]
 name = "waker-fn"
