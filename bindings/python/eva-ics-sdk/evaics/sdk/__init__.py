@@ -1,4 +1,4 @@
-__version__ = '0.2.32'
+__version__ = '0.2.33'
 
 import busrt
 import sys
@@ -688,15 +688,24 @@ class Service:
         logger.setLevel(level)
         while logger.hasHandlers():
             logger.removeHandler(logger.handlers[0])
-        self.log_handler = EvaLogHandler(self.bus)
-        self.log_handler.setLevel(level=level)
-        self.log_handler.setFormatter(self.log_formatter)
+
+        if os.environ.get('EVA_SVC_DEBUG') == '1':
+            # log to stdout as well with date/time
+            self.log_handler = logging.StreamHandler(sys.stdout)
+            self.log_handler.setLevel(level=level)
+            self.log_handler.setFormatter(
+                logging.Formatter('%(asctime)s ' + self.log_format))
+        else:
+            self.log_handler = EvaLogHandler(self.bus)
+            self.log_handler.setLevel(level=level)
+            self.log_handler.setFormatter(self.log_formatter)
         logger.addHandler(self.log_handler)
 
         def log_trace(msg, *args, **kwargs):
             logger.log(1, msg, *args, **kwargs)
 
         logger.trace = log_trace
+
         self.logger = logger
         return self.logger
 
@@ -907,6 +916,36 @@ class Service:
                         'items': items if isinstance(items, list) else [items],
                     }))).wait_completed()
         except Exception as e:
+            raise rpc_e2e(e)
+
+    def call(self, method: str, params: dict = None, target='eva.core'):
+        """
+        Call BUS/RT EAPI method
+
+        Args:
+            method: API method
+
+        Optional:
+
+            params: API method parameters (dict)
+
+            target: target service (default: eva.core)
+
+        Returns:
+            API response payload
+        """
+        try:
+            payload = self.rpc.call(
+                target,
+                busrt.rpc.Request(
+                    method, None if params is None else
+                    msgpack.dumps(params))).wait_completed(
+                        self.timeout['default']).get_payload()
+            if payload:
+                return unpack(payload)
+            else:
+                return None
+        except busrt.rpc.RpcException as e:
             raise rpc_e2e(e)
 
 
