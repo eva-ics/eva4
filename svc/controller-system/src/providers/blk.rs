@@ -89,19 +89,19 @@ async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
         if util > 100.0 {
             util = 100.0;
         }
-        Metric::new("blk", &format_name(name), "r")
+        Metric::new("blk", &format_name(name, false), "r")
             .report(reads)
             .await;
-        Metric::new("blk", &format_name(name), "w")
+        Metric::new("blk", &format_name(name, false), "w")
             .report(writes)
             .await;
-        Metric::new("blk", &format_name(name), "rb")
+        Metric::new("blk", &format_name(name, false), "rb")
             .report(read_bytes)
             .await;
-        Metric::new("blk", &format_name(name), "wb")
+        Metric::new("blk", &format_name(name, false), "wb")
             .report(written_bytes)
             .await;
-        Metric::new("blk", &format_name(name), "util")
+        Metric::new("blk", &format_name(name, false), "util")
             .report(util)
             .await;
         true
@@ -195,7 +195,7 @@ pub async fn report_worker() {
             for c in config.devices.as_ref().unwrap() {
                 if !r.contains(c) {
                     for res in ["r", "w", "rb", "wb", "util"] {
-                        Metric::new("blk", &format_name(c), res)
+                        Metric::new("blk", &format_name(c, false), res)
                             .failed()
                             .report(-1)
                             .await;

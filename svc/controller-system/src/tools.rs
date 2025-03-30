@@ -63,10 +63,13 @@ pub fn calc_usage<N: Into<u64>>(total: N, free: N) -> f64 {
     }
 }
 
-fn format_metric_name(s: &str) -> String {
+fn format_metric_name(s: &str, allow_slash: bool) -> String {
     let mut result = String::with_capacity(s.len());
     for ch in s.chars() {
-        if ch.is_alphanumeric() || eva_common::OID_ALLOWED_SYMBOLS.contains(ch) {
+        if ch.is_alphanumeric()
+            || (allow_slash && ch == '/')
+            || eva_common::OID_ALLOWED_SYMBOLS.contains(ch)
+        {
             result.push(ch);
         } else {
             result.push_str(crate::REPLACE_UNSUPPORTED_SYMBOLS);
@@ -75,12 +78,12 @@ fn format_metric_name(s: &str) -> String {
     result
 }
 
-pub fn format_name(s: &str) -> Arc<String> {
+pub fn format_name(s: &str, allow_slash: bool) -> Arc<String> {
     let mut cache = NAME_CACHE.lock();
     if let Some(name) = cache.get(s) {
         name.clone()
     } else {
-        let name = Arc::new(format_metric_name(s));
+        let name = Arc::new(format_metric_name(s, allow_slash));
         cache.insert(s.to_owned(), name.clone());
         name
     }

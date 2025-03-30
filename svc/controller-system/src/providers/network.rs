@@ -70,7 +70,7 @@ pub async fn report_worker() {
                         continue;
                     }
                 }
-                let name = format_name(interface);
+                let name = format_name(interface, false);
                 Metric::new("network", &name, "rxb")
                     .report(i.received())
                     .await;

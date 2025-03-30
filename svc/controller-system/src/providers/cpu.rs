@@ -61,7 +61,7 @@ pub async fn report_worker() {
                 } else if let Some(n) = cpu_name.strip_prefix("CPU ") {
                     cpu_name = n;
                 }
-                let name = format_name(cpu_name);
+                let name = format_name(cpu_name, false);
                 Metric::new("cpu/core", &name, "usage")
                     .report(cpu.cpu_usage())
                     .await;

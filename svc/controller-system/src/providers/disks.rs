@@ -49,7 +49,7 @@ fn format_metric_mountpoint_name(path: &Path) -> Arc<String> {
     if mount_point.is_empty() {
         "SYSTEM_ROOT".to_owned().into()
     } else {
-        format_name(&mount_point)
+        format_name(&mount_point, false)
     }
 }
 

@@ -14,9 +14,9 @@ static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub fn set_config(mut config: Config) -> EResult<()> {
     for task in &mut config.tasks {
-        task.name = format_name(&task.name).to_string();
+        task.name = format_name(&task.name, true).to_string();
         for m in &mut task.map {
-            m.name = format_name(&m.name).to_string();
+            m.name = format_name(&m.name, true).to_string();
         }
     }
     CONFIG
