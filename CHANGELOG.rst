@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* 2025-04-01 build 2025040101: Various functionality improvements, Python SDK updates
 * 2025-03-15 build 2025031501: Minor security updates, log reducers, ZF replication improvements
 * 2025-03-06 build 2025030601: Stability improvements, service replication sensors
 * 2025-02-10 build 2025021001: Data diodes support
