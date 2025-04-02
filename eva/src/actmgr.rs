@@ -494,6 +494,7 @@ impl Manager {
             );
             return Ok(Some(result));
         }
+        log::info!("launching action {:?}", uuid);
         let result = perform(&target, method, &payload, timeout, rpc).await;
         let mut actions = self.actions.lock().unwrap();
         let action = actions
@@ -629,11 +630,13 @@ async fn perform(
     timeout: Duration,
     rpc: &RpcClient,
 ) -> EResult<()> {
+    log::info!("performing {} on {}", method, target);
     tokio::time::timeout(
         timeout,
         rpc.call(target, method, payload.into(), QoS::RealtimeProcessed),
     )
     .await??;
+    log::info!("{} on {} completed", method, target);
     Ok(())
 }
 

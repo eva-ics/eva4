@@ -1033,9 +1033,12 @@ impl Core {
                     .launch_action(action, Some(t_accepted), timeout)
                     .await
                     .log_ef();
+                log::info!("action launched for {}", oid);
                 if tokio::time::timeout(timeout, core_listener).await.is_err() {
+                    log::warn!("action listener timed out for {}", oid);
                     action_manager.mark_action_timed_out(&uuid);
                 }
+                log::info!("action listener completed for {}", oid);
                 if oid.kind() == ItemKind::Unit {
                     let inv = inventory.read().await;
                     if let Some(unit) = inv.get_item(&oid) {
