@@ -3,7 +3,7 @@
 KEEP_NIGHTLY=10
 KEEP_STABLE=5
 
-lts=("2025010701")
+lts=("2025010701" "2025040101")
 
 VERSION=$(grep ^version Cargo.toml|cut -d\" -f2)
 
