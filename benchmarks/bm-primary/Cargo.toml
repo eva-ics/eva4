@@ -6,7 +6,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.38.2", features = ["full"] }
 sysinfo = "0.24"
 busrt = { version = "0.4", features = ["ipc", "rpc"] }
 bma-benchmark = "0.0.20"

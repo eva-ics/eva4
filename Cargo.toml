@@ -78,7 +78,7 @@ genpass-native = { version = "*", path = "genpass-native" }
 psrpc = { version = "*", path = "psrpc" }
 async-trait = "^0.1.77"
 log = "^0.4.20"
-tokio = "^1.36.0"
+tokio = "^1.38.2"
 colored = "^2.1.0"
 bmart = "^0.2.11"
 uuid = "^1.7.0"
