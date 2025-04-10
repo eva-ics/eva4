@@ -8,7 +8,7 @@ publish = false
 busrt = { version = "0.4.12", features = ["rpc", "ipc", "rt"], optional = true }
 eva-common = { version = "0.3.88", features = ["events", "console-logger", "fips"] }
 eva-sdk = { version = "0.3.63", features = ["controller"], optional = true }
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 async-trait = { version = "0.1.77", optional = true }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 log = "0.4.20"
