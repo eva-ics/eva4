@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 busrt = { version = "0.4", features = ["rpc", "ipc"] }
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.38.2", features = ["full"] }
 async-trait = { version = "0.1.77" }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 eva-common = { workspace = true, features = ["events", "common-payloads"] }
