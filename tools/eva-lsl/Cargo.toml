@@ -18,7 +18,7 @@ eva-common = { version = "0.3.75", features = ["common-payloads", "payload", "se
 hostname = "0.4.0"
 notify = "7.0.0"
 serde = { version = "1.0.210", features = ["derive"] }
-tokio = { version = "1.40.0", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 
 [target.'cfg(windows)'.dependencies]
 ansi_term = "0.12.1"
