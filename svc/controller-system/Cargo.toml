@@ -6,8 +6,8 @@ publish = false
 
 [dependencies]
 busrt = { version = "0.4.12", features = ["rpc", "ipc", "rt"], optional = true }
-eva-common = { version = "0.3.88", features = ["events", "console-logger", "fips"] }
-eva-sdk = { version = "0.3.63", features = ["controller"], optional = true }
+eva-common = { version = "0.3.93", features = ["events", "console-logger"] }
+eva-sdk = { version = "0.3.64", features = ["controller"], optional = true }
 tokio = { version = "1.43.1", features = ["full"] }
 async-trait = { version = "0.1.77", optional = true }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
@@ -69,9 +69,9 @@ openssl-vendored = ["eva-common/openssl-vendored", "openssl/vendored"]
 openssl3 = ["eva-common/openssl3"]
 fips = ["rustls?/fips", "rustls-cng?/fips"]
 
-service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "mimalloc", "procfs", "eva-sdk"]
+service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "mimalloc", "procfs", "eva-sdk", "eva-common/fips"]
 agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
-agent-linux = ["agent", "syslog", "is-terminal", "openssl", "mimalloc", "eva-common/services", "procfs", "reqwest/native-tls"]
+agent-linux = ["agent", "syslog", "is-terminal", "openssl", "mimalloc", "eva-common/services", "procfs", "reqwest/native-tls", "eva-common/fips"]
 agent-windows = ["agent", "eventlog", "windows-service", "reqwest/rustls-tls", "rustls", "rustls-cng", "rustls-native-certs", "dep:hex"]
 
 #default = ["service"]
