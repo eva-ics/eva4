@@ -37,6 +37,7 @@ procfs = { version = "0.16.0", optional = true }
 rustls = { version = "0.23", features = ["ring"], optional = true }
 rustls-cng = { version = "0.5", optional = true }
 rustls-native-certs = { version = "0.8", optional = true }
+hex = { version = "0.4.3", optional = true }
 
 [profile.release]
 strip = true
@@ -71,7 +72,7 @@ fips = ["rustls?/fips", "rustls-cng?/fips"]
 service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "mimalloc", "procfs", "eva-sdk"]
 agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
 agent-linux = ["agent", "syslog", "is-terminal", "openssl", "mimalloc", "eva-common/services", "procfs", "reqwest/native-tls"]
-agent-windows = ["agent", "eventlog", "windows-service", "reqwest/rustls-tls", "rustls", "rustls-cng", "rustls-native-certs"]
+agent-windows = ["agent", "eventlog", "windows-service", "reqwest/rustls-tls", "rustls", "rustls-cng", "rustls-native-certs", "dep:hex"]
 
 #default = ["service"]
 #default = ["agent-windows"]

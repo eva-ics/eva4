@@ -833,6 +833,7 @@ dependencies = [
  "eva-common",
  "eva-sdk",
  "eventlog",
+ "hex",
  "http-body-util",
  "hyper",
  "hyper-util",
