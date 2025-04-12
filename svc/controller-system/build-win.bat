@@ -2,4 +2,4 @@
 
 cd c:\src\eva4\svc\controller-system
 call c:\src\init.bat
-cargo build --release -F agent-windows
+~/.cargo/bin/cargo build --release -F agent-windows
