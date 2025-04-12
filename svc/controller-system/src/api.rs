@@ -79,15 +79,18 @@ fn authorize_request(headers: &HeaderMap) -> EResult<String> {
         if let Some(val) = headers.get(trusted_api_system) {
             let host = val.to_str().map_err(Error::invalid_data)?;
             if host.contains('=') {
-                let mut parts = host.splitn(2, '=');
-                let key = parts.next().unwrap();
-                if key.trim() != "CN" {
-                    return Err(Error::access("invalid trusted system common name"));
+                for part in host.split(',') {
+                    let mut parts = part.splitn(2, '=');
+                    let key = parts.next().unwrap();
+                    if key.trim() != "CN" {
+                        continue;
+                    }
+                    let value = parts
+                        .next()
+                        .ok_or_else(|| Error::invalid_data("missing common name value"))?;
+                    return Ok(value.trim().to_owned());
                 }
-                let value = parts
-                    .next()
-                    .ok_or_else(|| Error::invalid_data("missing common name value"))?;
-                return Ok(value.trim().to_owned());
+                return Err(Error::access("no trusted system common name"));
             }
             return Ok(host.trim().to_owned());
         }
@@ -174,20 +177,23 @@ async fn serve(
 }
 
 pub async fn launch_server(config: Config, timeout: Duration) -> EResult<()> {
-    let hosts: BTreeMap<String, String> =
-        config.hosts.into_iter().map(|v| (v.name, v.key)).collect();
-    HOSTS
-        .set(hosts)
-        .map_err(|_| Error::core("Unable to set HOSTS"))?;
-    if let Some(real_ip_header) = config.real_ip_header {
-        REAL_IP_HEADER
-            .set(real_ip_header)
-            .map_err(|_| Error::core("Unable to set REAL_IP_HEADER"))?;
-    }
-    if let Some(trusted_api_system_name) = config.trusted_system_header {
-        HEADER_TRUSTED_API_SYSTEM
-            .set(trusted_api_system_name)
-            .map_err(|_| Error::core("Unable to set HEADER_TRUSTED_API_SYSTEM_NAME"))?;
+    if HOSTS.get().is_none() {
+        // first time initialization
+        let hosts: BTreeMap<String, String> =
+            config.hosts.into_iter().map(|v| (v.name, v.key)).collect();
+        HOSTS
+            .set(hosts)
+            .map_err(|_| Error::core("Unable to set HOSTS"))?;
+        if let Some(real_ip_header) = config.real_ip_header {
+            REAL_IP_HEADER
+                .set(real_ip_header)
+                .map_err(|_| Error::core("Unable to set REAL_IP_HEADER"))?;
+        }
+        if let Some(trusted_api_system_name) = config.trusted_system_header {
+            HEADER_TRUSTED_API_SYSTEM
+                .set(trusted_api_system_name)
+                .map_err(|_| Error::core("Unable to set HEADER_TRUSTED_API_SYSTEM_NAME"))?;
+        }
     }
     let listener = TcpListener::bind(config.listen).await?;
     let client_pool =
