@@ -10,12 +10,16 @@ use std::time::Duration;
 
 #[cfg(target_os = "windows")]
 mod cert_resolver {
+    use eva_common::err_logger;
     use eva_common::prelude::*;
+    use log::{info, warn};
     use rustls::{
         client::ResolvesClientCert, pki_types::CertificateDer, sign::CertifiedKey, SignatureScheme,
     };
     use rustls_cng::{signer::CngSigningKey, store::CertStore};
     use std::sync::Arc;
+
+    err_logger!();
 
     #[derive(Debug)]
     pub struct ClientCertResolver {
@@ -28,7 +32,17 @@ mod cert_resolver {
         store: &CertStore,
         name: &str,
     ) -> EResult<(Vec<CertificateDer<'static>>, CngSigningKey)> {
-        let contexts = store.find_by_subject_name(name).map_err(Error::failed)?;
+        let contexts = if let Some(id_hex) = name.replace(' ', "").strip_prefix("id=") {
+            store
+                .find_by_sha1(
+                    hex::decode(id_hex)
+                        .log_err_with("unable to decode certificate thumbprint")
+                        .map_err(Error::failed)?,
+                )
+                .map_err(Error::failed)?
+        } else {
+            store.find_by_subject_name(name).map_err(Error::failed)?
+        };
         let context = contexts
             .first()
             .ok_or_else(|| Error::failed("No client certificate"))?;
@@ -49,12 +63,26 @@ mod cert_resolver {
             _acceptable_issuers: &[&[u8]],
             sigschemes: &[SignatureScheme],
         ) -> Option<Arc<CertifiedKey>> {
-            let (chain, signing_key) = get_chain(&self.store, &self.cert_name).ok()?;
+            let (chain, signing_key) = match get_chain(&self.store, &self.cert_name) {
+                Ok((chain, signing_key)) => (chain, signing_key),
+                Err(e) => {
+                    warn!(
+                        "Failed to get client certificate {}: {}",
+                        &self.cert_name, e
+                    );
+                    return None;
+                }
+            };
             if let Some(ref pin) = self.pin {
-                signing_key.key().set_pin(pin).ok()?;
+                signing_key
+                    .key()
+                    .set_pin(pin)
+                    .log_err_with("unable to set certificate key pin")
+                    .ok()?;
             }
             for scheme in signing_key.supported_schemes() {
                 if sigschemes.contains(scheme) {
+                    info!("Using client certificate {}", &self.cert_name);
                     return Some(Arc::new(CertifiedKey {
                         cert: chain,
                         key: Arc::new(signing_key),
@@ -62,7 +90,7 @@ mod cert_resolver {
                     }));
                 }
             }
-            log::warn!("client cert NOT FOUND");
+            warn!("client cert NOT FOUND");
             None
         }
 
@@ -123,7 +151,12 @@ impl Auth {
                     .with_client_cert_resolver(std::sync::Arc::new(
                         cert_resolver::ClientCertResolver {
                             store,
-                            cert_name: format!("CN = {}", auth.cert),
+                            cert_name: if auth.cert.contains('=') {
+                                auth.cert.clone()
+                            } else {
+                                format!("CN = {}", auth.cert)
+                            },
+
                             pin: None,
                         },
                     ));
