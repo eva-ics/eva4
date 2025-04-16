@@ -62,7 +62,7 @@ edition = "2021"
 repository = "https://github.com/eva-ics/eva4"
 
 [workspace.dependencies]
-openssl = "^0.10.70"
+openssl = "^0.10.72"
 once_cell = "^1.19.0"
 hyper = "^0.14.28"
 parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }
