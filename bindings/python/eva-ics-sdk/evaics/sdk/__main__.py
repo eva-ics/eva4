@@ -11,7 +11,7 @@ TIMEOUT = 5
 
 SVC_TPL = '''#!/opt/eva4/venv/bin/python
 
-__version__ = '0.2.33'
+__version__ = '0.0.1'
 
 import evaics.sdk as sdk
 import busrt
