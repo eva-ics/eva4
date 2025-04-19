@@ -108,7 +108,9 @@ impl RpcHandlers for Handlers {
                     p.fill,
                     p.precision,
                     p.xopts,
-                ).await.log_err()?;
+                )
+                .await
+                .log_err()?;
                 Ok(Some(pack(&data)?))
             }
             "state_history" => {
