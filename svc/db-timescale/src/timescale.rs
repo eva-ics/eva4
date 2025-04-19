@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 use eva_common::{acl::OIDMask, prelude::*};
 use eva_sdk::types::{Fill, HistoricalState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Write as _};
 
 use sqlx::Row;
@@ -35,6 +35,12 @@ impl ValueFunction {
     }
 }
 
+#[derive(Serialize, Default)]
+pub struct StateHistoryCombinedData {
+    t: Vec<f64>,
+    data: BTreeMap<String, Vec<Value>>,
+}
+
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
 pub async fn state_history_combined(
@@ -44,7 +50,7 @@ pub async fn state_history_combined(
     fill: Fill,
     precision: Option<u32>,
     mut xopts: BTreeMap<String, Value>,
-) -> EResult<BTreeMap<String, Vec<Value>>> {
+) -> EResult<StateHistoryCombinedData> {
     let pool = crate::db::POOL.get().unwrap();
     let vfn = if let Some(v) = xopts.remove("vfn") {
         ValueFunction::deserialize(v)?
@@ -84,7 +90,7 @@ pub async fn state_history_combined(
         cols.push((id, oid));
     }
     if cols.is_empty() {
-        return Ok(BTreeMap::new());
+        return Ok(<_>::default());
     }
     let te = if let Some(t) = t_end {
         t + fill.as_secs_f64()
@@ -128,7 +134,7 @@ ORDER BY bucket
             .join(","),
     );
     let mut rows = sqlx::query(&q).fetch(pool);
-    let mut result = BTreeMap::new();
+    let mut result = StateHistoryCombinedData::default();
     while let Some(row) = rows.try_next().await? {
         let t_n: NaiveDateTime = row.try_get(0)?;
         let t = naive_to_ts(t_n);
@@ -137,23 +143,18 @@ ORDER BY bucket
                 break;
             }
         }
-        result
-            .entry("t".to_owned())
-            .or_insert_with(Vec::new)
-            .push(Value::F64(t));
+        result.t.push(t);
         for (i, (_, oid)) in cols.iter().enumerate() {
             let val: Option<f64> = row.try_get(i + 2)?;
-            if let Some(v) = val {
-                result
-                    .entry(oid.to_owned())
-                    .or_insert_with(Vec::new)
-                    .push(Value::F64(v).rounded(precision)?);
-            } else {
-                result
-                    .entry(oid.to_owned())
-                    .or_insert_with(Vec::new)
-                    .push(Value::Unit);
-            }
+            result
+                .data
+                .entry(format!("{}/value", oid))
+                .or_insert_with(Vec::new)
+                .push(if let Some(v) = val {
+                    Value::F64(v).rounded(precision)?
+                } else {
+                    Value::Unit
+                });
         }
     }
     Ok(result)
