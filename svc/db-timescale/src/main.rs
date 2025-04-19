@@ -1,5 +1,6 @@
 use busrt::QoS;
 use eva_common::acl::{OIDMask, OIDMaskList};
+use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -79,6 +80,37 @@ impl RpcHandlers for Handlers {
         let method = event.parse_method()?;
         let payload = event.payload();
         match method {
+            "state_history_combined" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct StateHistoryCombinedParams {
+                    i: ValueOrList<String>,
+                    #[serde(alias = "s")]
+                    t_start: Option<f64>,
+                    #[serde(alias = "e")]
+                    t_end: Option<f64>,
+                    #[serde(alias = "w")]
+                    fill: Fill,
+                    #[serde(alias = "p")]
+                    precision: Option<u32>,
+                    #[serde(alias = "o", rename = "xopts", default)]
+                    xopts: BTreeMap<String, Value>,
+                }
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: StateHistoryCombinedParams = unpack(payload)?;
+                let data = timescale::state_history_combined(
+                    &p.i.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+                    p.t_start
+                        .unwrap_or_else(|| eva_common::time::now_ns_float() - 86400.0),
+                    p.t_end,
+                    p.fill,
+                    p.precision,
+                    p.xopts,
+                ).await.log_err()?;
+                Ok(Some(pack(&data)?))
+            }
             "state_history" => {
                 #[derive(Deserialize)]
                 #[serde(deny_unknown_fields)]
@@ -354,6 +386,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("t_start")
             .optional("t_end")
             .optional("limit"),
+    );
+    info.add_method(
+        ServiceMethod::new("state_history_combined")
+            .required("i")
+            .optional("t_start")
+            .optional("t_end")
+            .optional("fill")
+            .optional("precision"),
     );
     let rpc: Arc<RpcClient> = initial
         .init_rpc(Handlers {
