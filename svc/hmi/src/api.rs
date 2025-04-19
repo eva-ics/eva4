@@ -584,6 +584,9 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "item.state_log" | "state_log" => {
                             method_item_state_log(params, &mut aci).await
                         }
+                        "item.state_history_combined" => {
+                            method_item_state_history_combined(params, &mut aci).await
+                        }
                         "log.get" | "log_get" => method_log_get(params, &mut aci).await,
                         "api_log.get" => method_api_log_get(params, &mut aci).await,
                         "action" => method_action(params, &mut aci).await,
@@ -921,14 +924,15 @@ fn get_default_db() -> String {
     crate::DEFAULT_HISTORY_DB_SVC.get().unwrap().clone()
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum OIDsingleOrMulti {
+    Single(OIDMask),
+    Multi(Vec<OIDMask>),
+}
+
 #[allow(clippy::too_many_lines)]
 async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Value> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum OIDsingleOrMulti {
-        Single(OIDMask),
-        Multi(Vec<OIDMask>),
-    }
     #[derive(Deserialize, Eq, PartialEq)]
     #[serde(rename_all = "lowercase")]
     enum OutputFormat {
@@ -1169,6 +1173,98 @@ async fn method_item_state_log(params: Value, aci: &mut ACI) -> EResult<Value> {
         eapi_bus::call(
             &format!("eva.db.{}", p.database),
             "state_log",
+            pack(&payload)?.into(),
+        )
+        .await?
+        .payload(),
+    )?;
+    Ok(result)
+}
+
+#[allow(clippy::too_many_lines)]
+async fn method_item_state_history_combined(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct StateHistoryCombinedParams {
+        i: OIDsingleOrMulti,
+        #[serde(alias = "s")]
+        t_start: Option<Value>,
+        #[serde(alias = "e")]
+        t_end: Option<Value>,
+        #[serde(alias = "w")]
+        fill: String,
+        #[serde(alias = "o", default)]
+        xopts: BTreeMap<String, Value>,
+        #[serde(alias = "a", default = "get_default_db")]
+        database: String,
+    }
+    #[derive(Serialize)]
+    struct StateHistoryCombinedPayload<'a> {
+        i: OIDsingleOrMulti,
+        t_start: f64,
+        t_end: f64,
+        fill: Fill,
+        precision: Option<u32>,
+        xopts: &'a BTreeMap<String, Value>,
+    }
+    aci.log_request(log::Level::Debug).await.log_ef();
+    let p = StateHistoryCombinedParams::deserialize(params)?;
+    let ts_now = eva_common::time::now_ns_float();
+    let t_start = parse_ts!(p.t_start).unwrap_or_else(|| ts_now - 86_400.0);
+    let t_end = parse_ts!(p.t_end).unwrap_or(ts_now);
+    if t_end < t_start {
+        return Err(Error::invalid_params("invalid period"));
+    }
+    let (fill, precision) = {
+        let mut sp = p.fill.splitn(2, ':');
+        let fill_str = sp.next().unwrap();
+        let f: Fill = if let Some(x) = fill_str.strip_suffix('A') {
+            let points: u32 = x.parse()?;
+            if points > 10_000 {
+                return Err(Error::invalid_params("too many points (max 10k)"));
+            }
+            if points < 2 {
+                return Err(Error::invalid_params("points can not be less than 2"));
+            }
+            let mut period = (t_end - t_start) / f64::from(points - 1);
+            if period < 1.0 {
+                period = 1.0;
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
+            Fill::Seconds(period.round() as u32)
+        } else {
+            fill_str.parse()?
+        };
+        let precs = if let Some(p) = sp.next() {
+            Some(p.parse()?)
+        } else {
+            None
+        };
+        (f, precs)
+    };
+    match p.i {
+        OIDsingleOrMulti::Single(ref oid) => {
+            aci.acl().require_item_mask_read(oid)?;
+        }
+        OIDsingleOrMulti::Multi(ref oids) => {
+            for oid in oids {
+                aci.acl().require_item_mask_read(oid)?;
+            }
+        }
+    }
+    let payload = StateHistoryCombinedPayload {
+        i: p.i,
+        t_start,
+        t_end,
+        fill,
+        precision,
+        xopts: &p.xopts,
+    };
+    let result: Value = unpack(
+        eapi_bus::call(
+            &format!("eva.db.{}", p.database),
+            "state_history_combined",
             pack(&payload)?.into(),
         )
         .await?
