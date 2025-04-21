@@ -27,7 +27,7 @@ state_history:
       req: false
     - nam: xopts
       typ: Map<String, String>
-      des: "Extra: vfn=fn for value grouping: mean/sum (d: mean)"
+      des: "Extra: vfn=fn for value grouping: mean/sum (d: mean), rp=TABLE for custom rp_TABLE"
       req: false
     - nam: compact
       typ: bool
@@ -78,7 +78,7 @@ state_log:
       req: false
     - nam: xopts
       typ: Map<String, String>
-      des: "Extra: offset=N for query offset"
+      des: "Extra: offset=N for query offset, rp=TABLE for custom rp_TABLE"
       req: false
   ret: State log payload (includes OIDs, as other svcs may support get-by-mask)
   exm: |

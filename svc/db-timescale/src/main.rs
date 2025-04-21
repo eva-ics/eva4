@@ -10,7 +10,7 @@ use eva_sdk::types::{Fill, StateProp};
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::{atomic, Arc};
 use std::time::Duration;
 
@@ -35,6 +35,29 @@ static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static EVA_PG_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
+pub fn history_table_name(xopts: &BTreeMap<String, Value>) -> EResult<String> {
+    if let Some(t) = xopts.get("rp") {
+        let name = format!("rp_{}", t);
+        check_sql_safe(&name, "rp")?;
+        Ok(name)
+    } else {
+        Ok("state_history_events".to_owned())
+    }
+}
+
+pub fn check_sql_safe(s: &str, param: &str) -> EResult<()> {
+    if s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.')
+    {
+        Ok(())
+    } else {
+        Err(Error::invalid_data(format!(
+            "invalid characters in the parameter {}",
+            param
+        )))
+    }
+}
 
 pub fn eva_pg_enabled() -> bool {
     EVA_PG_ENABLED.load(atomic::Ordering::Relaxed)
@@ -163,6 +186,7 @@ impl RpcHandlers for Handlers {
                             p.precision,
                             p.limit,
                             p.prop,
+                            p.xopts,
                             p.compact,
                         )
                         .await
@@ -183,7 +207,7 @@ impl RpcHandlers for Handlers {
                     #[serde(alias = "n")]
                     limit: Option<usize>,
                     #[serde(alias = "o", default)]
-                    xopts: HashMap<String, Value>,
+                    xopts: BTreeMap<String, Value>,
                 }
                 if payload.is_empty() {
                     Err(RpcError::params(None))
@@ -201,6 +225,7 @@ impl RpcHandlers for Handlers {
                         p.t_end,
                         p.limit,
                         offset,
+                        p.xopts,
                     )
                     .await
                     .log_err()?;

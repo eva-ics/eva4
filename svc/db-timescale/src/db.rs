@@ -10,9 +10,12 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions, PgPool, Row,
 };
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::str::FromStr;
 use std::time::Duration;
+
+use crate::history_table_name;
 
 err_logger!();
 
@@ -232,9 +235,11 @@ pub async fn state_history(
     precision: Option<u32>,
     limit: Option<usize>,
     prop: Option<StateProp>,
+    xopts: BTreeMap<String, Value>,
     compact: bool,
 ) -> EResult<StateHistoryData> {
     let pool = POOL.get().unwrap();
+    let table_name = history_table_name(&xopts)?;
     let mut q = String::new();
     // try to parse OID
     if let Ok(oid) = oid_str.parse::<OID>() {
@@ -269,9 +274,9 @@ pub async fn state_history(
         "value"
     };
     let query = format!(
-        r"SELECT t,{pq} FROM state_history_events
+        r"SELECT t,{pq} FROM {table_name} AS she
             JOIN state_history_oids
-            ON state_history_events.oid_id=state_history_oids.id {q}"
+            ON she.oid_id=state_history_oids.id {q}"
     );
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);
@@ -319,8 +324,10 @@ pub async fn state_log(
     t_end: Option<f64>,
     limit: Option<usize>,
     offset: Option<usize>,
+    xopts: BTreeMap<String, Value>,
 ) -> EResult<Vec<ItemState>> {
     let pool = POOL.get().unwrap();
+    let table_name = history_table_name(&xopts)?;
     let mut q = "WHERE oid".to_owned();
     if oid.is_wildcard() {
         write!(q, " like '{}'", oid.to_wildcard_str("%")).map_err(Error::failed)?;
@@ -342,9 +349,9 @@ pub async fn state_log(
         q += ", oid";
     }
     let query = format!(
-        r"SELECT oid,t,status,value FROM state_history_events
+        r"SELECT oid,t,status,value FROM {table_name} AS she
         JOIN state_history_oids
-        ON state_history_events.oid_id=state_history_oids.id {q}"
+        ON she.oid_id=state_history_oids.id {q}"
     );
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);

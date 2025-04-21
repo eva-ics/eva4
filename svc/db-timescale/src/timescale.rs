@@ -1,4 +1,4 @@
-use crate::db::naive_to_ts;
+use crate::{db::naive_to_ts, history_table_name};
 use chrono::NaiveDateTime;
 use eva_common::{acl::OIDMask, prelude::*};
 use eva_sdk::types::{Fill, HistoricalState, StateHistoryData, StateProp};
@@ -57,6 +57,7 @@ pub async fn state_history_combined(
     } else {
         ValueFunction::default()
     };
+    let table_name = history_table_name(&xopts)?;
     let mut q = "SELECT id, oid FROM state_history_oids WHERE FALSE".to_owned();
     let mut oids = Vec::new();
     for s in oid_str {
@@ -118,7 +119,7 @@ pub async fn state_history_combined(
         finish=>to_timestamp({})
         ) as bucket,
         {}
-FROM state_history_events
+FROM {}
 WHERE oid_id IN ({})
 AND t>=to_timestamp({}) and t<=to_timestamp({})
 GROUP BY bucket
@@ -129,6 +130,7 @@ ORDER BY bucket
         t_start,
         te,
         subq,
+        table_name,
         cols.iter()
             .map(|(id, _)| id.to_string())
             .collect::<Vec<_>>()
@@ -196,6 +198,7 @@ pub async fn state_history_filled(
     } else {
         ValueFunction::default()
     };
+    let table_name = history_table_name(&xopts)?;
     let (cols, pq, need_status, need_value) = if let Some(p) = prop {
         match p {
             StateProp::Status => (
@@ -225,15 +228,16 @@ pub async fn state_history_filled(
     '{} seconds'::interval,
     t,
     start=>to_timestamp({}),
-    finish=>to_timestamp({})) AS period, {} FROM state_history_events
+    finish=>to_timestamp({})) AS period, {} FROM {} AS she
     JOIN state_history_oids
-    ON state_history_events.oid_id=state_history_oids.id
+    ON she.oid_id=state_history_oids.id
     {} AND t>=to_timestamp({}) and t<=to_timestamp({}) GROUP BY period"#,
         cols,
         fill.as_secs(),
         t_start,
         te,
         pq,
+        table_name,
         where_oid_q,
         t_start,
         te
