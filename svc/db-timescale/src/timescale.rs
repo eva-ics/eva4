@@ -120,6 +120,7 @@ pub async fn state_history_combined(
         {}
 FROM state_history_events
 WHERE oid_id IN ({})
+AND t>=to_timestamp({}) and t<=to_timestamp({})
 GROUP BY bucket
 ORDER BY bucket
 )
@@ -132,6 +133,8 @@ ORDER BY bucket
             .map(|(id, _)| id.to_string())
             .collect::<Vec<_>>()
             .join(","),
+        t_start,
+        te
     );
     let mut rows = sqlx::query(&q).fetch(pool);
     let mut result = StateHistoryCombinedData::default();
