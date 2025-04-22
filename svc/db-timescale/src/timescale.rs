@@ -16,6 +16,104 @@ enum ValueFunction {
     Sum,
 }
 
+#[derive(Deserialize, Default, Copy, Clone, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum FillNull {
+    #[default]
+    None,
+    Zero,
+    NaN,
+    Previous,
+}
+
+impl From<FillNull> for NullFiller {
+    fn from(kind: FillNull) -> Self {
+        NullFiller {
+            kind,
+            previous: None,
+        }
+    }
+}
+
+struct NullFiller {
+    kind: FillNull,
+    previous: Option<Value>,
+}
+
+impl NullFiller {
+    fn format_status(&mut self, maybe_status: Option<i16>, is_first: bool) -> EResult<Value> {
+        match self.kind {
+            FillNull::None | FillNull::NaN => {
+                if let Some(s) = maybe_status {
+                    Ok(Value::I16(s))
+                } else {
+                    Ok(Value::Unit)
+                }
+            }
+            FillNull::Zero => {
+                if let Some(s) = maybe_status {
+                    Ok(Value::I16(s))
+                } else if is_first {
+                    Ok(Value::Unit)
+                } else {
+                    Ok(Value::I16(0))
+                }
+            }
+            FillNull::Previous => {
+                if let Some(s) = maybe_status {
+                    self.previous = Some(Value::I16(s));
+                    Ok(Value::I16(s))
+                } else if let Some(ref v) = self.previous {
+                    Ok(v.clone())
+                } else if is_first {
+                    Ok(Value::Unit)
+                } else {
+                    Ok(Value::I16(0))
+                }
+            }
+        }
+    }
+    fn format_value(
+        &mut self,
+        maybe_value: Option<f64>,
+        is_first: bool,
+        precision: Option<u32>,
+    ) -> EResult<Value> {
+        match self.kind {
+            FillNull::None => {
+                if let Some(v) = maybe_value {
+                    Ok(Value::F64(v).rounded(precision)?)
+                } else {
+                    Ok(Value::Unit)
+                }
+            }
+            _ => {
+                if let Some(v) = maybe_value {
+                    if self.kind == FillNull::Previous {
+                        self.previous = Some(Value::F64(v).rounded(precision)?);
+                    }
+                    Ok(Value::F64(v).rounded(precision)?)
+                } else if is_first {
+                    Ok(Value::Unit)
+                } else {
+                    match self.kind {
+                        FillNull::Zero => Ok(Value::F64(0.0)),
+                        FillNull::NaN => Ok(Value::F64(f64::NAN)),
+                        FillNull::Previous => {
+                            if let Some(ref v) = self.previous {
+                                Ok(v.clone())
+                            } else {
+                                Ok(Value::F64(0.0))
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl ValueFunction {
     fn as_str(&self) -> &str {
         match self {
@@ -56,6 +154,11 @@ pub async fn state_history_combined(
         ValueFunction::deserialize(v)?
     } else {
         ValueFunction::default()
+    };
+    let mut null_filler: NullFiller = if let Some(v) = xopts.remove("fill_null") {
+        FillNull::deserialize(v)?.into()
+    } else {
+        FillNull::default().into()
     };
     let table_name = history_table_name(&xopts)?;
     let mut q = "SELECT id, oid FROM state_history_oids WHERE FALSE".to_owned();
@@ -140,6 +243,7 @@ ORDER BY bucket
     );
     let mut rows = sqlx::query(&q).fetch(pool);
     let mut result = StateHistoryCombinedData::default();
+    let mut is_first = true;
     while let Some(row) = rows.try_next().await? {
         let t_n: NaiveDateTime = row.try_get(0)?;
         let t = naive_to_ts(t_n);
@@ -155,12 +259,9 @@ ORDER BY bucket
                 .data
                 .entry(format!("{}/value", oid))
                 .or_insert_with(Vec::new)
-                .push(if let Some(v) = val {
-                    Value::F64(v).rounded(precision)?
-                } else {
-                    Value::Unit
-                });
+                .push(null_filler.format_value(val, is_first, precision)?);
         }
+        is_first = false;
     }
     Ok(result)
 }
@@ -197,6 +298,11 @@ pub async fn state_history_filled(
         ValueFunction::deserialize(v)?
     } else {
         ValueFunction::default()
+    };
+    let mut null_filler: NullFiller = if let Some(v) = xopts.remove("fill_null") {
+        FillNull::deserialize(v)?.into()
+    } else {
+        FillNull::default().into()
     };
     let table_name = history_table_name(&xopts)?;
     let (cols, pq, need_status, need_value) = if let Some(p) = prop {
@@ -249,6 +355,7 @@ pub async fn state_history_filled(
     log::trace!("executing query {}", query);
     let mut rows = sqlx::query(&query).fetch(pool);
     let mut data = Vec::new();
+    let mut is_first = true;
     while let Some(row) = rows.try_next().await? {
         let t_n: NaiveDateTime = row.try_get("t")?;
         let t = naive_to_ts(t_n);
@@ -259,21 +366,13 @@ pub async fn state_history_filled(
         }
         let status: Option<Value> = if need_status {
             let s: Option<i16> = row.try_get("status")?;
-            Some(if let Some(st) = s {
-                Value::I16(st)
-            } else {
-                Value::Unit
-            })
+            Some(null_filler.format_status(s, is_first)?)
         } else {
             None
         };
         let value = if need_value {
             let val: Option<f64> = row.try_get("value")?;
-            if let Some(v) = val {
-                Some(Value::F64(v).rounded(precision)?)
-            } else {
-                Some(Value::Unit)
-            }
+            Some(null_filler.format_value(val, is_first, precision)?)
         } else {
             None
         };
@@ -283,6 +382,7 @@ pub async fn state_history_filled(
             value,
         };
         data.push(state);
+        is_first = false;
     }
     if data.is_empty() {
         data = fill.fill_na(
