@@ -1195,14 +1195,13 @@ class CLI:
                              limit=limit,
                              xopts=xopts_map),
                         target=db_svc)
-        cols = []
+        cols = [
+            't|n=time|f=time{}'.format(f':{time_zone}' if time_zone else '')
+        ]
         if prop == 'status' or prop is None:
             cols += ['status']
         if prop == 'value' or prop is None:
             cols += ['value']
-        cols += [
-            't|n=time|f=time{}'.format(f':{time_zone}' if time_zone else '')
-        ]
         print_result(data, cols=cols)
 
     def accounting_query(self, accounting_svc, time_start, time_end, time_zone,

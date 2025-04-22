@@ -789,7 +789,7 @@ def append_item_cli(root_sp):
     p.add_argument('--xopts',
                    metavar='NAME=VALUE',
                    help='Extra query options',
-                   nargs='*')
+                   action='append')
 
     p = sp.add_parser('slog', help='item state log')
     p.add_argument('i', metavar='OID').completer = ComplOID()
