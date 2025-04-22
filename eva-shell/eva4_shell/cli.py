@@ -1913,6 +1913,7 @@ class CLI:
                     current=None,
                     active=None,
                     inactive=None,
+                    time_zone=None,
                     user=None):
         flt = {}
         if node:
@@ -1938,7 +1939,9 @@ class CLI:
             print_result(data)
         else:
             cols = [
-                'oid', 'node', 'level', 'group', 'id', 'current', 'description'
+                'oid', 'node', 'level', 'group', 'id', 'current',
+                't|n=time|f=time_sec{}'.format(
+                    f':{time_zone}' if time_zone else ''), 'description'
             ]
             if user:
                 cols += ['subscriptions']
