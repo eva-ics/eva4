@@ -382,6 +382,60 @@ item.state_history:
             ]
         }
     }
+item.state_history_combined:
+  des: Gets state history combined (TimescaleDB only) for item(s), value only
+  par:
+    - nam: i
+      typ: Vec<String>/String
+      des: Item OID(s)
+      req: true
+    - nam: t_start
+      typ: f64/String
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end
+      typ: f64/String
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: fill
+      typ: String
+      des: "Fill (nS/T/H/D/W e.g. 10T for 10-minute or nA for n records) + optional [:precision]"
+      req: true
+    - nam: xopts
+      typ: Map<String, String>
+      des: Extra options, depending on database type
+      req: false
+    - nam: database
+      typ: String
+      des: 'DB svc to get history from, w/o "eva.db." pfx (def: specified in default_db)'
+      req: false
+  ret: State history combined payload
+  http_req:
+    i: ["sensor:env/temp", "sensor:env/hum"]
+    fill: 5T:2
+    t_start: 1652387700.0
+  http_rpl: |
+    {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+            "sensor:env/temp/value": [
+                20.0,
+                15.2,
+                18.3
+            ]
+            "sensor:env/hum/value": [
+                45.2,
+                40.1,
+                40.0
+            ],
+            "t": [
+                1652387700.0,
+                1652388000.0,
+                1652388300.0
+            ],
+        }
+    }
 item.state_log:
   des: Gets state log for item(s)
   par:

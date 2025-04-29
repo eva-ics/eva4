@@ -57,6 +57,57 @@ state_history:
             "value": 15
         }
     ]
+state_history_combined:
+  des: Gets item state history combined (value only)
+  par:
+    - nam: i
+      typ: String/Vec<String>
+      des: Item OID/OIDs
+      req: true
+    - nam: t_start
+      typ: f64
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end
+      typ: f64
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: fill
+      typ: String
+      des: Fill (nS/T/H/D/W e.g. 10T for 10-minute, requires ts_extension)
+      req: true
+    - nam: precision
+      typ: u32
+      des: Round values to digits after commma
+      req: false
+    - nam: xopts
+      typ: Map<String, String>
+      des: "Extra: vfn=fn for value grouping: mean/sum (d: mean), fill_null=none|zero|nan|previous, rp=TABLE for custom rp_TABLE"
+      req: false
+  ret: State history combined payload
+  exm: |
+    {
+        "data": {
+            "sensor:env/temp": [
+                20.0,
+                25.0,
+                22.0,
+                18.0,
+            ],
+            "sensor:env/hum": [
+                40.0,
+                45.0,
+                35.2,
+                34.0,
+            ]
+        },
+        "t": [
+            1745859600.0,
+            1745863200.0,
+            1745866800.0,
+            1745870400.0,
+        ]
+    }
 state_log:
   des: Gets item state log
   par:

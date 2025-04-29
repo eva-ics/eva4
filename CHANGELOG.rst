@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* 2025-04-29 build 2025042901: TimescaleDB integration improvements
 * 2025-04-15 build 2025041501: Certain improvements in system controller service
 * 2025-04-01 build 2025040101: Various functionality improvements, Python SDK updates
 * 2025-03-15 build 2025031501: Minor security updates, log reducers, ZF replication improvements
