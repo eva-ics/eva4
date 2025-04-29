@@ -114,12 +114,7 @@ async fn new(args: CommandNew) -> EResult<()> {
     add_dependency(
         "eva-common",
         "0.3",
-        &[
-            "events",
-            "common-payloads",
-            "payload",
-            "acl",
-        ],
+        &["events", "common-payloads", "payload", "acl"],
         None,
         false,
     )
@@ -147,13 +142,21 @@ std-alloc = []
     Ok(())
 }
 
+fn client_config() -> eva_client::Config {
+    let mut config = eva_client::Config::default();
+    if let Ok(key) = std::env::var("EVA_API_KEY") {
+        config = config.token(&key);
+    }
+    config
+}
+
 async fn run(args: CommandRun) -> EResult<()> {
     let hostname = hostname::get()?.to_string_lossy().to_string();
     let pid = std::process::id();
     let client = eva_client::EvaClient::connect(
         &args.bus,
         &format!("eva-svc-launcher.{}.{}", hostname, pid),
-        eva_client::Config::default(),
+        client_config(),
     )
     .await?;
     let result: Vec<Value> = client
