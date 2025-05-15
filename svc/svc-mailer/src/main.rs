@@ -280,7 +280,7 @@ impl Mailer {
             rcps
         };
         for rcp in &rcps {
-            debug!("sending mail to {}, subject: {:?}", rcp, subject);
+            info!("sending mail to {}, subject: {:?}", rcp, subject);
         }
         if rcps.is_empty() {
             return Err(Error::failed("no rcp specified, no defaults set"));
