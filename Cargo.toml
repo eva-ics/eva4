@@ -39,6 +39,7 @@ members = [
   "logreducer",
   "psrpc",
   "genpass-native",
+  "tracing-async-mutex",
   "crypto-tools",
   "benchmarks/bm-primary",
   "crypto-tools",

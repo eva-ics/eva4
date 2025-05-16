@@ -6012,6 +6012,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-async-mutex"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
