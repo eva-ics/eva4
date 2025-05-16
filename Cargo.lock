@@ -6015,6 +6015,8 @@ dependencies = [
 name = "tracing-async-mutex"
 version = "0.1.0"
 dependencies = [
+ "parking_lot_rt",
+ "serde",
  "tokio",
 ]
 
