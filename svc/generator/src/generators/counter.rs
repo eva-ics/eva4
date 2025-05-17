@@ -41,12 +41,11 @@ impl GeneratorSource for GenSource {
         &self,
         name: &str,
         params: Value,
-        sampling: u32,
+        sampling: f64,
         targets: Arc<Vec<Target>>,
     ) -> EResult<JoinHandle<()>> {
         let params = Params::deserialize(params)?;
         let name = name.to_owned();
-        let sampling = f64::from(sampling);
         let fut = tokio::spawn(async move {
             let mut int = tokio::time::interval(Duration::from_secs_f64(1.0 / sampling));
             let mut c = params.min;
@@ -62,9 +61,8 @@ impl GeneratorSource for GenSource {
         });
         Ok(fut)
     }
-    fn plan(&self, params: Value, sampling: u32, duration: Duration) -> EResult<Vec<GenData>> {
+    fn plan(&self, params: Value, sampling: f64, duration: Duration) -> EResult<Vec<GenData>> {
         let params = Params::deserialize(params)?;
-        let sampling = f64::from(sampling);
         let interval = Duration::from_secs_f64(1.0 / sampling);
         let mut now = Duration::from_secs(0);
         let mut result = Vec::new();
@@ -86,13 +84,12 @@ impl GeneratorSource for GenSource {
     async fn apply(
         &self,
         params: Value,
-        sampling: u32,
+        sampling: f64,
         t_start: f64,
         t_end: f64,
         targets: Vec<OID>,
     ) -> EResult<Uuid> {
         let params = Params::deserialize(params)?;
-        let sampling = f64::from(sampling);
         let interval = 1.0 / sampling;
         let mut c = params.min;
         let mut now = t_start;

@@ -1195,8 +1195,8 @@ def append_generator_cli(root_sp):
     p.add_argument('kind', choices=source_types)
     p.add_argument('-s',
                    '--sampling',
-                   default=1,
-                   type=int,
+                   default=1.0,
+                   type=float,
                    help='Sampling frequency')
     p.add_argument('--target',
                    action='append',
@@ -1215,8 +1215,8 @@ def append_generator_cli(root_sp):
     p.add_argument('kind', choices=source_types)
     p.add_argument('-s',
                    '--sampling',
-                   default=1,
-                   type=int,
+                   default=1.0,
+                   type=float,
                    help='Sampling frequency')
     p.add_argument('-d',
                    '--duration',
@@ -1246,8 +1246,8 @@ def append_generator_cli(root_sp):
     p.add_argument('kind', choices=source_types)
     p.add_argument('-s',
                    '--sampling',
-                   default=1,
-                   type=int,
+                   default=1.0,
+                   type=float,
                    help='Sampling frequency')
     p.add_argument('--target', action='append', help='target OID')
     p.add_argument('--start', required=True, help='Starting time')

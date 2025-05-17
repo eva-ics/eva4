@@ -26,12 +26,11 @@ impl GeneratorSource for GenSource {
         &self,
         name: &str,
         params: Value,
-        sampling: u32,
+        sampling: f64,
         targets: Arc<Vec<Target>>,
     ) -> EResult<JoinHandle<()>> {
         let params = Params::deserialize(params)?;
         let name = name.to_owned();
-        let sampling = f64::from(sampling);
         let expr: meval::Expr = params.formula.parse().map_err(Error::invalid_params)?;
         let _ = expr.clone().bind("x").map_err(Error::invalid_params)?;
         let fut = tokio::spawn(async move {
@@ -50,9 +49,8 @@ impl GeneratorSource for GenSource {
         });
         Ok(fut)
     }
-    fn plan(&self, params: Value, sampling: u32, duration: Duration) -> EResult<Vec<GenData>> {
+    fn plan(&self, params: Value, sampling: f64, duration: Duration) -> EResult<Vec<GenData>> {
         let params = Params::deserialize(params)?;
-        let sampling = f64::from(sampling);
         let interval = Duration::from_secs_f64(1.0 / sampling);
         let mut now = Duration::from_secs(0);
         let mut result = Vec::new();
@@ -77,13 +75,12 @@ impl GeneratorSource for GenSource {
     async fn apply(
         &self,
         params: Value,
-        sampling: u32,
+        sampling: f64,
         t_start: f64,
         t_end: f64,
         targets: Vec<OID>,
     ) -> EResult<Uuid> {
         let params = Params::deserialize(params)?;
-        let sampling = f64::from(sampling);
         let interval = 1.0 / sampling;
         let mut now = t_start;
         let expr: meval::Expr = params.formula.parse().map_err(Error::invalid_params)?;

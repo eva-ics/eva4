@@ -258,9 +258,9 @@ impl SourceKind {
     }
 }
 
-fn prepare_sampling(sampling: Option<u32>) -> EResult<u32> {
+fn prepare_sampling(sampling: Option<f64>) -> EResult<f64> {
     if let Some(s) = sampling {
-        if s == 0 {
+        if s == 0.0 {
             Err(Error::invalid_params("sampling can not be zero"))
         } else {
             Ok(s)
@@ -277,7 +277,7 @@ struct Source {
     kind: SourceKind,
     #[serde(default)]
     params: Value,
-    sampling: Option<u32>,
+    sampling: Option<f64>,
     #[serde(default)]
     targets: Arc<Vec<Target>>,
     #[serde(skip)]

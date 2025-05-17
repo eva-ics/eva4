@@ -76,12 +76,11 @@ impl GeneratorSource for GenSource {
         &self,
         name: &str,
         params: Value,
-        sampling: u32,
+        sampling: f64,
         targets: Arc<Vec<Target>>,
     ) -> EResult<JoinHandle<()>> {
         let params = Params::deserialize(params)?;
         let name = name.to_owned();
-        let sampling = f64::from(sampling);
         let fut = tokio::spawn(async move {
             let mut int = tokio::time::interval(Duration::from_secs_f64(1.0 / sampling));
             while !svc_is_terminating() {

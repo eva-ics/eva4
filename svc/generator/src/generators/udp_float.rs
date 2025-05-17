@@ -21,7 +21,7 @@ impl GeneratorSource for GenSource {
         &self,
         name: &str,
         params: Value,
-        _sampling: u32,
+        _sampling: f64,
         targets: Arc<Vec<Target>>,
     ) -> EResult<JoinHandle<()>> {
         let params = Params::deserialize(params)?;

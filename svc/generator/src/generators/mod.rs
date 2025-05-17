@@ -6,7 +6,7 @@ use std::time::Duration;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-pub const DEFAULT_SAMPLING: u32 = 1;
+pub const DEFAULT_SAMPLING: f64 = 1.0;
 
 #[derive(Serialize)]
 pub struct GenData {
@@ -20,14 +20,14 @@ pub trait GeneratorSource: Send + Sync {
         &self,
         _name: &str,
         _params: Value,
-        _sampling: u32,
+        _sampling: f64,
         _targets: Arc<Vec<Target>>,
     ) -> EResult<JoinHandle<()>> {
         Err(Error::unsupported(
             "the generator does not support starting",
         ))
     }
-    fn plan(&self, _params: Value, _sampling: u32, _duration: Duration) -> EResult<Vec<GenData>> {
+    fn plan(&self, _params: Value, _sampling: f64, _duration: Duration) -> EResult<Vec<GenData>> {
         Err(Error::unsupported(
             "the generator does not support planning",
         ))
@@ -35,7 +35,7 @@ pub trait GeneratorSource: Send + Sync {
     async fn apply(
         &self,
         _params: Value,
-        _sampling: u32,
+        _sampling: f64,
         _t_start: f64,
         _t_end: f64,
         _targets: Vec<OID>,
