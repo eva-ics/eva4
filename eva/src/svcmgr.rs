@@ -533,6 +533,11 @@ fn default_workers() -> u32 {
     1
 }
 
+#[inline]
+fn default_restart_delay() -> Duration {
+    Duration::from_secs(2)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Params {
@@ -557,6 +562,12 @@ pub struct Params {
     launcher: Arc<String>,
     #[serde(default)]
     call_tracing: bool,
+    #[serde(
+        default = "default_restart_delay",
+        serialize_with = "eva_common::tools::serialize_duration_as_f64",
+        deserialize_with = "eva_common::tools::de_float_as_duration"
+    )]
+    restart_delay: Duration,
     log_level: Option<String>,
     #[serde(default)]
     realtime: RealtimeConfig,
@@ -611,6 +622,7 @@ impl Params {
             self.call_tracing,
         )
         .with_realtime(self.realtime.clone())
+        .with_restart_delay(self.restart_delay)
     }
     fn startup_timeout(&self) -> Option<Duration> {
         self.timeout.startup()

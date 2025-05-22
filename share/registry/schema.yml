@@ -321,6 +321,7 @@ svc:
         shutdown: *floatornull
         startup: *floatornull
     react_to_fail: *bool
+    restart_delay: *floatornull
     mem_warn: *intpositiveornull
     call_tracing: *bool
     log_level:

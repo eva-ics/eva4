@@ -33,8 +33,6 @@ err_logger!();
 
 pub const LAUNCHER_CLIENT_PFX: &str = "eva.launcher.";
 
-const RESTART_PERIOD: Duration = Duration::from_secs(2);
-
 struct ServiceRuntimeData {
     pid: u32,
     tasks: Vec<JoinHandle<()>>,
@@ -256,7 +254,7 @@ impl Service {
             .await
             .map_err(|e| Error::io(format!("unable to launch {} service: {}", id, e)))
             .log_ef();
-            sleep(RESTART_PERIOD).await;
+            sleep(initial.restart_delay()).await;
         }
         Ok(())
     }
