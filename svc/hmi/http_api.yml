@@ -1046,6 +1046,21 @@ db.list:
             "id": "pg"
         }
     }
+llc.list:
+  des: Get logic line controller services
+  ret: List of logic line controller services
+  http_rpl: |
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": [
+        {
+            "id": "eva.llc.p1"
+        },
+        {
+            "id": "eva.llc.p2",
+        }
+    }
 pvt.list:
   des: List entries in pvt
   ret: List of available files and folders

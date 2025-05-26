@@ -619,6 +619,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                         "user_data.set" => method_user_data_set(params, &mut aci).await,
                         "user_data.delete" => method_user_data_delete(params, &mut aci).await,
                         "db.list" => method_db_list(params, &mut aci).await,
+                        "llc.list" => method_llc_list(params, &mut aci).await,
                         "pvt.put" => method_pvt_put(params, &mut aci).await,
                         "pvt.get" => method_pvt_get(params, &mut aci).await,
                         "pvt.unlink" => method_pvt_unlink(params, &mut aci).await,
@@ -1968,6 +1969,47 @@ async fn method_user_data_delete(params: Value, aci: &mut ACI) -> EResult<Value>
     };
     db::delete_user_data(token.user(), &p.key).await?;
     ok!()
+}
+
+async fn method_llc_list(params: Value, aci: &mut ACI) -> EResult<Value> {
+    #[derive(Serialize)]
+    struct Params {
+        filter: &'static str,
+    }
+    #[derive(Deserialize)]
+    struct SvcId {
+        id: String,
+        enabled: bool,
+    }
+    #[derive(Serialize)]
+    struct SvcInfo<'a> {
+        id: &'a str,
+    }
+    aci.log_request(log::Level::Debug).await.log_ef();
+    ParamsEmpty::deserialize(params)?;
+    let svc_list: Vec<SvcId> = unpack(
+        eapi_bus::call(
+            "eva.core",
+            "svc.list",
+            pack(&Params {
+                filter: "^.*\\.llc\\..*$",
+            })?
+            .into(),
+        )
+        .await?
+        .payload(),
+    )?;
+    let svcs: Vec<SvcInfo> = svc_list
+        .iter()
+        .filter_map(|svc| {
+            if svc.enabled {
+                Some(SvcInfo { id: &svc.id })
+            } else {
+                None
+            }
+        })
+        .collect();
+    to_value(svcs).map_err(Into::into)
 }
 
 async fn method_db_list(params: Value, aci: &mut ACI) -> EResult<Value> {
