@@ -78,6 +78,7 @@ pub enum LvarOp {
 #[inline]
 pub fn sender_allowed_auto_create(sender: &str) -> bool {
     sender.contains(".controller.")
+        || sender.contains(".llc.")
         || sender.contains(".plc.")
         || sender.ends_with(".plc")
         || sender.ends_with(".program")
