@@ -690,7 +690,11 @@ impl ItemData {
     pub fn db_state(&self) -> Option<DbState> {
         if let Some(ref st) = self.state {
             let state = st.lock();
-            Some((&*state).into())
+            if matches!(state.value, Value::Bytes(_)) {
+                None
+            } else {
+                Some((&*state).into())
+            }
         } else {
             None
         }
