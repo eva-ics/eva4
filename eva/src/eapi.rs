@@ -802,6 +802,8 @@ impl RpcHandlers for BusApi {
                     include: Option<OIDMaskList>,
                     #[serde(default)]
                     exclude: Option<OIDMaskList>,
+                    #[serde(default)]
+                    include_binary_values: bool,
                 }
                 need_ready!();
                 if payload.is_empty() {
@@ -835,7 +837,7 @@ impl RpcHandlers for BusApi {
                 let system_name = self.core.system_name();
                 let result: Vec<FullItemStateAndInfo> = items
                     .iter()
-                    .map(|v| v.full_state_and_info(system_name))
+                    .map(|v| v.full_state_and_info(system_name, p.include_binary_values))
                     .collect();
                 Ok(Some(pack(&result)?))
             }
@@ -894,6 +896,8 @@ impl RpcHandlers for BusApi {
                     exclude: Option<OIDMaskList>,
                     #[serde(default)]
                     full: bool,
+                    #[serde(default)]
+                    include_binary_values: bool,
                 }
                 need_ready!();
                 if payload.is_empty() {
@@ -934,13 +938,13 @@ impl RpcHandlers for BusApi {
                 let result = if p.full {
                     let res: Vec<FullItemStateAndInfo> = items
                         .iter()
-                        .map(|v| v.full_state_and_info(system_name))
+                        .map(|v| v.full_state_and_info(system_name, p.include_binary_values))
                         .collect();
                     pack(&res)?
                 } else {
                     let res: Vec<ItemStateAndInfo> = items
                         .iter()
-                        .map(|v| v.state_and_info(system_name))
+                        .map(|v| v.state_and_info(system_name, p.include_binary_values))
                         .collect();
                     pack(&res)?
                 };

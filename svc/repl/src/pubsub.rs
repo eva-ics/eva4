@@ -75,6 +75,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                             node: Option<&'a str>,
                             include: Vec<String>,
                             exclude: Vec<&'a str>,
+                            include_binary_values: bool,
                         }
                         let acl = aaa::get_acl(key_id).await?;
                         let mut data = crate::PULL_DATA.get().unwrap().clone();
@@ -96,6 +97,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                             },
                             include: allow,
                             exclude,
+                            include_binary_values: true,
                         };
                         let items: Vec<FullItemStateAndInfoOwned> = unpack(
                             eapi_bus::call("eva.core", "item.list", pack(&payload)?.into())

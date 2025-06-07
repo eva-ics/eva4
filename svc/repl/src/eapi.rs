@@ -507,10 +507,12 @@ pub async fn submit_periodic(
         exclude: &'a OIDMaskList,
         #[serde(skip_serializing_if = "Option::is_none")]
         node: Option<&'a str>,
+        include_binary_values: bool,
     }
     let payload = busrt::borrow::Cow::Referenced(Arc::new(pack(&Request {
         i: oids,
         exclude: oids_exclude,
+        include_binary_values: true,
         node: if replicate_remote {
             None
         } else {

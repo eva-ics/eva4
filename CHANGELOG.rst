@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* TBA build TBA: ⚠️  Item binary values, for proper replication update secondaries first
 * 2025-05-27 build 2025052701: Custom svc restart delays, Logic line support
 * 2025-05-21 build 2025052101: Data gen. sampling below 1, tracing mutexes, stability improvements
 * 2025-04-29 build 2025042901: TimescaleDB integration improvements

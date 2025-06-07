@@ -709,12 +709,21 @@ impl ItemData {
     /// # Panics
     ///
     /// Will panic if the state mutex is poisoned
-    pub fn state_and_info<'a>(&'a self, system_name: &'a str) -> ItemStateAndInfo<'a> {
+    pub fn state_and_info<'a>(
+        &'a self,
+        system_name: &'a str,
+        include_binary_values: bool,
+    ) -> ItemStateAndInfo<'a> {
         let (status, value, act, ieid, t) = if let Some(ref st) = self.state {
             let state = st.lock();
+            let value = if include_binary_values || !matches!(state.value, Value::Bytes(_)) {
+                ValueOptionOwned::Value(state.value.clone())
+            } else {
+                ValueOptionOwned::Value(Value::Bytes(vec![0]))
+            };
             (
                 Some(state.status),
-                ValueOptionOwned::Value(state.value.clone()),
+                value,
                 state.act,
                 Some(state.ieid),
                 Some(state.t),
@@ -747,9 +756,13 @@ impl ItemData {
     /// # Panics
     ///
     /// Will panic if the state mutex is poisoned
-    pub fn full_state_and_info<'a>(&'a self, system_name: &'a str) -> FullItemStateAndInfo<'a> {
+    pub fn full_state_and_info<'a>(
+        &'a self,
+        system_name: &'a str,
+        include_binary_values: bool,
+    ) -> FullItemStateAndInfo<'a> {
         FullItemStateAndInfo {
-            si: self.state_and_info(system_name),
+            si: self.state_and_info(system_name, include_binary_values),
             meta: self.meta.as_ref(),
             enabled: self.enabled(),
         }

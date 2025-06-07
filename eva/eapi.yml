@@ -213,6 +213,10 @@ item.list:
       typ: Vec<String>
       des: List of additional masks to exclude
       req: false
+    - nam: include_binary_values
+      typ: bool
+      des: Include binary item values
+      req: false
   ret: list of items
   exm: |
     [
@@ -283,6 +287,10 @@ item.state:
     - nam: full
       typ: bool
       des: Return full item state (include meta and enabled fields)
+      req: false
+    - nam: include_binary_values
+      typ: bool
+      des: Include binary item values
       req: false
   ret: list of item states
   exm: |
