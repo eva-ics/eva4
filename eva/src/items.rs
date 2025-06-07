@@ -719,7 +719,11 @@ impl ItemData {
             let value = if include_binary_values || !matches!(state.value, Value::Bytes(_)) {
                 ValueOptionOwned::Value(state.value.clone())
             } else {
-                ValueOptionOwned::Value(Value::Bytes(vec![0]))
+                let Value::Bytes(ref v) = state.value else {
+                    unreachable!()
+                };
+                let short_value = v.get(0..3).unwrap_or(v);
+                ValueOptionOwned::Value(Value::Bytes(short_value.to_vec()))
             };
             (
                 Some(state.status),
