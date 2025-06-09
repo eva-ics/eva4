@@ -1,3 +1,5 @@
+VERSION := `grep ^version Cargo.toml|cut -d\" -f2`
+
 run-sink: build-release run-launch-sink
 
 run-src: build-release run-launch-src
@@ -5,6 +7,13 @@ run-src: build-release run-launch-src
 inspect-sink: build-release run-inspect-sink
 
 inspect-src: build-release run-inspect-source
+
+release: build-docker build-x86_64 build-aarch64 upload
+
+upload:
+  gsutil cp -a public-read ./target-aarch64-gnu/aarch64-unknown-linux-gnu/release/libgsteva.so gs://pub.bma.ai/eva-gst/libgsteva-{{ VERSION }}-aarch64.so
+  gsutil cp -a public-read ./target-x86_64-gnu/x86_64-unknown-linux-gnu/release/libgsteva.so gs://pub.bma.ai/eva-gst/libgsteva-{{ VERSION }}-x86_64.so
+  rci job run pub.bma.ai
 
 build-docker:
   docker build -t eva-gst:x86_64 -f Dockerfile.x86_64 .
