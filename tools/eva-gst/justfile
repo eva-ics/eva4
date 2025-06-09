@@ -1,0 +1,32 @@
+run-sink: build-release run-launch-sink
+
+run-src: build-release run-launch-src
+
+inspect-sink: build-release run-inspect-sink
+
+inspect-src: build-release run-inspect-source
+
+build-docker:
+  docker build -t eva-gst:x86_64 -f Dockerfile.x86_64 .
+  docker build -t eva-gst:aarch64 -f Dockerfile.aarch64 .
+
+build-release:
+  cargo build --release
+
+run-launch-sink:
+  GST_PLUGIN_PATH=$(pwd)/target/release gst-launch-1.0 -v videotestsrc ! 'video/x-raw,width=1280,height=720' ! videoconvert ! openh264enc ! evasink oid=lvar:video/stream1
+
+run-launch-src:
+  GST_PLUGIN_PATH=$(pwd)/target/release gst-launch-1.0 -v evasrc oid=lvar:video/stream1 ! openh264dec ! fpsdisplaysink
+
+run-inspect-sink:
+  GST_PLUGIN_PATH=$(pwd)/target/release gst-inspect-1.0 evasink
+
+run-inspect-source:
+  GST_PLUGIN_PATH=$(pwd)/target/release gst-inspect-1.0 evasrc
+
+build-x86_64:
+  CARGO_TARGET_DIR=target-x86_64-gnu cross build --target x86_64-unknown-linux-gnu --release
+
+build-aarch64:
+  CARGO_TARGET_DIR=target-aarch64-gnu cross build --target aarch64-unknown-linux-gnu --release

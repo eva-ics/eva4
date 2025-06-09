@@ -1,0 +1,29 @@
+[package]
+name = "eva-gst"
+version = "0.1.0"
+edition = "2021"
+description = "EVA-ICS GStreamer plugins"
+repository = "https://github.com/eva-ics/eva4"
+publish = false
+
+[lib]
+name = "gsteva"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+atomic-timer = "0.2.2"
+binrw = "0.15.0"
+busrt = { version = "0.4.19", features = ["ipc-sync"] }
+eva-common = { version = "0.3.99", features = ["payload", "events"] }
+gst = { version = "0.22", package = "gstreamer" }
+gst-base = { version = "0.22", package = "gstreamer-base" }
+gst-video = { version = "0.22", package = "gstreamer-video" }
+hostname = "0.4.1"
+parking_lot = { version = "0.12.1", package = "parking_lot_rt" }
+rtsc = "0.3.15"
+serde = { version = "1.0.219", features = ["derive"] }
+strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
+
+[build-dependencies]
+gst-plugin-version-helper = "0.8"
