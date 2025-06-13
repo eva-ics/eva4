@@ -29,6 +29,10 @@ config:
     max_records: 100
     max_record_length: 16384
   keep_api_log: 86400
+  # item OIDs / OID masks to subscribe HMI to. If not specified, all items are subscribed.
+  #oids:
+    #- "#"
+  #oids_exclude: []
   # any user can get API log for everyone (false = admins and users with op moderator in ACLs)
   # public_api_log: true
   ui_path: ui

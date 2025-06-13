@@ -1,6 +1,7 @@
 use crate::{aaa, UI_NOT_FOUND_TO_BASE, WS_URI};
 use crate::{serve, upload};
 use eva_common::acl::{OIDMask, OIDMaskList};
+use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::hyper_response;
 use eva_common::hyper_tools::HResultX;
 use eva_common::prelude::*;
@@ -15,10 +16,12 @@ use hyper::{http, Body, Method, Request, Response, StatusCode};
 use hyper_tungstenite::{tungstenite, HyperWebsocket, WebSocketStream};
 use lazy_static::lazy_static;
 use log::error;
+use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use rjrpc::http::HyperJsonRpcServer;
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map, HashMap, HashSet};
+use std::borrow::Cow;
+use std::collections::{hash_map, BTreeMap, BTreeSet, HashMap, HashSet};
 use std::net::IpAddr;
 use std::sync::{atomic, Arc};
 use std::time::Duration;
@@ -29,13 +32,14 @@ use uuid::Uuid;
 err_logger!();
 
 #[derive(Serialize, Eq, PartialEq, Copy, Clone, Hash)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 enum Topic {
     State,
     Log,
     Pong,
     Reload,
     Server,
+    Stream,
     Bye,
 }
 
@@ -67,15 +71,71 @@ lazy_static! {
 
     // web sockets not registered with any token
     pub static ref WS_STANDALONE: tokio::sync::Mutex<HashMap<Uuid, WebSocket>> = <_>::default();
+
+    // streams
+    pub static ref WS_STREAMS: tokio::sync::Mutex<BTreeMap<Arc<OID>, BTreeSet<Arc<WsTx>>>> =
+        tokio::sync::Mutex::new(BTreeMap::new());
+    pub static ref WS_STREAM_HANDLER_TX: OnceCell<async_channel::Sender<(OID, Arc<WsTx>)>> =
+        OnceCell::new();
+}
+
+#[derive(Serialize)]
+pub struct StreamInfo {
+    pub oid: Arc<OID>,
+    pub key: String,
+}
+
+impl Ord for StreamInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.oid
+            .cmp(&other.oid)
+            .then_with(|| self.key.cmp(&other.key))
+    }
+}
+
+impl PartialOrd for StreamInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for StreamInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.oid == other.oid && self.key == other.key
+    }
+}
+
+impl Eq for StreamInfo {}
+
+pub async fn stream_info_list() -> Vec<StreamInfo> {
+    let mut result = Vec::new();
+    {
+        let streams = WS_STREAMS.lock().await;
+        for (oid, clients) in &*streams {
+            for client in clients {
+                let key = if let Some(token) = client.auth.token() {
+                    token.id().to_string()
+                } else {
+                    client.auth.key_id().unwrap_or_default().to_owned()
+                };
+                result.push(StreamInfo {
+                    oid: oid.clone(),
+                    key,
+                });
+            }
+        }
+    }
+    result.sort();
+    result
 }
 
 struct WsRepl(Arc<OID>, IEID);
 
-fn notify_ws(c: &WsTx, frame: &WsFrame, repl: Option<&WsRepl>) -> EResult<()> {
+fn notify_ws(c: &WsTx, frame: Cow<WsFrame>, repl: Option<&WsRepl>) -> EResult<()> {
     let res = if let Some(repl) = repl {
         c.try_send_state_frame(frame, repl)
     } else {
-        c.tx.try_send(frame.clone())
+        c.tx.try_send(frame.into_owned())
     };
     if let Err(e) = res {
         if let async_channel::TrySendError::Full(_) = e {
@@ -89,7 +149,7 @@ fn notify_ws(c: &WsTx, frame: &WsFrame, repl: Option<&WsRepl>) -> EResult<()> {
 
 fn notify_ws_list(ws_list: Vec<Arc<WsTx>>, frame: &WsFrame, repl: Option<WsRepl>) {
     for c in ws_list {
-        let _ = notify_ws(&c, frame, repl.as_ref());
+        let _ = notify_ws(&c, Cow::Borrowed(frame), repl.as_ref());
     }
 }
 
@@ -130,63 +190,96 @@ pub fn notify_log(topic: &str, record: Value) {
     }
 }
 
+#[derive(Clone)]
+enum WsFrame {
+    Text(Arc<WsTextFrame>),
+    Binary(Vec<u8>),
+}
+
 #[derive(Serialize, Clone)]
-struct WsFrame {
+struct WsTextFrame {
     s: Topic,
     #[serde(skip_serializing_if = "Option::is_none")]
     d: Option<Value>,
 }
 
 impl WsFrame {
+    fn new_binary(data: Vec<u8>) -> Self {
+        Self::Binary(data)
+    }
     #[inline]
     fn new_state(d: Value) -> Self {
-        Self {
-            s: Topic::State,
-            d: Some(d),
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::State,
+                d: Some(d),
+            }
+            .into(),
+        )
     }
     #[inline]
     fn new_log(d: Value) -> Self {
-        Self {
-            s: Topic::Log,
-            d: Some(d),
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::Log,
+                d: Some(d),
+            }
+            .into(),
+        )
     }
     #[inline]
     fn new_bye() -> Self {
-        Self {
-            s: Topic::Bye,
-            d: None,
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::Bye,
+                d: None,
+            }
+            .into(),
+        )
     }
     #[inline]
     fn is_data(&self) -> bool {
-        self.s == Topic::State
+        let Self::Text(ref s) = self else {
+            return false;
+        };
+        s.s == Topic::State
     }
     #[inline]
     fn is_bye(&self) -> bool {
-        self.s == Topic::Bye
+        let Self::Text(ref s) = self else {
+            return false;
+        };
+        s.s == Topic::Bye
     }
     #[inline]
     fn new_pong() -> Self {
-        Self {
-            s: Topic::Pong,
-            d: None,
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::Pong,
+                d: None,
+            }
+            .into(),
+        )
     }
     #[inline]
     fn new_reload() -> Self {
-        Self {
-            s: Topic::Reload,
-            d: Some(Value::String("asap".to_owned())),
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::Reload,
+                d: Some(Value::String("asap".to_owned())),
+            }
+            .into(),
+        )
     }
     #[inline]
     fn new_server_event(event: ServerEvent) -> Self {
-        Self {
-            s: Topic::Server,
-            d: Some(to_value(event).unwrap()),
-        }
+        Self::Text(
+            WsTextFrame {
+                s: Topic::Server,
+                d: Some(to_value(event).unwrap()),
+            }
+            .into(),
+        )
     }
 }
 
@@ -216,6 +309,7 @@ impl WsTx {
     fn ask_terminate(&self) {
         if let Some(token) = self.auth.token() {
             token.unregister_websocket(self.id);
+            self.tx.close();
         } else {
             let id = self.id;
             tokio::spawn(async move {
@@ -225,7 +319,7 @@ impl WsTx {
     }
     fn try_send_state_frame(
         &self,
-        frame: &WsFrame,
+        frame: Cow<WsFrame>,
         ws_repl: &WsRepl,
     ) -> Result<(), async_channel::TrySendError<WsFrame>> {
         match self.repl.lock().entry(ws_repl.0.clone()) {
@@ -239,7 +333,7 @@ impl WsTx {
                 entry.insert(ws_repl.1);
             }
         }
-        self.tx.try_send(frame.clone())
+        self.tx.try_send(frame.into_owned())
     }
     async fn send_initial(&self, oids: Option<OIDMaskList>) -> EResult<()> {
         #[derive(Serialize)]
@@ -263,7 +357,7 @@ impl WsTx {
             for state in states {
                 let ws_repl = WsRepl(Arc::new(state.oid.clone()), state.ieid);
                 let frame = WsFrame::new_state(to_value(state)?);
-                if notify_ws(self, &frame, Some(&ws_repl)).is_err() {
+                if notify_ws(self, Cow::Owned(frame), Some(&ws_repl)).is_err() {
                     break;
                 }
             }
@@ -335,6 +429,14 @@ async fn serve_websocket_sender(
             }
         };
     }
+    macro_rules! send_binary {
+        ($data: expr) => {
+            if sender.send(Message::Binary($data)).await.is_err() {
+                ws_tx.ask_terminate();
+                break;
+            }
+        };
+    }
     if let Some(bttl) = buf_ttl {
         let mut event_buf: HashMap<Topic, Vec<Value>> = HashMap::new();
         let mut buf_interval = tokio::time::interval(Duration::from_secs_f64(bttl));
@@ -343,18 +445,29 @@ async fn serve_websocket_sender(
             f = rx.recv() => {
                 if let Ok(frame) = f {
                     if frame.is_data() {
-                        if let Some(data) = frame.d {
+                        let WsFrame::Text(frame) = frame else {
+                            continue;
+                        };
+                        if let Some(ref data) = frame.d {
                             if let Some(v) = event_buf.get_mut(&frame.s) {
-                                v.push(data);
+                                v.push(data.clone());
                             } else {
-                                event_buf.insert(frame.s, vec![data]);
+                                event_buf.insert(frame.s, vec![data.clone()]);
                             }
                         }
                     } else if frame.is_bye() {
+                        let WsFrame::Text(frame) = frame else {
+                            continue;
+                        };
                         send!(&frame);
                         break;
                     } else {
-                        send!(&frame);
+                        match frame {
+                            WsFrame::Text(frame) => send!(&frame),
+                            WsFrame::Binary(data) => {
+                                send_binary!(data);
+                            }
+                        }
                     }
                 } else {
                     break;
@@ -372,12 +485,23 @@ async fn serve_websocket_sender(
         }
     } else {
         while let Ok(frame) = rx.recv().await {
-            send!(&frame);
-            if frame.is_bye() {
+            let is_bye = frame.is_bye();
+            match frame {
+                WsFrame::Text(ref frame) => {
+                    send!(frame);
+                }
+                WsFrame::Binary(data) => {
+                    send_binary!(data);
+                }
+            }
+            if is_bye {
                 break;
             }
         }
     }
+    // ensure nothing is sent
+    sender.close().await.ok();
+    rx.close();
 }
 
 pub fn get_log_topics(level: u8) -> Vec<&'static str> {
@@ -446,6 +570,48 @@ async fn serve_websocket(
                     let method = cmd.method.as_str();
                     trace!("web socket {} {}", ws_tx.id, method);
                     match method {
+                        "stream.start" => {
+                            #[derive(Deserialize)]
+                            struct StreamParams {
+                                i: OID,
+                            }
+                            let Some(p) = cmd.params else {
+                                continue;
+                            };
+                            let Ok(params) = StreamParams::deserialize(p) else {
+                                warn!("invalid blob stream params");
+                                continue;
+                            };
+                            if !ws_tx.auth.acl().check_item_read(&params.i) {
+                                let frame = WsFrame::Text(
+                                    WsTextFrame {
+                                        s: Topic::Stream,
+                                        d: Some(Value::String("forbidden".to_owned())),
+                                    }
+                                    .into(),
+                                );
+                                if notify_ws(&ws_tx, Cow::Owned(frame), None).is_err() {
+                                    break;
+                                }
+                                continue;
+                            }
+                            let frame = WsFrame::Text(
+                                WsTextFrame {
+                                    s: Topic::Stream,
+                                    d: Some(Value::String("start".to_owned())),
+                                }
+                                .into(),
+                            );
+                            if notify_ws(&ws_tx, Cow::Owned(frame), None).is_err() {
+                                break;
+                            }
+                            WS_STREAM_HANDLER_TX
+                                .get()
+                                .unwrap()
+                                .send((params.i, ws_tx.clone()))
+                                .await
+                                .log_ef();
+                        }
                         "subscribe.state" => {
                             if let Some(p) = cmd.params {
                                 if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
@@ -565,6 +731,7 @@ impl WebSocket {
         let tx = self.ws_tx.tx.clone();
         tokio::spawn(async move {
             let _ = tx.send(WsFrame::new_bye()).await;
+            tx.close();
         });
         unsubscribe_web_socket(&self.ws_tx);
     }
@@ -748,7 +915,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         if let Err(e) =
                             serve_websocket(ws_tx_c.clone(), rx, websocket, buf_ttl, oids).await
                         {
-                            error!("error in websocket connection: {}", e);
+                            warn!("error in websocket connection: {}", e);
                         }
                         ws_tx_c.ask_terminate();
                     });
@@ -963,4 +1130,138 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
             _ => hyper_response!(StatusCode::METHOD_NOT_ALLOWED),
         }
     }
+}
+
+fn push_oid_state_topic(oid: &OID, topics: &mut Vec<String>) {
+    topics.push(format!("{}{}", LOCAL_STATE_TOPIC, oid.as_path()));
+    topics.push(format!("{}{}", REMOTE_STATE_TOPIC, oid.as_path()));
+}
+
+pub async fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResult<()> {
+    let event_rx = bus_client
+        .take_event_channel()
+        .ok_or_else(|| Error::core("Failed to take stream event channel"))?;
+    let bus_client = Arc::new(tokio::sync::Mutex::new(bus_client));
+    let mut int = tokio::time::interval(Duration::from_secs(1));
+    // cleanup worker
+    let bus_client_c = bus_client.clone();
+    tokio::spawn(async move {
+        loop {
+            int.tick().await;
+            let mut ws_streams = WS_STREAMS.lock().await;
+            let mut topics_to_unsubscribe = Vec::new();
+            for clients in ws_streams.values_mut() {
+                clients.retain(|c| !c.tx.is_closed());
+            }
+            ws_streams.retain(|oid, clients| {
+                if clients.is_empty() {
+                    push_oid_state_topic(oid, &mut topics_to_unsubscribe);
+                    false
+                } else {
+                    true
+                }
+            });
+            if topics_to_unsubscribe.is_empty() {
+                continue;
+            }
+            bus_client_c
+                .lock()
+                .await
+                .unsubscribe_bulk(
+                    &topics_to_unsubscribe
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<&str>>(),
+                    QoS::Processed,
+                )
+                .await
+                .log_ef();
+        }
+    });
+    // accept new clients future
+    let (tx, rx) = async_channel::bounded(2048);
+    WS_STREAM_HANDLER_TX
+        .set(tx)
+        .map_err(|_| Error::core("WS_STREAM_HANDLER_TX already set"))?;
+    tokio::spawn(async move {
+        while let Ok((oid, ws_tx)) = rx.recv().await {
+            let mut topics = Vec::with_capacity(2);
+            push_oid_state_topic(&oid, &mut topics);
+            let mut ws_streams = WS_STREAMS.lock().await;
+            #[allow(clippy::mutable_key_type)]
+            let clients = ws_streams.entry(oid.into()).or_default();
+            clients.insert(ws_tx);
+            bus_client
+                .lock()
+                .await
+                .subscribe_bulk(
+                    &topics.iter().map(String::as_str).collect::<Vec<&str>>(),
+                    QoS::Processed,
+                )
+                .await
+                .log_ef();
+        }
+    });
+    // event loop future
+    tokio::spawn(async move {
+        #[derive(Deserialize, Debug)]
+        struct BlobData {
+            value: Value,
+        }
+        while let Ok(frame) = event_rx.recv().await {
+            let Some(topic) = frame.topic() else {
+                continue;
+            };
+            let oid = if let Some(topic) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                let Ok(oid) = OID::from_path(topic).log_err() else {
+                    continue;
+                };
+                oid
+            } else if let Some(topic) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                let Ok(oid) = OID::from_path(topic).log_err() else {
+                    continue;
+                };
+                oid
+            } else {
+                continue;
+            };
+            let Ok(data) = unpack::<BlobData>(frame.payload()) else {
+                continue;
+            };
+            let value = data.value;
+            if value == Value::Unit {
+                let ws_streams = WS_STREAMS.lock().await;
+                let Some(clients) = ws_streams.get(&oid) else {
+                    continue;
+                };
+                for ws_tx in clients {
+                    ws_tx
+                        .tx
+                        .send(WsFrame::Text(
+                            WsTextFrame {
+                                s: Topic::Stream,
+                                d: Some(Value::String("eof".to_owned())),
+                            }
+                            .into(),
+                        ))
+                        .await
+                        .ok();
+                }
+            }
+            let ws_streams = WS_STREAMS.lock().await;
+            let Some(clients) = ws_streams.get(&oid) else {
+                continue;
+            };
+            let Value::Bytes(v) = value else {
+                continue;
+            };
+            for ws_tx in clients {
+                let frame = WsFrame::new_binary(v.clone());
+                if ws_tx.tx.send(frame).await.is_err() {
+                    ws_tx.ask_terminate();
+                }
+            }
+        }
+    });
+    Ok(())
 }

@@ -124,6 +124,21 @@ session.destroy:
       des: Session token ID
       req: true
   ret:
+stream.list:
+  des: Lists active data streams
+  par:
+  ret:
+  exm: |
+    [
+      {
+          "key": ".admin",
+          "oid": "sensor:s0"
+      },
+      {
+          "key": "token:3ce27e5c1840470fb918583d58835130aavwzACdjlwJAlzG",
+          "oid": "sensor:s0"
+      }
+    ]
 authenticate:
   des: Allows other services to directly authenticate users
   par:

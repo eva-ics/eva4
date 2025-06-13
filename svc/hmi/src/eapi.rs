@@ -132,6 +132,12 @@ impl RpcHandlers for Handlers {
                     Ok(None)
                 }
             }
+            "stream.list" => {
+                if !payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                Ok(Some(pack(&crate::handler::stream_info_list().await)?))
+            }
             "user_data.get" => {
                 #[derive(Deserialize)]
                 struct Params {

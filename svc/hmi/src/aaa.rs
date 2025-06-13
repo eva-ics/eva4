@@ -198,6 +198,13 @@ impl Auth {
             Auth::No => None,
         }
     }
+    #[inline]
+    pub fn key_id(&self) -> Option<&str> {
+        match self {
+            Auth::Key(ref key_id, _) => Some(key_id),
+            Auth::Token(_) | Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => None,
+        }
+    }
 }
 
 pub async fn auth_key(key: &str, ip: Option<IpAddr>) -> EResult<Option<(Acl, &'static str)>> {
