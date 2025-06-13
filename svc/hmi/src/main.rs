@@ -1,7 +1,5 @@
-use eva_common::acl::Acl;
-use eva_common::events::{
-    AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, ANY_STATE_TOPIC, LOG_EVENT_TOPIC,
-};
+use eva_common::acl::{Acl, OIDMaskList};
+use eva_common::events::{AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, LOG_EVENT_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use hyper::server::conn::AddrStream;
@@ -149,6 +147,10 @@ fn default_buf_size() -> usize {
     16384
 }
 
+fn all_oids() -> OIDMaskList {
+    OIDMaskList::new0("#".parse().unwrap())
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
@@ -184,6 +186,10 @@ struct Config {
     #[serde(default)]
     user_data: UserDataConfig,
     ws_uri: Option<String>,
+    #[serde(default = "all_oids")]
+    pub oids: OIDMaskList,
+    #[serde(default)]
+    pub oids_exclude: OIDMaskList,
 }
 
 #[derive(Deserialize, Default)]
@@ -328,7 +334,6 @@ async fn main(mut initial: Initial) -> EResult<()> {
         format!("{AAA_ACL_TOPIC}#"),
         format!("{AAA_USER_TOPIC}#"),
         format!("{AAA_KEY_TOPIC}#"),
-        format!("{ANY_STATE_TOPIC}#"),
     ];
     for t in handler::get_log_topics(0) {
         topics.push(format!("{LOG_EVENT_TOPIC}{}", t));
@@ -342,6 +347,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
         )
         .await?;
     svc_init_logs(&initial, client.clone())?;
+    eva_sdk::service::subscribe_oids(rpc.as_ref(), &config.oids, eva_sdk::service::EventKind::Any)
+        .await?;
+    eva_sdk::service::exclude_oids(
+        rpc.as_ref(),
+        &config.oids_exclude,
+        eva_sdk::service::EventKind::Any,
+    )
+    .await?;
     UI_NOT_FOUND_TO_BASE.store(config.ui_not_found_to_base, atomic::Ordering::Relaxed);
     if config.development {
         warn!("development mode started");
