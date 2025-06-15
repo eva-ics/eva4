@@ -1240,7 +1240,7 @@ pub async fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResu
                         .send(WsFrame::Text(
                             WsTextFrame {
                                 s: Topic::Stream,
-                                d: Some(Value::String("eof".to_owned())),
+                                d: Some(Value::String("eos".to_owned())),
                             }
                             .into(),
                         ))
