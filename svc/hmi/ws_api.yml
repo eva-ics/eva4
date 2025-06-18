@@ -17,6 +17,10 @@ ping:
   des: Manually pings the server
   par:
   ret: '{s:"pong"}'
+stream.start:
+  des: Starts a binary stream
+  par: i=OID
+  ret: '{s:"stream", d: "start"}, {s:"stream", d: "forbidden"}'
 bye:
   des: Closes the session
   par:
