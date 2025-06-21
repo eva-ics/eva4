@@ -3,6 +3,7 @@ use std::{sync::LazyLock, thread};
 use busrt::sync::client::SyncClient as _;
 use eva_common::{
     events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC},
+    multimedia::{FrameHeader, VideoFormat},
     payload::unpack,
     value::Value,
     OID,
@@ -18,7 +19,7 @@ use gst::{
     },
     prelude::{GstParamSpecBuilderExt as _, ToValue as _},
     subclass::prelude::{ElementImpl, GstObjectImpl},
-    Caps, PadDirection, PadPresence, PadTemplate,
+    PadDirection, PadPresence, PadTemplate,
 };
 use gst_base::{
     prelude::BaseSrcExt as _,
@@ -30,12 +31,11 @@ use gst_base::{
 use gst_video::VideoInfo;
 use parking_lot::Mutex;
 use serde::Deserialize;
-use strum::IntoEnumIterator as _;
 
 type Sender = rtsc::channel::Sender<BusFrame, parking_lot::RawMutex, parking_lot::Condvar>;
 type Receiver = rtsc::channel::Receiver<BusFrame, parking_lot::RawMutex, parking_lot::Condvar>;
 
-use crate::{default_bus_client_name, FrameHeader, VideoFormat, DEFAULT_BUS_PATH, VERSION};
+use crate::{default_bus_client_name, DEFAULT_BUS_PATH};
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
@@ -82,12 +82,8 @@ fn bus_reader(tx: Sender, bus_path: &str, bus_client_name: &str, oid: OID) {
         };
         let data_bytes = bytes.split_off(FrameHeader::SIZE);
         let header = FrameHeader::from_slice(&bytes).expect("Failed to parse frame header");
-        assert!(
-            (header.version == VERSION),
-            "Unsupported frame version: {}",
-            header.version
-        );
-        let video_format: VideoFormat = header.format.try_into().unwrap();
+        assert!((header.is_version_valid()), "Unsupported frame version",);
+        let video_format: VideoFormat = header.format().expect("Unsupported video format");
         let frame = BusFrame {
             header,
             video_format,
@@ -246,14 +242,13 @@ impl ElementImpl for EvaSrc {
     }
     fn pad_templates() -> &'static [gst::PadTemplate] {
         static PAD_TEMPLATES: LazyLock<Vec<gst::PadTemplate>> = LazyLock::new(|| {
-            let mut caps = Caps::new_empty();
-            let caps_mut = caps.make_mut();
-
-            for format in VideoFormat::iter() {
-                caps_mut.append(format.into_caps());
-            }
-            let src_pad_template =
-                PadTemplate::new("src", PadDirection::Src, PadPresence::Always, &caps).unwrap();
+            let src_pad_template = PadTemplate::new(
+                "src",
+                PadDirection::Src,
+                PadPresence::Always,
+                &VideoFormat::all_caps(),
+            )
+            .unwrap();
 
             vec![src_pad_template]
         });
@@ -286,8 +281,8 @@ impl BaseSrcImpl for EvaSrc {
                 move || bus_reader(tx, &bus_path, &bus_client_name, oid)
             });
             let frame = rx.recv().unwrap();
-            let width = frame.header.width;
-            let height = frame.header.height;
+            let width = frame.header.width();
+            let height = frame.header.height();
             let format = frame.video_format;
             session.replace(Session {
                 format,
@@ -334,8 +329,8 @@ impl PushSrcImpl for EvaSrc {
             return Err(gst::FlowError::NotNegotiated);
         };
         let frame = session.rx.recv().unwrap();
-        if frame.header.width != session.width
-            || frame.header.height != session.height
+        if frame.header.width() != session.width
+            || frame.header.height() != session.height
             || frame.video_format != session.format
         {
             gst::warning!(CAT, "Stream parameters has been changed");

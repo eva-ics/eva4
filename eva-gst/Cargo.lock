@@ -112,13 +112,37 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "binrw"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "173901312e9850391d4d7c1318c4e099fdc037d61870fca427429830efdb4e5f"
+dependencies = [
+ "array-init",
+ "binrw_derive 0.13.3",
+ "bytemuck",
+]
+
+[[package]]
+name = "binrw"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81419ff39e6ed10a92a7f125290859776ced35d9a08a665ae40b23e7ca702f30"
 dependencies = [
  "array-init",
- "binrw_derive",
+ "binrw_derive 0.15.0",
  "bytemuck",
+]
+
+[[package]]
+name = "binrw_derive"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb515fdd6f8d3a357c8e19b8ec59ef53880807864329b1cb1cba5c53bf76557e"
+dependencies = [
+ "either",
+ "owo-colors 3.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -128,7 +152,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "376404e55ec40d0d6f8b4b7df3f87b87954bd987f0cf9a7207ea3b6ea5c9add4"
 dependencies = [
  "either",
- "owo-colors",
+ "owo-colors 4.2.1",
  "proc-macro2",
  "quote",
  "syn 2.0.101",
@@ -376,10 +400,13 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.99"
+version = "0.3.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "211c1849a661fd2a61fa976cc947b5c15535e189b393fc09f6010bc4da15285b"
+checksum = "3a9f254c104da2e64ecbab33e7e4f700ff464f08a1f325b3b44089f5771d7a0d"
 dependencies = [
+ "binrw 0.13.3",
+ "gstreamer",
+ "gstreamer-video",
  "ipnetwork",
  "lazy_static",
  "log",
@@ -390,6 +417,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "strum",
  "submap",
 ]
 
@@ -398,7 +426,7 @@ name = "eva-gst"
 version = "0.1.0"
 dependencies = [
  "atomic-timer",
- "binrw",
+ "binrw 0.15.0",
  "busrt",
  "eva-common",
  "gst-plugin-version-helper",
@@ -409,7 +437,6 @@ dependencies = [
  "parking_lot_rt",
  "rtsc",
  "serde",
- "strum",
 ]
 
 [[package]]
@@ -963,6 +990,12 @@ checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
 dependencies = [
  "num-traits",
 ]
+
+[[package]]
+name = "owo-colors"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
 name = "owo-colors"

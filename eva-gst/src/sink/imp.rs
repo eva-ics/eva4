@@ -4,12 +4,14 @@ use std::{
     time::Duration,
 };
 
-use crate::{default_bus_client_name, FrameHeader, VideoFormat, DEFAULT_BUS_PATH, VERSION};
+use crate::{default_bus_client_name, DEFAULT_BUS_PATH};
 use atomic_timer::AtomicTimer;
 use busrt::{sync::client::SyncClient, QoS};
 use eva_common::{
     events::{RawStateEventOwned, RAW_STATE_TOPIC},
+    multimedia::{FrameHeader, VideoFormat},
     payload::pack,
+    value::Value,
     OID,
 };
 use gst::{
@@ -21,13 +23,11 @@ use gst::{
     },
     prelude::GstParamSpecBuilderExt as _,
     subclass::prelude::{ElementImpl, GstObjectImpl, ObjectSubclassExt},
-    Buffer, BufferFlags, Caps, ErrorMessage, FlowError, FlowSuccess, LoggableError, PadDirection,
-    PadPresence, PadTemplate,
+    Buffer, ErrorMessage, FlowError, FlowSuccess, LoggableError, PadDirection, PadPresence,
+    PadTemplate,
 };
 use gst_base::subclass::prelude::BaseSinkImpl;
-use gst_video::VideoInfo;
 use parking_lot::Mutex;
-use strum::IntoEnumIterator as _;
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
@@ -194,14 +194,13 @@ impl ElementImpl for EvaSink {
     }
     fn pad_templates() -> &'static [gst::PadTemplate] {
         static PAD_TEMPLATES: LazyLock<Vec<gst::PadTemplate>> = LazyLock::new(|| {
-            let mut caps = Caps::new_empty();
-            let caps_mut = caps.make_mut();
-
-            for format in VideoFormat::iter() {
-                caps_mut.append(format.into_caps());
-            }
-            let sink_pad_template =
-                PadTemplate::new("sink", PadDirection::Sink, PadPresence::Always, &caps).unwrap();
+            let sink_pad_template = PadTemplate::new(
+                "sink",
+                PadDirection::Sink,
+                PadPresence::Always,
+                &VideoFormat::all_caps(),
+            )
+            .unwrap();
 
             vec![sink_pad_template]
         });
@@ -212,27 +211,16 @@ impl ElementImpl for EvaSink {
 
 impl BaseSinkImpl for EvaSink {
     fn set_caps(&self, caps: &gst::Caps) -> Result<(), LoggableError> {
-        let s = caps
-            .as_ref()
-            .structure(0)
-            .expect("Caps must have at least one structure");
-        let codec: VideoFormat = s.name().parse().expect("Invalid video format in caps");
-        let info = VideoInfo::from_caps(caps).expect("Failed to get video info from caps");
-        let width = info.width();
-        let height = info.height();
         let settings = self.settings.lock();
         let oid = settings.oid.as_ref().expect("OID is not set");
+        let header = FrameHeader::try_from_caps(caps).expect("Invalid caps for EVA ICS sink");
         println!(
             "EVA ICS sink stream {} {}x{} -> {}",
-            codec, width, height, oid
+            header.format().expect("Unsupported video format"),
+            header.width(),
+            header.height(),
+            oid
         );
-        let header = FrameHeader {
-            version: VERSION,
-            format: codec as u8,
-            width: width.try_into().expect("Width too large"),
-            height: height.try_into().expect("Height too large"),
-            metadata: 0, // Dynamically set later
-        };
         let mut session = self.session.lock();
         session.frame_header = Some(header);
         session.bus_topic = Some(format!("{}{}", RAW_STATE_TOPIC, oid.as_path()).into());
@@ -277,7 +265,7 @@ impl BaseSinkImpl for EvaSink {
     }
     fn render(&self, buffer: &Buffer) -> Result<FlowSuccess, FlowError> {
         let mut session = self.session.lock();
-        let mut header = match session.frame_header.as_ref() {
+        let header = match session.frame_header.as_ref() {
             None => {
                 gst::element_imp_error!(self, gst::CoreError::Negotiation, ["Have no caps yet"]);
                 return Err(gst::FlowError::NotNegotiated);
@@ -322,19 +310,10 @@ impl BaseSinkImpl for EvaSink {
                 reader.run();
             });
         }
-        let flags = buffer.flags();
-        let is_key = !flags.contains(BufferFlags::DELTA_UNIT);
-        if is_key {
-            header.metadata |= 1;
-        }
-        let mut frame_buf = header.into_vec(buffer.size());
-        frame_buf.extend(buffer.map_readable().unwrap().as_slice());
+        let value =
+            Value::try_from_gstreamer_buffer(&header, buffer).expect("Failed to parse buffer");
         let client = session.bus_client.as_mut().unwrap();
-        let payload = pack(&RawStateEventOwned::new(
-            1,
-            eva_common::value::Value::Bytes(frame_buf),
-        ))
-        .unwrap();
+        let payload = pack(&RawStateEventOwned::new(1, value)).unwrap();
         if let Err(e) = client.publish(&bus_topic, payload.into(), QoS::No) {
             gst::warning!(
                 CAT,
