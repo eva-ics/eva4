@@ -1,5 +1,7 @@
+use std::sync::atomic;
 use std::time::Duration;
 
+use bma_ts::Monotonic;
 use eva_common::err_logger;
 use eva_common::multimedia::{FrameHeader, VideoFormat};
 use eva_common::prelude::*;
@@ -7,7 +9,10 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::{poc, set_poc};
 use gst::glib::object::{Cast as _, ObjectExt as _};
 use gst::prelude::{ElementExt as _, GstBinExt as _};
-use serde::Deserialize;
+use once_cell::sync::Lazy;
+use parking_lot_rt::Mutex;
+use rtsc::event_map::EventMap;
+use serde::{Deserialize, Serialize};
 
 err_logger!();
 
@@ -19,6 +24,19 @@ const DESCRIPTION: &str = "GStreamer Audio/Video sink service";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+static STREAM_HEADER: Lazy<Mutex<Option<FrameHeader>>> = Lazy::new(<_>::default);
+static FRAMES: Lazy<Mutex<EventMap<Monotonic, (), Duration>>> = Lazy::new(<_>::default);
+static FRAMES_PROCESSED: atomic::AtomicU64 = atomic::AtomicU64::new(0);
+
+#[derive(Serialize)]
+struct StreamInfo {
+    width: u16,
+    height: u16,
+    format: String,
+    fps: usize,
+    frames: u64,
+}
+
 struct Handlers {
     info: ServiceInfo,
 }
@@ -28,8 +46,30 @@ impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();
         let method = event.parse_method()?;
+        let payload = event.payload();
         #[allow(clippy::single_match, clippy::match_single_binding)]
         match method {
+            "stream.info" => {
+                if !payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let header = STREAM_HEADER.lock().clone();
+                let width = header.as_ref().map_or(0, FrameHeader::width);
+                let height = header.as_ref().map_or(0, FrameHeader::height);
+                let format = header
+                    .as_ref()
+                    .map(|h| h.format().map_or("unknown".to_string(), |f| f.to_string()))
+                    .unwrap_or_default();
+                let fps = FRAMES.lock().data().len();
+                let frames = FRAMES_PROCESSED.load(atomic::Ordering::Relaxed);
+                Ok(Some(pack(&StreamInfo {
+                    width,
+                    height,
+                    format,
+                    fps,
+                    frames,
+                })?))
+            }
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
@@ -76,6 +116,7 @@ fn handle_pipeline(pipeline: &str, tx: async_channel::Sender<Value>) -> EResult<
                     let buffer = sample.buffer().expect("Failed to get buffer");
                     let header = FrameHeader::try_from_caps_ref(sample.caps().unwrap())
                         .expect("Invalid caps for EVA ICS sink");
+                    STREAM_HEADER.lock().replace(header.clone());
 
                     let val = Value::try_from_gstreamer_buffer_ref(&header, buffer)
                         .expect("Failed to convert GStreamer buffer to Value");
@@ -86,6 +127,10 @@ fn handle_pipeline(pipeline: &str, tx: async_channel::Sender<Value>) -> EResult<
                         }
                         panic!("Failed to send value to channel: {}", e);
                     }
+
+                    let mut frames = FRAMES.lock();
+                    frames.insert(Monotonic::now(), ());
+                    frames.cleanup(Monotonic::now() - Duration::from_secs(1));
                     Ok(gst::FlowSuccess::Ok)
                 }
             })
@@ -131,7 +176,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
-    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(ServiceMethod::new("stream.info"));
     let handlers = Handlers { info };
     eapi_bus::init(&initial, handlers).await?;
     set_poc(Some(Duration::from_secs(1)));
@@ -143,6 +189,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let oid = config.oid;
     tokio::spawn(async move {
         while let Ok(value) = rx.recv().await {
+            FRAMES_PROCESSED.fetch_add(1, atomic::Ordering::Relaxed);
             eapi_bus::publish_item_state(&oid, 1, Some(&value))
                 .await
                 .expect("Failed to publish item state");

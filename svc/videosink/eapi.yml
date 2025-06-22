@@ -2,3 +2,10 @@ stream.info:
   des: Get info for the current stream
   par:
   ret:
+    {
+      "format": "video/x-h264",
+      "fps": 15,
+      "frames": 7231,
+      "height": 480,
+      "width": 640
+    }

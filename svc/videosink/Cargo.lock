@@ -622,6 +622,7 @@ version = "4.0.2"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
+ "bma-ts",
  "eva-common",
  "eva-sdk",
  "gstreamer",
@@ -629,6 +630,8 @@ dependencies = [
  "log",
  "mimalloc",
  "once_cell",
+ "parking_lot_rt",
+ "rtsc",
  "serde",
  "tokio",
 ]
