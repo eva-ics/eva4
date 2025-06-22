@@ -1,0 +1,20 @@
+command: target/debug/eva-videosink
+workers: 1
+bus:
+  path: var/bus.ipc
+config:
+  # target sensor to write stream to
+  oid: sensor:streams/s0
+  # the gstreamer pipeline to use. must produce video/x-h264, video/x-h265,
+  # video/x-vp8, video/x-vp9 or video/x-av1
+  #
+  # the picture format is recommended to be compatible with the web browsers
+  pipeline: videotestsrc pattern=ball
+      ! video/x-raw,width=640,height=480,framerate=15/1,format=I420
+      ! openh264enc
+# if running under restricted user, 'chown -R eva:eva /var/cache/fontconfig/'
+# may be required
+user: eva
+timeout:
+  default: 10
+  startup: 45
