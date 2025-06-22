@@ -20,7 +20,7 @@ fi
 case $ARCH in
   x86_64-musl)
     TARGET=x86_64-unknown-linux-musl
-    FFI_TARGET=x86_64-unknown-linux-gnu
+    GNU_TARGET=x86_64-unknown-linux-gnu
     STRIP=strip
     YEDB_ARCH=x86_64
     CARGO=cross
@@ -29,7 +29,7 @@ case $ARCH in
     ;;
   aarch64-musl)
     TARGET=aarch64-unknown-linux-musl
-    FFI_TARGET=aarch64-unknown-linux-gnu
+    GNU_TARGET=aarch64-unknown-linux-gnu
     STRIP=aarch64-linux-gnu-strip
     YEDB_ARCH=aarch64
     CARGO=cross
@@ -38,7 +38,7 @@ case $ARCH in
     ;;
   x86_64-ubuntu20.04)
     TARGET=x86_64-unknown-linux-gnu
-    FFI_TARGET=${TARGET}
+    GNU_TARGET=${TARGET}
     STRIP=strip
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
@@ -174,7 +174,12 @@ cd ../../.. || exit 1
 
 echo "Building FFI SVC..."
 cd eva4/svc/ffi || exit 1
-"${CARGO}" build --target "${FFI_TARGET}" --release ${CARGO_ARGS} || exit 1
+"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
+cd ../../.. || exit 1
+
+echo "Building VideoSink SVC..."
+cd eva4/svc/videosink || exit 1
+"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../../.. || exit 1
 
 echo "Building Enterprise extensions..."
@@ -236,7 +241,8 @@ for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
 done
 
 cp -vf "../eva4/svc/controller-system/${CARGO_TARGET_DIR}/${TARGET}/release/eva-controller-system" svc/ || exit 1
-cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${FFI_TARGET}/release/eva-ffi" svc/ || exit 1
+cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-ffi" svc/ || exit 1
+cp -vf "../eva4/svc/videosink/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosink" svc/ || exit 1
 
 for svc in eva-aaa-msad \
   eva-kioskman eva-rtmon eva-aaa-accounting eva-svc-alarms \
