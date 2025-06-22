@@ -51,6 +51,7 @@ exclude = [
   "contrib/webinfo",
   "eva_pg",
   "svc/ffi",
+  "svc/videosink",
   "svc/controller-system",
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
