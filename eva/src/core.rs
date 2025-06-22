@@ -284,7 +284,9 @@ async fn destroy_inventory_item(oid: &OID, rpc: &RpcClient) -> EResult<()> {
 macro_rules! prepare_state_data {
     ($item: expr, $state: expr, $instant_save: expr) => {{
         let s_st: LocalStateEvent = Into::<LocalStateEvent>::into($state);
-        let db_st = if $instant_save.matches($item.oid()) {
+        let db_st = if matches!(s_st.value, Value::Bytes(_)) {
+            None
+        } else if $instant_save.matches($item.oid()) {
             Some(Into::<DbState>::into($state))
         } else {
             None
