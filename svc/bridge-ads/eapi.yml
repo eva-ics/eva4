@@ -14,6 +14,18 @@ ping:
     {
       "state": 5
     }
+get_symbol_info:
+  des: Get ADS symbol info tables
+  par:
+    - nam: net_id
+      typ: "String/[u8; 6]"
+      des: Device AMS Net ID
+      req: true
+    - nam: port
+      typ: u16
+      des: Device AMS Port
+      req: true
+  ret: Symbol info tables
 read:
   des: Call ADS read request
   par:

@@ -77,6 +77,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .required("port"),
     );
     info.add_method(
+        ServiceMethod::new("get_symbol_info")
+            .required("net_id")
+            .required("port"),
+    );
+    info.add_method(
         ServiceMethod::new("read")
             .required("net_id")
             .required("port")

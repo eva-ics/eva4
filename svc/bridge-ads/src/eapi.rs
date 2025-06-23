@@ -63,6 +63,22 @@ impl RpcHandlers for Handlers {
                     Ok(Some(pack(&state)?))
                 }
             }
+            "get_symbol_info" => {
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    #[derive(Deserialize)]
+                    #[serde(deny_unknown_fields)]
+                    struct Params {
+                        net_id: NetId,
+                        port: u16,
+                    }
+                    let p: Params = unpack(payload)?;
+                    let device_addr: AmsAddr = p.net_id.into_ams_addr(p.port)?;
+                    let result = ads::get_symbol_info(device_addr).await?;
+                    Ok(Some(pack(&result)?))
+                }
+            }
             "read" => {
                 if payload.is_empty() {
                     Err(RpcError::params(None))

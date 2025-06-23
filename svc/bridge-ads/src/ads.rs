@@ -10,11 +10,91 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use log::error;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 
 pub const ADS_SUM_LIMIT: usize = 500;
 
 const SLEEP_STEP: Duration = Duration::from_millis(1);
+
+#[derive(Serialize)]
+pub struct SymbolInfo {
+    symbols: Vec<Symbol>,
+    types: HashMap<String, Type>,
+}
+
+#[derive(Serialize)]
+pub struct Symbol {
+    pub name: String,
+    pub ix_group: u32,
+    pub ix_offset: u32,
+    pub typ: String,
+    pub size: usize,
+    pub base_type: u32,
+    pub flags: u32,
+}
+
+impl From<::ads::symbol::Symbol> for Symbol {
+    fn from(s: ::ads::symbol::Symbol) -> Self {
+        Self {
+            name: s.name,
+            ix_group: s.ix_group,
+            ix_offset: s.ix_offset,
+            typ: s.typ,
+            size: s.size,
+            base_type: s.base_type,
+            flags: s.flags,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct Type {
+    pub name: String,
+    pub size: usize,
+    pub array: Vec<(u32, u32)>,
+    pub fields: Vec<Field>,
+    pub base_type: u32,
+    pub flags: u32,
+}
+
+impl From<::ads::symbol::Type> for Type {
+    fn from(t: ::ads::symbol::Type) -> Self {
+        Self {
+            name: t.name,
+            size: t.size,
+            array: t.array,
+            fields: t.fields.into_iter().map(Into::into).collect(),
+            base_type: t.base_type,
+            flags: t.flags,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct Field {
+    pub name: String,
+    pub typ: String,
+    pub offset: Option<u32>,
+    pub size: usize,
+    pub array: Vec<(u32, u32)>,
+    pub base_type: u32,
+    pub flags: u32,
+}
+
+impl From<::ads::symbol::Field> for Field {
+    fn from(f: ::ads::symbol::Field) -> Self {
+        Self {
+            name: f.name,
+            typ: f.typ,
+            offset: f.offset,
+            size: f.size,
+            array: f.array,
+            base_type: f.base_type,
+            flags: f.flags,
+        }
+    }
+}
 
 pub trait ParseAmsNetId {
     fn ams_net_id(&self) -> EResult<[u8; 6]>;
@@ -183,6 +263,17 @@ pub async fn ping_worker(
     Ok(())
 }
 
+fn get_symbol_info_sync(addr: AmsAddr) -> EResult<SymbolInfo> {
+    let client = get_client!();
+    let device = client.device(addr);
+    let (s, t) = ::ads::symbol::get_symbol_info(device).map_err(Error::io)?;
+    let symbol_info = SymbolInfo {
+        symbols: s.into_iter().map(Into::into).collect(),
+        types: t.into_iter().map(|(k, v)| (k, v.into())).collect(),
+    };
+    Ok(symbol_info)
+}
+
 fn read_sync(addr: AmsAddr, group: u32, offset: u32, size: usize) -> EResult<Vec<u8>> {
     let mut result = vec![0; size];
     let client = get_client!();
@@ -322,6 +413,10 @@ fn write_sync(addr: AmsAddr, group: u32, offset: u32, data: Vec<u8>) -> EResult<
         .write(group, offset, &data)
         .map_err(|e| Error::io(format!("ADS write: {}", e)))?;
     Ok(())
+}
+
+pub async fn get_symbol_info(addr: AmsAddr) -> EResult<SymbolInfo> {
+    tokio::task::spawn_blocking(move || get_symbol_info_sync(addr)).await?
 }
 
 pub async fn read(addr: AmsAddr, group: u32, offset: u32, size: usize) -> EResult<Vec<u8>> {
