@@ -26,4 +26,4 @@ genpass-native = { workspace = true }
 parking_lot = { workspace = true }
 
 [features]
-openssl-vendored = ["openssl/vendored"]
+openssl-vendored = ["openssl/vendored", "paho-mqtt/vendored-ssl"]
