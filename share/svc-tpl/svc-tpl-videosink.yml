@@ -13,7 +13,8 @@ config:
       ! video/x-raw,width=640,height=480,framerate=15/1,format=I420
       ! openh264enc
 # if running under restricted user, 'chown -R eva:eva /var/cache/fontconfig/'
-# may be required
+# may be required. if streaming a USB camera, make sure the user has access to
+# the device
 user: eva
 timeout:
   default: 10
