@@ -98,6 +98,11 @@ fi
 
 ./prepare || exit 8
 
+# create missing directories if required
+
+mkdir -p ./pvt/vendored-apps/opcentre/idc/dashboards
+mkdir -p ./pvt/vendored-apps/opcentre/idc/clipart
+
 rm -f ./svc/sblock.sh
 
 if [ ! -f /.eva_container ]; then
