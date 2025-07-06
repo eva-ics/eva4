@@ -3,6 +3,7 @@ use gst::glib;
 
 mod sink;
 mod source;
+mod videosrvsource;
 
 const DEFAULT_BUS_PATH: &str = "/opt/eva4/var/bus.ipc";
 
@@ -36,6 +37,7 @@ gst::plugin_define!(
 
 pub fn register(plugin: &gst::Plugin) -> Result<(), glib::BoolError> {
     source::register(plugin)?;
+    videosrvsource::register(plugin)?;
     sink::register(plugin)?;
     Ok(())
 }
