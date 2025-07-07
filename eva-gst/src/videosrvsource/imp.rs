@@ -52,9 +52,9 @@ struct EvaVideoInfo {
 
 #[derive(Deserialize)]
 struct VideoFrame {
-    t: f64,
+    //t: f64,
     data: Vec<u8>,
-    key_unit: bool,
+    //key_unit: bool,
 }
 
 struct Session {
@@ -65,6 +65,7 @@ struct Session {
     rpc: busrt::sync::rpc::RpcClient,
     videosrv_svc: String,
     packed_cursor: Vec<u8>,
+    pts: u64,
 }
 
 impl Session {
@@ -89,7 +90,9 @@ struct Settings {
     bus_client_name: String,
     videosrv_svc: String,
     t_start: Option<f64>,
+    t_end: Option<f64>,
     limit: usize,
+    force_fps: u16,
 }
 
 impl Default for Settings {
@@ -100,7 +103,9 @@ impl Default for Settings {
             bus_client_name: <_>::default(),
             videosrv_svc: DEFAULT_VIDEOSRV_SVC.to_string(),
             t_start: None,
+            t_end: None,
             limit: 0,
+            force_fps: 0,
         }
     }
 }
@@ -140,9 +145,20 @@ impl ObjectImpl for EvaVideoSrvSrc {
                 .blurb("Start date/time for the video stream")
                 .mutable_ready()
                 .build(),
+                glib::ParamSpecString::builder("t-end")
+                .nick("End time")
+                .blurb("End date/time for the video stream. If not set, the stream will continue until the end of the recording.")
+                .mutable_ready()
+                .build(),
                 glib::ParamSpecUInt::builder("limit")
                 .nick("Frame limit")
                 .blurb("Maximum number of frames to process. 0 means no limit.")
+                .default_value(0)
+                .mutable_ready()
+                .build(),
+                glib::ParamSpecUInt::builder("fps")
+                .nick("Force FPS")
+                .blurb("Force FPS for the video stream. If set to 0, the FPS will be taken from the recording")
                 .default_value(0)
                 .mutable_ready()
                 .build(),
@@ -190,6 +206,18 @@ impl ObjectImpl for EvaVideoSrvSrc {
                 );
                 settings.t_start = Some(t_start);
             }
+            "t-end" => {
+                let mut settings = self.settings.lock();
+                let t_end_s: String = value.get().expect("type checked upstream");
+                let t_end = t_end_s.parse::<f64>().expect("Invalid t_end format");
+                gst::info!(
+                    CAT,
+                    "Changing t_end from {:?} to {:?}",
+                    settings.t_end,
+                    t_end
+                );
+                settings.t_end = Some(t_end);
+            }
             "limit" => {
                 let mut settings = self.settings.lock();
                 let limit: u32 = value.get().expect("type checked upstream");
@@ -200,6 +228,18 @@ impl ObjectImpl for EvaVideoSrvSrc {
                     limit
                 );
                 settings.limit = limit.try_into().unwrap();
+            }
+            "fps" => {
+                let mut settings = self.settings.lock();
+                let force_fps: u32 = value.get().expect("type checked upstream");
+                let force_fps = u16::try_from(force_fps).expect("Force FPS should fit into u16");
+                gst::info!(
+                    CAT,
+                    "Changing force FPS from {} to {}",
+                    settings.force_fps,
+                    force_fps
+                );
+                settings.force_fps = force_fps;
             }
             "bus-path" => {
                 let mut settings = self.settings.lock();
@@ -254,11 +294,22 @@ impl ObjectImpl for EvaVideoSrvSrc {
                     .map_or_else(String::new, |t| t.to_string())
                     .to_value()
             }
+            "t-end" => {
+                let settings = self.settings.lock();
+                settings
+                    .t_end
+                    .map_or_else(String::new, |t| t.to_string())
+                    .to_value()
+            }
             "limit" => {
                 let settings = self.settings.lock();
                 u32::try_from(settings.limit)
                     .expect("Limit should fit into u32")
                     .to_value()
+            }
+            "fps" => {
+                let settings = self.settings.lock();
+                u32::from(settings.force_fps).to_value()
             }
             "bus-path" => {
                 let settings = self.settings.lock();
@@ -362,18 +413,18 @@ impl BaseSrcImpl for EvaVideoSrvSrc {
             })
             .unwrap();
             let res = rpc
-                .call("eva.videosrv.default", "rec.info", payload.into(), QoS::No)
+                .call(&settings.videosrv_svc, "rec.info", payload.into(), QoS::No)
                 .unwrap();
             let info: EvaVideoInfo = unpack(res.payload()).expect("Failed to unpack video info");
             let format = VideoFormat::try_from(info.format).expect("Failed to get video format");
             println!(
-                "EVA ICS recording for: {} {} {}x{} {}fps",
+                "EVA ICS recording for {} {} {}x{} {}fps",
                 oid, format, info.width, info.height, info.fps
             );
             let payload = pack(&RecPullParams {
                 i: oid.clone(),
                 t_start: settings.t_start,
-                t_end: None,
+                t_end: settings.t_end,
                 limit: if settings.limit > 0 {
                     Some(settings.limit)
                 } else {
@@ -398,9 +449,14 @@ impl BaseSrcImpl for EvaVideoSrvSrc {
                 format,
                 width: info.width,
                 height: info.height,
-                fps: info.fps,
+                fps: if settings.force_fps > 0 {
+                    settings.force_fps
+                } else {
+                    info.fps
+                },
                 videosrv_svc: settings.videosrv_svc.clone(),
                 packed_cursor,
+                pts: 0,
             });
         }
         let session = session.as_ref().unwrap();
@@ -455,9 +511,13 @@ impl PushSrcImpl for EvaVideoSrvSrc {
         }
         let mut buffer =
             gst::Buffer::with_size(video_frame.data.len()).expect("Failed to allocate buffer");
-        buffer
-            .get_mut()
-            .unwrap()
+        let buffer_mut = buffer.make_mut();
+        buffer_mut.set_pts(gst::ClockTime::from_nseconds(session.pts));
+        buffer_mut.set_duration(gst::ClockTime::from_nseconds(
+            1_000_000_000 / u64::from(session.fps),
+        ));
+        session.pts += 1_000_000_000 / u64::from(session.fps);
+        buffer_mut
             .copy_from_slice(0, &video_frame.data)
             .expect("Failed to copy pixels into buffer");
         Ok(CreateSuccess::NewBuffer(buffer))
