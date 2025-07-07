@@ -68,6 +68,14 @@ struct Session {
     pts: u64,
 }
 
+fn parse_timestamp(s: &str) -> f64 {
+    if let Ok(t) = s.parse::<f64>() {
+        return t;
+    }
+    let d = dateparser::parse(s).expect("Failed to parse date/time");
+    d.timestamp() as f64 + f64::from(d.timestamp_subsec_nanos()) / 1_000_000_000.0
+}
+
 impl Session {
     fn next_frame(&self) -> Option<VideoFrame> {
         let payload = busrt::borrow::Cow::Borrowed(&self.packed_cursor);
@@ -197,7 +205,7 @@ impl ObjectImpl for EvaVideoSrvSrc {
             "t-start" => {
                 let mut settings = self.settings.lock();
                 let t_start_s: String = value.get().expect("type checked upstream");
-                let t_start = t_start_s.parse::<f64>().expect("Invalid t_start format");
+                let t_start = parse_timestamp(&t_start_s);
                 gst::info!(
                     CAT,
                     "Changing t_start from {:?} to {:?}",
@@ -209,7 +217,7 @@ impl ObjectImpl for EvaVideoSrvSrc {
             "t-end" => {
                 let mut settings = self.settings.lock();
                 let t_end_s: String = value.get().expect("type checked upstream");
-                let t_end = t_end_s.parse::<f64>().expect("Invalid t_end format");
+                let t_end = parse_timestamp(&t_end_s);
                 gst::info!(
                     CAT,
                     "Changing t_end from {:?} to {:?}",
