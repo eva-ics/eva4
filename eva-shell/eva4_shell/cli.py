@@ -669,7 +669,14 @@ class CLI:
         call_rpc('svc.purge', dict(svcs=[i]))
         ok()
 
-    def svc_call(self, i, file, method, params, trace=False):
+    def svc_call(self,
+                 i,
+                 file,
+                 output,
+                 passthrough,
+                 method,
+                 params,
+                 trace=False):
         if file:
             import yaml
             payload = yaml.safe_load(read_file(file))
@@ -678,11 +685,22 @@ class CLI:
             for p in params:
                 n, v = p.split('=', 1)
                 payload[n] = format_value(v, advanced=True, name=n)
+        if passthrough and not output:
+            raise ValueError(
+                'output file is required when passthrought is enabled')
         result = call_rpc(method,
                           payload if payload else None,
                           target=i,
-                          trace=trace)
-        if current_command.json or isinstance(result, list):
+                          trace=trace,
+                          unpack_result=not passthrough)
+        if passthrough:
+            write_file(output, result, mode='wb')
+            ok()
+        elif output:
+            import json
+            write_file(output, json.dumps(result, indent=4, sort_keys=True))
+            ok()
+        elif current_command.json or isinstance(result, list):
             print_result(result)
         elif isinstance(result, dict):
             print_result(result, name_value=True)

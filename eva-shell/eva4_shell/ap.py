@@ -481,6 +481,10 @@ def append_svc_cli(root_sp):
                    metavar='FILE',
                    help='read call params payload form the file ("-" for stdin)'
                   ).completer = ComplDeployFile()
+    p.add_argument('-o', '--output', metavar='FILE', help='output file')
+    p.add_argument('--passthrough',
+                   action='store_true',
+                   help='do not unpack the result (requires the output file)')
     p.add_argument('method', metavar='METHOD').completer = ComplSvcRpcMethod()
     p.add_argument(
         'params',

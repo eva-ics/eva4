@@ -19,6 +19,7 @@ DEFAULT_GENERATOR_SERVICE = 'eva.generator.default'
 DEFAULT_ACCOUNTING_SERVICE = 'eva.aaa.accounting'
 DEFAULT_ALARM_SERVICE = 'eva.alarm.default'
 
+
 def print_trace_msg(msg):
     level = msg['l']
     print('[', end='')
@@ -53,7 +54,7 @@ def connect():
         common.rpc.on_frame = on_frame
 
 
-def call_rpc(method, params=None, target='eva.core', trace=False):
+def call_rpc(method, params=None, target='eva.core', trace=False, unpack_result=True):
     common.bus_conn_no += 1
     connect()
     if current_command.debug:
@@ -85,5 +86,7 @@ def call_rpc(method, params=None, target='eva.core', trace=False):
             print()
     if result.is_empty():
         return None
-    else:
+    elif unpack_result:
         return unpack(result.get_payload())
+    else:
+        return result.get_payload()
