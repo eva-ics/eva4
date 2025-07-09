@@ -492,7 +492,7 @@ dependencies = [
 
 [[package]]
 name = "eva-gst"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "atomic-timer",
  "binrw 0.15.0",
