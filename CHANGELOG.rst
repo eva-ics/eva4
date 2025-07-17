@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.0.2-stable
 ============
 
+* 2025-07-17 build 2025071701: Database values zero-precision fixes
 * 2025-06-23 build 2025062301: ADS improvements, video sink service
 * 2025-06-18 build 2025061801: Web socket binary stream API, Live player IDC component
 * 2025-06-10 build 2025061001: ⚠️  Item binary values
