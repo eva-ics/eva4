@@ -1719,9 +1719,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.99"
+version = "0.3.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "211c1849a661fd2a61fa976cc947b5c15535e189b393fc09f6010bc4da15285b"
+checksum = "36077ae9f68ce3dbc488617b18d89230afb18287bb2dc2cb9a0ed3a0579253bf"
 dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
@@ -2882,7 +2882,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http 0.2.9",
- "indexmap 2.2.3",
+ "indexmap 2.10.0",
  "slab",
  "tokio",
  "tokio-util 0.7.3",
@@ -2922,6 +2922,12 @@ dependencies = [
  "ahash 0.8.9",
  "allocator-api2",
 ]
+
+[[package]]
+name = "hashbrown"
+version = "0.15.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
 
 [[package]]
 name = "hashlink"
@@ -3219,12 +3225,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.2.3"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "233cf39063f058ea2caae4091bf4a3ef70a653afbc026f5c4a4135d114e3c177"
+checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
- "hashbrown 0.14.3",
+ "hashbrown 0.15.4",
 ]
 
 [[package]]
@@ -5228,7 +5234,7 @@ version = "0.9.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd075d994154d4a774f95b51fb96bdc2832b0ea48425c92546073816cda1f2f"
 dependencies = [
- "indexmap 2.2.3",
+ "indexmap 2.10.0",
  "itoa 1.0.14",
  "ryu",
  "serde",

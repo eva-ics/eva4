@@ -34,7 +34,9 @@ glob = "0.3.1"
 hostname = "0.3.1"
 lazy_static = { workspace = true }
 chrono = { workspace = true }
-eva-common = { features = ["full"] , workspace = true }
+eva-common = { features = ["acl", "actions", "events", "time", "bus-rpc", "services", "registry", "workers",
+  "dataconv", "db", "cache", "hyper-tools", "extended-value", "common-payloads", "payload",
+  "logic", "logger", "axum", "serde-keyvalue", "console-logger", "data-objects"], workspace = true }
 bmart = { workspace = true }
 multi_log = "0.1.2"
 log = { workspace = true }
