@@ -346,6 +346,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 test_mp!("source.deploy", "generator_sources"),
             );
         }
+        if node.video_recordings.is_some() {
+            svcs_to_test.insert(
+                &node.params.video_svc,
+                test_mp!("rec.deploy", "video_recordings"),
+            );
+        }
         if node.alarms.is_some() {
             svcs_to_test.insert(&node.params.alarm_svc, test_mp!("alarm.deploy", "alarms"));
         }
@@ -519,6 +525,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 "source.deploy"
             );
             deploy_resource!(
+                node.video_recordings,
+                "video_recordings",
+                &node.params.video_svc,
+                "rec.deploy"
+            );
+            deploy_resource!(
                 node.alarms,
                 "alarms",
                 &node.params.alarm_svc,
@@ -575,6 +587,12 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                 "alarms",
                 &node.params.alarm_svc,
                 "alarm.undeploy"
+            );
+            undeploy_resource!(
+                node.video_recordings,
+                "video_recordings",
+                &node.params.video_svc,
+                "rec.undeploy"
             );
             undeploy_resource!(
                 node.generator_sources,
@@ -651,6 +669,8 @@ struct DeploymentContent {
     items: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     generator_sources: ValueOptionOwned,
+    #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
+    video_recordings: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
     alarms: ValueOptionOwned,
     #[serde(default, skip_serializing_if = "ValueOptionOwned::is_none")]
@@ -735,6 +755,10 @@ fn default_generator_svc() -> String {
     "eva.generator.default".to_owned()
 }
 
+fn default_video_svc() -> String {
+    "eva.videosrv.default".to_owned()
+}
+
 fn default_alarm_svc() -> String {
     "eva.alarm.default".to_owned()
 }
@@ -753,6 +777,8 @@ struct NodeParams {
     filemgr_svc: String,
     #[serde(default = "default_generator_svc")]
     generator_svc: String,
+    #[serde(default = "default_video_svc")]
+    video_svc: String,
     #[serde(default = "default_alarm_svc")]
     alarm_svc: String,
 }
@@ -765,6 +791,7 @@ impl Default for NodeParams {
             user_svc: default_auth_svc(),
             filemgr_svc: default_filemgr_svc(),
             generator_svc: default_generator_svc(),
+            video_svc: default_video_svc(),
             alarm_svc: default_alarm_svc(),
         }
     }
