@@ -355,7 +355,7 @@ dobj:
     - fields
 config/ee/license:
   type: object
-  additionalProperties: false
+  additionalProperties: true
   properties:
     key: *str
     expires: *intpositiveornull
