@@ -1707,6 +1707,99 @@ class CLI:
         call_rpc('kiosk.dev_close', dict(i=i), target=kiosk_svc)
         ok()
 
+    def video_rec_list(self, video_svc):
+        data = call_rpc('rec.list', target=video_svc)
+        print_result(data, cols=['oid', 'keep', 'enabled'])
+
+    def video_rec_create(self, i, keep, enabled, video_svc):
+        payload = {
+            'oid': i,
+        }
+        if keep:
+            payload['keep'] = keep
+        if enabled:
+            payload['enabled'] = enabled
+        call_rpc('rec.deploy',
+                 dict(video_recordings=[payload]),
+                 target=video_svc)
+        ok()
+
+    def video_rec_destroy(self, i, video_svc):
+        payload = {
+            'oid': i,
+        }
+        call_rpc('rec.undeploy',
+                 dict(video_recordings=[payload]),
+                 target=video_svc)
+        ok()
+
+    def video_rec_enable(self, i, video_svc):
+        call_rpc('rec.enable', dict(i=i), target=video_svc)
+        ok()
+
+    def video_rec_disable(self, i, video_svc):
+        call_rpc('rec.disable', dict(i=i), target=video_svc)
+        ok()
+
+    def video_rec_edit(self, i, video_svc):
+
+        def deploy(cfg, i):
+            call_rpc('rec.deploy',
+                     dict(video_recordings=[cfg]),
+                     target=video_svc)
+            print(f'video recording config re-deployed: {i}')
+            print()
+
+        config = call_rpc('rec.get_config', dict(i=i), target=video_svc)
+        edit_config(config,
+                    f'video.rec|{i}|config',
+                    deploy_fn=partial(deploy, i=i))
+
+    def video_rec_export(self, i, video_svc, output=None):
+        c = 0
+        configs = []
+        for source in call_rpc('rec.list', target=video_svc):
+            oid = source['oid']
+            if (i.startswith('*') and oid.endswith(i[1:])) or \
+                (i.endswith('*') and oid.startswith(i[:-1])) or \
+                (i.startswith('*') and i.endswith('*') and i[1:-1] in oid) or \
+                i == oid:
+                c += 1
+                config = call_rpc('rec.get_config',
+                                  dict(i=oid),
+                                  target=video_svc)
+                configs.append(config)
+        result = dict(video_recordings=configs)
+        if current_command.json:
+            print_result(result)
+        else:
+            import yaml
+            dump = yaml.dump(result, default_flow_style=False)
+            if output is None:
+                print(dump)
+            else:
+                write_file(output, dump)
+                print(f'{c} video recording configuration(s) exported')
+                print()
+
+    def video_rec_deploy(self, video_svc, file=None):
+        import yaml
+        sources = yaml.safe_load(
+            read_file(file).decode()).pop('video_recordings')
+        call_rpc('rec.deploy', dict(video_recordings=sources), target=video_svc)
+        print(f'{len(sources)} video recording configuration(s) deployed')
+        print()
+
+    def video_rec_undeploy(self, video_svc, file=None):
+        import yaml
+        sources = yaml.safe_load(
+            read_file(file).decode()).pop('video_recordings')
+        call_rpc('rec.undeploy',
+                 dict(video_recordings=sources),
+                 target=video_svc)
+        print(f'{len(sources)} video recording configuration(s) undeployed')
+        print()
+
     def generator_source_list(self, generator_svc):
         data = call_rpc('source.list', target=generator_svc)
         print_result(data, cols=['name', 'kind', 'active'])

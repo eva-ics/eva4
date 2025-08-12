@@ -17,7 +17,7 @@ from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
 from .client import DEFAULT_KIOSK_SERVICE, DEFAULT_GENERATOR_SERVICE
-from .client import DEFAULT_ACCOUNTING_SERVICE, DEFAULT_ALARM_SERVICE
+from .client import DEFAULT_ACCOUNTING_SERVICE, DEFAULT_ALARM_SERVICE, DEFAULT_VIDEO_SERVICE
 
 ALARM_OP_CODES = [
     'TT', 'TL', 'LL', 'SS', 'SD', 'OS', 'CC', 'AA', 'US', 'RD', 'IS'
@@ -1183,6 +1183,94 @@ def append_cloud_cli(root_sp):
                    help='update without any confirmations',
                    action='store_true')
 
+def append_video_cli(root_sp):
+    ap_generator = root_sp.add_parser('video', help='video commands')
+    sp_generator = ap_generator.add_subparsers(dest='_subc', help='sub command')
+
+    ap = sp_generator.add_parser('rec', help='video recordings')
+    sp = ap.add_subparsers(dest='_subc2', help='sub command')
+
+    p = sp.add_parser('create', help='create a video recording')
+    p.add_argument('i', metavar='source')
+    p.add_argument('--keep',
+                   type=float,
+                   help='Keep (seconds)')
+    p.add_argument('--enabled',
+                   help='Enable recording',
+                   action='store_true')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('list', help='list video recordings')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('edit', help='edit a video recording config')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('enable', help='enable (start) a video recording')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('disable', help='disable (stop) a video recording')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('destroy', help='destroy a video recording')
+    p.add_argument('i', metavar='source')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+
+    p = sp.add_parser('export', help='export video recording config(s) to a deployment file')
+    p.add_argument('i', metavar='MASK')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
+    p.add_argument('-o', '--output', metavar='FILE',
+                   help='output file').completer = ComplDeployFile()
+
+    p = sp.add_parser('deploy', help='deploy video recording(s) from a deployment file')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
+
+    p = sp.add_parser('undeploy',
+                      help='undeploy video recordings(s) using a deployment file')
+    p.add_argument(
+        '-a',
+        '--video-svc',
+        help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
+        default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('generator')
+    p.add_argument('-f', '--file', metavar='FILE',
+                   help='deployment file').completer = ComplDeployFile()
 
 def append_generator_cli(root_sp):
     source_types = [
@@ -1589,6 +1677,7 @@ def init_ap():
         'lvar': [],
         'mirror': [],
         'node': [],
+        'video': [],
         'server': [],
         'spoint': [],
         'system': [],
@@ -1627,6 +1716,7 @@ def init_ap():
     if is_local_shell():
         append_mirror_cli(sp)
     append_node_cli(sp)
+    append_video_cli(sp)
     if is_local_shell():
         append_server_cli(sp)
     append_spoint_cli(sp)
