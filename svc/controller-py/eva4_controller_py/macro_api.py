@@ -128,6 +128,8 @@ def update_state(oid, state):
         oid: item OID
         state: new state (may contain status/value/t and other state fields)
     """
+    if not isinstance(state, dict):
+        state = {'value': state}
     if 'status' not in state:
         state['status'] = 1
     oid = OID(oid) if isinstance(oid, str) else oid
