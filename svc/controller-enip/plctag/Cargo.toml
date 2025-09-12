@@ -1,6 +1,6 @@
 [package]
 name = "plctag"
-version = "4.0.2"
+version = "4.1.0"
 authors = ["Serhij S. <div@altertech.com>"]
 edition = "2018"
 

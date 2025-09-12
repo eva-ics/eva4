@@ -60,7 +60,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "4.0.2"
+version = "4.1.0"
 edition = "2021"
 repository = "https://github.com/eva-ics/eva4"
 
