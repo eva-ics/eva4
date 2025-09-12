@@ -183,6 +183,11 @@ just prepare || exit 1
 "${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../../.. || exit 1
 
+echo "Building VideoServer Enterprise extension..."
+cd eva4-enterprise/eva4-esvc/videosrv || exit 1
+"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
+cd ../../.. || exit 1
+
 echo "Building Enterprise extensions..."
 if [ -d eva4-enterprise ]; then
   cd eva4-enterprise || exit 1
@@ -245,6 +250,7 @@ cp -vf "../eva4/svc/controller-system/${CARGO_TARGET_DIR}/${TARGET}/release/eva-
 cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-ffi" svc/ || exit 1
 cp -vf "../eva4/svc/videosink/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosink" svc/ || exit 1
 
+cp -vf "../eva4-enterprise/eva4-esvc/videosrv/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosrv" svc/ || exit 1
 for svc in eva-aaa-msad \
   eva-kioskman eva-rtmon eva-aaa-accounting eva-svc-alarms \
   eva-zfrepl; do
