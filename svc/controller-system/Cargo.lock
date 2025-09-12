@@ -823,7 +823,7 @@ dependencies = [
 
 [[package]]
 name = "eva-controller-system"
-version = "4.0.2"
+version = "4.1.0"
 dependencies = [
  "async-trait",
  "bmart",

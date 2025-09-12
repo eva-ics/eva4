@@ -618,7 +618,7 @@ dependencies = [
 
 [[package]]
 name = "eva-videosink"
-version = "4.0.2"
+version = "4.1.0"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
