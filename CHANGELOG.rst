@@ -17,6 +17,11 @@ applying to production.
 Note that for mission-critical systems it is recommended to test every update
 before applying to production despite of the absence of warning marks.
 
+4.1.0-stable
+============
+
+* TBA: Video recording server. Bookmarks in vendored apps.
+
 4.0.2-stable
 ============
 
