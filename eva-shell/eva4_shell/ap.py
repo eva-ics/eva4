@@ -12,7 +12,7 @@ neotermcolor.readline_always_safe = True
 
 from .sharedobj import common, current_command
 from .tools import print_tb, err, is_local_shell
-from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile, ComplDobj
+from .compl import ComplOID, ComplSvc, ComplNode, ComplDeployFile, ComplAnyFile, ComplDobj
 from .compl import ComplOIDtp, ComplSvcRpcMethod, ComplSvcRpcParams, ComplEdit
 from .client import call_rpc, DEFAULT_DB_SERVICE, DEFAULT_REPL_SERVICE
 from .client import DEFAULT_ACL_SERVICE, DEFAULT_AUTH_SERVICE
@@ -522,6 +522,10 @@ def append_svc_cli(root_sp):
     p = sp.add_parser(
         'purge', help='purge service (destroy and delete all service data)')
     p.add_argument('i', metavar='SVC').completer = ComplSvc()
+
+    p = sp.add_parser('flash', help='flash the service binary')
+    p.add_argument('i', metavar='SVC').completer = ComplSvc()
+    p.add_argument('file', metavar='FILE', help='service file to reflash with').completer = ComplAnyFile()
 
 
 def append_acl_cli(root_sp):
@@ -1183,6 +1187,7 @@ def append_cloud_cli(root_sp):
                    help='update without any confirmations',
                    action='store_true')
 
+
 def append_video_cli(root_sp):
     ap_generator = root_sp.add_parser('video', help='video commands')
     sp_generator = ap_generator.add_subparsers(dest='_subc', help='sub command')
@@ -1192,12 +1197,8 @@ def append_video_cli(root_sp):
 
     p = sp.add_parser('create', help='create a video recording')
     p.add_argument('i', metavar='source')
-    p.add_argument('--keep',
-                   type=float,
-                   help='Keep (seconds)')
-    p.add_argument('--enabled',
-                   help='Enable recording',
-                   action='store_true')
+    p.add_argument('--keep', type=float, help='Keep (seconds)')
+    p.add_argument('--enabled', help='Enable recording', action='store_true')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1243,7 +1244,8 @@ def append_video_cli(root_sp):
         help=f'video service (default: {DEFAULT_VIDEO_SERVICE})',
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
 
-    p = sp.add_parser('export', help='export video recording config(s) to a deployment file')
+    p = sp.add_parser(
+        'export', help='export video recording config(s) to a deployment file')
     p.add_argument('i', metavar='MASK')
     p.add_argument(
         '-a',
@@ -1253,7 +1255,8 @@ def append_video_cli(root_sp):
     p.add_argument('-o', '--output', metavar='FILE',
                    help='output file').completer = ComplDeployFile()
 
-    p = sp.add_parser('deploy', help='deploy video recording(s) from a deployment file')
+    p = sp.add_parser('deploy',
+                      help='deploy video recording(s) from a deployment file')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1262,8 +1265,8 @@ def append_video_cli(root_sp):
     p.add_argument('-f', '--file', metavar='FILE',
                    help='deployment file').completer = ComplDeployFile()
 
-    p = sp.add_parser('undeploy',
-                      help='undeploy video recordings(s) using a deployment file')
+    p = sp.add_parser(
+        'undeploy', help='undeploy video recordings(s) using a deployment file')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1271,6 +1274,7 @@ def append_video_cli(root_sp):
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('generator')
     p.add_argument('-f', '--file', metavar='FILE',
                    help='deployment file').completer = ComplDeployFile()
+
 
 def append_generator_cli(root_sp):
     source_types = [

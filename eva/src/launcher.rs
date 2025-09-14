@@ -10,6 +10,7 @@ use eva_common::payload::{pack, unpack};
 use eva_common::services::SERVICE_PAYLOAD_INITIAL;
 use eva_common::services::SERVICE_PAYLOAD_PING;
 use eva_common::services::{Initial, RealtimeConfig};
+use eva_common::tools::get_eva_dir;
 use log::{debug, error, info, warn};
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -387,6 +388,66 @@ impl RpcHandlers for Handlers {
                 p.initial = p.initial.with_realtime(realtime);
                 debug!("starting service {}", p.id);
                 stop_svc!(&p.id, services);
+                if let Some(b) = p.binary_to_reflash {
+                    if !b.is_empty() {
+                        let mut sp = p.initial.command().split(' ');
+                        let program_path = Path::new(
+                            sp.next()
+                                .ok_or_else(|| Error::invalid_data("command not specified"))?
+                                .trim(),
+                        );
+                        let program_dir = program_path
+                            .parent()
+                            .ok_or_else(|| Error::io("unable to get svc directory"))
+                            .log_err()?
+                            .canonicalize()
+                            .log_err()?;
+                        warn!(
+                            "reflashing service {} binary {}",
+                            p.id,
+                            program_path.display()
+                        );
+                        let venv_bin = Path::new(&get_eva_dir()).join("venv/bin");
+                        let forbidden_paths = [
+                            Path::new("/bin"),
+                            Path::new("/sbin"),
+                            Path::new("/usr/bin"),
+                            Path::new("/usr/sbin"),
+                            Path::new("/usr/local/bin"),
+                            Path::new("/usr/local/sbin"),
+                            &venv_bin,
+                        ];
+                        if forbidden_paths.contains(&program_dir.as_path()) {
+                            error!(
+                                "refusing to reflash service {} binary {} to system path",
+                                p.id,
+                                program_path.display()
+                            );
+                            return Err(Error::invalid_data(
+                                "refusing to reflash binary to system path",
+                            )
+                            .into());
+                        }
+                        if program_dir == Path::new(&get_eva_dir()).join("svc") {
+                            error!(
+                                "refusing to reflash service {} binary {} for the internal service",
+                                p.id,
+                                program_path.display()
+                            );
+                            return Err(Error::invalid_data(
+                                "refusing to reflash binary for the internal service",
+                            )
+                            .into());
+                        }
+                        if program_path.exists() {
+                            fs::remove_file(&program_path).await.log_err()?;
+                        }
+                        fs::write(&program_path, &b).await?;
+                        let mut perms = fs::metadata(&program_path).await.log_err()?.permissions();
+                        perms.set_mode(0o755);
+                        fs::set_permissions(&program_path, perms).await.log_err()?;
+                    }
+                }
                 let mut service = Service::new(&p.id, p.mem_warn);
                 if let Some(dp) = p.initial.data_path() {
                     let data_path = Path::new(dp);

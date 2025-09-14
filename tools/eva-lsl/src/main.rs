@@ -6,7 +6,7 @@ use colored::Colorize;
 use eva_common::payload::pack;
 use eva_common::{common_payloads::ParamsId, prelude::*};
 use notify::Watcher as _;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt as _;
 
 const SVC_TPL: &str = include_str!("../tpl/svc_main.rs");
@@ -21,11 +21,22 @@ struct Args {
 enum Command {
     New(CommandNew),
     Run(CommandRun),
+    Flash(CommandFlash),
 }
 
 #[derive(Parser)]
 struct CommandNew {
     name: String,
+}
+
+#[derive(Parser)]
+struct CommandFlash {
+    #[clap()]
+    service_id: String,
+    #[clap(long, help = "Path to the service binary")]
+    binary: String,
+    #[clap(short = 'b', long, default_value = "/opt/eva4/var/bus.ipc")]
+    bus: String,
 }
 
 #[derive(Parser)]
@@ -99,6 +110,7 @@ async fn main() -> EResult<()> {
     match args.command {
         Command::New(c) => new(c).await,
         Command::Run(c) => run(c).await,
+        Command::Flash(c) => flash(c).await,
     }
 }
 
@@ -259,4 +271,36 @@ async fn run(args: CommandRun) -> EResult<()> {
         }
     };
     std::process::exit(exitcode.code().unwrap_or(0));
+}
+
+async fn flash(args: CommandFlash) -> EResult<()> {
+    #[derive(Serialize)]
+    struct PayloadFlash<'a> {
+        i: &'a str,
+        binary: Vec<u8>,
+    }
+    let hostname = hostname::get()?.to_string_lossy().to_string();
+    let pid = std::process::id();
+    let client = eva_client::EvaClient::connect(
+        &args.bus,
+        &format!("eva-svc-launcher.{}.{}", hostname, pid),
+        client_config(),
+    )
+    .await?;
+    let content = tokio::fs::read(&args.binary).await?;
+    client
+        .call::<(), PayloadFlash>(
+            "eva.core",
+            "svc.flash",
+            PayloadFlash {
+                i: &args.service_id,
+                binary: content,
+            },
+        )
+        .await?;
+    println!(
+        "Service {} flashed successfully",
+        args.service_id.green().bold()
+    );
+    Ok(())
 }

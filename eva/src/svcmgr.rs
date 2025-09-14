@@ -42,8 +42,11 @@ pub struct PayloadStartStop {
     pub id: String,
     pub initial: Initial,
     pub mem_warn: u64,
+    #[serde(default)]
+    pub binary_to_reflash: Option<Vec<u8>>,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn start_stop_service(
     launcher: &str,
     method: &str,
@@ -51,12 +54,14 @@ async fn start_stop_service(
     initial: Initial,
     mem_warn: u64,
     timeout: Duration,
+    binary_to_reflash: Option<Vec<u8>>,
     rpc: &RpcClient,
 ) -> EResult<()> {
     let payload = PayloadStartStop {
         id: id.to_owned(),
         initial,
         mem_warn,
+        binary_to_reflash,
     };
     tokio::time::timeout(
         // give it 1 sec more to let the bus call pass
@@ -322,6 +327,7 @@ impl Manager {
                     init,
                     mem_warn.unwrap_or(MEMORY_WARN_DEFAULT),
                     default_timeout,
+                    None,
                     &rpc,
                 )
                 .await
@@ -364,15 +370,25 @@ impl Manager {
         id: &str,
         system_name: &str,
         default_timeout: Duration,
+        binary_to_reflash: Option<Vec<u8>>,
     ) -> EResult<()> {
         trace!("restarting service {}", id);
         let rpc = self.rpc.get().unwrap();
         let (init, launcher, mem_warn) =
             self.get_service_init(id, system_name, default_timeout, false)?;
-        start_stop_service(&launcher, "start", id, init, mem_warn, default_timeout, rpc)
-            .await
-            .map_err(|e| Error::failed(format!("unable to restart {}: {}", id, e)))
-            .log_err()
+        start_stop_service(
+            &launcher,
+            "start",
+            id,
+            init,
+            mem_warn,
+            default_timeout,
+            binary_to_reflash,
+            rpc,
+        )
+        .await
+        .map_err(|e| Error::failed(format!("unable to restart {}: {}", id, e)))
+        .log_err()
     }
     /// # Panics
     ///
@@ -388,10 +404,19 @@ impl Manager {
         let rpc = self.rpc.get().unwrap();
         let (init, launcher, mem_warn) =
             self.get_service_init(id, system_name, default_timeout, true)?;
-        start_stop_service(&launcher, "stop", id, init, mem_warn, default_timeout, rpc)
-            .await
-            .map_err(|e| Error::failed(format!("unable to stop {}: {}", id, e)))
-            .log_err()
+        start_stop_service(
+            &launcher,
+            "stop",
+            id,
+            init,
+            mem_warn,
+            default_timeout,
+            None,
+            rpc,
+        )
+        .await
+        .map_err(|e| Error::failed(format!("unable to stop {}: {}", id, e)))
+        .log_err()
     }
     /// # Panics
     ///
@@ -418,7 +443,7 @@ impl Manager {
         let enabled = params.enabled;
         self.services.lock().unwrap().insert(id.to_owned(), params);
         if enabled {
-            self.restart_service(id, system_name, default_timeout)
+            self.restart_service(id, system_name, default_timeout, None)
                 .await?;
         }
         Ok(())
@@ -443,6 +468,7 @@ impl Manager {
                     initial,
                     mem_warn,
                     default_timeout,
+                    None,
                     rpc,
                 )
                 .await?;
@@ -469,7 +495,17 @@ impl Manager {
             self.get_service_init(id, system_name, default_timeout, true)?;
         info!("undeploying service {}", id);
         let rpc = self.rpc.get().unwrap();
-        start_stop_service(&launcher, "stop", id, init, mem_warn, default_timeout, rpc).await?;
+        start_stop_service(
+            &launcher,
+            "stop",
+            id,
+            init,
+            mem_warn,
+            default_timeout,
+            None,
+            rpc,
+        )
+        .await?;
         registry::key_delete(registry::R_SERVICE, id, rpc).await?;
         self.services.lock().unwrap().remove(id);
         Ok(())

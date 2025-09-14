@@ -96,6 +96,38 @@ class ComplSvcRpcParams:
                 if p.startswith(prefix) and not p in pp:
                     yield f'{p}='
 
+class ComplAnyFile:
+
+    def __call__(self, prefix, **kwargs):
+        import glob
+        expanded = None
+
+        def expand_user(pfx):
+            nonlocal expanded
+            if pfx.startswith('~'):
+                expanded = os.path.expanduser('~')
+                return expanded + pfx[1:]
+            else:
+                return pfx
+
+        def contract_user(pfx):
+            nonlocal expanded
+            if expanded is None:
+                return pfx
+            else:
+                return '~' + pfx[len(expanded):]
+
+        if not prefix:
+            masks = ['*']
+        else:
+            prefix = expand_user(prefix)
+            masks = [f'{prefix}*']
+        for mask in masks:
+            for f in glob.glob(mask):
+                yield contract_user(f)
+            for f in glob.glob(f'{prefix}*'):
+                if os.path.isdir(f):
+                    yield contract_user(f'{f}/')
 
 class ComplDeployFile:
 

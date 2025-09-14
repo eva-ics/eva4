@@ -1174,7 +1174,39 @@ impl RpcHandlers for BusApi {
                 let p: ParamsId = unpack(payload).log_err()?;
                 self.core
                     .service_manager()
-                    .restart_service(p.i, self.core.system_name(), self.core.timeout())
+                    .restart_service(p.i, self.core.system_name(), self.core.timeout(), None)
+                    .await?;
+                Ok(None)
+            }
+            "svc.flash" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct ParamsFlash<'a> {
+                    i: &'a str,
+                    binary: Value,
+                }
+                need_ready!();
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsFlash = unpack(payload).log_err()?;
+                let binary: Vec<u8> = match p.binary {
+                    Value::Bytes(v) => v,
+                    Value::Seq(_) => Vec::deserialize(p.binary)?,
+                    _ => {
+                        return Err(RpcError::params(rpc_err_str(
+                            "binary must be byte array or array of numbers",
+                        )));
+                    }
+                };
+                self.core
+                    .service_manager()
+                    .restart_service(
+                        p.i,
+                        self.core.system_name(),
+                        self.core.timeout(),
+                        Some(binary),
+                    )
                     .await?;
                 Ok(None)
             }

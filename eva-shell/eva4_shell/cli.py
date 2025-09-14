@@ -661,6 +661,11 @@ class CLI:
         call_rpc('svc.restart', dict(i=i))
         ok()
 
+    def svc_flash(self, i, file):
+        binary = open(file, 'rb').read()
+        call_rpc('svc.flash', dict(i=i, binary=binary))
+        ok()
+
     def svc_destroy(self, i):
         call_rpc('svc.undeploy', dict(svcs=[i]))
         ok()

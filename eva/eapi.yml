@@ -646,6 +646,18 @@ svc.restart:
       des: Service ID
       req: true
   ret:
+svc.flash:
+  des: Flashes a local service with new binary
+  par:
+    - nam: i
+      typ: String
+      des: Service ID
+      req: true
+    - nam: binary
+      typ: Vec<u8>
+      des: New service binary
+      req: true
+  ret:
 svc.get_params:
   des: Gets parameters for an individual service
   par: &svc_id
