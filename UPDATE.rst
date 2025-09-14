@@ -6,6 +6,8 @@ What is new
 
 * CCTV capabilities added: real-time video streams, video recording server
 
+* "svc.flash" core method and remote service flashing (deployment) with SDK tools
+
 Update instructions
 ===================
 
