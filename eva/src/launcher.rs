@@ -409,6 +409,7 @@ impl RpcHandlers for Handlers {
                         );
                         let venv_bin = Path::new(&get_eva_dir()).join("venv/bin");
                         let forbidden_paths = [
+                            Path::new("/"),
                             Path::new("/bin"),
                             Path::new("/sbin"),
                             Path::new("/usr/bin"),
