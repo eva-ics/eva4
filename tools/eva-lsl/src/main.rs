@@ -37,6 +37,8 @@ struct CommandFlash {
     binary: String,
     #[clap(short = 'b', long, default_value = "/opt/eva4/var/bus.ipc")]
     bus: String,
+    #[clap(short = 'T', long, default_value = "5")]
+    timeout: u64,
 }
 
 #[derive(Parser)]
@@ -69,6 +71,8 @@ struct CommandRun {
     binary: Option<String>,
     #[clap(short = 'w', long, help = "Automatically restart on source changes")]
     watch: bool,
+    #[clap(short = 'T', long, default_value = "5")]
+    timeout: u64,
 }
 
 async fn add_dependency(
@@ -163,12 +167,13 @@ fn client_config() -> eva_client::Config {
 }
 
 async fn run(args: CommandRun) -> EResult<()> {
+    let timeout = Duration::from_secs(args.timeout);
     let hostname = hostname::get()?.to_string_lossy().to_string();
     let pid = std::process::id();
     let client = eva_client::EvaClient::connect(
         &args.bus,
         &format!("eva-svc-launcher.{}.{}", hostname, pid),
-        client_config(),
+        client_config().timeout(timeout),
     )
     .await?;
     let result: Vec<Value> = client
@@ -279,12 +284,13 @@ async fn flash(args: CommandFlash) -> EResult<()> {
         i: &'a str,
         binary: Vec<u8>,
     }
+    let timeout = Duration::from_secs(args.timeout);
     let hostname = hostname::get()?.to_string_lossy().to_string();
     let pid = std::process::id();
     let client = eva_client::EvaClient::connect(
         &args.bus,
         &format!("eva-svc-launcher.{}.{}", hostname, pid),
-        client_config(),
+        client_config().timeout(timeout),
     )
     .await?;
     let content = tokio::fs::read(&args.binary).await?;
