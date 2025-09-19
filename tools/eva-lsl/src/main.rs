@@ -255,6 +255,7 @@ async fn run(args: CommandRun) -> EResult<()> {
         .map_err(Error::io)?;
 
     let exitcode = loop {
+        let ctrlc = tokio::signal::ctrl_c();
         let mut process = tokio::process::Command::new(cmd)
             .stdin(std::process::Stdio::piped())
             .args(&cmd_args)
@@ -269,6 +270,11 @@ async fn run(args: CommandRun) -> EResult<()> {
             _ = watch_rx.recv() => {
                 let _ = process.kill().await;
                 let _ = process.wait().await;
+            }
+            _ = ctrlc => {
+                let _ = process.kill().await;
+                let exitcode = process.wait().await?;
+                break exitcode
             }
             exitcode = process.wait() => {
                 break exitcode?;
