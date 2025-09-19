@@ -52,6 +52,7 @@ exclude = [
   "eva_pg",
   "svc/ffi",
   "svc/videosink",
+  "svc/gst-pipeline",
   "svc/controller-system",
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
