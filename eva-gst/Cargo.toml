@@ -16,7 +16,7 @@ atomic-timer = "0.2.2"
 binrw = "0.15.0"
 busrt = { version = "0.4.21", features = ["ipc-sync", "rpc-sync", "cursors"] }
 dateparser = "0.2.1"
-eva-common = { version = "0.3.100", features = ["payload", "events", "multimedia"] }
+eva-common = { version = "0.3.112", features = ["payload", "events", "multimedia"] }
 gst = { version = "0.22", package = "gstreamer" }
 gst-base = { version = "0.22", package = "gstreamer-base" }
 gst-video = { version = "0.22", package = "gstreamer-video" }
