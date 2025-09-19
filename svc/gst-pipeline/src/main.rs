@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::time::Duration;
+use std::time::Instant;
 
 use async_channel::Receiver;
 use async_channel::Sender;
@@ -85,6 +86,7 @@ fn pipeline_loop(
     caps_dst_str: &str,
     rx: Receiver<Option<Vec<u8>>>,
     tx: Sender<Option<(ItemStatus, Vec<u8>)>>,
+    timeout: Duration,
 ) -> EResult<()> {
     let caps_dst = Caps::from_str(caps_dst_str)
         .log_err_with("invalid destination caps")
@@ -151,7 +153,15 @@ fn pipeline_loop(
         .log_err_with("unable to push buffer to appsrc")
         .map_err(Error::failed)?;
 
+    let start = Instant::now();
+
     loop {
+        if start.elapsed() > timeout && pipeline.state(None).1 != gstreamer::State::Playing {
+            error!("Pipeline timeout");
+            tx.send_blocking(Some((-1, vec![])))
+                .map_err(Error::failed)?; // mark error
+            return Err(Error::timeout());
+        }
         while let Some(sample) =
             appsink.try_pull_sample(Some(gstreamer::ClockTime::from_mseconds(1)))
         {
@@ -246,6 +256,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    let timeout = initial.timeout();
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     let (pipeline_tx, pipeline_rx) = async_channel::bounded(128);
     let (publisher_tx, publisher_rx) = async_channel::bounded(128);
@@ -266,6 +277,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 &config.caps_dst,
                 pipeline_rx,
                 publisher_tx.clone(),
+                timeout,
             ) {
                 error!("Pipeline error: {}", e);
                 publisher_tx.send_blocking(Some((-1, vec![]))).ok();
