@@ -469,9 +469,9 @@ dependencies = [
 
 [[package]]
 name = "eva-common"
-version = "0.3.112"
+version = "0.3.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1721b8600adc6d9d152b0df5f83497fafd77433631b9cc5c9811703bf8b2b16c"
+checksum = "46aa5d3cd75b4f5b7369b0ef02e10bfda4026f1ad7a29a064b64a957582f0ff7"
 dependencies = [
  "binrw 0.13.3",
  "gstreamer",
