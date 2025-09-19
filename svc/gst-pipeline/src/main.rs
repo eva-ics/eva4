@@ -78,11 +78,13 @@ struct Config {
     oid_src: OID,
     oid_dst: OID,
     pipeline: String,
+    caps_src: Option<String>,
     caps_dst: String,
 }
 
 fn pipeline_loop(
     pipeline: &str,
+    caps_src_str: Option<&str>,
     caps_dst_str: &str,
     rx: Receiver<Option<Vec<u8>>>,
     tx: Sender<Option<(ItemStatus, Vec<u8>)>>,
@@ -126,10 +128,24 @@ fn pipeline_loop(
         }
     };
 
-    info!(
-        "Pipeline appsrc: {}",
-        src_header.try_to_caps().map_err(Error::invalid_data)?
-    );
+    if let Some(caps_src_str) = caps_src_str {
+        if caps_src_str.is_empty() {
+            info!("Pipeline appsrc caps auto-negotiation");
+        } else {
+            let caps_src = Caps::from_str(caps_src_str)
+                .log_err_with("invalid source caps")
+                .map_err(Error::invalid_params)?;
+            info!("Pipeline appsrc caps: {}", caps_src);
+            appsrc.set_caps(Some(&caps_src));
+        }
+    } else {
+        let caps_src = src_header
+            .try_to_caps()
+            .log_err_with("unable to create caps from source header")
+            .map_err(Error::invalid_data)?;
+        info!("Pipeline appsrc caps (auto): {}", caps_src);
+        appsrc.set_caps(Some(&caps_src));
+    }
     info!("Pipeline appsink caps: {}", caps_dst);
 
     let appsink = pipeline
@@ -274,6 +290,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         move || {
             if let Err(e) = pipeline_loop(
                 &config.pipeline,
+                config.caps_src.as_deref(),
                 &config.caps_dst,
                 pipeline_rx,
                 publisher_tx.clone(),
