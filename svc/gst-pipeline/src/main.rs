@@ -11,6 +11,7 @@ use eva_common::err_logger;
 use eva_common::events::RawStateEventOwned;
 use eva_common::events::RAW_STATE_TOPIC;
 use eva_common::multimedia::FrameHeader;
+use eva_common::multimedia::VideoFormat;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
@@ -273,10 +274,15 @@ fn pipeline_loop(
         .push_buffer(buffer)
         .log_err_with("unable to push buffer to appsrc")
         .map_err(Error::failed)?;
+    if src_header.is_key_frame() || src_header.format()? == VideoFormat::Raw {
+        state_monitor.inc_buffers_in();
+    }
 
     let start = Instant::now();
 
     let mut prev_pipeline_state = gstreamer::State::VoidPending;
+
+    let mut first_key_frame_received = false;
 
     loop {
         let pipeline_state = pipeline
@@ -346,7 +352,12 @@ fn pipeline_loop(
             .push_buffer(buffer)
             .log_err_with("unable to push buffer to appsrc")
             .map_err(Error::failed)?;
-        state_monitor.inc_buffers_in();
+        if header.is_key_frame() || header.format()? == VideoFormat::Raw {
+            first_key_frame_received = true;
+        }
+        if first_key_frame_received {
+            state_monitor.inc_buffers_in();
+        }
     }
     pipeline
         .set_state(gstreamer::State::Null)
