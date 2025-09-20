@@ -171,8 +171,15 @@ fn pipeline_loop(
 
     let start = Instant::now();
 
+    let mut prev_pipeline_state = gstreamer::State::Null;
+
     loop {
-        if start.elapsed() > timeout && pipeline.state(None).1 != gstreamer::State::Playing {
+        let pipeline_state = pipeline.state(None).1;
+        if pipeline_state != prev_pipeline_state {
+            info!("Pipeline state changed: {prev_pipeline_state:?} -> {pipeline_state:?}");
+            prev_pipeline_state = pipeline_state;
+        }
+        if start.elapsed() > timeout && pipeline_state != gstreamer::State::Playing {
             error!("Pipeline timeout");
             tx.send_blocking(Some((-1, vec![])))
                 .map_err(Error::failed)?; // mark error
