@@ -292,6 +292,8 @@ svc:
       type: ["string", "null"]
     user: *strornull
     config: *any
+    env:
+      type: object
     realtime:
       type: object
       additionalProperties: false
