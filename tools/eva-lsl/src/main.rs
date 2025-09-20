@@ -260,6 +260,7 @@ async fn run(args: CommandRun) -> EResult<()> {
             .stdin(std::process::Stdio::piped())
             .args(&cmd_args)
             .env("EVA_SVC_DEBUG", "1")
+            .envs(initial.env())
             .spawn()?;
         let mut stdin = process
             .stdin
