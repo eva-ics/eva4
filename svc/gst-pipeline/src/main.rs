@@ -174,7 +174,9 @@ fn pipeline_loop(
     let mut prev_pipeline_state = gstreamer::State::Null;
 
     loop {
-        let pipeline_state = pipeline.state(None).1;
+        let pipeline_state = pipeline
+            .state(Some(gstreamer::ClockTime::from_mseconds(1)))
+            .1;
         if pipeline_state != prev_pipeline_state {
             info!("Pipeline state changed: {prev_pipeline_state:?} -> {pipeline_state:?}");
             prev_pipeline_state = pipeline_state;
