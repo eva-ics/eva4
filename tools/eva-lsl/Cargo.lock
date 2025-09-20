@@ -530,7 +530,7 @@ dependencies = [
 
 [[package]]
 name = "eva-lsl"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "ansi_term",
  "async-channel 2.3.1",

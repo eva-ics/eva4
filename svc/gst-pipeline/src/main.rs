@@ -1,4 +1,6 @@
 use std::str::FromStr;
+use std::sync::atomic;
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -9,6 +11,7 @@ use eva_common::err_logger;
 use eva_common::events::RawStateEventOwned;
 use eva_common::events::RAW_STATE_TOPIC;
 use eva_common::multimedia::FrameHeader;
+use eva_common::multimedia::VideoFormat;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
@@ -19,12 +22,91 @@ use gstreamer::prelude::ElementExt as _;
 use gstreamer::prelude::GstBinExt as _;
 use gstreamer::Caps;
 use serde::Deserialize;
+use serde::Serialize;
 
 err_logger!();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Service";
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+enum PipelineStateDisplay {
+    #[default]
+    VoidPending = 0,
+    Null = 1,
+    Ready = 2,
+    Paused = 3,
+    Playing = 4,
+    Unknown = -1,
+}
+
+impl From<i32> for PipelineStateDisplay {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => PipelineStateDisplay::VoidPending,
+            1 => PipelineStateDisplay::Null,
+            2 => PipelineStateDisplay::Ready,
+            3 => PipelineStateDisplay::Paused,
+            4 => PipelineStateDisplay::Playing,
+            _ => PipelineStateDisplay::Unknown,
+        }
+    }
+}
+
+#[derive(Default)]
+struct GstPipelineStateMonitor {
+    inner: Arc<GstPipelineStateInner>,
+}
+
+impl Clone for GstPipelineStateMonitor {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl GstPipelineStateMonitor {
+    fn state(&self) -> PipelineStateDisplay {
+        self.inner.state.load(atomic::Ordering::Relaxed).into()
+    }
+
+    fn buffers_in(&self) -> u64 {
+        self.inner.buffers_in.load(atomic::Ordering::Relaxed)
+    }
+
+    fn buffers_out(&self) -> u64 {
+        self.inner.buffers_out.load(atomic::Ordering::Relaxed)
+    }
+
+    fn set_state(&self, state: gstreamer::State) {
+        self.inner
+            .state
+            .store(state as i32, atomic::Ordering::Relaxed);
+    }
+
+    fn inc_buffers_in(&self) {
+        self.inner
+            .buffers_in
+            .fetch_add(1, atomic::Ordering::Relaxed);
+    }
+
+    fn inc_buffers_out(&self) {
+        self.inner
+            .buffers_out
+            .fetch_add(1, atomic::Ordering::Relaxed);
+    }
+}
+
+#[derive(Default)]
+struct GstPipelineStateInner {
+    state: atomic::AtomicI32,
+    buffers_in: atomic::AtomicU64,
+    buffers_out: atomic::AtomicU64,
+}
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -34,6 +116,7 @@ struct Handlers {
     info: ServiceInfo,
     pipeline_tx: Sender<Option<Vec<u8>>>,
     publisher_tx: Sender<Option<(ItemStatus, Vec<u8>)>>,
+    state_monitor: GstPipelineStateMonitor,
 }
 
 #[async_trait::async_trait]
@@ -41,8 +124,30 @@ impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();
         let method = event.parse_method()?;
-        #[allow(clippy::single_match, clippy::match_single_binding)]
+        let payload = event.payload();
         match method {
+            "pipeline.state" => {
+                #[derive(Serialize)]
+                struct StateInfo {
+                    state: PipelineStateDisplay,
+                    buffers_in: u64,
+                    buffers_out: u64,
+                    buffers_pending: u64,
+                }
+                if !payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let buffers_in = self.state_monitor.buffers_in();
+                let buffers_out = self.state_monitor.buffers_out();
+                let buffers_pending = buffers_in.saturating_sub(buffers_out);
+                let info = StateInfo {
+                    state: self.state_monitor.state(),
+                    buffers_in,
+                    buffers_out,
+                    buffers_pending,
+                };
+                Ok(Some(pack(&info)?))
+            }
             _ => svc_handle_default_rpc(method, &self.info),
         }
     }
@@ -88,6 +193,7 @@ fn pipeline_loop(
     caps_dst_str: &str,
     rx: Receiver<Option<Vec<u8>>>,
     tx: Sender<Option<(ItemStatus, Vec<u8>)>>,
+    state_monitor: GstPipelineStateMonitor,
     timeout: Duration,
 ) -> EResult<()> {
     let caps_dst = Caps::from_str(caps_dst_str)
@@ -124,6 +230,10 @@ fn pipeline_loop(
             else {
                 continue;
             };
+            // wait for the first key frame or raw format
+            if !header.is_key_frame() && header.format()? != VideoFormat::Raw {
+                continue;
+            }
             break (header, data_bytes);
         }
     };
@@ -168,10 +278,11 @@ fn pipeline_loop(
         .push_buffer(buffer)
         .log_err_with("unable to push buffer to appsrc")
         .map_err(Error::failed)?;
+    state_monitor.inc_buffers_in();
 
     let start = Instant::now();
 
-    let mut prev_pipeline_state = gstreamer::State::Null;
+    let mut prev_pipeline_state = gstreamer::State::VoidPending;
 
     loop {
         let pipeline_state = pipeline
@@ -180,6 +291,7 @@ fn pipeline_loop(
         if pipeline_state != prev_pipeline_state {
             info!("Pipeline state changed: {prev_pipeline_state:?} -> {pipeline_state:?}");
             prev_pipeline_state = pipeline_state;
+            state_monitor.set_state(pipeline_state);
         }
         if start.elapsed() > timeout && pipeline_state != gstreamer::State::Playing {
             error!("Pipeline timeout");
@@ -209,6 +321,7 @@ fn pipeline_loop(
             if tx.send_blocking(Some((1, out))).is_err() {
                 break;
             }
+            state_monitor.inc_buffers_out();
         }
         if svc_is_terminating() {
             break;
@@ -239,6 +352,7 @@ fn pipeline_loop(
             .push_buffer(buffer)
             .log_err_with("unable to push buffer to appsrc")
             .map_err(Error::failed)?;
+        state_monitor.inc_buffers_in();
     }
     pipeline
         .set_state(gstreamer::State::Null)
@@ -282,13 +396,16 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
     let timeout = initial.timeout();
-    let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    let mut info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
+    info.add_method(ServiceMethod::new("pipeline.state"));
     let (pipeline_tx, pipeline_rx) = async_channel::bounded(128);
     let (publisher_tx, publisher_rx) = async_channel::bounded(128);
+    let state_monitor: GstPipelineStateMonitor = <_>::default();
     let handlers = Handlers {
         info,
         pipeline_tx: pipeline_tx.clone(),
         publisher_tx: publisher_tx.clone(),
+        state_monitor: state_monitor.clone(),
     };
     eva_sdk::service::set_poc(Some(Duration::from_secs(1)));
     eapi_bus::init(&initial, handlers).await?;
@@ -303,6 +420,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 &config.caps_dst,
                 pipeline_rx,
                 publisher_tx.clone(),
+                state_monitor,
                 timeout,
             ) {
                 error!("Pipeline error: {}", e);
