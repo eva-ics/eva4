@@ -85,6 +85,7 @@ impl Service {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
+            .envs(initial.env())
             .kill_on_drop(false)
             .args(&args)
             .spawn()?;
