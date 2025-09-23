@@ -183,6 +183,12 @@ just prepare || exit 1
 "${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../../.. || exit 1
 
+echo "Building GST pipeline SVC..."
+cd eva4/svc/gst-pipeline || exit 1
+just prepare || exit 1
+"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
+cd ../../.. || exit 1
+
 echo "Building VideoServer Enterprise extension..."
 cd eva4-enterprise/eva4-esvc/videosrv || exit 1
 "${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
@@ -249,6 +255,7 @@ done
 cp -vf "../eva4/svc/controller-system/${CARGO_TARGET_DIR}/${TARGET}/release/eva-controller-system" svc/ || exit 1
 cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-ffi" svc/ || exit 1
 cp -vf "../eva4/svc/videosink/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosink" svc/ || exit 1
+cp -vf "../eva4/svc/gst-pipeline/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-gst-pipeline" svc/ || exit 1
 
 cp -vf "../eva4-enterprise/eva4-esvc/videosrv/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosrv" svc/ || exit 1
 for svc in eva-aaa-msad \

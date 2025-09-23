@@ -1,0 +1,12 @@
+pipeline.state:
+  des: Get pipeline state
+  par:
+  ret: Pipeline state
+  exm: |
+    {
+      "buffers_in": 281,
+      "buffers_out": 277,
+      "buffers_pending": 4,
+      "state": "playing"
+    }
+
