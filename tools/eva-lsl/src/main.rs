@@ -64,6 +64,8 @@ struct CommandRun {
         long,
         help = "Run under a specific user (default: no privilege drop)"
     )]
+    #[arg(long = "env", value_parser = parse_env_kv, number_of_values = 1, help = "Set environment variables (KEY=VALUE)")]
+    env: Vec<(String, String)>,
     user: Option<String>,
     #[clap(long, help = "Build in release mode")]
     release: bool,
@@ -73,6 +75,11 @@ struct CommandRun {
     watch: bool,
     #[clap(short = 'T', long, default_value = "5")]
     timeout: u64,
+}
+
+fn parse_env_kv(s: &str) -> Result<(String, String), String> {
+    let (k, v) = s.split_once('=').ok_or("must be KEY=VALUE")?;
+    Ok((k.to_string(), v.to_string()))
 }
 
 async fn add_dependency(
@@ -255,10 +262,13 @@ async fn run(args: CommandRun) -> EResult<()> {
         .map_err(Error::io)?;
 
     let exitcode = loop {
+        let ctrlc = tokio::signal::ctrl_c();
         let mut process = tokio::process::Command::new(cmd)
             .stdin(std::process::Stdio::piped())
             .args(&cmd_args)
             .env("EVA_SVC_DEBUG", "1")
+            .envs(initial.env())
+            .envs(args.env.iter().cloned())
             .spawn()?;
         let mut stdin = process
             .stdin
@@ -269,6 +279,11 @@ async fn run(args: CommandRun) -> EResult<()> {
             _ = watch_rx.recv() => {
                 let _ = process.kill().await;
                 let _ = process.wait().await;
+            }
+            _ = ctrlc => {
+                let _ = process.kill().await;
+                let exitcode = process.wait().await?;
+                break exitcode
             }
             exitcode = process.wait() => {
                 break exitcode?;

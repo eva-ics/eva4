@@ -579,6 +579,8 @@ fn default_restart_delay() -> Duration {
 pub struct Params {
     #[serde(default = "eva_common::tools::default_true")]
     enabled: bool,
+    #[serde(default)]
+    env: HashMap<String, Value>,
     command: String,
     #[serde(default)]
     prepare_command: Option<String>,
@@ -659,6 +661,12 @@ impl Params {
         )
         .with_realtime(self.realtime.clone())
         .with_restart_delay(self.restart_delay)
+        .with_env(
+            self.env
+                .iter()
+                .map(|(k, v)| (k.clone(), v.to_string()))
+                .collect(),
+        )
     }
     fn startup_timeout(&self) -> Option<Duration> {
         self.timeout.startup()
