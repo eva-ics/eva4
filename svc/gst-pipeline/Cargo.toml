@@ -18,6 +18,8 @@ tokio = { version = "1.36", features = ["full"] }
 
 [features]
 std-alloc = []
+openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
+openssl3 = ["eva-common/openssl3"]
 
 [profile.release]
 strip = true
