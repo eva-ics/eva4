@@ -20,7 +20,9 @@ before applying to production despite of the absence of warning marks.
 4.1.0-stable
 ============
 
-* 2025-09-15 build 20215091302: Video recording server. Bookmarks in vendored apps. svc.flash core method.
+* 2025-09-23 build 2025092301: GStreamer pipeline service for video and audio
+  processing and transcoding.
+* 2025-09-15 build 2025091302: Video recording server. Bookmarks in vendored apps. svc.flash core method.
 
 4.0.2-stable
 ============
