@@ -1,0 +1,21 @@
+# GStreamer pipeline service
+command: target/debug/eva-gst-pipeline
+bus:
+  path: var/bus.ipc
+config:
+  # destination caps, required
+  caps_dst: video/x-raw,format=RGB,width=640,height=480
+  # destination sensor, required
+  oid_dst: sensor:s0_raw
+  # override source caps, required in case if the pipeline elements cannot negotiate by themselves
+  # - if not present: auto caps, according to the source
+  # - if set to an empty string: the source announces "any" caps
+  #caps_src: video/x-h264,stream-format=byte-stream,alignment=au
+  # source sensor, required
+  oid_src: sensor:s0
+  # GStreamer pipeline
+  pipeline: h264parse ! openh264dec ! videoconvert
+env:
+  # increase debug level (0-5) for more verbose logging
+  GST_DEBUG: 0
+user: nobody
