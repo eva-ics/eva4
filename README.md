@@ -66,6 +66,10 @@ binary, as it dynamically loads service libraries in runtime.
 The "eva-videosink" service (*svc/videosink*) must be built separately and
 never as a static binary, as it dynamically loads service libraries in runtime.
 
+The "eva-gst-pipeline" service (*svc/gst-pipeline*) must be built separately
+and never as a static binary, as it dynamically loads service libraries in
+runtime.
+
 The controller-system service (svc/controller-system) must be built separately
 with a feature to set required mode (to build as EVA ICS service set "service"
 feature).
