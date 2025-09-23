@@ -74,7 +74,7 @@ if [ ! -f /.eva_container ]; then
   "./_update/eva-${VERSION}/svc/eva-node" --mode info > /dev/null || exit 2
   echo "- Stopping everything"
   ./sbin/eva-control stop
-  if [ "$EVA_UPDATE_SKIP_VENV" -ne 1 ]; then
+  if [ "$EVA_UPDATE_SKIP_VENV" != "1" ]; then
     if [ -d venv ]; then
       echo "- Installing missing Python modules"
       if ! EVA_DIR=$(pwd) MODS_LIST=./_update/eva-${VERSION}/install/mods.list \
