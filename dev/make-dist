@@ -185,7 +185,6 @@ cd ../../.. || exit 1
 
 echo "Building GST pipeline SVC..."
 cd eva4/svc/gst-pipeline || exit 1
-just prepare || exit 1
 "${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
 cd ../../.. || exit 1
 
