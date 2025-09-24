@@ -82,10 +82,17 @@ impl RpcHandlers for Handlers {
 #[serde(deny_unknown_fields)]
 struct Config {
     pipeline: String,
+    force_width: Option<u16>,
+    force_height: Option<u16>,
     oid: OID,
 }
 
-fn handle_pipeline(pipeline: &str, tx: async_channel::Sender<Value>) -> EResult<()> {
+fn handle_pipeline(
+    pipeline: &str,
+    tx: async_channel::Sender<Value>,
+    force_width: Option<u16>,
+    force_height: Option<u16>,
+) -> EResult<()> {
     debug!("Using GStreamer pipeline: {}", pipeline);
     let mut pipeline = pipeline.to_owned();
 
@@ -113,8 +120,19 @@ fn handle_pipeline(pipeline: &str, tx: async_channel::Sender<Value>) -> EResult<
                         return Err(gst::FlowError::Eos);
                     }
                     let sample = sink.pull_sample().map_err(|_| gst::FlowError::Eos)?;
+                    let mut caps = sample.caps().unwrap().to_owned();
+                    if let Some(w) = force_width {
+                        let caps_mut = caps.make_mut();
+                        let s = caps_mut.structure_mut(0).unwrap();
+                        s.set("width", i32::from(w));
+                    }
+                    if let Some(h) = force_height {
+                        let caps_mut = caps.make_mut();
+                        let s = caps_mut.structure_mut(0).unwrap();
+                        s.set("height", i32::from(h));
+                    }
                     let buffer = sample.buffer().expect("Failed to get buffer");
-                    let header = FrameHeader::try_from_caps_ref(sample.caps().unwrap())
+                    let header = FrameHeader::try_from_caps_ref(&caps)
                         .expect("Invalid caps for EVA ICS sink");
                     STREAM_HEADER.lock().replace(header.clone());
 
@@ -196,7 +214,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     });
     let pipe_thread = tokio::task::spawn_blocking(move || {
-        if let Err(err) = handle_pipeline(&config.pipeline, tx) {
+        if let Err(err) = handle_pipeline(
+            &config.pipeline,
+            tx,
+            config.force_width,
+            config.force_height,
+        ) {
             error!("Failed to handle pipeline: {}", err);
             poc();
         }

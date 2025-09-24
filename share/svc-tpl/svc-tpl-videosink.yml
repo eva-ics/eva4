@@ -12,6 +12,10 @@ config:
   pipeline: videotestsrc pattern=ball
       ! video/x-raw,width=640,height=480,framerate=15/1,format=I420
       ! openh264enc
+  # optionally force a specific width and height in case if the pipeline can
+  # not be properly negotiated
+  #force_width: 640
+  #force_height: 480
 # if running under restricted user, 'chown -R eva:eva /var/cache/fontconfig/'
 # may be required. if streaming a USB camera, make sure the user has access to
 # the device
