@@ -49,6 +49,8 @@ struct Settings {
     oid: Option<OID>,
     bus_path: String,
     bus_client_name: String,
+    force_width: u32,
+    force_height: u32,
 }
 
 impl Default for Settings {
@@ -57,6 +59,8 @@ impl Default for Settings {
             oid: None,
             bus_path: DEFAULT_BUS_PATH.to_string(),
             bus_client_name: <_>::default(),
+            force_width: 0,
+            force_height: 0,
         }
     }
 }
@@ -111,7 +115,21 @@ impl ObjectImpl for EvaSink {
                 .nick("Bus client name")
                 .blurb("Bus client name to use for this sink. If empty, a default name will be generated based on the hostname and process ID.")
                 .mutable_ready()
-                .build()
+                .build(),
+                glib::ParamSpecUInt::builder("force-width")
+                .nick("Force width")
+                .blurb("Force picture width (0 to disable)")
+                .minimum(0)
+                .maximum(u32::MAX)
+                .mutable_ready()
+                .build(),
+                glib::ParamSpecUInt::builder("force-height")
+                .nick("Force height")
+                .blurb("Force picture height (0 to disable)")
+                .minimum(0)
+                .maximum(u32::MAX)
+                .mutable_ready()
+                .build(),
             ]
         });
 
@@ -151,6 +169,28 @@ impl ObjectImpl for EvaSink {
                 );
                 settings.bus_client_name = bus_client_name;
             }
+            "force-width" => {
+                let mut settings = self.settings.lock();
+                let force_width: u32 = value.get().expect("type checked upstream");
+                gst::info!(
+                    CAT,
+                    "Changing force width from {} to {}",
+                    settings.force_width,
+                    force_width
+                );
+                settings.force_width = force_width;
+            }
+            "force-height" => {
+                let mut settings = self.settings.lock();
+                let force_height: u32 = value.get().expect("type checked upstream");
+                gst::info!(
+                    CAT,
+                    "Changing force height from {} to {}",
+                    settings.force_height,
+                    force_height
+                );
+                settings.force_height = force_height;
+            }
             _ => unimplemented!(),
         }
     }
@@ -171,6 +211,14 @@ impl ObjectImpl for EvaSink {
             "bus-client-name" => {
                 let settings = self.settings.lock();
                 settings.bus_client_name.to_value()
+            }
+            "force-width" => {
+                let settings = self.settings.lock();
+                settings.force_width.to_value()
+            }
+            "force-height" => {
+                let settings = self.settings.lock();
+                settings.force_height.to_value()
             }
             _ => unimplemented!(),
         }
@@ -213,7 +261,18 @@ impl BaseSinkImpl for EvaSink {
     fn set_caps(&self, caps: &gst::Caps) -> Result<(), LoggableError> {
         let settings = self.settings.lock();
         let oid = settings.oid.as_ref().expect("OID is not set");
-        let header = FrameHeader::try_from_caps(caps).expect("Invalid caps for EVA ICS sink");
+        let mut caps = caps.clone();
+        if settings.force_width > 0 {
+            let caps_mut = caps.make_mut();
+            let s = caps_mut.structure_mut(0).unwrap();
+            s.set("width", i32::try_from(settings.force_width).unwrap());
+        }
+        if settings.force_height > 0 {
+            let caps_mut = caps.make_mut();
+            let s = caps_mut.structure_mut(0).unwrap();
+            s.set("height", i32::try_from(settings.force_height).unwrap());
+        }
+        let header = FrameHeader::try_from_caps(&caps).expect("Invalid caps for EVA ICS sink");
         println!(
             "EVA ICS sink stream {} {}x{} -> {}",
             header.format().expect("Unsupported video format"),
