@@ -1,4 +1,4 @@
-__version__ = '0.2.34'
+__version__ = '0.2.35'
 
 import busrt
 import sys
@@ -1149,6 +1149,62 @@ class XCallDefault:
 
     def require_pvt_read(self, path):
         pass
+
+
+class VideoFrame:
+
+    def __init__(self, payload: bytes):
+        if len(payload) < 10:
+            raise ValueError('invalid video frame payload')
+        if payload[:3] != b'EVS':
+            raise ValueError('invalid video frame payload header')
+        version = payload[3]
+        if version != 1:
+            raise ValueError('unsupported video frame payload version')
+        self.version = version
+        self.format = payload[4]
+        self.width = int.from_bytes(payload[5:7], 'little', signed=False)
+        self.height = int.from_bytes(payload[7:9], 'little', signed=False)
+        self.flags = payload[9]
+        self.data = payload[10:]
+
+    def is_keyframe(self):
+        return (self.flags & 1) != 0
+
+    def set_keyframe(self, keyframe=True):
+        if keyframe:
+            self.flags |= 1
+        else:
+            self.flags &= ~1
+
+    def to_bytes(self) -> bytes:
+        return (b'EVS' + bytes([self.version, self.format]) +
+                self.width.to_bytes(2, 'little', signed=False) +
+                self.height.to_bytes(2, 'little', signed=False) +
+                bytes([self.flags]) + self.data)
+
+    def as_numpy_rgb_array(self):
+        if self.format != 0:
+            raise ValueError('can convert only raw (RGB8) frames to numpy array')
+        import numpy as np
+        return np.frombuffer(self.data, dtype=np.uint8).reshape(
+            (self.height, self.width, 3))
+
+    def format_name(self) -> str:
+        if self.format == 0:
+            return 'raw'
+        elif self.format == 10:
+            return 'h264'
+        elif self.format == 11:
+            return 'h265'
+        elif self.format == 12:
+            return 'vp8'
+        elif self.format == 13:
+            return 'vp9'
+        elif self.format == 14:
+            return 'av1'
+        else:
+            return 'unknown'
 
 
 def oid_match(oid, oid_masks):
