@@ -1,6 +1,6 @@
 [package]
 name = "eva-gst"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "EVA-ICS GStreamer plugins"
 repository = "https://github.com/eva-ics/eva4"
@@ -16,7 +16,7 @@ atomic-timer = "0.2.2"
 binrw = "0.15.0"
 busrt = { version = "0.4.21", features = ["ipc-sync", "rpc-sync", "cursors"] }
 dateparser = "0.2.1"
-eva-common = { version = "0.3.114", features = ["payload", "events", "multimedia"] }
+eva-common = { version = "0.3.117", features = ["payload", "events", "multimedia"] }
 gst = { version = "0.22", package = "gstreamer" }
 gst-base = { version = "0.22", package = "gstreamer-base" }
 gst-video = { version = "0.22", package = "gstreamer-video" }
