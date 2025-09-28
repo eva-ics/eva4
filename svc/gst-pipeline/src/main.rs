@@ -30,6 +30,12 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Service";
 
+static ERROR_STATE: atomic::AtomicBool = atomic::AtomicBool::new(false);
+
+fn mark_error_state() {
+    ERROR_STATE.store(true, atomic::Ordering::SeqCst);
+}
+
 #[derive(Serialize, Default)]
 #[serde(rename_all = "snake_case")]
 #[repr(i32)]
@@ -295,6 +301,7 @@ fn pipeline_loop(
         }
         if start.elapsed() > timeout && pipeline_state != gstreamer::State::Playing {
             error!("Pipeline timeout");
+            mark_error_state();
             tx.send_blocking(Some((-1, vec![])))
                 .map_err(Error::failed)?; // mark error
             return Err(Error::timeout());
@@ -365,13 +372,7 @@ async fn publisher_loop(oid: OID, rx: Receiver<Option<(ItemStatus, Vec<u8>)>>) -
     let topic = format!("{}{}", RAW_STATE_TOPIC, oid.as_path());
     while let Ok(Some((status, bytes))) = rx.recv().await {
         if svc_is_terminating() {
-            eapi_bus::publish_confirmed(
-                &topic,
-                pack(&RawStateEventOwned::new(status, Value::Unit))?.into(),
-            )
-            .await
-            .log_ef();
-            return Ok(());
+            break;
         }
         let ev = if status == 1 {
             if bytes.is_empty() {
@@ -424,11 +425,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 timeout,
             ) {
                 error!("Pipeline error: {}", e);
+                mark_error_state();
                 publisher_tx.send_blocking(Some((-1, vec![]))).ok();
                 poc();
             }
         }
     });
+    let dst_topic = format!("{}{}", RAW_STATE_TOPIC, config.oid_dst.as_path());
     let publisher_fut = tokio::spawn(publisher_loop(config.oid_dst, publisher_rx));
     let oid_src_mask: OIDMask = config.oid_src.into();
     eapi_bus::subscribe_oids(&[oid_src_mask], eva_sdk::service::EventKind::Actual).await?;
@@ -445,5 +448,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
     pipeline_tx.send(None).await.ok();
     publisher_fut.await.ok();
     pipeline_fut.await.ok();
+    if !ERROR_STATE.load(atomic::Ordering::SeqCst) {
+        eapi_bus::publish_confirmed(
+            &dst_topic,
+            pack(&RawStateEventOwned::new(1, Value::Unit))?.into(),
+        )
+        .await
+        .log_ef();
+        tokio::time::sleep(Duration::from_millis(100)).await; // ensure the dst is marked Null
+    }
     Ok(())
 }
