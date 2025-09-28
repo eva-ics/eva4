@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 async-channel = "2.5.0"
 async-trait = "0.1"
-eva-common = { version = "0.3.114", features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
+eva-common = { version = "0.3.116", features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
 eva-sdk = { version = "0.3", features = ["controller"] }
 gstreamer = { version = "0.22" }
 gstreamer-app = "0.22"

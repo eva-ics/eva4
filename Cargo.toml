@@ -73,7 +73,7 @@ parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }
 async-channel = "^1.7"
 async-recursion = "^1.0.5"
 serde_yaml = "^0.8"
-eva-common = { version = "^0.3.115", features = ["fips"] }
+eva-common = { version = "^0.3.116", features = ["fips"] }
 cargo_metadata = "^0.18.1"
 itertools = "^0.12.1"
 hex = "^0.4.3"
