@@ -525,7 +525,9 @@ def append_svc_cli(root_sp):
 
     p = sp.add_parser('flash', help='flash the service binary')
     p.add_argument('i', metavar='SVC').completer = ComplSvc()
-    p.add_argument('file', metavar='FILE', help='service file to reflash with').completer = ComplAnyFile()
+    p.add_argument(
+        'file', metavar='FILE',
+        help='service file to reflash with').completer = ComplAnyFile()
 
 
 def append_acl_cli(root_sp):
@@ -824,6 +826,12 @@ def append_item_cli(root_sp):
 
     p = sp.add_parser('create', help='create an item')
     p.add_argument('i', metavar='OID').completer = ComplOID()
+    p.add_argument(
+        '-p',
+        '--python',
+        help=
+        'For Python lmacro: assign eva.controller.py as action svc and edit code after creation',
+        action='store_true')
 
     p = sp.add_parser('destroy', help='destroy item(s)')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
@@ -836,6 +844,10 @@ def append_item_cli(root_sp):
 
     p = sp.add_parser('edit', help='edit item config')
     p.add_argument('i', metavar='OID').completer = ComplOID()
+    p.add_argument('-p',
+                   '--python',
+                   help='For Python lmacro: edit code',
+                   action='store_true')
 
     p = sp.add_parser('set', help='set item state')
     p.add_argument('i', metavar='OID').completer = ComplOID()

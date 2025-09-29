@@ -13,18 +13,22 @@ from rapidtables import format_table, FORMAT_GENERATOR, FORMAT_GENERATOR_COLS
 from .tools import print_result, ok
 from .tools import edit_config, edit_remote_file, read_file, write_file
 from .tools import print_action_result, format_value, prepare_time, err, warn
-from .tools import get_node_svc_info, edit_file, get_term_size, exec_cmd, xc
+from .tools import get_node_svc_info, get_term_size, exec_cmd, xc
 from .tools import get_my_ip, check_local_shell
 from .client import call_rpc, DEFAULT_REPL_SERVICE, connect
 from .sharedobj import common, current_command
-
-from . import DEFAULT_REPOSITORY_URL
 
 
 def eva_control_c(c, pfx=''):
     check_local_shell()
     cmd = f'{pfx}{common.dir_eva}/sbin/eva-control {c}'
     os.system(cmd)
+
+
+def format_python_fname(i):
+    short_id = i.rsplit('/', 1)[-1].rsplit(':', 1)[-1]
+    fname = f'xc/py/{short_id}.py'
+    return fname
 
 
 class CLI:
@@ -1139,8 +1143,13 @@ class CLI:
         print(f'{len(items)} item(s) undeployed')
         print()
 
-    def item_create(self, i):
-        call_rpc('item.create', dict(i=i))
+    def item_create(self, i, python=False):
+        if python:
+            cfg = {'oid': i, 'action': {'svc': 'eva.controller.py'}}
+            call_rpc('item.deploy', dict(items=[cfg]))
+            return self.edit(format_python_fname(i), 'eva.filemgr.main')
+        else:
+            call_rpc('item.create', dict(i=i))
         ok()
 
     def item_destroy(self, i):
@@ -1151,7 +1160,10 @@ class CLI:
         call_rpc('item.enable', dict(i=i))
         ok()
 
-    def item_edit(self, i):
+    def item_edit(self, i, python=False):
+
+        if python:
+            return self.edit(format_python_fname(i), 'eva.filemgr.main')
 
         def deploy_edited_item(cfg, i):
             call_rpc('item.deploy', dict(items=[cfg]))
