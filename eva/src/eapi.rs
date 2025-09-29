@@ -1123,6 +1123,30 @@ impl RpcHandlers for BusApi {
                 need_ready!();
                 lvar_op!(LvarOp::Toggle)
             }
+            "svc.disable" => {
+                need_ready!();
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsId = unpack(payload).log_err()?;
+                self.core
+                    .service_manager()
+                    .set_service_enabled(p.i, false, self.core.system_name(), self.core.timeout())
+                    .await?;
+                Ok(None)
+            }
+            "svc.enable" => {
+                need_ready!();
+                if payload.is_empty() {
+                    return Err(RpcError::params(None));
+                }
+                let p: ParamsId = unpack(payload).log_err()?;
+                self.core
+                    .service_manager()
+                    .set_service_enabled(p.i, true, self.core.system_name(), self.core.timeout())
+                    .await?;
+                Ok(None)
+            }
             "svc.deploy" => {
                 need_ready!();
                 if payload.is_empty() {

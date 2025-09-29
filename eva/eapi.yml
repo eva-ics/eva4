@@ -630,6 +630,22 @@ svc.undeploy:
       des: Service parameters or a list of service IDs
       req: false
   ret:
+svc.enable:
+  des: Enable a local service
+  par:
+    - nam: i
+      typ: String
+      des: Service ID
+      req: true
+  ret:
+svc.disable:
+  des: Disable a local service
+  par:
+    - nam: i
+      typ: String
+      des: Service ID
+      req: true
+  ret:
 svc.purge:
   des: Undeploys local services and purge their data
   par:

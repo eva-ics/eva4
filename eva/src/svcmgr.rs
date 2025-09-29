@@ -209,6 +209,25 @@ impl Manager {
     ///
     /// Will panic if the mutex is poisoned
     #[inline]
+    pub async fn set_service_enabled(
+        &self,
+        id: &str,
+        enabled: bool,
+        system_name: &str,
+        timeout: Duration,
+    ) -> EResult<()> {
+        info!("setting service {} enabled={}", id, enabled);
+        let mut params = self.get_service_params(id)?;
+        if params.enabled == enabled {
+            return Ok(());
+        }
+        params.enabled = enabled;
+        self.deploy_service(id, params, system_name, timeout).await
+    }
+    /// # Panics
+    ///
+    /// Will panic if the mutex is poisoned
+    #[inline]
     pub fn get_service_params(&self, id: &str) -> EResult<Params> {
         self.services.lock().unwrap().get(id).map_or_else(
             || Err(Error::not_found(format!("no such service: {}", id))),
