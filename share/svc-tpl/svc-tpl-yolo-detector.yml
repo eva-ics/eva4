@@ -1,0 +1,54 @@
+# Detector service for Ultralytics YOLO models
+#
+# Requires https://pypi.org/project/eva4-svc-yolo-detector/ Python module installed
+command: venv/bin/eva4-svc-yolo-detector
+bus:
+  path: var/bus.ipc
+config:
+  # Path to the YOLO model file. In case of model formats other than PyTorch,
+  # ensure the YOLO runtime is installed in the venv
+  model: /opt/eva4/cv/yolo11m.pt
+  # Classes to detect
+  classes:
+  # The class color used for the debug stream and 3rd party apps
+  - color: orange
+    # Confidence threshold for the class
+    confidence: 0.1
+    # Class id, according to the model, can be an integer or a string
+    id: person
+  # Key points, e.g. for YOLO-pose models. If the color is not specified, the
+  # key point is ignored in the debug stream. The model MUST provide keypoints otherwise
+  # the detector will fail to work
+  #keypoints:
+    #colors:
+    #- null
+    #- green
+    #- green
+    #- null
+    #- null
+    #- blue
+    #- blue
+    #- '#336699'
+    #- '#336699'
+    #- '#99CCFF'
+    #- '#99CCFF'
+    #- red
+    #- red
+    #- '#996633'
+    #- '#996633'
+    #- '#FFCC99'
+    #- '#FFCC99'
+    #enable: true
+  # Raw stream source OID, must provide RGB8 frames
+  oid_src: sensor:streams/s0/raw
+  # Debug stream OID, filled with RGB8 frames with detection boxes and keypoints
+  #oid_cv_debug: sensor:streams/s0/cv/debug
+  # Destination OID for detection results, filled with detection results (object)
+  #oid_dst: sensor:streams/s0/cv/json
+  # lmacro to process detections, executed with an argument (_1) containing the detections
+  # and "detector_stats" variable containing detector statistics
+  #process: lmacro:streams/s0/cv/process
+user: eva # make sure the user has access to the model file
+# the service may consume relatively large amounts of memory, set the warning
+# threshold accordingly
+mem_warn: 1500000000

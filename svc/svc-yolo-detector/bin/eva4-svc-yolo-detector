@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+
+import eva4_svc_yolo_detector
+eva4_svc_yolo_detector.run()
