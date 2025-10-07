@@ -6,7 +6,7 @@ from functools import partial
 from collections import OrderedDict
 
 import busrt
-from evaics.sdk import pack
+from evaics.sdk import pack, VideoFrame
 from neotermcolor import colored
 from rapidtables import format_table, FORMAT_GENERATOR, FORMAT_GENERATOR_COLS
 
@@ -1188,6 +1188,33 @@ class CLI:
                      cols=[
                          'oid', 'status', 'value|l=20|n=value', 'ieid',
                          't|n=set time|f=time', 'node', 'connected', 'act'
+                     ])
+
+    def item_stream_info(self, i):
+        data = call_rpc(
+            'item.state',
+            dict(i=i, include_binary_values=True),
+        )
+        for d in data:
+            value = d['value']
+            del d['value']
+            if value is None:
+                d['format'] = 'nodata'
+            else:
+                try:
+                    frame = VideoFrame(value)
+                    d['format'] = frame.format_name()
+                    d['dims'] = [frame.width, frame.height]
+                except:
+                    d['format'] = 'not-a-stream'
+
+        print_result(data,
+                     cols=[
+                         'oid',
+                         'status',
+                         'format',
+                         'dims',
+                         't|n=set time|f=time',
                      ])
 
     def item_slog(self, i, db_svc, time_start, time_end, time_zone, limit):

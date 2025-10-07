@@ -770,6 +770,9 @@ def append_item_cli(root_sp):
     p.add_argument('i', metavar='MASK').completer = ComplOID('state')
     p.add_argument('-y', '--full', action='store_true')
 
+    p = sp.add_parser('stream-info', help='item stream info')
+    p.add_argument('i', metavar='MASK').completer = ComplOID('state')
+
     p = sp.add_parser('history', help='item state history')
     p.add_argument('i', metavar='OID').completer = ComplOID('state')
     p.add_argument('-a',
