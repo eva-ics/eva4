@@ -6,7 +6,7 @@ from functools import partial
 from collections import OrderedDict
 
 import busrt
-from evaics.sdk import pack, VideoFrame
+from evaics.sdk import pack
 from neotermcolor import colored
 from rapidtables import format_table, FORMAT_GENERATOR, FORMAT_GENERATOR_COLS
 
@@ -1191,6 +1191,10 @@ class CLI:
                      ])
 
     def item_stream_info(self, i):
+        try:
+            from evaics.sdk import VideoFrame
+        except:
+            raise RuntimeError('Requires EVA ICS Python SDK 0.2.35 or newer')
         data = call_rpc(
             'item.state',
             dict(i=i, include_binary_values=True),
