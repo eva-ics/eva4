@@ -1,2 +1,2 @@
-FROM ubuntu:jammy
+FROM --platform=linux/amd64 ubuntu:jammy
 RUN apt-get update && apt-get -y install build-essential libglib2.0-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
