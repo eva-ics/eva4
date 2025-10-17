@@ -17,7 +17,7 @@ remove_build() {
 }
 
 for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/nightly/manifest*"|sort \
-  |head -n -${KEEP_NIGHTLY}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
+  |ghead -n -${KEEP_NIGHTLY}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
   if [[ " ${lts[@]} " =~ " $build " ]]; then
     echo "Keeping nightly LTS build $build"
   else
@@ -26,7 +26,7 @@ for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/nightly/manifest*"|sor
 done
 
 for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/stable/manifest*"|sort\
-  |head -n -${KEEP_STABLE}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
+  |ghead -n -${KEEP_STABLE}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
   if [[ " ${lts[@]} " =~ " $build " ]]; then
     echo "Keeping stable LTS build $build"
   else

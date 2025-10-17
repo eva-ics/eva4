@@ -2,9 +2,6 @@
 
 import argparse
 import os
-import hashlib
-import requests
-import sys
 import json
 import random
 
