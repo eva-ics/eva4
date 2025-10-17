@@ -33,7 +33,7 @@ stable-build-mark:
 	git push
 
 stable-build-create:
-	cd /opt/eva-util/eva-builder && ./update.sh lab-builder1
+	cd ~/src/eva-util/eva-builder && ./update.sh lab-builder1
 	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && make do-stable-build-create"
 
 do-stable-build-create:
