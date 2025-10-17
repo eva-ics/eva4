@@ -1,0 +1,14 @@
+detector.stats:
+  des: Get detector stats
+  par:
+  ret: Detector stats
+  exm: |
+    {
+      "fps": 30,
+      "frames_dropped": 3,
+      "frames_processed": 149,
+      "status": "ready",
+      "t_avg_ms": 25,
+      "t_max_ms": 141,
+      "t_min_ms": 18
+    }

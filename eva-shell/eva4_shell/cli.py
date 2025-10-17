@@ -1190,6 +1190,37 @@ class CLI:
                          't|n=set time|f=time', 'node', 'connected', 'act'
                      ])
 
+    def item_stream_info(self, i):
+        try:
+            from evaics.sdk import VideoFrame
+        except:
+            raise RuntimeError('Requires EVA ICS Python SDK 0.2.35 or newer')
+        data = call_rpc(
+            'item.state',
+            dict(i=i, include_binary_values=True),
+        )
+        for d in data:
+            value = d['value']
+            del d['value']
+            if value is None:
+                d['format'] = 'nodata'
+            else:
+                try:
+                    frame = VideoFrame(value)
+                    d['format'] = frame.format_name()
+                    d['dims'] = [frame.width, frame.height]
+                except:
+                    d['format'] = 'not-a-stream'
+
+        print_result(data,
+                     cols=[
+                         'oid',
+                         'status',
+                         'format',
+                         'dims',
+                         't|n=set time|f=time',
+                     ])
+
     def item_slog(self, i, db_svc, time_start, time_end, time_zone, limit):
         time_start = prepare_time(time_start)
         time_end = prepare_time(time_end)

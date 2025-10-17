@@ -1,4 +1,4 @@
-FROM ubuntu:jammy
+FROM --platform=linux/amd64 ubuntu:jammy
 ARG CROSS_DEB_ARCH=arm64
 COPY sources.aarch64.list /etc/apt/sources.list
 RUN dpkg --add-architecture $CROSS_DEB_ARCH && \

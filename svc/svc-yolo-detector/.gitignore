@@ -1,0 +1,5 @@
+*.pyc
+__pycache__
+eva4_svc_yolo_detector.egg-info
+dist
+build

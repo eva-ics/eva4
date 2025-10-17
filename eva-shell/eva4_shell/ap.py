@@ -770,6 +770,9 @@ def append_item_cli(root_sp):
     p.add_argument('i', metavar='MASK').completer = ComplOID('state')
     p.add_argument('-y', '--full', action='store_true')
 
+    p = sp.add_parser('stream-info', help='item stream info')
+    p.add_argument('i', metavar='MASK').completer = ComplOID('state')
+
     p = sp.add_parser('history', help='item state history')
     p.add_argument('i', metavar='OID').completer = ComplOID('state')
     p.add_argument('-a',
@@ -1208,7 +1211,7 @@ def append_video_cli(root_sp):
     sp = ap.add_subparsers(dest='_subc2', help='sub command')
 
     p = sp.add_parser('create', help='create a video recording')
-    p.add_argument('i', metavar='source')
+    p.add_argument('i', metavar='source').completer = ComplOIDtp('sensor')
     p.add_argument('--keep', type=float, help='Keep (seconds)')
     p.add_argument('--enabled', help='Enable recording', action='store_true')
     p.add_argument(
@@ -1225,7 +1228,7 @@ def append_video_cli(root_sp):
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
 
     p = sp.add_parser('edit', help='edit a video recording config')
-    p.add_argument('i', metavar='source')
+    p.add_argument('i', metavar='source').completer = ComplOIDtp('sensor')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1233,7 +1236,7 @@ def append_video_cli(root_sp):
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
 
     p = sp.add_parser('enable', help='enable (start) a video recording')
-    p.add_argument('i', metavar='source')
+    p.add_argument('i', metavar='source').completer = ComplOIDtp('sensor')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1241,7 +1244,7 @@ def append_video_cli(root_sp):
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
 
     p = sp.add_parser('disable', help='disable (stop) a video recording')
-    p.add_argument('i', metavar='source')
+    p.add_argument('i', metavar='source').completer = ComplOIDtp('sensor')
     p.add_argument(
         '-a',
         '--video-svc',
@@ -1249,7 +1252,7 @@ def append_video_cli(root_sp):
         default=DEFAULT_VIDEO_SERVICE).completer = ComplSvc('videosrv')
 
     p = sp.add_parser('destroy', help='destroy a video recording')
-    p.add_argument('i', metavar='source')
+    p.add_argument('i', metavar='source').completer = ComplOIDtp('sensor')
     p.add_argument(
         '-a',
         '--video-svc',
