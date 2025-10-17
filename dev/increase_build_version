@@ -21,6 +21,6 @@ else
 fi
 
 echo "$f $BUILD -> $NEW_BUILD"
-sed -i "s/pub const BUILD: .*/pub const BUILD: u64 = ${NEW_BUILD};/g" ${LIB}
+sed -i '' "s/pub const BUILD: .*/pub const BUILD: u64 = ${NEW_BUILD};/g" ${LIB}
 
-sed -i "s/^BUILD=.*/BUILD=${NEW_BUILD}/g" update.sh
+sed -i '' "s/^BUILD=.*/BUILD=${NEW_BUILD}/g" update.sh
