@@ -1,3 +1,5 @@
 #!/bin/sh
 
-/opt/eva4/sbin/bus ./var/bus.ipc $*
+P=$(realpath $0)
+D=$(dirname $P)
+$D/sbin/bus $D/var/bus.ipc $*

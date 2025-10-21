@@ -93,6 +93,7 @@ fn main() {
     let _sys = eva::SystemConfig::new()
         .apply()
         .expect("Unable to apply system config");
+    #[cfg(target_os = "linux")]
     eva::apply_current_thread_params(&realtime, false).unwrap();
     if let Err(e) = eva::node::launch(
         args.mode,
