@@ -29,7 +29,6 @@ const CACHE_USER_EMAILS_SIZE: usize = 10_000;
 
 const MAX_PARALLEL_RESOLVERS: usize = 10;
 const MAX_PARALLEL_SENDS_DELAYED: usize = 10;
-const MAX_PARALLEL_TASKS: usize = 100;
 
 static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
 static TIMEOUT: OnceCell<Duration> = OnceCell::new();
@@ -172,6 +171,7 @@ struct Mailer {
     default_rcp: Vec<Mailbox>,
     from: Mailbox,
     tasks_sem: tokio::sync::Semaphore,
+    max_parallel_tasks: usize,
 }
 
 impl Mailer {
@@ -216,17 +216,18 @@ impl Mailer {
             ));
         }
         let mailer = b.build();
-        let tasks_sem = tokio::sync::Semaphore::new(MAX_PARALLEL_TASKS);
+        let tasks_sem = tokio::sync::Semaphore::new(config.pool_size.try_into().unwrap());
         Ok(Self {
             inner: mailer,
             timeout,
             default_rcp: rcps,
             from: from.parse().map_err(Error::invalid_data)?,
             tasks_sem,
+            max_parallel_tasks: config.pool_size.try_into().unwrap(),
         })
     }
     fn is_busy(&self) -> bool {
-        self.tasks_sem.available_permits() < MAX_PARALLEL_TASKS
+        self.tasks_sem.available_permits() < self.max_parallel_tasks
     }
     async fn send(
         &self,

@@ -12,7 +12,7 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lettre = { version = "0.11.4", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.19", features = ["tokio1-native-tls"] }
 mimalloc = { workspace = true }
 once_cell = { workspace = true }
 ttl_cache = { workspace = true }
