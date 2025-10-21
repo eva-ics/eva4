@@ -73,7 +73,7 @@ parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }
 async-channel = "^1.7"
 async-recursion = "^1.0.5"
 serde_yaml = "^0.8"
-eva-common = { version = "^0.3.116", features = ["fips"] }
+eva-common = { version = "^0.3.119", features = ["fips"] }
 cargo_metadata = "^0.18.1"
 itertools = "^0.12.1"
 hex = "^0.4.3"
@@ -97,7 +97,7 @@ serde_json = "^1.0.113"
 sqlx = "^0.6.3"
 mimalloc = "^0.1.46"
 triggered = "^0.1.2"
-eva-sdk = "^0.3.64"
+eva-sdk = "^0.3.74"
 busrt = { version = "^0.4.13", features = ["rt"] }
 chrono = "^0.4.33"
 simple-pool = "^0.0.18"
