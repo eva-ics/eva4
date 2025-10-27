@@ -62,7 +62,7 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct ParamsSymbolSet {
-                        i: String,
+                        i: Arc<String>,
                         value: Value,
                         #[serde(
                             default,

@@ -1076,14 +1076,13 @@ pub async fn read_by_name(name: Arc<String>, timeout: Duration, retries: u8) -> 
 }
 
 pub async fn write_by_name(
-    name: String,
+    name: Arc<String>,
     value: Value,
     timeout: Duration,
     verify: bool,
     retries: u8,
 ) -> EResult<()> {
     let mut result = Err(Error::timeout());
-    let name = Arc::new(name);
     let op = Op::new(timeout);
     for _ in 0..=retries {
         let name_c = name.clone();
