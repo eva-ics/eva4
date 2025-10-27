@@ -30,7 +30,7 @@ pub fn need_check_ready() -> bool {
 }
 
 lazy_static! {
-    static ref ADS_VARS: Mutex<HashMap<String, Arc<adsbr::Var>>> = <_>::default();
+    static ref ADS_VARS: Mutex<HashMap<Arc<String>, Arc<adsbr::Var>>> = <_>::default();
     static ref BRIDGE_ID: OnceCell<String> = <_>::default();
     static ref DEVICE_ADDR: OnceCell<::ads::AmsAddr> = <_>::default();
     static ref TIMEOUT: OnceCell<Duration> = <_>::default();
@@ -163,47 +163,51 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_init_logs(&initial, client.clone())?;
     svc_start_signal_handlers();
     info!("scanning variables");
-    let mut symbols: HashSet<&str> = HashSet::new();
-    for pull in &config.pull {
-        symbols.insert(pull.symbol());
-    }
-    for action in config.action_map.values() {
-        symbols.insert(action.symbol());
-    }
-    set_poc(config.panic_in);
-    let vars = match adsbr::create_vars(symbols.into_iter().collect::<Vec<&str>>().as_slice()).await
-    {
-        Ok(v) => v,
-        Err(e) => {
-            poc().await;
-            return Err(e);
-        }
-    };
     let mut oids_failed = HashSet::new();
     {
-        let mut ads_vars = ADS_VARS.lock().unwrap();
-        for var in vars {
-            match var.check() {
-                Ok(()) => {
-                    ads_vars.insert(var.name().to_owned(), Arc::new(var));
-                }
+        let mut symbols: HashSet<Arc<String>> = HashSet::new();
+        for pull in &config.pull {
+            symbols.insert(pull.symbol());
+        }
+        for action in config.action_map.values() {
+            symbols.insert(action.symbol());
+        }
+        set_poc(config.panic_in);
+        let vars =
+            match adsbr::create_vars(symbols.into_iter().collect::<Vec<Arc<String>>>().as_slice())
+                .await
+            {
+                Ok(v) => v,
                 Err(e) => {
-                    error!("{}", e);
+                    poc().await;
+                    return Err(e);
+                }
+            };
+        {
+            let mut ads_vars = ADS_VARS.lock().unwrap();
+            for var in vars {
+                match var.check() {
+                    Ok(()) => {
+                        ads_vars.insert(var.name(), Arc::new(var));
+                    }
+                    Err(e) => {
+                        error!("{}", e);
+                    }
                 }
             }
-        }
-        for pull in &mut config.pull {
-            if let Some(var) = ads_vars.get(pull.symbol()) {
-                pull.set_var(var.clone());
-            } else {
-                for m in pull.map() {
-                    oids_failed.insert(m.oid());
+            for pull in &mut config.pull {
+                if let Some(var) = ads_vars.get(&pull.symbol()) {
+                    pull.set_var(var.clone());
+                } else {
+                    for m in pull.map() {
+                        oids_failed.insert(m.oid());
+                    }
                 }
             }
-        }
-        for action in config.action_map.values_mut() {
-            if let Some(var) = ads_vars.get(action.symbol()) {
-                action.set_var(var.clone());
+            for action in config.action_map.values_mut() {
+                if let Some(var) = ads_vars.get(&action.symbol()) {
+                    action.set_var(var.clone());
+                }
             }
         }
     }

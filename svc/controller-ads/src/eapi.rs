@@ -3,7 +3,7 @@ use eva_common::prelude::*;
 use eva_sdk::controller::{format_action_topic, Action};
 use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic;
+use std::sync::{atomic, Arc};
 use std::time::Duration;
 
 pub struct Handlers {
@@ -33,7 +33,7 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct ParamsSymbolGet {
-                        i: String,
+                        i: Arc<String>,
                         #[serde(
                             default,
                             deserialize_with = "eva_common::tools::de_opt_float_as_duration"
@@ -95,7 +95,7 @@ impl RpcHandlers for Handlers {
                     #[derive(Deserialize)]
                     #[serde(deny_unknown_fields)]
                     struct ParamsSymbolSetBulk {
-                        i: Vec<String>,
+                        i: Vec<Arc<String>>,
                         values: Vec<Value>,
                         #[serde(
                             default,
@@ -110,7 +110,7 @@ impl RpcHandlers for Handlers {
                     #[derive(Serialize)]
                     struct RespSymbolSetBulk {
                         #[serde(skip_serializing_if = "Vec::is_empty")]
-                        failed: Vec<String>,
+                        failed: Vec<Arc<String>>,
                     }
                     let p: ParamsSymbolSetBulk = unpack(payload)?;
                     let failed = crate::adsbr::write_by_names_multi(

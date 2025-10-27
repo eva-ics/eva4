@@ -152,7 +152,7 @@ struct ParamsSuWriteRead<'a> {
 
 #[derive(Debug, Clone)]
 pub struct Var {
-    name: String,
+    name: Arc<String>,
     kind: Kind,
     array_len: Option<u32>,
     string_len: Option<u32>,
@@ -163,8 +163,8 @@ pub struct Var {
 
 impl Var {
     #[inline]
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> Arc<String> {
+        self.name.clone()
     }
     pub fn check(&self) -> EResult<()> {
         if self.handle.load(atomic::Ordering::SeqCst) == 0 {
@@ -431,7 +431,7 @@ async fn bridge_write_read(g: u32, o: u32, data: &[u8], size: usize) -> EResult<
     .await
 }
 
-async fn create_handles(names: &[&str]) -> EResult<Vec<u32>> {
+async fn create_handles(names: &[Arc<String>]) -> EResult<Vec<u32>> {
     let mut result: Vec<u32> = Vec::with_capacity(names.len());
     if !names.is_empty() {
         let mut reqs = Vec::with_capacity(names.len());
@@ -493,14 +493,14 @@ pub async fn destroy_vars(vars: &[&Var]) -> EResult<()> {
     Ok(())
 }
 
-pub async fn create_vars(names: &[&str]) -> EResult<Vec<Var>> {
+pub async fn create_vars(names: &[Arc<String>]) -> EResult<Vec<Var>> {
     let infos = query_type_infos(names).await?;
     let handles = create_handles(names).await?;
     Ok(names
         .iter()
         .zip(infos.into_iter().zip(handles.into_iter()))
         .map(|(name, (info, handle))| Var {
-            name: (*name).to_owned(),
+            name: name.clone(),
             kind: info.kind,
             array_len: info.array_len,
             string_len: info.string_len,
@@ -548,7 +548,7 @@ fn string_len_by_definition(definition: Option<&str>) -> Option<u32> {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
+async fn query_type_infos(names: &[Arc<String>]) -> EResult<Vec<SymbolInfo>> {
     let mut result: Vec<SymbolInfo> = Vec::with_capacity(names.len());
     if !names.is_empty() {
         let mut reqs = Vec::with_capacity(names.len());
@@ -969,21 +969,18 @@ async fn write_var_jobs_multi(
     Ok(failed)
 }
 
-async fn get_var_by_name(name: &str) -> EResult<Arc<Var>> {
-    if let Some(var) = crate::ADS_VARS.lock().unwrap().get(name) {
+async fn get_var_by_name(name: Arc<String>) -> EResult<Arc<Var>> {
+    if let Some(var) = crate::ADS_VARS.lock().unwrap().get(&name) {
         return Ok(var.clone());
     }
-    let vars = create_vars(&[name]).await?;
+    let vars = create_vars(&[name.clone()]).await?;
     let var = vars
         .into_iter()
         .next()
         .ok_or_else(|| Error::failed("unable to create ADS handle"))?;
     var.check()?;
     let var = Arc::new(var);
-    crate::ADS_VARS
-        .lock()
-        .unwrap()
-        .insert(name.to_owned(), var.clone());
+    crate::ADS_VARS.lock().unwrap().insert(name, var.clone());
     Ok(var)
 }
 
@@ -1001,7 +998,7 @@ async fn prepare_write_var_jobs(jobs: &[WriteJob]) -> EResult<(Vec<WriteVarJob>,
                     value: job.value.clone(),
                 });
             } else {
-                to_get.push(job.name.as_str());
+                to_get.push(job.name.clone());
                 jobs_to_get.push(job);
             }
         }
@@ -1025,9 +1022,9 @@ async fn prepare_write_var_jobs(jobs: &[WriteJob]) -> EResult<(Vec<WriteVarJob>,
     Ok((res, failed))
 }
 
-pub async fn read_var_by_name(name: &str, timeout: Duration) -> EResult<Value> {
+pub async fn read_var_by_name(name: Arc<String>, timeout: Duration) -> EResult<Value> {
     let op = Op::new(timeout);
-    let var = get_var_by_name(name).await?;
+    let var = get_var_by_name(name.clone()).await?;
     op.timeout()?;
     read_val(&var).await
 }
@@ -1061,16 +1058,16 @@ async fn write_var_by_name(
     verify: bool,
 ) -> EResult<()> {
     let op = Op::new(timeout);
-    let var = get_var_by_name(&name).await?;
+    let var = get_var_by_name(name).await?;
     write_and_verify(&var, value, op.timeout()?, verify).await
 }
 
-pub async fn read_by_name(name: String, timeout: Duration, retries: u8) -> EResult<Value> {
+pub async fn read_by_name(name: Arc<String>, timeout: Duration, retries: u8) -> EResult<Value> {
     let mut result = Err(Error::timeout());
     let op = Op::new(timeout);
     for _ in 0..=retries {
         let t = op.timeout()?;
-        result = read_var_by_name(&name, t).await;
+        result = read_var_by_name(name.clone(), t).await;
         if result.is_ok() {
             return result;
         }
@@ -1102,7 +1099,7 @@ pub async fn write_by_name(
 }
 
 struct WriteJob {
-    name: String,
+    name: Arc<String>,
     value: Arc<Value>,
 }
 
@@ -1116,10 +1113,10 @@ async fn write_jobs_multi(
     write_jobs: &[WriteJob],
     timeout: Duration,
     verify: bool,
-) -> EResult<Vec<String>> {
+) -> EResult<Vec<Arc<String>>> {
     let op = Op::new(timeout);
     let (jobs, failed_vars) = prepare_write_var_jobs(write_jobs).await?;
-    let mut failed: HashSet<String> = failed_vars.into_iter().map(|var| var.name).collect();
+    let mut failed: HashSet<Arc<String>> = failed_vars.into_iter().map(|var| var.name).collect();
     for var in write_var_jobs_multi(&jobs, op.timeout()?, verify).await? {
         failed.insert(var.name.clone());
     }
@@ -1128,12 +1125,12 @@ async fn write_jobs_multi(
 
 /// returns vec of failed-to-write symbols
 pub async fn write_by_names_multi(
-    names: Vec<String>,
+    names: Vec<Arc<String>>,
     values: Vec<Value>,
     timeout: Duration,
     verify: bool,
     retries: u8,
-) -> EResult<Vec<String>> {
+) -> EResult<Vec<Arc<String>>> {
     if names.len() != values.len() {
         return Err(Error::invalid_data("names/values seq len mismatch"));
     }
@@ -1151,7 +1148,7 @@ pub async fn write_by_names_multi(
             return Ok(jobs.iter().map(|job| job.name.clone()).collect());
         };
         if let Ok(failed_symbols) = write_jobs_multi(&jobs, t, verify).await {
-            let fset: HashSet<String> = failed_symbols.into_iter().collect();
+            let fset: HashSet<Arc<String>> = failed_symbols.into_iter().collect();
             jobs.retain(|job| fset.contains(&job.name));
         }
         if jobs.is_empty() {

@@ -36,7 +36,7 @@ pub struct AdsConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ActionMap {
-    symbol: String,
+    symbol: Arc<String>,
     #[serde(default)]
     transform: Vec<transform::Task>,
     #[serde(skip)]
@@ -45,8 +45,8 @@ pub struct ActionMap {
 
 impl ActionMap {
     #[inline]
-    pub fn symbol(&self) -> &str {
-        &self.symbol
+    pub fn symbol(&self) -> Arc<String> {
+        self.symbol.clone()
     }
     #[inline]
     pub fn need_transform(&self) -> bool {
@@ -114,7 +114,7 @@ pub struct Config {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PullSymbol {
-    symbol: String,
+    symbol: Arc<String>,
     map: Vec<PullTask>,
     #[serde(skip)]
     var: Option<Arc<crate::adsbr::Var>>,
@@ -122,8 +122,8 @@ pub struct PullSymbol {
 
 impl PullSymbol {
     #[inline]
-    pub fn symbol(&self) -> &str {
-        &self.symbol
+    pub fn symbol(&self) -> Arc<String> {
+        self.symbol.clone()
     }
     #[inline]
     pub fn map(&self) -> &[PullTask] {
