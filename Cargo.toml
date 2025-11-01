@@ -38,12 +38,13 @@ members = [
   "dobj-codegen",
   "logreducer",
   "psrpc",
+  "eva-internal",
   "genpass-native",
   "tracing-async-mutex",
   "crypto-tools",
   "benchmarks/bm-primary",
   "crypto-tools",
-  "dobj-codegen"]
+  "dobj-codegen", "eva-internal"]
 
 resolver = "1"
 

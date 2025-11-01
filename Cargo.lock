@@ -2217,6 +2217,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-internal"
+version = "4.1.0"
+dependencies = [
+ "eva-common",
+ "tokio",
+]
+
+[[package]]
 name = "eva-repl"
 version = "4.1.0"
 dependencies = [

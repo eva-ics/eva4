@@ -1,0 +1,9 @@
+[package]
+name = "eva-internal"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+eva-common = { workspace = true, features = ["time"] }
+tokio = { workspace = true, features = ["time"] }
