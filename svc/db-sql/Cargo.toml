@@ -22,5 +22,7 @@ sqlx = { version = "0.6.3", features = [
 futures = "0.3.30"
 mimalloc = { workspace = true }
 
+eva-internal = { path = "../../eva-internal" }
+
 [features]
 std-alloc = []

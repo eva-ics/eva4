@@ -22,5 +22,7 @@ futures = { workspace = true }
 chrono = { workspace = true }
 mimalloc = { workspace = true }
 
+eva-internal = { path = "../../eva-internal" }
+
 [features]
 std-alloc = []

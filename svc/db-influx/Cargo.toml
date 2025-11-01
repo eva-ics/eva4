@@ -25,7 +25,9 @@ csv-async = "1.2.6"
 futures = "0.3.30"
 mimalloc = { workspace = true }
 tokio-native-tls = "0.3.1"
+
 crypto-tools = { path = "../../crypto-tools" }
+eva-internal = { path = "../../eva-internal" }
 
 [features]
 std-alloc = []

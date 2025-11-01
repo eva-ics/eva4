@@ -3,6 +3,7 @@ use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
+use eva_internal::RtcSyncedInterval;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
@@ -344,11 +345,10 @@ async fn collect_periodic(
         .collect();
     let p = ParamsState { i, exclude };
     let payload = pack(&p)?;
-    let mut int = tokio::time::interval(interval);
-    int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut int = RtcSyncedInterval::new(interval);
     let rpc = RPC.get().unwrap();
     while !svc_is_terminating() {
-        int.tick().await;
+        let t = int.tick().await;
         let data = rpc
             .call(
                 "eva.core",
@@ -363,7 +363,6 @@ async fn collect_periodic(
             (!skip_disconnected || s.connected) && s.value.as_ref().map_or(true, Value::is_numeric)
         });
         if !states.is_empty() {
-            let t = eva_common::time::now_ns_float();
             tx.send(Event::BulkState(
                 states
                     .into_iter()
@@ -371,7 +370,7 @@ async fn collect_periodic(
                         oid: s.oid,
                         status: s.status,
                         value: s.value,
-                        set_time: t,
+                        set_time: t.timestamp(),
                     })
                     .collect(),
             ))

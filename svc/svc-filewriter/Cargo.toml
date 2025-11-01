@@ -22,6 +22,8 @@ cron = "0.12.0"
 parking_lot = { workspace = true }
 openssl = { workspace = true }
 
+eva-internal = { path = "../../eva-internal" }
+
 [features]
 std-alloc = []
 openssl-vendored = ["openssl/vendored"]
