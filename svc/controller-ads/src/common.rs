@@ -148,6 +148,8 @@ pub struct PullTask {
     #[serde(default)]
     transform: Vec<transform::Task>,
     idx: Option<usize>,
+    #[serde(default)]
+    array_auto_expand: bool,
 }
 
 impl PullTask {
@@ -170,5 +172,9 @@ impl PullTask {
     #[inline]
     pub fn idx(&self) -> Option<usize> {
         self.idx
+    }
+    #[inline]
+    pub fn array_auto_expand(&self) -> bool {
+        self.array_auto_expand
     }
 }

@@ -58,6 +58,22 @@ config:
     #- symbol: test_arrays.test_float_array[5]
       #map:
          #- oid: sensor:tests/test2
+    # pull a symbol and auto-expand array elements
+    #
+    # pulls individual items for each array element as OID[INDEX]
+    #
+    # additionally, the item with OID without [INDEX] is reported, containing
+    # the pull status only with a null value
+    #
+    # requirements and limitations:
+    #   - the target symbol must be an array
+    #   - the values are reported immediately, pull cache is not used
+    #   - auto-expanded items cannot have transforms and value_delta
+    #   - auto-expanded items are not marked as failed on pull errors
+    #- symbol: test_arrays.test_float_array
+      #map:
+         #- oid: sensor:tests/test2_expanded
+         #  array_auto_expand: true
   # action queue size, per item, actions on overflow are not dropped but wait
   # their attempt to enter the queue. The core marks an action as failed if it
   # does not enter the queue for <action timeout> seconds

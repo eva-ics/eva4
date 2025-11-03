@@ -87,7 +87,47 @@ async fn pull(
                                     }
                                 };
                             }
-                            if let Some(idx) = task.idx() {
+                            // array auto expand
+                            if task.array_auto_expand() {
+                                if let Value::Seq(ref vals) = val {
+                                    // mark the array itself as ok
+                                    process!(Value::Unit);
+                                    for (i, value) in vals.iter().enumerate() {
+                                        let Ok(oid) = format!("{}[{}]", task.oid(), i).parse()
+                                        else {
+                                            error!(
+                                                "{} pull error: cannot parse oid with index {}",
+                                                task.oid(),
+                                                i
+                                            );
+                                            continue;
+                                        };
+                                        let raw_state = RawStateEventOwned::new(1, value.clone());
+                                        match pack(&raw_state) {
+                                            Ok(payload) => {
+                                                if let Err(e) = tx.try_send((
+                                                    format_raw_state_topic(&oid),
+                                                    payload,
+                                                )) {
+                                                    error!("state queue error for {}: {}", oid, e);
+                                                }
+                                            }
+                                            Err(e) => error!(
+                                                "state serialization error for {}: {}",
+                                                oid, e
+                                            ),
+                                        }
+                                    }
+                                } else {
+                                    report_error!(
+                                        "{} pull error: {} value is not an array",
+                                        task.oid(),
+                                        symbol.symbol()
+                                    );
+                                    oids_failed.insert(task.oid());
+                                }
+                            // array single index
+                            } else if let Some(idx) = task.idx() {
                                 if let Value::Seq(ref vals) = val {
                                     if let Some(value) = vals.get(idx) {
                                         process!(value);
@@ -108,6 +148,7 @@ async fn pull(
                                     );
                                     oids_failed.insert(task.oid());
                                 }
+                            // normal value
                             } else {
                                 process!(val.clone());
                             }
