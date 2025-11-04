@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.1.0-stable
 ============
 
+* 2025-11-04 build 2025110401: Mailer pool size fixes, DB services RTC-stick intervals, ADS improvements
 * 2025-10-17 build 2025101701: Videosrv fixes, certain CCTV improvements
 * 2025-10-01 build 2025100101: OpCenter CCTV RGB8 support, "svc.enable/svc.disable" core methods
 * 2025-09-23 build 2025092301: GStreamer pipeline service for video and audio
