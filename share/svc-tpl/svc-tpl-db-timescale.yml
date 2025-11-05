@@ -29,4 +29,6 @@ config:
   oids_exclude: []
   # enable EVA ICS PostgreSQL extension support (experimental)
   #eva_pg: true
+  # by default null values (status) are written into the database
+  oids_exclude_null: []
 user: nobody

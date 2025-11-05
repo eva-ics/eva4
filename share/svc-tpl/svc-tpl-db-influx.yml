@@ -34,4 +34,6 @@ config:
   oids:
     - "#"
   oids_exclude: []
+  # by default null values (status) are written into the database
+  oids_exclude_null: []
 user: nobody
