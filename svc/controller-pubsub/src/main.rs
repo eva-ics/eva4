@@ -757,6 +757,7 @@ async fn connect(
         }
         PsProto::Mqtt => {
             let mut builder = paho_mqtt::ConnectOptionsBuilder::new();
+            let mut protocol = "tcp";
             let mut mqtt_config = builder
                 .keep_alive_interval(pubsub_config.ping_interval * 2)
                 .connect_timeout(timeout);
@@ -765,6 +766,7 @@ async fn connect(
                 mqtt_config = mqtt_config.user_name(username).password(password);
             }
             if let Some(ref ca_certs) = pubsub_config.ca_certs {
+                protocol = "ssl";
                 let mut b = paho_mqtt::ssl_options::SslOptionsBuilder::new();
                 let ssl = b.trust_store(ca_certs).map_err(Error::failed)?;
                 mqtt_config = mqtt_config.ssl_options(ssl.finalize());
@@ -772,8 +774,9 @@ async fn connect(
             let mut client = None;
             let cfg = mqtt_config.finalize();
             for host in pubsub_config.host.iter() {
-                let c = paho_mqtt::async_client::AsyncClient::new(format!("tcp://{}", host))
-                    .map_err(Error::failed)?;
+                let c =
+                    paho_mqtt::async_client::AsyncClient::new(format!("{}://{}", protocol, host))
+                        .map_err(Error::failed)?;
                 match c.connect(cfg.clone()).await {
                     Ok(_) => {
                         client = Some(c);
