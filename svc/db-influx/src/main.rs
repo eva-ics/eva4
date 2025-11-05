@@ -290,6 +290,7 @@ async fn sender(rx: async_channel::Receiver<Event>, buf_ttl: Option<Duration>) {
 async fn collect_periodic(
     oids: &OIDMaskList,
     oids_exclude: &OIDMaskList,
+    oids_exclude_null: &OIDMaskList,
     interval: Duration,
     tx: &async_channel::Sender<Event>,
 ) -> EResult<()> {
@@ -321,7 +322,10 @@ async fn collect_periodic(
         let mut states: Vec<ShortItemStateConnected> = unpack(data.payload())?;
         let skip_disconnected = SKIP_DISCONNECTED.load(atomic::Ordering::Relaxed);
         states.retain(|s| {
-            (!skip_disconnected || s.connected) && s.value.as_ref().map_or(true, Value::is_numeric)
+            (!skip_disconnected || s.connected)
+                && s.value
+                    .as_ref()
+                    .map_or_else(|| !oids_exclude_null.matches(&s.oid), Value::is_numeric)
         });
         if !states.is_empty() {
             tx.send(Event::BulkState(
@@ -417,9 +421,15 @@ async fn main(mut initial: Initial) -> EResult<()> {
         let fut = tokio::spawn(async move {
             let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
             while !svc_is_terminating() {
-                collect_periodic(&config.oids, &config.oids_exclude, interval, &tx)
-                    .await
-                    .log_ef();
+                collect_periodic(
+                    &config.oids,
+                    &config.oids_exclude,
+                    &config.oids_exclude_null,
+                    interval,
+                    &tx,
+                )
+                .await
+                .log_ef();
             }
         });
         Some(fut)
