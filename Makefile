@@ -55,6 +55,11 @@ release-installer:
 		cp -a public-read install.sh gs://pub.bma.ai/eva4/install
 	rci job run pub.bma.ai
 
+release-docker-deploy:
+	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/yaml" \
+		cp -a public-read ./docker/deploy/* gs://pub.bma.ai/eva4/docker/deploy/
+	rci job run pub.bma.ai
+
 release-switch-arch:
 	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
 		cp -a public-read ./tools/switch-arch gs://pub.bma.ai/eva4/tools/switch-arch

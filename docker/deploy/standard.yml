@@ -51,7 +51,6 @@ content:
       params:
         bus:
           path: var/bus.ipc
-        call_tracing: false
         command: svc/eva-hmi
         config:
           api:
