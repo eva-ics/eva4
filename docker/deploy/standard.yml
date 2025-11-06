@@ -1,0 +1,77 @@
+version: 4
+content:
+  - node: .local
+    acls:
+    - admin: true
+      id: admin
+    users:
+    - acls:
+      - admin
+      login: admin
+      password: 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+    svcs:
+    - id: eva.aaa.acl
+      params:
+        bus:
+          path: var/bus.ipc
+        command: svc/eva-aaa-acl
+        config:
+          forbid_empty_acls: false
+          strict_acl_formatting: false
+        user: nobody
+        workers: 1
+    - id: eva.aaa.localauth
+      params:
+        bus:
+          path: var/bus.ipc
+        command: svc/eva-aaa-localauth
+        config:
+          acl_svc: eva.aaa.acl
+          one_time:
+            expires: 10
+          password_policy:
+            min_length: 8
+            required_letter: true
+            required_number: true
+        user: nobody
+        workers: 1
+    - id: eva.filemgr.main
+      params:
+        bus:
+          path: var/bus.ipc
+        command: svc/eva-filemgr
+        config:
+          mime_types: share/mime.yml
+          protected:
+          - registry
+          - svc_data
+          terminal: true
+        workers: 1
+    - id: eva.hmi.default
+      params:
+        bus:
+          path: var/bus.ipc
+        call_tracing: false
+        command: svc/eva-hmi
+        config:
+          api:
+          - listen: 0.0.0.0:7727
+            proto: http
+          auth_svcs:
+          - eva.aaa.localauth
+          buf_size: 16384
+          keep_api_log: 86400
+          mime_types: share/mime.yml
+          pvt_path: pvt
+          session:
+            allow_concurrent: true
+            allow_list_neighbors: false
+            prolong: true
+            stick_ip: true
+            timeout: 60
+          ui_path: ui
+          user_data:
+            max_record_length: 16384
+            max_records: 100
+        user: eva
+        workers: 1
