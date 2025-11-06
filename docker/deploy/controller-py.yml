@@ -1,0 +1,18 @@
+version: 4
+content:
+  - node: .local
+    extra:
+      deploy:
+        before:
+          - method: eva.filemgr.main::sh
+            params:
+              c: /opt/eva4/sbin/venvmgr add eva4-controller-py
+              timeout: 60
+    svcs:
+    - id: eva.controller.py
+      params:
+        command: venv/bin/eva4-svc-controller-py
+        bus:
+          path: var/bus.ipc
+        config: {}
+        user: nobody
