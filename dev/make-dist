@@ -42,7 +42,7 @@ case $ARCH in
     STRIP=strip
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
-    CARGO_ARGS=
+    CARGO_ARGS="--features eva-internal/fips"
     CARGO_TARGET_DIR=target-native
     export CARGO_TARGET_DIR
     if ! lsb_release -cs|grep ^focal$ ; then

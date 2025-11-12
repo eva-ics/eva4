@@ -81,8 +81,22 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
         ))?)
     } else if let Some(creds) = meta.credentials() {
         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
-        Box::pin(login(&creds.0, &creds.1, None, None, ip, &source)).await
+        Box::pin(login(&creds.0, &creds.1, None, None, ip, &source, false)).await
     } else {
+        if let Some(token) = meta.external_token() {
+            if let Some(verifier) = crate::OIDC_VERIFIER.get() {
+                match verifier.verify(token) {
+                    Ok(sub) => {
+                        debug!("external token verified for user: {}", sub);
+                        let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
+                        return Box::pin(login(&sub, "", None, None, ip, &source, true)).await;
+                    }
+                    Err(e) => {
+                        debug!("external token verification failed: {}", e);
+                    }
+                }
+            }
+        }
         if let Some(agent) = meta.agent() {
             if agent.starts_with("evaHI ") {
                 return Err(Error::new0(ErrorKind::EvaHIAuthenticationRequired));
@@ -265,6 +279,7 @@ async fn login(
     token_id: Option<String>,
     ip: Option<IpAddr>,
     source: &str,
+    externally_verified: bool,
 ) -> EResult<Value> {
     #[derive(Serialize)]
     struct AuthPayload<'a> {
@@ -273,6 +288,8 @@ async fn login(
         timeout: f64,
         xopts: Option<&'a BTreeMap<String, Value>>,
         source: &'a str,
+        #[serde(skip_serializing_if = "std::ops::Not::not")]
+        externally_verified: bool,
     }
     let auth_svcs = aaa::auth_svcs();
     let payload = pack(&AuthPayload {
@@ -281,6 +298,7 @@ async fn login(
         timeout: eapi_bus::timeout().as_secs_f64(),
         xopts,
         source,
+        externally_verified,
     })?;
     let mut aci = ACI::new(
         Auth::Login(login.to_owned(), None),
@@ -458,6 +476,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                             None,
                             ip,
                             &source,
+                            false,
                         ))
                         .await
                     }
@@ -476,6 +495,7 @@ async fn call(method: &str, params: Option<Value>, mut meta: JsonRpcRequestMeta)
                             Some(creds.token),
                             ip,
                             &source,
+                            false,
                         ))
                         .await
                     }

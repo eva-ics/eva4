@@ -953,6 +953,8 @@ impl RpcHandlers for Handlers {
                     )]
                     timeout: Duration,
                     xopts: Option<HashMap<String, Value>>,
+                    #[serde(default)]
+                    externally_verified: bool,
                 }
                 #[derive(Serialize)]
                 struct ParamsOtpCheck<'a> {
@@ -972,7 +974,7 @@ impl RpcHandlers for Handlers {
                             return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                         }
                     } else if let Some(user) = USERS.lock().await.get(p.login) {
-                        if !user.password.verify(p.password).await? {
+                        if !p.externally_verified && !user.password.verify(p.password).await? {
                             debug!("user {} authentication failed: invalid password", p.login);
                             return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
                         }
@@ -984,7 +986,7 @@ impl RpcHandlers for Handlers {
                     };
                 let rpc = RPC.get().unwrap();
                 let op = Op::new(p.timeout);
-                if !one_time {
+                if !one_time && !p.externally_verified {
                     if let Some(otp_svc) = self.otp_svc.as_ref() {
                         safe_rpc_call(
                             rpc,

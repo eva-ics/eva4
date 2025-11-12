@@ -1,6 +1,7 @@
 use eva_common::acl::{Acl, OIDMaskList};
 use eva_common::events::{AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, LOG_EVENT_TOPIC};
 use eva_common::prelude::*;
+use eva_internal::OidcVerifier;
 use eva_sdk::prelude::*;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
@@ -75,6 +76,7 @@ lazy_static! {
     static ref SVC_ID: OnceCell<String> = <_>::default();
     static ref API_FILTER: OnceCell<OID> = <_>::default();
     static ref WS_URI: OnceCell<String> = <_>::default();
+    static ref OIDC_VERIFIER: OnceCell<OidcVerifier> = <_>::default();
 }
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
@@ -151,6 +153,33 @@ fn all_oids() -> OIDMaskList {
     OIDMaskList::new0("#".parse().unwrap())
 }
 
+fn default_oidc_header() -> String {
+    "X-JWT-Assertion".to_owned()
+}
+
+fn default_oidc_sub_field() -> String {
+    "sub".to_owned()
+}
+
+fn default_oidc_refresh_interval() -> Duration {
+    Duration::from_secs(300)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OidcConfig {
+    #[serde(default = "default_oidc_header")]
+    header: String,
+    #[serde(default = "default_oidc_sub_field")]
+    sub_field: String,
+    key_path: String,
+    #[serde(
+        default = "default_oidc_refresh_interval",
+        deserialize_with = "eva_common::tools::de_float_as_duration"
+    )]
+    refresh_interval: Duration,
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
@@ -163,6 +192,7 @@ struct Config {
     auth_svcs: Vec<String>,
     #[serde(default)]
     session: SessionConfig,
+    oidc: Option<OidcConfig>,
     #[serde(default)]
     keep_api_log: u32,
     #[serde(default)]
@@ -259,6 +289,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
             ui_path
         }))
         .map_err(|_| Error::core("Unable to set UI_PATH"))?;
+    handler::init(config.oidc.as_ref().map(|o| o.header.clone()).as_deref())?;
     if config.vendored_apps {
         let vendored_apps_path =
             eva_common::tools::format_path(eva_dir, Some("vendored-apps"), None);
@@ -350,6 +381,17 @@ async fn main(mut initial: Initial) -> EResult<()> {
         )
         .await?;
     svc_init_logs(&initial, client.clone())?;
+    if let Some(oidc_config) = config.oidc {
+        let verifier = OidcVerifier::create(
+            &oidc_config.key_path,
+            timeout,
+            oidc_config.refresh_interval,
+            &oidc_config.sub_field,
+        );
+        OIDC_VERIFIER
+            .set(verifier)
+            .map_err(|_| Error::core("Unable to set OIDC_VERIFIER"))?;
+    };
     eva_sdk::service::subscribe_oids(rpc.as_ref(), &config.oids, eva_sdk::service::EventKind::Any)
         .await?;
     eva_sdk::service::exclude_oids(

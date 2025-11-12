@@ -53,13 +53,7 @@ const ERR_INVALID_IP: &str = "Invalid IP address";
 const WS_QUEUE: usize = 32768;
 
 lazy_static! {
-    static ref HJRPC: HyperJsonRpcServer = {
-        let mut s = HyperJsonRpcServer::new();
-        s.serve_at("/", &Method::POST);
-        s.serve_at("/jrpc", &Method::POST);
-        s.serve_at("/jrpc", &Method::GET);
-        s
-    };
+    pub static ref HJRPC: OnceCell<HyperJsonRpcServer> = <_>::default();
     pub static ref WS_SUB: Mutex<SubMap<Arc<WsTx>>> =
         Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#")
                 .formula_prefix(OID_MASK_PREFIX_FORMULA)
@@ -945,8 +939,9 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
         return hyper_response!(StatusCode::FORBIDDEN);
     }
     let (parts, body) = req.into_parts();
-    if HJRPC.matches(&parts) {
-        HJRPC.process(crate::api::processor, &parts, body, ip).await
+    let hjrpc = HJRPC.get().unwrap();
+    if hjrpc.matches(&parts) {
+        hjrpc.process(crate::api::processor, &parts, body, ip).await
     } else {
         let uri = parts.uri.path();
         match parts.method {
@@ -1263,5 +1258,17 @@ pub async fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResu
             }
         }
     });
+    Ok(())
+}
+
+pub fn init(token_header: Option<&str>) -> EResult<()> {
+    let mut s = HyperJsonRpcServer::new();
+    s.serve_at("/", &Method::POST);
+    s.serve_at("/jrpc", &Method::POST);
+    s.serve_at("/jrpc", &Method::GET);
+    if let Some(th) = token_header {
+        s.set_external_token_header(th);
+    }
+    HJRPC.set(s).map_err(|_| Error::core("HJRPC already set"))?;
     Ok(())
 }
