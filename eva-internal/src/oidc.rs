@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use eva_common::{EResult, Error};
 use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
@@ -36,11 +39,14 @@ async fn fetcher(
     path: String,
     timeout: Duration,
     refresh_interval: Duration,
+    retry_delay: Duration,
+    failed_after: Duration,
 ) {
     let mut int = tokio::time::interval(refresh_interval);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         int.tick().await;
+        let ts = Instant::now();
         loop {
             match safe_fetch_jwks(&path, timeout).await {
                 Ok(v) => {
@@ -50,9 +56,11 @@ async fn fetcher(
                     break;
                 }
                 Err(e) => {
-                    jwks.lock().take();
+                    if failed_after > Duration::ZERO && ts.elapsed() > failed_after {
+                        jwks.lock().take();
+                    }
                     error!("Failed to fetch JWKs from {}: {}", path, e);
-                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    tokio::time::sleep(retry_delay).await;
                 }
             }
         }
@@ -70,13 +78,25 @@ impl Verifier {
         path: &str,
         timeout: Duration,
         refresh_interval: Duration,
+        retry_delay: Duration,
+        failed_after: Duration,
         sub_field: &str,
     ) -> Self {
         let jwk = Arc::new(Mutex::new(None));
         let handle = tokio::spawn({
             let jwk = jwk.clone();
             let path = path.to_string();
-            async move { fetcher(jwk, path, timeout, refresh_interval).await }
+            async move {
+                fetcher(
+                    jwk,
+                    path,
+                    timeout,
+                    refresh_interval,
+                    retry_delay,
+                    failed_after,
+                )
+                .await
+            }
         });
         Self {
             sub_field: sub_field.to_string(),

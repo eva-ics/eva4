@@ -17,6 +17,23 @@ config:
   #api_filter: lmacro:service/api_filter
   auth_svcs:
     - eva.aaa.localauth
+  # OpenID JWT token flow configuration
+  # Allows to use external authenticators on front-end servers
+  # (e.g. Gateryx, Traefik+Authentik, other reverse proxies with OIDC support)
+  # The local user still MUST be present (on any auth svc)
+  #oidc: 
+    # JWT assertion HTTP header name
+    #header: X-JWT-Assertion
+    # JWT field to use as username
+    #sub_field: sub
+    # path or URL to JWKs (JSON Web Key Set), supports single and multiple keys in one file
+    #key: /opt/eva4/keys/oidc.jwk
+    # refresh JWKs every N seconds (default: 3600)
+    #refresh: 3600
+    # retry interval in seconds if JWKs fetch fails (default: 10)
+    #retry: 10
+    # remove existing JWKs on fetch failure after seconds (default: 600, 0 - do not remove)
+    #failed_after: 600
   session:
     timeout: 60 # session timeout in seconds
     prolong: true # prolong session on any activity

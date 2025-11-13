@@ -165,6 +165,14 @@ fn default_oidc_refresh_interval() -> Duration {
     Duration::from_secs(300)
 }
 
+fn default_oidc_retry_interval() -> Duration {
+    Duration::from_secs(10)
+}
+
+fn default_oidc_failed_after() -> Duration {
+    Duration::from_secs(600)
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct OidcConfig {
@@ -172,12 +180,22 @@ struct OidcConfig {
     header: String,
     #[serde(default = "default_oidc_sub_field")]
     sub_field: String,
-    key_path: String,
+    key: String,
     #[serde(
         default = "default_oidc_refresh_interval",
         deserialize_with = "eva_common::tools::de_float_as_duration"
     )]
-    refresh_interval: Duration,
+    refresh: Duration,
+    #[serde(
+        default = "default_oidc_retry_interval",
+        deserialize_with = "eva_common::tools::de_float_as_duration"
+    )]
+    retry: Duration,
+    #[serde(
+        default = "default_oidc_failed_after",
+        deserialize_with = "eva_common::tools::de_float_as_duration"
+    )]
+    failed_after: Duration,
 }
 
 #[derive(Deserialize)]
@@ -383,9 +401,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_init_logs(&initial, client.clone())?;
     if let Some(oidc_config) = config.oidc {
         let verifier = OidcVerifier::create(
-            &oidc_config.key_path,
+            &oidc_config.key,
             timeout,
-            oidc_config.refresh_interval,
+            oidc_config.refresh,
+            oidc_config.retry,
+            oidc_config.failed_after,
             &oidc_config.sub_field,
         );
         OIDC_VERIFIER
