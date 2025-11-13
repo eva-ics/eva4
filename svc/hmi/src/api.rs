@@ -89,7 +89,11 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
                     Ok(sub) => {
                         debug!("external token verified for user: {}", sub);
                         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
-                        return Box::pin(login(&sub, "", None, None, ip, &source, true)).await;
+                        if let Ok(v) =
+                            Box::pin(login(&sub, "", None, None, ip, &source, true)).await
+                        {
+                            return Ok(v);
+                        }
                     }
                     Err(e) => {
                         debug!("external token verification failed: {}", e);
