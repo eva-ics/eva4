@@ -5,7 +5,11 @@ timeout: 5
 # the suicide timeout, used during shutdown (the node process is forcibly
 # killed after)
 suicide_timeout: 15
-# auto-create items coming from controllers (svc ids *.controller.* or *.plc.*)
+# auto-create items. possible values:
+# - false - disable auto-creation
+# - true - create items coming from controllers (svc ids *.controller.* or *.plc.*)
+# - ['svc1', 'svc2', 'svc3'] - create items coming from particular services
+# - '#' or '*' - create items coming from any bus client
 auto_create: true
 # source (remote node) sensors with source online/offline state. can be used in
 # various logic scenarios. Have OIDs like sensor:SYSTEM_NAME/node/REMOTE_NAME
