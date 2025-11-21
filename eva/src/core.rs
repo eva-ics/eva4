@@ -76,12 +76,39 @@ pub enum LvarOp {
 // clippy, this is not a file path!
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 #[inline]
-pub fn sender_allowed_auto_create(sender: &str) -> bool {
+fn sender_allowed_auto_create_strict(sender: &str) -> bool {
     sender.contains(".controller.")
         || sender.contains(".llc.")
         || sender.contains(".plc.")
         || sender.ends_with(".plc")
         || sender.ends_with(".program")
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(untagged)]
+enum AutoCreate {
+    Strict(bool),
+    BySingleSender(String),
+    BySender(HashSet<String>),
+}
+
+impl Default for AutoCreate {
+    fn default() -> Self {
+        AutoCreate::Strict(false)
+    }
+}
+
+impl AutoCreate {
+    #[inline]
+    fn allowed(&self, sender: &str) -> bool {
+        match self {
+            AutoCreate::Strict(v) => *v && sender_allowed_auto_create_strict(sender),
+            AutoCreate::BySingleSender(v) => v == "*" || v == "#" || sender.contains(v),
+            AutoCreate::BySender(v) => {
+                v.iter().any(|s| s == "*" || s == "#") || v.iter().any(|s| sender.contains(s))
+            }
+        }
+    }
 }
 
 pub enum ActionLaunchResult {
@@ -337,7 +364,7 @@ pub struct Core {
     pid_file: String,
     instant_save: InstantSave,
     #[serde(default)]
-    auto_create: bool,
+    auto_create: AutoCreate,
     #[serde(default)]
     source_sensors: bool,
     #[serde(
@@ -540,7 +567,7 @@ impl Core {
             inventory_db: None,
             system_name: system_name.to_owned(),
             pid_file: <_>::default(),
-            auto_create: false,
+            auto_create: <_>::default(),
             source_sensors: false,
             instant_save: InstantSave::Strict(false),
             suicide_timeout,
@@ -1258,6 +1285,19 @@ impl Core {
         info!("source destroyed: {}", source_id);
         self.unlock_source(source_id);
     }
+
+    async fn get_or_crete_lvar(&self, oid: &OID, source: &str) -> Option<Item> {
+        let inv = self.inventory.read().await;
+        if let Some(lvar) = inv.get_item(oid) {
+            return Some(lvar);
+        }
+        if !self.auto_create.allowed(source) {
+            return None;
+        }
+        drop(inv);
+        let lvar = self.create_local_item(oid.clone()).await.ok()?;
+        Some(lvar)
+    }
     /// # Panics
     ///
     /// Will panic if the state mutex is poisoned
@@ -1270,17 +1310,22 @@ impl Core {
         oid: &OID,
         op: LvarOp,
         method_orig: &str,
+        source: &str,
     ) -> EResult<Option<Value>> {
         if oid.kind() != ItemKind::Lvar {
             return Err(Error::not_implemented(
                 "Lvar ops can be applied to Lvars only",
             ));
         }
+        //let lvar = self
+        //.inventory
+        //.read()
+        //.await
+        //.get_item(oid)
+        //.ok_or_else(|| Error::not_found(oid))?;
         let lvar = self
-            .inventory
-            .read()
+            .get_or_crete_lvar(oid, source)
             .await
-            .get_item(oid)
             .ok_or_else(|| Error::not_found(oid))?;
         if !lvar.enabled() {
             return Err(Error::access(format!("Lvar {} is disabled", oid)));
@@ -1299,8 +1344,7 @@ impl Core {
                 )
                 .await??
                 .payload(),
-            )
-            .map_err(Into::into);
+            );
         }
         if let Some(st) = lvar.state() {
             let rpc = self.rpc.get().unwrap();
@@ -1460,7 +1504,7 @@ impl Core {
                         }
                         return Ok(());
                     }
-                    if self.auto_create && sender_allowed_auto_create(sender) {
+                    if self.auto_create.allowed(sender) {
                         apply_delta!();
                         if let Some(rw) = rw {
                             self.auto_create_item_from_raw(&o.oid, rw, sender).await;
@@ -1492,9 +1536,9 @@ impl Core {
                     item_events_to_process.push((item, RawStateEventOwned::from(r)));
                 } else {
                     if allow_auto_create.is_none() {
-                        allow_auto_create.replace(sender_allowed_auto_create(sender));
+                        allow_auto_create.replace(self.auto_create.allowed(sender));
                     }
-                    if self.auto_create && allow_auto_create.unwrap() {
+                    if allow_auto_create.unwrap() {
                         item_events_to_create.push(r);
                     }
                 }
@@ -1626,7 +1670,7 @@ impl Core {
         let maybe_item = self.inventory.read().await.get_item(oid);
         if let Some(item) = maybe_item {
             self.process_raw_state(item, raw, true, sender).await
-        } else if self.auto_create && sender_allowed_auto_create(sender) {
+        } else if self.auto_create.allowed(sender) {
             self.auto_create_item_from_raw(oid, raw, sender).await;
             Ok(())
         } else {
@@ -1635,7 +1679,7 @@ impl Core {
     }
 
     pub async fn auto_create_item_from_raw_empty(&self, oid: &OID, sender: &str) {
-        if self.auto_create && sender_allowed_auto_create(sender) {
+        if self.auto_create.allowed(sender) {
             let item_config = ItemConfigData::blank(oid, sender);
             info!(
                 "auto-creating local item {} (blank) source: {}",

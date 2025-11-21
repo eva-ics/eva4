@@ -115,7 +115,15 @@ config/core:
     keep_action_history: *floatpositive
     #dump: *bool
     suicide_timeout: *floatpositive
-    auto_create: *bool
+    auto_create:
+      anyOf:
+        - type: boolean
+        - type: string
+        - type: array
+          uniqueItems: true
+          additionalItems: false
+          items:
+            type: string
     source_sensors: *bool
     instant_save:
       anyOf:

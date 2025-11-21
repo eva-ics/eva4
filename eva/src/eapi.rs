@@ -392,7 +392,11 @@ impl RpcHandlers for BusApi {
                 } else {
                     let p: ParamsId = unpack(event.payload()).log_err()?;
                     let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
-                    if let Some(value) = self.core.lvar_op(&oid, $op, method).await? {
+                    if let Some(value) = self
+                        .core
+                        .lvar_op(&oid, $op, method, event.primary_sender())
+                        .await?
+                    {
                         Ok(Some(pack(&value)?))
                     } else {
                         Ok(None)
@@ -1098,7 +1102,12 @@ impl RpcHandlers for BusApi {
                     let p: ParamsSet = unpack(event.payload()).log_err()?;
                     let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
                     self.core
-                        .lvar_op(&oid, LvarOp::Set(p.status, p.value.into()), method)
+                        .lvar_op(
+                            &oid,
+                            LvarOp::Set(p.status, p.value.into()),
+                            method,
+                            event.primary_sender(),
+                        )
                         .await?;
                     Ok(None)
                 }
