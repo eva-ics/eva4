@@ -25,6 +25,7 @@ case $ARCH in
     YEDB_ARCH=x86_64
     CARGO=cross
     CARGO_ARGS="--features openssl-vendored"
+    CARGO_WORKSPACE_EXTRA_ARGS=
     CARGO_TARGET_DIR=target
     ;;
   aarch64-musl)
@@ -34,6 +35,7 @@ case $ARCH in
     YEDB_ARCH=aarch64
     CARGO=cross
     CARGO_ARGS="--features openssl-vendored"
+    CARGO_WORKSPACE_EXTRA_ARGS=
     CARGO_TARGET_DIR=target
     ;;
   x86_64-ubuntu20.04)
@@ -42,7 +44,8 @@ case $ARCH in
     STRIP=strip
     YEDB_ARCH=x86_64-ubuntu20.04
     CARGO=cargo
-    CARGO_ARGS="--features eva-internal/fips"
+    CARGO_ARGS=
+    CARGO_WORKSPACE_EXTRA_ARGS="--features eva-internal/fips"
     CARGO_TARGET_DIR=target-native
     export CARGO_TARGET_DIR
     if ! lsb_release -cs|grep ^focal$ ; then
@@ -164,7 +167,7 @@ echo "Building EVA ICS..."
 ARCH_SFX=$ARCH
 export ARCH_SFX
 DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
-  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} || exit 1
+  "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} ${CARGO_WORKSPACE_EXTRA_ARGS} || exit 1
 cd .. || exit 1
 
 echo "Building controller system SVC..."
