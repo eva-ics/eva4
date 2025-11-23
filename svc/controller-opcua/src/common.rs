@@ -62,7 +62,7 @@ pub struct OpcAuthX509 {
 pub enum OpcType {
     #[serde(alias = "BOOL")]
     Bool,
-    #[serde(alias = "byte", alias = "BYTE", alias = "BOOL", alias = "USINT")]
+    #[serde(alias = "byte", alias = "BYTE", alias = "USINT")]
     Uint8,
     #[serde(alias = "sint8", alias = "SINT")]
     Int8,
