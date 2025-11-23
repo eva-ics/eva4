@@ -21,7 +21,7 @@ config:
   # Allows to use external authenticators on front-end servers
   # (e.g. Gateryx, Traefik+Authentik, other reverse proxies with OIDC support)
   # The local user still MUST be present (on any auth svc)
-  #oidc: 
+  #oidc:
     # JWT assertion HTTP header name
     #header: X-JWT-Assertion
     # JWT field to use as username
