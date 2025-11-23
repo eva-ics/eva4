@@ -20,7 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.1.0-stable
 ============
 
-* 2025-11-23 build 2025112301: HMI OIDC token auth, item auto-creation improvements
+* 2025-11-23 build 2025112301: ⚠️  HMI OIDC token auth, item auto-creation improvements
 * 2025-11-06 build 2025110601: MQTT TLS fixes, exclude null values from TSDBs
 * 2025-11-04 build 2025110401: Mailer pool size fixes, DB services RTC-stick intervals, ADS improvements
 * 2025-10-17 build 2025101701: Videosrv fixes, certain CCTV improvements
