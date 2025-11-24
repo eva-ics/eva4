@@ -8,7 +8,7 @@ if [ -z $BUILD ]; then
   exit 9
 fi
 
-ARGS="--no-cache"
+ARGS="--pull --no-cache"
 [ "$TEST" = "1" ] && ARGS=
 sed "s/%VERSION%/$VERSION/g" Dockerfile.in | sed "s/%BUILD%/$BUILD/g" > Dockerfile || exit 1
 docker build $ARGS -t bmauto/eva-ics4 . || exit 1
