@@ -1,25 +1,31 @@
-from ubuntu:20.04
+FROM ubuntu:20.04
+
+RUN env DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get install --no-install-recommends -y tzdata && \
+    ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
+    apt-get install -y --no-install-recommends bash jq curl procps ca-certificates tar gzip adduser nano && \
+    apt-get install -y --no-install-recommends python3 python3-venv && \
+    apt-get install  -y --no-install-recommends vim-tiny && \
+    apt-get clean
+
+RUN addgroup --system eva && \
+    adduser --system --no-create-home --home /opt/eva4 --ingroup eva eva
+
 RUN touch /.eva_container
-RUN apt-get update
-RUN env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y tzdata
-RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends bash jq curl procps ca-certificates tar gzip adduser nano
-RUN apt-get install -y --no-install-recommends python3 python3-venv
-RUN apt-get install  -y --no-install-recommends vim-tiny
-RUN addgroup --system eva
-RUN adduser --system --no-create-home --home /opt/eva4 --ingroup eva eva
-RUN mkdir /opt/eva4
+
 RUN curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64-ubuntu20.04.tgz \
   | tar xzf - -C /opt/eva4  --strip-components 1
 RUN curl https://pub.bma.ai/eva4/%VERSION%/nightly/update-%BUILD%.sh -o /opt/eva4/update.sh
-RUN /opt/eva4/prepare
-RUN /opt/eva4/sbin/eva-registry-cli set-field eva/config/python-venv pip_extra_options -- --no-cache-dir
-RUN /opt/eva4/sbin/venvmgr build
-RUN /opt/eva4/sbin/venvmgr add eva-shell
-RUN /opt/eva4/sbin/venvmgr add requests
-RUN ln -sf /opt/eva4/bin/eva /usr/local/bin/eva
+
+RUN /opt/eva4/prepare && \
+    /opt/eva4/sbin/eva-registry-cli set-field eva/config/python-venv pip_extra_options -- --no-cache-dir && \
+    /opt/eva4/sbin/venvmgr build && \
+    /opt/eva4/sbin/venvmgr add eva-shell && \
+    /opt/eva4/sbin/venvmgr add requests && \
+    ln -sf /opt/eva4/bin/eva /usr/local/bin/eva
+
 RUN echo '{"buf_size":8192,"buf_ttl":10,"queue_size":32768,"sockets":["var/bus.ipc","0.0.0.0:7778"]}' | /opt/eva4/sbin/eva-registry-cli set eva/config/bus - --type json
 RUN echo '[{"level":"info","output":"console"},{"level":"info","output":"bus"},{"keep":86400,"level":"info","max_records":1000000,"output":"memory"}]' | /opt/eva4/sbin/eva-registry-cli set eva/config/logs - --type json
 COPY eva-launcher /
-CMD [ "/bin/bash", "-c", "/eva-launcher" ]
+RUN chmod +x /eva-launcher
+CMD ["/eva-launcher"]
