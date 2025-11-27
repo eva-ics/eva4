@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 import evaics.sdk as sdk
 
@@ -55,12 +55,16 @@ class Authenticator:
             except:
                 self.conn = None
                 raise
-            if self.conn.entries is None:
-                raise RuntimeError("Invalid username")
-            groups = [
-                group.split(',', maxsplit=1)[0].split('=', maxsplit=1)[1]
-                for group in self.conn.entries[0].memberOf
-            ]
+            if not self.conn.entries:
+                raise RuntimeError("Invalid user")
+            try:
+                groups = [
+                    group.split(',', maxsplit=1)[0].split('=', maxsplit=1)[1]
+                    for group in self.conn.entries[0].memberOf
+                ]
+            except Exception as e:
+                _d.service.logger.error(f"Failed to get groups for user {login}: {e}")
+                return []
             return [
                 group[len(self.group_prefix):]
                 for group in groups
@@ -94,7 +98,7 @@ class Authenticator:
             self.conn = None
             raise
 
-        if self.conn.entries is None:
+        if not self.conn.entries:
             raise RuntimeError("Invalid email address")
 
         return self.conn.entries[0].cn.value
