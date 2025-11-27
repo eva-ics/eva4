@@ -1,4 +1,4 @@
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 import evaics.sdk as sdk
 
@@ -19,12 +19,14 @@ class Authenticator:
                  ldap_path,
                  group_prefix,
                  timeout=5,
-                 ca_certs=None):
+                 ca_certs=None,
+                 provider=None):
         self.ldap_url = ldap_url
         self.service_user = service_user
         self.service_password = service_password
         self.ldap_path = ldap_path
         self.timeout = timeout
+        self.provider = provider
         self.group_prefix = group_prefix
         if ca_certs:
             tls_config = Tls(validate=ssl.CERT_REQUIRED,
@@ -44,27 +46,37 @@ class Authenticator:
             self.prepare_conn()
             if '@' in login:
                 login = self.get_username_by_email(login)
-            if verify_only is not True:
+            if not verify_only:
                 self.authenticate_ldap(login, password)
             search_dn = f"cn={login},{self.ldap_path}"
             try:
+                attributes = ["memberOf"]
+                if self.provider == "msad":
+                    attributes.append("userAccountControl")
+                elif self.provider == "authentik":
+                    attributes.append("ak-active")
                 self.conn.search(search_base=search_dn,
                                  search_filter="(objectClass=*)",
-                                 attributes=["memberOf"],
+                                 attributes=attributes,
                                  time_limit=self.timeout)
             except:
                 self.conn = None
                 raise
             if not self.conn.entries:
                 raise RuntimeError("Invalid user")
-            try:
-                groups = [
-                    group.split(',', maxsplit=1)[0].split('=', maxsplit=1)[1]
-                    for group in self.conn.entries[0].memberOf
-                ]
-            except Exception as e:
-                _d.service.logger.error(f"Failed to get groups for user {login}: {e}")
-                return []
+            entries = self.conn.entries[0]
+            if self.provider == "msad":
+                uac = int(entries.userAccountControl.value)
+                if uac & 2:
+                    raise RuntimeError("User account is disabled")
+            elif self.provider == "authentik":
+                ak_active = entries["ak-active"].value
+                if not ak_active:
+                    raise RuntimeError("User account is disabled")
+            groups = [
+                group.split(',', maxsplit=1)[0].split('=', maxsplit=1)[1]
+                for group in entries.memberOf
+            ]
             return [
                 group[len(self.group_prefix):]
                 for group in groups
@@ -135,6 +147,7 @@ def run():
     group_prefix = config.get('group_prefix', 'eva_')
     ldap_url = config['url']
     ldap_path = config['path']
+    ldap_provider = config.get('provider', None)
     service_user = config['service_user']
     tls_ca = config.get('tls_ca', None)
     service_password = config['service_password']
@@ -144,8 +157,9 @@ def run():
                                      service_password=service_password,
                                      ldap_path=ldap_path,
                                      timeout=timeout,
+                                     group_prefix=group_prefix,
                                      ca_certs=tls_ca,
-                                     group_prefix=group_prefix)
+                                     provider=ldap_provider)
     service.init(info, on_rpc_call=handle_rpc)
     try:
         _d.authenticator.prepare_conn()

@@ -18,4 +18,13 @@ config:
   url: ldap://host:389
   # CA certificates file for TLS connection
   #tls_ca: /path/to/ca.crt
+  # LDAP provider, required for additional checking, e.g. OIDC token validation
+  # to ensure user is enabled
+  # 
+  # Supported providers:
+  #
+  # msad - Microsoft Active Directory
+  # authentik - Authentik LDAP provider
+  #
+  #provider: msad
 user: nobody
