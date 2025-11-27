@@ -1,4 +1,4 @@
-__version__ = '0.2.35'
+__version__ = '0.2.36'
 
 import busrt
 import sys
@@ -375,7 +375,6 @@ class Registry:
         self.service = service
         self.key_prefix = f'eva/svc_data/{service.id}'
         self.registry_svc = 'eva.registry'
-        print(self.service.id, flush=True)
 
     def key_set(self, key, value):
         """
