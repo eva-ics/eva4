@@ -1,4 +1,4 @@
-__version__ = '0.1.2'
+__version__ = '0.1.4'
 
 import evaics.sdk as sdk
 
@@ -22,6 +22,8 @@ class Authenticator:
                  ca_certs=None,
                  provider=None):
         self.ldap_url = ldap_url
+        if provider and provider not in ['msad', 'authentik']:
+            raise ValueError(f"Unsupported LDAP provider: {provider}")
         self.service_user = service_user
         self.service_password = service_password
         self.ldap_path = ldap_path
@@ -165,4 +167,5 @@ def run():
         _d.authenticator.prepare_conn()
     except Exception as e:
         _d.service.logger.error(f"Failed to connect to LDAP server: {e}")
+    print(f'LDAP server: {ldap_url}, provider: {ldap_provider}', flush=True)
     service.block()
