@@ -1,0 +1,21 @@
+# LDAP Authentication Service
+#
+# Requires https://pypi.org/project/eva4-svc-aaa-ldap/ Python module installed
+command: venv/bin/eva4-svc-aaa-ldap
+bus:
+  path: var/bus.ipc
+config:
+  # ACL service
+  acl_svc: eva.aaa.acl
+  # LDAP group prefix (users msut be in groups e.g. eva_GROUP,ou=users,dc=domain,dc=com)
+  #group_prefix: eva_
+  # LDAP base path
+  path: ou=users,dc=domain,dc=com
+  # LDAP service user credentials
+  service_user: service
+  service_password: secret
+  # LDAP server URL (for TLS use ldaps://)
+  url: ldap://host:389
+  # CA certificates file for TLS connection
+  #tls_ca: /path/to/ca.crt
+user: nobody

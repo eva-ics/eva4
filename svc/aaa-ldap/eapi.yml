@@ -1,0 +1,24 @@
+auth.user:
+  des: Authenticates a client using a local user account
+  par:
+    - nam: login
+      typ: String
+      des: Account login
+      req: true
+    - nam: password
+      typ: String
+      des: Account password (plain text)
+      req: true
+    - nam: timeout
+      typ: f64
+      des: Max operation timeout
+      req: false
+    - nam: xopts
+      typ: map<String/Any>
+      des: "Extra options map (e.g. otp=code for two-factor auth)"
+      req: false
+    - nam: externally_verified
+      typ: bool
+      des: "DANGEROUS: Skip password verification, assume it is already done by an external agent"
+      req: false
+  ret: The method returns errors if auth is not successful
