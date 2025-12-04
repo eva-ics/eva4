@@ -13,9 +13,10 @@ RUN addgroup --system eva && \
 
 RUN touch /.eva_container
 
-RUN curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64-ubuntu20.04.tgz \
-  | tar xzf - -C /opt/eva4  --strip-components 1
-RUN curl https://pub.bma.ai/eva4/%VERSION%/nightly/update-%BUILD%.sh -o /opt/eva4/update.sh
+RUN mkdir -p /opt/eva4 && \
+  curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64-ubuntu20.04.tgz \
+    | tar xzf - -C /opt/eva4  --strip-components 1 && \
+  curl https://pub.bma.ai/eva4/%VERSION%/nightly/update-%BUILD%.sh -o /opt/eva4/update.sh
 
 RUN /opt/eva4/prepare && \
     /opt/eva4/sbin/eva-registry-cli set-field eva/config/python-venv pip_extra_options -- --no-cache-dir && \
