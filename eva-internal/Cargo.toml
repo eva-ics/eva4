@@ -5,16 +5,14 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-aws-lc-rs = { version = "1.14.1" }
-base64-url = "3.0.2"
+#aws-lc-rs = { version = "1.14.1" }
+#base64-url = "3.0.2"
 eva-common = { workspace = true, features = ["time", "extended-value"] }
-jsonwebtoken = { version = "10.2", features = ["p256", "p384", "rsa", "ed25519-dalek", "aws_lc_rs"] }
-log = { workspace = true }
-parking_lot = { workspace = true }
-reqwest = { version = "0.11", features = ["native-tls"] }
+#jsonwebtoken = { version = "10.2", features = ["p256", "p384", "rsa", "ed25519-dalek", "aws_lc_rs"] }
+#log = { workspace = true }
+#parking_lot = { workspace = true }
+#reqwest = { version = "0.11", features = ["native-tls"] }
 tokio = { workspace = true, features = ["time", "rt"] }
-serde_json = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+#serde_json = { workspace = true }
+#serde = { workspace = true, features = ["derive"] }
 
-[features]
-fips = ["aws-lc-rs/fips"]

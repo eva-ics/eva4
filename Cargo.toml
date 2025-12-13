@@ -67,6 +67,7 @@ edition = "2021"
 repository = "https://github.com/eva-ics/eva4"
 
 [workspace.dependencies]
+aws-lc-rs = "1.14.1"
 openssl = "^0.10.72"
 once_cell = "^1.19.0"
 hyper = "^0.14.28"
@@ -88,6 +89,7 @@ colored = "^2.1.0"
 bmart = "^0.2.11"
 uuid = "^1.7.0"
 futures = "^0.3.30"
+tracing = { version = "0.1", features = ["log"] }
 serde = "^1.0.197"
 ttl_cache = "0.5"
 base64 = "^0.13"

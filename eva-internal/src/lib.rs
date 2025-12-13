@@ -3,10 +3,6 @@ use std::time::Duration;
 use eva_common::time::{now, Time};
 use tokio::time::Interval;
 
-mod oidc;
-
-pub use oidc::Verifier as OidcVerifier;
-
 pub struct RtcSyncedInterval {
     interval: Interval,
     d: Duration,

@@ -1,12 +1,12 @@
 use eva_common::acl::{Acl, OIDMaskList};
 use eva_common::events::{AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, LOG_EVENT_TOPIC};
 use eva_common::prelude::*;
-use eva_internal::OidcVerifier;
 use eva_sdk::prelude::*;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use lazy_static::lazy_static;
+use oidc_verifier::Verifier as OidcVerifier;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
