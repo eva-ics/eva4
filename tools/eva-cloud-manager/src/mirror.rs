@@ -126,7 +126,12 @@ pub async fn update(opts: Options) -> EResult<()> {
         Err(e) => return Err(Error::failed(format!("unable to read eva.key: {}", e))),
     }
     http_client.set_manifest(manifest.clone());
-    let distro = format!("eva-{}-{}-{}.tgz", ver.version, ver.build, crate::arch_sfx());
+    let distro = format!(
+        "eva-{}-{}-{}.tgz",
+        ver.version,
+        ver.build,
+        crate::arch_sfx()
+    );
     let distro_p = Path::new(&distro);
     let mut files = manifest.files();
     files.sort();
