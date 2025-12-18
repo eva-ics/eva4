@@ -127,7 +127,7 @@ pub async fn update(opts: Options) -> EResult<()> {
         "eva-{}-{}-{}.tgz",
         new_version.version,
         new_version.build,
-        crate::ARCH_SFX
+        crate::arch_sfx()
     );
     env::set_current_dir(&*EVA_DIR)?;
     let download_timeout = opts
@@ -156,7 +156,7 @@ pub async fn update(opts: Options) -> EResult<()> {
     let mut p = Command::new("bash")
         .arg(&update_script)
         .env("EVA_REPOSITORY_URL", repository_url)
-        .env("ARCH_SFX", crate::ARCH_SFX)
+        .env("ARCH_SFX", crate::arch_sfx())
         .spawn()?;
     let res = p.wait().await?;
     if res.code().unwrap_or(0) == 0 {

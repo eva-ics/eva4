@@ -1,9 +1,10 @@
 use log::{error, info, warn};
+use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 
 mod args;
 mod cloud_update;
@@ -18,7 +19,12 @@ pub const DEFAULT_REPOSITORY_URL: &str = "https://pub.bma.ai/eva4";
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 
-const ARCH_SFX: &str = env!("ARCH_SFX");
+static ARCH_SFX: Lazy<String> =
+    Lazy::new(|| std::env::var("EVA_ARCH_SFX").unwrap_or(env!("ARCH_SFX").to_string()));
+
+pub fn arch_sfx() -> &'static str {
+    &ARCH_SFX
+}
 
 #[derive(Default)]
 pub struct FileCleaner {
