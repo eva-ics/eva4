@@ -1589,7 +1589,7 @@ class CLI:
         data = call_rpc('kiosk.list', target=kiosk_svc)
         if current_command.json:
             print_result(data)
-        else:
+        elif isinstance(data, list) and data:
             formatted_data = []
             for d in data:
                 state = d.get('state')
