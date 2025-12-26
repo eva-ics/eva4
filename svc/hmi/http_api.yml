@@ -447,8 +447,8 @@ item.state_log:
       typ: f64/String
       des: "Beginning timestamp (default: last 24 hours)"
       req: false
-    - nam: t_end/String
-      typ: f64
+    - nam: t_end
+      typ: f64/String
       des: "Ending timestamp (default: now)"
       req: false
     - nam: limit
