@@ -2362,6 +2362,7 @@ dependencies = [
 name = "eva-internal"
 version = "4.1.0"
 dependencies = [
+ "aws-lc-rs",
  "eva-common",
  "tokio",
 ]
