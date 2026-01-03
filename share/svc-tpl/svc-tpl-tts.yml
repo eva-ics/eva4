@@ -32,5 +32,5 @@ config:
   ##killall -9 play > /dev/null 2>&1 # stop current playback
   ##play $1 gain ${GAIN} > /dev/null 2>&1 # play a file with sox play
   #
-  #playback_command: /data/play.sh
+  #playback_cmd: /data/play.sh
 user: eva # make sure the user has access to audio device and file dirs
