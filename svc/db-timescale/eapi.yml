@@ -15,7 +15,7 @@ state_history:
       req: false
     - nam: fill
       typ: String
-      des: Fill (nS/T/H/D/W e.g. 10T for 10-minute, requires ts_extension)
+      des: Fill (nS/T/H/D/W e.g. 10T for 10-minute)
       req: false
     - nam: precision
       typ: u32
