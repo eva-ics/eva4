@@ -1,0 +1,33 @@
+# Network monitoring controller
+command: target/debug/eva-controller-netmon
+bus:
+  path: var/bus.ipc
+config:
+  # Maximum number of parallel probes (default: number of workers)
+  #max_parallel_probes: 100
+  hosts:
+    # ping every 1 second (warning: ping probes require the service to run as root)
+    - interval: 1
+      oid: sensor:hosts/host1/liveness
+      probe:
+        kind: ping
+        options:
+          target: 192.168.1.1
+    # probe TCP port 25 every 60 seconds
+    - interval: 60
+      oid: sensor:hosts/host1/smtp
+      probe:
+        kind: tcp
+        options:
+          target: 192.168.1.1
+          port: 25
+    # probe HTTP URL every 60 seconds
+    - interval: 60
+      oid: sensor:hosts/web/bohemia-automation
+      probe:
+        kind: http
+        options:
+          url: https://www.bohemia-automation.com
+          # check body content, optional
+          content: "&copy; 2026 Bohemia Automation Limited"
+#user: nobody

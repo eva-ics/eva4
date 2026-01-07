@@ -19,6 +19,7 @@ members = [
   "svc/controller-ads",
   "svc/controller-opcua",
   "svc/controller-pubsub",
+  "svc/controller-netmon",
   "svc/bridge-ads",
   "svc/controller-w1",
   "svc/controller-trap",

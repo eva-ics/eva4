@@ -1,0 +1,22 @@
+[package]
+name = "eva-controller-netmon"
+version.workspace = true
+repository.workspace = true
+edition = "2024"
+publish = false
+
+[dependencies]
+async-trait = { workspace = true }
+atomic-timer = "0.3"
+eva-common = { workspace = true, features = ["events", "common-payloads", "payload", "acl"] }
+eva-sdk = { workspace = true, features = ["controller"] }
+log = { workspace = true }
+mimalloc = { workspace = true }
+once_cell = { workspace = true }
+reqwest = "0.13.1"
+serde = { workspace = true, features = ["derive", "rc"] }
+surge-ping = "0.8.3"
+tokio = { workspace = true, features = ["full"] }
+
+[features]
+std-alloc = []
