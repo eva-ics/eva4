@@ -21,6 +21,10 @@ state_history:
       typ: bool
       des: Pack data in arrays according to type
       req: false
+    - nam: xopts
+      typ: Map<String, String>
+      des: "Extra: path=JSON path, e.g. $.value.temp[0]"
+      req: false
   ret: State history payload
   exm: |
     [

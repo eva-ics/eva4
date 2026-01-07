@@ -6,6 +6,7 @@ members = [
   "svc/dapp",
   "svc/db-influx",
   "svc/db-sql",
+  "svc/db-json",
   "svc/db-timescale",
   "svc/aaa-acl",
   "svc/aaa-otp",

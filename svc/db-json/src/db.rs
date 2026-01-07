@@ -6,13 +6,15 @@ use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
 use once_cell::sync::OnceCell;
 use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions, PgPool, Row,
+    postgres::{PgConnectOptions, PgPoolOptions},
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::str::FromStr;
 use std::time::Duration;
+
+use crate::path::jsonpath_to_pg;
 
 err_logger!();
 
@@ -187,7 +189,7 @@ pub async fn state_history(
     _precision: Option<u32>,
     limit: Option<usize>,
     prop: Option<StateProp>,
-    _xopts: BTreeMap<String, Value>,
+    mut xopts: BTreeMap<String, Value>,
     compact: bool,
 ) -> EResult<StateHistoryData> {
     let pool = POOL.get().unwrap();
@@ -219,11 +221,17 @@ pub async fn state_history(
         (*p == StateProp::Status, *p == StateProp::Value)
     });
     let pq = if need_status && need_value {
-        "status,value"
+        format!(
+            "status,{} as value",
+            jsonpath_to_pg("value", xopts.remove("path"))?
+        )
     } else if need_status {
-        "status"
+        "status".to_owned()
     } else {
-        "value"
+        format!(
+            "{} as value",
+            jsonpath_to_pg("value", xopts.remove("path"))?
+        )
     };
     let query = format!(
         r"SELECT t,{pq} FROM {table_name} AS she
@@ -242,8 +250,8 @@ pub async fn state_history(
             None
         };
         let value = if need_value {
-            let val: serde_json::Value = row.try_get("value")?;
-            eva_common::value::to_value(val).ok()
+            let val: Option<serde_json::Value> = row.try_get("value")?;
+            eva_common::value::to_value(val.unwrap_or_default()).ok()
         } else {
             None
         };
@@ -309,8 +317,8 @@ pub async fn state_log(
         let oid: OID = oid_str.parse()?;
         let t: NaiveDateTime = row.try_get("t")?;
         let status: i16 = row.try_get("status")?;
-        let val: serde_json::Value = row.try_get("value")?;
-        let value = eva_common::value::to_value(val).ok();
+        let val: Option<serde_json::Value> = row.try_get("value")?;
+        let value = eva_common::value::to_value(val.unwrap_or_default()).ok();
         let state = ItemState {
             oid,
             set_time: naive_to_ts(t),
