@@ -1,0 +1,29 @@
+[package]
+name = "eva-db-json"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+busrt = { features = ["rpc", "ipc"] , workspace = true }
+tokio = { features = ["full"] , workspace = true }
+async-trait = { workspace = true }
+serde = { features = ["derive", "rc"] , workspace = true }
+serde_json = { workspace = true }
+eva-common = { features = ["events", "db", "workers", "common-payloads", "time"] , workspace = true }
+log = { workspace = true }
+async-channel = { workspace = true }
+eva-sdk = { workspace = true }
+once_cell = { workspace = true }
+bmart = { workspace = true }
+sqlx = { version = "0.6.3", features = [
+"runtime-tokio-native-tls", "postgres", "chrono" ] }
+futures = { workspace = true }
+chrono = { workspace = true }
+mimalloc = { workspace = true }
+
+eva-internal = { path = "../../eva-internal" }
+
+[features]
+std-alloc = []

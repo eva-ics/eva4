@@ -1,0 +1,90 @@
+state_history:
+  des: Gets item state history
+  par:
+    - nam: i
+      typ: String
+      des: Item OID
+      req: true
+    - nam: t_start
+      typ: f64
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end
+      typ: f64
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: limit
+      typ: u32
+      des: Limit records to
+      req: false
+    - nam: compact
+      typ: bool
+      des: Pack data in arrays according to type
+      req: false
+  ret: State history payload
+  exm: |
+    [
+        {
+            "status": 1,
+            "t": 1652059860.0424938,
+            "value": 15
+        },
+        {
+            "status": 1,
+            "t": 1652059865.045223,
+            "value": "something"
+        },
+        {
+            "status": 1,
+            "t": 1652059870.0452943,
+            "value": {"key": "value"}
+        },
+        {
+            "status": 1,
+            "t": 1652059875.0443518,
+            "value": [1, 2, 3]
+        }
+    ]
+state_log:
+  des: Gets item state log
+  par:
+    - nam: i
+      typ: String
+      des: "Item OID, supports ending masks (e.g. sensor:group/#)"
+      req: true
+    - nam: t_start
+      typ: f64
+      des: "Beginning timestamp (default: last 24 hours)"
+      req: false
+    - nam: t_end
+      typ: f64
+      des: "Ending timestamp (default: now)"
+      req: false
+    - nam: limit
+      typ: u32
+      des: Limit records to
+      req: false
+  ret: State log payload (includes OIDs, as other svcs may support get-by-mask)
+  exm: |
+    [
+        {
+            "oid": "sensor:tests/temp",
+            "status": 1,
+            "t": 1652060175.0443184,
+            "value": 15
+        },
+        {
+            "oid": "sensor:tests/temp",
+            "status": 1,
+            "t": 1652060180.046056,
+            "value": "something"
+        },
+        {
+            "oid": "sensor:tests/temp",
+            "status": 1,
+            "t": 1652060185.0454304,
+            "value": {"key": "value"}
+        }
+    ]
+state_push:
+  des: "push item states into db, (payload: single item state or list). skips existing states"
