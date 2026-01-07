@@ -14,6 +14,11 @@ pub fn jsonpath_to_pg(column: &str, path: Option<Value>) -> EResult<String> {
     if !path.starts_with("$.") {
         return Err(Error::failed("Invalid JSONPath: must start with '$.'"));
     }
+    if path.contains(';') || path.contains('\\') {
+        return Err(Error::failed(
+            "Invalid JSONPath: contains invalid characters",
+        ));
+    }
 
     let mut sql = String::from(column);
     let mut chars = path[2..].chars().peekable();
