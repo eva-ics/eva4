@@ -2,7 +2,7 @@ use clap::Parser;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::svc_block2;
-use log::{log, Level as LL};
+use log::{Level as LL, log};
 use once_cell::sync::{Lazy, OnceCell};
 use std::cell::RefCell;
 use std::cmp::Ordering;
@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::ffi::CString;
 use std::path::Path;
 use std::ptr;
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 const ABI_VERSION: u16 = 1;
@@ -437,13 +437,13 @@ impl IntoResultVec for i32 {
 }
 
 trait FfiBuf {
-    fn as_ffi_buf(&self) -> EResult<EBuffer>;
-    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer>;
+    fn as_ffi_buf(&self) -> EResult<EBuffer<'_>>;
+    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer<'_>>;
 }
 
 #[allow(clippy::cast_ptr_alignment, clippy::ptr_as_ptr)]
 impl FfiBuf for Vec<u8> {
-    fn as_ffi_buf(&self) -> EResult<EBuffer> {
+    fn as_ffi_buf(&self) -> EResult<EBuffer<'_>> {
         Ok(EBuffer {
             len: self.len(),
             data: self.as_ptr() as *mut i32,
@@ -451,7 +451,7 @@ impl FfiBuf for Vec<u8> {
             _src: self,
         })
     }
-    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer> {
+    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer<'_>> {
         Ok(EBuffer {
             len: self.len(),
             data: self.as_mut_ptr() as *mut i32,

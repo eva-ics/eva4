@@ -2193,6 +2193,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-db-json"
+version = "4.1.0"
+dependencies = [
+ "async-channel 1.9.0",
+ "async-trait",
+ "bmart",
+ "busrt",
+ "chrono",
+ "eva-common",
+ "eva-internal",
+ "eva-sdk",
+ "futures",
+ "log",
+ "mimalloc",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "eva-db-sql"
 version = "4.1.0"
 dependencies = [

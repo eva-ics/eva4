@@ -1,12 +1,12 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::{ParamsId, ValueOrList};
 use eva_common::events::{
-    LocalStateEvent, RawStateEvent, RawStateEventOwned, RemoteStateEvent, LOCAL_STATE_TOPIC,
-    RAW_STATE_TOPIC, REMOTE_STATE_TOPIC,
+    LOCAL_STATE_TOPIC, LocalStateEvent, RAW_STATE_TOPIC, REMOTE_STATE_TOPIC, RawStateEvent,
+    RawStateEventOwned, RemoteStateEvent,
 };
 use eva_common::prelude::*;
 use eva_sdk::controller::{
-    format_action_topic, transform, Action, RawStateCache, RawStateEventPreparedOwned,
+    Action, RawStateCache, RawStateEventPreparedOwned, format_action_topic, transform,
 };
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
@@ -15,8 +15,8 @@ use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use psrpc::pubsub;
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map, BTreeMap, HashMap};
-use std::sync::{atomic, Arc};
+use std::collections::{BTreeMap, HashMap, hash_map};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 use tokio::sync::oneshot;
 use ttl_cache::TtlCache;
@@ -651,7 +651,7 @@ async fn handle_input(
 }
 
 fn spawn_bus_client_worker(
-    bus_client: Arc<tokio::sync::Mutex<(dyn AsyncClient + 'static)>>,
+    bus_client: Arc<tokio::sync::Mutex<dyn AsyncClient + 'static>>,
     rx: async_channel::Receiver<(String, Vec<u8>)>,
 ) {
     tokio::spawn(async move {

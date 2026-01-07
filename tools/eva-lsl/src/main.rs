@@ -173,6 +173,7 @@ fn client_config() -> eva_client::Config {
     config
 }
 
+#[allow(clippy::too_many_lines)]
 async fn run(args: CommandRun) -> EResult<()> {
     let timeout = Duration::from_secs(args.timeout);
     let hostname = hostname::get()?.to_string_lossy().to_string();

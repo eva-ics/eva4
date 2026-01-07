@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use simple_pool::ResourcePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 err_logger!();
@@ -204,7 +204,7 @@ enum Event {
 }
 
 impl Event {
-    fn as_data(&self) -> Data {
+    fn as_data(&self) -> Data<'_> {
         match self {
             Event::State(v) => Data::Single(v),
             Event::BulkState(v) => Data::Bulk(v),

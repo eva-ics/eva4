@@ -37,7 +37,7 @@ pub enum OIDSingleOrMulti {
 }
 
 impl OIDSingleOrMulti {
-    pub fn iter(&self) -> OIDSingleOrMultiIter {
+    pub fn iter(&self) -> OIDSingleOrMultiIter<'_> {
         OIDSingleOrMultiIter { osm: self, curr: 0 }
     }
 }

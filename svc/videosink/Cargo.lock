@@ -261,6 +261,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bma-ts"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c4d51856f84780628a0e9379aa5101cd9835e0b7976a3a6d9f109ea6c71e153"
+dependencies = [
+ "nix 0.27.1",
+ "thiserror",
+ "web-time",
+]
+
+[[package]]
 name = "bmart"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -581,9 +592,9 @@ dependencies = [
 
 [[package]]
 name = "eva-sdk"
-version = "0.3.71"
+version = "0.3.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c261839255a399c5dbce3752923547243ceee2a35ffb73ba8f9b6ca5f5037e"
+checksum = "2d4f72d422eeb9b307811b12f6f3fdb1ad56c9dfed07f744481e14b88ef769a3"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
@@ -598,7 +609,7 @@ dependencies = [
  "once_cell",
  "parking_lot_rt",
  "regex",
- "rtsc",
+ "rtsc 0.4.3",
  "serde",
  "tokio",
  "tokio-fd",
@@ -622,7 +633,7 @@ version = "4.1.0"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
- "bma-ts",
+ "bma-ts 0.1.15",
  "eva-common",
  "eva-sdk",
  "gstreamer",
@@ -631,7 +642,7 @@ dependencies = [
  "mimalloc",
  "once_cell",
  "parking_lot_rt",
- "rtsc",
+ "rtsc 0.3.15",
  "serde",
  "tokio",
 ]
@@ -1783,7 +1794,25 @@ version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bd3b986f2744829572bbd7f60df41280100a1e67a44c054d4851159abfdac30"
 dependencies = [
- "bma-ts",
+ "bma-ts 0.1.15",
+ "libc",
+ "linux-futex",
+ "lock_api",
+ "object-id",
+ "parking_lot_rt",
+ "pin-project",
+ "rtsc-derive",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "rtsc"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f324e7d4fc7bb6f3ff3309437415c306a061e8480ad8b038c1164b7cf44f06"
+dependencies = [
+ "bma-ts 0.2.4",
  "libc",
  "linux-futex",
  "lock_api",
@@ -2388,6 +2417,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]

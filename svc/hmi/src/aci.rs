@@ -1,5 +1,5 @@
 use crate::aaa::{Auth, Token};
-use crate::{db, USER_DIRS};
+use crate::{USER_DIRS, db};
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, Utc};
 use eva_common::acl::Acl;
 use eva_common::err_logger;
@@ -7,7 +7,7 @@ use eva_common::prelude::*;
 use futures::TryStreamExt;
 use log::{error, trace};
 use serde::Deserialize;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use sqlx::Row;
 use std::collections::BTreeMap;
 use std::sync::atomic;
@@ -249,7 +249,7 @@ impl ACI {
         self.acl().check_pvt_write(s)
     }
     #[inline]
-    pub fn as_extended_info(&self) -> ACIExtendedInfo {
+    pub fn as_extended_info(&self) -> ACIExtendedInfo<'_> {
         ACIExtendedInfo {
             auth: &self.auth,
             source: &self.source,

@@ -1,25 +1,25 @@
 use crate::{EResult, Error};
-use busrt::rpc::{Rpc, RpcClient};
 use busrt::QoS;
+use busrt::rpc::{Rpc, RpcClient};
 use bytes::{BufMut, BytesMut};
 use chrono::prelude::*;
 use colored::Colorize;
 use eva_common::events::LOG_EVENT_TOPIC;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_common::tools::{format_path, SocketPath};
+use eva_common::tools::{SocketPath, format_path};
 use log::trace;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use once_cell::sync::OnceCell;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::collections::HashMap;
 use std::fmt::Write as _;
-use std::io::stdout;
 use std::io::Write;
+use std::io::stdout;
 use std::str::FromStr;
-use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic;
 
 const DEFAULT_KEEP: i64 = 86_400_i64;
 const INTERVAL_CLEAN_MEMORY_LOGS: std::time::Duration = std::time::Duration::from_secs(60);
@@ -659,7 +659,7 @@ pub fn init(
         eva_common::console_logger::console_log_with_timestamp(),
         atomic::Ordering::Relaxed,
     );
-    let mut loggers: Vec<Box<(dyn Log + 'static)>> = Vec::new();
+    let mut loggers: Vec<Box<dyn Log + 'static>> = Vec::new();
     let mut max_filter = LevelFilter::Error;
     let mut keep_mem: Option<chrono::Duration> = None;
     let mut keep_mem_max_records: Option<usize> = None;

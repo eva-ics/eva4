@@ -5,10 +5,10 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use genpass_native::{random_string, Password, PasswordPolicy};
+use genpass_native::{Password, PasswordPolicy, random_string};
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -242,7 +242,7 @@ struct KeyDb {
 
 impl KeyDb {
     #[inline]
-    fn values(&self) -> std::collections::hash_map::Values<String, Arc<Key>> {
+    fn values(&self) -> std::collections::hash_map::Values<'_, String, Arc<Key>> {
         self.keys_by_id.values()
     }
     fn append(&mut self, key: Arc<Key>) -> EResult<()> {

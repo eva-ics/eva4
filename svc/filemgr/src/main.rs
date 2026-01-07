@@ -281,12 +281,6 @@ enum Permissions {
     Executable(bool),
 }
 
-#[derive(Serialize, Deserialize)]
-struct Executable {
-    #[serde(alias = "x")]
-    executable: bool,
-}
-
 impl Permissions {
     fn new(p: u32, caller: Caller) -> Self {
         match caller {

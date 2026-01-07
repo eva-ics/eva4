@@ -1,4 +1,4 @@
-use crate::common::{safe_run_macro, ParamsCow, ParamsRun};
+use crate::common::{ParamsCow, ParamsRun, safe_run_macro};
 use chrono::{DateTime, Local};
 use cron::Schedule;
 use eva_common::prelude::*;
@@ -35,7 +35,7 @@ impl Job {
     pub fn id(&self) -> &str {
         &self.id
     }
-    pub fn info(&self) -> Info {
+    pub fn info(&self) -> Info<'_> {
         Info {
             id: &self.id,
             run: &self.run,
