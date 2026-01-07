@@ -6,8 +6,8 @@ use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
 use once_cell::sync::OnceCell;
 use sqlx::{
-    ConnectOptions, PgPool, Row,
     postgres::{PgConnectOptions, PgPoolOptions},
+    ConnectOptions, PgPool, Row,
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

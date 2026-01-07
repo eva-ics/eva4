@@ -1,4 +1,4 @@
-use eva_common::{EResult, Error, value::Value};
+use eva_common::{value::Value, EResult, Error};
 
 /// Converts a simple JSONPath (e.g. `$.a[0].b`) into PostgreSQL jsonb syntax
 /// (e.g. `data -> 'a' -> 0 -> 'b'`)
