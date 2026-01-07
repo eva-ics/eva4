@@ -498,6 +498,7 @@ def format_value(value, advanced=False, name='', p=None):
     if value == '<<':
         import pwinput
         value = pwinput.pwinput(prompt=f'{name}: ')
+        return value
     if value.startswith('!'):
         return value[1:]
     if value.startswith('@'):
