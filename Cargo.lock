@@ -7271,9 +7271,9 @@ dependencies = [
 
 [[package]]
 name = "submap"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cb558a660d0330bbd4899c14e73a814ede4e541b1d0e697e6ca441f7f407c34"
+checksum = "e9f189b02e7de4d72fdcf605092288ec4d261ac61bff3e7a34d964d23ae66701"
 dependencies = [
  "openssl",
  "regex",
