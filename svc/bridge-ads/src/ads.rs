@@ -1,9 +1,9 @@
 use crate::get_client;
 use ::ads::AmsAddr;
-use busrt::rpc::Rpc;
 use busrt::QoS;
+use busrt::rpc::Rpc;
 use eva_common::common_payloads::ParamsOID;
-use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEventOwned};
 use eva_common::payload::pack;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -52,8 +52,9 @@ impl From<::ads::symbol::Symbol> for Symbol {
 pub struct Type {
     pub name: String,
     pub size: usize,
-    pub array: Vec<(u32, u32)>,
+    pub array: Vec<(i32, i32)>,
     pub fields: Vec<Field>,
+    #[allow(clippy::struct_field_names)]
     pub base_type: u32,
     pub flags: u32,
 }
@@ -77,7 +78,7 @@ pub struct Field {
     pub typ: String,
     pub offset: Option<u32>,
     pub size: usize,
-    pub array: Vec<(u32, u32)>,
+    pub array: Vec<(i32, i32)>,
     pub base_type: u32,
     pub flags: u32,
 }
@@ -166,7 +167,7 @@ impl SumUpResult {
 impl ParseAmsNetId for String {
     fn ams_net_id(&self) -> EResult<[u8; 6]> {
         let chunks: Vec<&str> = self.split('.').collect();
-        if chunks.len() == 6 || chunks.get(6).map_or(false, |v| v.is_empty()) {
+        if chunks.len() == 6 || chunks.get(6).is_some_and(|v| v.is_empty()) {
             let mut res = Vec::with_capacity(6);
             for c in chunks.iter().take(6) {
                 res.push(

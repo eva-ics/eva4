@@ -1,11 +1,11 @@
 use std::net::IpAddr;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use atomic_timer::AtomicTimer;
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use surge_ping::Client;
 use tokio::sync::Semaphore;
@@ -20,7 +20,7 @@ const DESCRIPTION: &str = "Network monitor service";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static PROBES_SEMAPHORE: OnceCell<Semaphore> = OnceCell::new();
+static PROBES_SEMAPHORE: OnceLock<Semaphore> = OnceLock::new();
 
 struct Handlers {
     info: ServiceInfo,

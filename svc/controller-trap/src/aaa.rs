@@ -4,13 +4,13 @@ use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
 
-lazy_static::lazy_static! {
-    pub static ref ENC_OPTS: Mutex<HashMap<String, psrpc::options::Options>> = <_>::default();
-    pub static ref KEYS: Mutex<HashMap<String, String>> = <_>::default();
-    pub static ref ACLS: Mutex<HashMap<String, Arc<Acl>>> = <_>::default();
-}
+pub static ENC_OPTS: LazyLock<Mutex<HashMap<String, psrpc::options::Options>>> =
+    LazyLock::new(<_>::default);
+pub static KEYS: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(<_>::default);
+pub static ACLS: LazyLock<Mutex<HashMap<String, Arc<Acl>>>> = LazyLock::new(<_>::default);
 
 pub async fn get_acl(rpc: &RpcClient, key_id: &str) -> EResult<Arc<Acl>> {
     #[derive(Serialize)]

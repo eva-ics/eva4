@@ -1,17 +1,17 @@
 use crate::common;
 use crate::conv::ValueConv;
+use eva_common::ITEM_STATUS_ERROR;
 use eva_common::events::RawStateEventOwned;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_common::ITEM_STATUS_ERROR;
-use eva_sdk::controller::{format_raw_state_topic, RawStateCache, RawStateEventPreparedOwned};
+use eva_sdk::controller::{RawStateCache, RawStateEventPreparedOwned, format_raw_state_topic};
 use eva_sdk::service::poc;
 use eva_sdk::service::svc_is_terminating;
 use log::{error, trace, warn};
 use opcua::client::prelude::NodeId;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::{Duration, Instant};
 
 use eva_sdk::prelude::err_logger;
@@ -156,10 +156,10 @@ pub async fn launch(
     let raw_state_cache = Arc::new(RawStateCache::new(cache_time));
     while !svc_is_terminating() {
         let t = ticker.tick().await.into_std();
-        if let Some(prev) = last_ticked {
-            if t - prev > interval {
-                warn!("PLC puller timeout");
-            }
+        if let Some(prev) = last_ticked
+            && t - prev > interval
+        {
+            warn!("PLC puller timeout");
         }
         pull(&nodes, tx.clone(), raw_state_cache.clone()).await;
         last_ticked.replace(t);

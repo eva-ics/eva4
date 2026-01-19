@@ -1,6 +1,6 @@
+use crate::ApiKeyId;
 use crate::db;
 use crate::handler::WebSocket;
-use crate::ApiKeyId;
 use eva_common::acl::Acl;
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
@@ -12,14 +12,14 @@ use log::error;
 use log::{debug, trace};
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::future::Future;
 use std::net::IpAddr;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 use uuid::Uuid;
 

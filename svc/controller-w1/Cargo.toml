@@ -11,11 +11,9 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 eva-sdk = { features = ["controller"] , workspace = true }
 eva-common = { features = ["events", "time", "common-payloads"] , workspace = true }
-once_cell = { workspace = true }
 mimalloc = { workspace = true }
 bmart = { workspace = true }
 uuid = { features = ["v4"] , workspace = true }

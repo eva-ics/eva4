@@ -1,14 +1,13 @@
+use eva_common::ITEM_STATUS_ERROR;
 use eva_common::common_payloads::ParamsOID;
 use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
-use eva_common::ITEM_STATUS_ERROR;
-use eva_sdk::controller::{format_action_topic, format_raw_state_topic, Action};
+use eva_sdk::controller::{Action, format_action_topic, format_raw_state_topic};
 use eva_sdk::prelude::*;
-use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::sync::atomic;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::Duration;
 use tagmap::TagMap;
 use tokio::sync::Mutex;
@@ -23,11 +22,11 @@ const DESCRIPTION: &str = "Virtual controller";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static ITEMS: Lazy<Mutex<BTreeMap<OID, VirtualItem>>> = Lazy::new(<_>::default);
-static VARS: Lazy<Mutex<TagMap>> = Lazy::new(<_>::default);
+static ITEMS: LazyLock<Mutex<BTreeMap<OID, VirtualItem>>> = LazyLock::new(<_>::default);
+static VARS: LazyLock<Mutex<TagMap>> = LazyLock::new(<_>::default);
 
 static AUTO_CREATE: atomic::AtomicBool = atomic::AtomicBool::new(false);
-static TX: OnceCell<async_channel::Sender<(String, Vec<u8>)>> = OnceCell::new();
+static TX: OnceLock<async_channel::Sender<(String, Vec<u8>)>> = OnceLock::new();
 
 async fn puller(pull: Vec<PullTask>, pull_interval: Option<Duration>) -> EResult<()> {
     let mut int = tokio::time::interval(pull_interval.unwrap_or_else(|| Duration::from_secs(1)));

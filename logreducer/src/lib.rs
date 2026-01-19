@@ -1,12 +1,13 @@
+use std::sync::LazyLock;
+
 use log::Level;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use ttl_cache::TtlCache;
 
 const CAPACITY: usize = 65536;
 const TTL: std::time::Duration = std::time::Duration::from_secs(300);
 
-pub static REDUCER: Lazy<LogReducer> = Lazy::new(<_>::default);
+pub static REDUCER: LazyLock<LogReducer> = LazyLock::new(<_>::default);
 
 pub struct LogReducer {
     cache: Mutex<TtlCache<(Level, String), String>>,

@@ -5,8 +5,9 @@ use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
 use once_cell::sync::OnceCell;
 use sqlx::{
+    ConnectOptions, Row,
     any::{AnyConnectOptions, AnyKind, AnyPool, AnyPoolOptions},
-    sqlite, ConnectOptions, Row,
+    sqlite,
 };
 use std::fmt::Write as _;
 use std::str::FromStr;

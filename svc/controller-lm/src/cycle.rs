@@ -1,11 +1,11 @@
-use crate::common::{run_err_macro, safe_run_macro, ParamsCow, ParamsRun};
+use crate::common::{ParamsCow, ParamsRun, run_err_macro, safe_run_macro};
 use eva_common::prelude::*;
 use eva_common::tools::serialize_atomic_u64;
 use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::{Duration, Instant};
 
 #[derive(bmart::tools::EnumStr, Eq, PartialEq, Copy, Clone)]
@@ -98,15 +98,15 @@ impl Cycle {
             .store(CycleStatus::Running as u8, atomic::Ordering::SeqCst);
         while self.status.load(atomic::Ordering::SeqCst) == CycleStatus::Running as u8 {
             let t = ticker.tick().await.into_std();
-            if let Some(prev) = last_ticked {
-                if t - prev > self.interval {
-                    warn!("cycle {} timeout", self.id);
-                    self.timed_out.fetch_add(1, atomic::Ordering::SeqCst);
-                    run_err!((
-                        "cycle".to_owned(),
-                        Some(Value::String("timeout".to_owned()))
-                    ));
-                }
+            if let Some(prev) = last_ticked
+                && t - prev > self.interval
+            {
+                warn!("cycle {} timeout", self.id);
+                self.timed_out.fetch_add(1, atomic::Ordering::SeqCst);
+                run_err!((
+                    "cycle".to_owned(),
+                    Some(Value::String("timeout".to_owned()))
+                ));
             }
             let params = ParamsRun::new(
                 &self.run,

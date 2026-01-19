@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
-use crate::{aaa, ReplicationData};
-use crate::{nodes, ReplicationStateEventExtended};
+use crate::{ReplicationData, aaa};
+use crate::{ReplicationStateEventExtended, nodes};
 
 err_logger!();
 

@@ -23,7 +23,7 @@ path = "src/rt-launch.rs"
 
 [dependencies]
 tokio = { features = ["full"] , workspace = true }
-yedb = { version = "0.4.14", features = ["server-embed", "busrt-rpc"] }
+yedb = { version = "0.5.1", features = ["server-embed", "busrt-rpc"] }
 clap = { features = ["derive"] , workspace = true }
 busrt = { features = ["full"] , workspace = true }
 serde_yaml = { workspace = true }
@@ -31,8 +31,7 @@ serde_json = { workspace = true }
 colored = "2.1.0"
 serde = { features = ["derive", "rc"] , workspace = true }
 glob = "0.3.1"
-hostname = "0.3.1"
-lazy_static = { workspace = true }
+hostname = { workspace = true }
 chrono = { workspace = true }
 eva-common = { features = ["acl", "actions", "events", "time", "bus-rpc", "services", "registry", "workers",
   "dataconv", "db", "cache", "hyper-tools", "extended-value", "common-payloads", "payload",
@@ -40,10 +39,10 @@ eva-common = { features = ["acl", "actions", "events", "time", "bus-rpc", "servi
 bmart = { workspace = true }
 multi_log = "0.1.2"
 log = { workspace = true }
-syslog = "6.1.0"
+syslog = { workspace = true }
 hex = { workspace = true }
-regex = "1.10.3"
-bytes = "1.5.0"
+regex = { workspace = true }
+bytes = { workspace = true }
 mimalloc = { workspace = true }
 async-trait = { workspace = true }
 async-recursion = { workspace = true }
@@ -52,28 +51,22 @@ nix = { version = "0.25", features = ["user", "fs"] }
 atty = "0.2.14"
 uuid = { features = ["serde", "v4"] , workspace = true }
 triggered = "0.1.2"
-once_cell = { workspace = true }
-sqlx = { features = [
-"runtime-tokio-native-tls", "any",
-"sqlite","mysql", "postgres" ] , workspace = true }
+sqlx = { features = [ "runtime-tokio-native-tls", "any", "sqlite", "postgres" ] , workspace = true }
 futures = { workspace = true }
-ipnetwork = "0.20.0"
+ipnetwork = { workspace = true }
 async-io = "2.3.1"
-eva-robots = "0.3.0"
+eva-robots = "0.4.0"
 parking_lot = { features = ["serde"] , workspace = true }
-openssl = { workspace = true }
-sysinfo = "0.29"
-num_cpus = "1.16.0"
-binrw = "0.13.3"
-submap = "0.3.3"
-libc = "0.2.159"
-rtsc = "0.3.13"
-oneshot = "0.1.8"
+sysinfo = { workspace = true }
+num_cpus = { workspace = true }
+binrw = { workspace = true }
+submap = { workspace = true }
+libc = { workspace = true }
+rtsc = { workspace = true }
+oneshot = { workspace = true }
 
 [features]
 std-alloc = []
-openssl-vendored = ["openssl/vendored", "eva-common/openssl-no-fips"]
-openssl3 = ["eva-common/openssl3"]
 
 [build-dependencies]
 cargo_metadata = "0.18.1"

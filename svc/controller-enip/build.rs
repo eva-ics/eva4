@@ -9,8 +9,11 @@ fn main() {
     match os.as_str() {
         "linux" | "freebsd" => println!("cargo:rustc-link-lib=static=plctag"),
         "windows" => println!("cargo:rustc-link-lib=plctag"),
-        _ => unimplemented!(),
-    };
+        _ => eprintln!(
+            "Unsupported OS for libplctag: {}, linking will be not available",
+            os
+        ),
+    }
     println!("cargo:rustc-link-search=/opt/libplctag/{}-{}", os, arch);
     println!("cargo:rustc-link-arg=-lc");
 }

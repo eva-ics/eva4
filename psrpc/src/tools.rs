@@ -1,6 +1,6 @@
-use crate::{pubsub::Message, Error};
-use std::collections::btree_map::Entry;
+use crate::{Error, pubsub::Message};
 use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 
 pub type PublicationSender = async_channel::Sender<Publication>;
 pub type PublicationReceiver = async_channel::Receiver<Publication>;

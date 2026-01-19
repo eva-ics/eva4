@@ -4,8 +4,8 @@ use eva_common::err_logger;
 use eva_common::events::EventBuffer;
 use eva_common::prelude::*;
 use log::{error, info, warn};
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use std::time::Duration;
 
 #[cfg(target_os = "windows")]
@@ -14,7 +14,7 @@ mod cert_resolver {
     use eva_common::prelude::*;
     use log::{info, warn};
     use rustls::{
-        client::ResolvesClientCert, pki_types::CertificateDer, sign::CertifiedKey, SignatureScheme,
+        SignatureScheme, client::ResolvesClientCert, pki_types::CertificateDer, sign::CertifiedKey,
     };
     use rustls_cng::{signer::CngSigningKey, store::CertStore};
     use std::sync::Arc;
@@ -228,8 +228,8 @@ const SLEEP_STEP_ERR: Duration = Duration::from_secs(1);
 
 const EVENT_BUFFER_SIZE: usize = 100_000;
 
-static EVENT_BUFFER: Lazy<EventBuffer<ClientMetric>> =
-    Lazy::new(|| EventBuffer::bounded(EVENT_BUFFER_SIZE));
+static EVENT_BUFFER: LazyLock<EventBuffer<ClientMetric>> =
+    LazyLock::new(|| EventBuffer::bounded(EVENT_BUFFER_SIZE));
 
 err_logger!();
 

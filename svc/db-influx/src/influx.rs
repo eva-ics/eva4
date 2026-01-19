@@ -4,7 +4,7 @@ use eva_common::time::{ts_from_ns, ts_to_ns};
 use eva_sdk::types::{Fill, HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::{
-    client::connect::HttpConnector, header::HeaderMap, Body, Client, Method, Request, StatusCode,
+    Body, Client, Method, Request, StatusCode, client::connect::HttpConnector, header::HeaderMap,
 };
 use hyper_tls::HttpsConnector;
 use log::{error, trace, warn};

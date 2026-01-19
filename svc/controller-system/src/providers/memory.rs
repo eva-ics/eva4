@@ -3,8 +3,8 @@ use crate::tools::calc_usage;
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::OnceLock;
 use std::time::Duration;
 use sysinfo::System;
 
@@ -12,7 +12,7 @@ err_logger!();
 
 const REFRESH: Duration = Duration::from_secs(1);
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub fn set_config(config: Config) -> EResult<()> {
     CONFIG

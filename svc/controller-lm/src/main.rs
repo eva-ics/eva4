@@ -3,14 +3,12 @@ use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::{ParamsId, ParamsOID, ParamsUuid};
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
-use eva_sdk::controller::{actt::Actt, format_action_topic, Action};
+use eva_sdk::controller::{Action, actt::Actt, format_action_topic};
 use eva_sdk::prelude::*;
 use eva_sdk::service::svc_block2;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::Duration;
 use submap::SubMap;
 use tokio::sync::Mutex;
@@ -35,18 +33,15 @@ const DESCRIPTION: &str = "Logic Manager programmable controller";
 
 const QUEUE_SIZE: usize = 8192;
 
-lazy_static! {
-    static ref RULES: OnceCell<HashMap<String, Arc<Rule>>> = <_>::default();
-    static ref RULE_MATRIX: OnceCell<SubMap<Arc<Rule>>> = <_>::default();
-    static ref CYCLES: OnceCell<HashMap<String, Arc<Cycle>>> = <_>::default();
-    static ref JOBS: OnceCell<HashMap<String, Arc<Job>>> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref PREV_STATES: Mutex<HashMap<OID, StateX>> = <_>::default();
-    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
-        <_>::default();
-    static ref ACTT: OnceCell<Actt> = <_>::default();
-}
+static RULES: OnceLock<HashMap<String, Arc<Rule>>> = OnceLock::new();
+static RULE_MATRIX: OnceLock<SubMap<Arc<Rule>>> = OnceLock::new();
+static CYCLES: OnceLock<HashMap<String, Arc<Cycle>>> = OnceLock::new();
+static JOBS: OnceLock<HashMap<String, Arc<Job>>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static PREV_STATES: LazyLock<Mutex<HashMap<OID, StateX>>> = LazyLock::new(<_>::default);
+static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
+static ACTT: OnceLock<Actt> = OnceLock::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -69,7 +64,7 @@ impl RpcHandlers for Handlers {
             "rule.list" => {
                 if payload.is_empty() {
                     let mut rule_infos: Vec<rule::Info> =
-                        RULES.get().unwrap().iter().map(|(_, v)| v.info()).collect();
+                        RULES.get().unwrap().values().map(|v| v.info()).collect();
                     rule_infos.sort();
                     Ok(Some(pack(&rule_infos)?))
                 } else {
@@ -91,7 +86,7 @@ impl RpcHandlers for Handlers {
             "job.list" => {
                 if payload.is_empty() {
                     let mut job_infos: Vec<job::Info> =
-                        JOBS.get().unwrap().iter().map(|(_, v)| v.info()).collect();
+                        JOBS.get().unwrap().values().map(|v| v.info()).collect();
                     job_infos.sort();
                     Ok(Some(pack(&job_infos)?))
                 } else {
@@ -112,12 +107,8 @@ impl RpcHandlers for Handlers {
             }
             "cycle.list" => {
                 if payload.is_empty() {
-                    let mut cycles: Vec<&Cycle> = CYCLES
-                        .get()
-                        .unwrap()
-                        .iter()
-                        .map(|(_, v)| v.as_ref())
-                        .collect();
+                    let mut cycles: Vec<&Cycle> =
+                        CYCLES.get().unwrap().values().map(AsRef::as_ref).collect();
                     cycles.sort();
                     Ok(Some(pack(&cycles)?))
                 } else {
@@ -222,10 +213,10 @@ impl RpcHandlers for Handlers {
                 } else {
                     let p: ParamsOID = unpack(payload)?;
                     let _r = crate::ACTT.get().unwrap().mark_killed(&p.i);
-                    if let Err(e) = opener::kill(&p.i).await {
-                        if e.kind() != ErrorKind::ResourceNotFound {
-                            return Err(e.into());
-                        }
+                    if let Err(e) = opener::kill(&p.i).await
+                        && e.kind() != ErrorKind::ResourceNotFound
+                    {
+                        return Err(e.into());
                     }
                     Ok(None)
                 }

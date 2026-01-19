@@ -1,6 +1,6 @@
 use crate::common::init_cmd_options;
 use eva_common::prelude::*;
-use eva_sdk::controller::{format_action_topic, Action};
+use eva_sdk::controller::{Action, format_action_topic};
 use eva_sdk::prelude::*;
 use serde::Deserialize;
 use std::path::Path;
@@ -127,10 +127,10 @@ pub fn start_action_handler(
             {
                 error!("action error: {}", e);
             }
-            if map.update_after {
-                if let Some(trx) = crate::UPDATE_TRIGGERS.lock().unwrap().get(&oid) {
-                    let _r = trx.try_send(());
-                }
+            if map.update_after
+                && let Some(trx) = crate::UPDATE_TRIGGERS.lock().unwrap().get(&oid)
+            {
+                let _r = trx.try_send(());
             }
         }
     });

@@ -3,11 +3,11 @@ use crate::conv::ValueConv;
 use eva_common::op::Op;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_sdk::controller::{format_action_topic, Action};
+use eva_sdk::controller::{Action, format_action_topic};
 use log::error;
 use opcua::types::Variant;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 
 #[allow(clippy::cast_possible_truncation)]
 async fn run_action(

@@ -1,6 +1,6 @@
 use crate::is_verbose;
 use eva_common::events::{
-    RawStateEvent, RemoteStateEvent, RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC,
+    RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, RawStateEvent, RemoteStateEvent,
 };
 use eva_common::payload::pack;
 use eva_common::prelude::*;

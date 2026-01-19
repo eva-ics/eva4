@@ -1,9 +1,9 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ValueOrList;
 use eva_common::events::{
-    NodeInfo, NodeStateEvent, NodeStatus, ReplicationInventoryItem, ReplicationNodeInventoryItem,
-    ReplicationStateEventExtended, AAA_ACL_TOPIC, AAA_KEY_TOPIC, REPLICATION_INVENTORY_TOPIC,
-    REPLICATION_NODE_STATE_TOPIC,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, NodeInfo, NodeStateEvent, NodeStatus,
+    REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC, ReplicationInventoryItem,
+    ReplicationNodeInventoryItem, ReplicationStateEventExtended,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -13,8 +13,8 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]

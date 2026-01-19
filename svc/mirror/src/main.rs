@@ -1,10 +1,10 @@
 use eva_common::hyper_response;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use hyper::Server;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
-use hyper::{http, Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Method, Request, Response, StatusCode, http};
 use hyper_static::serve::static_file;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
@@ -14,8 +14,8 @@ use std::convert::Infallible;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 
 lazy_static! {
     static ref MIME_TYPES: OnceCell<HashMap<String, String>> = <_>::default();

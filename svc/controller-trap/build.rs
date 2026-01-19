@@ -15,9 +15,9 @@ fn main() {
     } else {
         match os.as_str() {
             "linux" | "freebsd" => println!("cargo:rustc-link-lib=static=netsnmp"),
-            "windows" => println!("cargo:rustc-link-lib=netsnmp"),
-            _ => unimplemented!(),
-        };
+            "windows" | "macos" => println!("cargo:rustc-link-lib=netsnmp"),
+            _ => panic!("Unsupported OS: {}", os),
+        }
         println!("cargo:rustc-link-search=/opt/libnetsnmp/{}-{}", os, arch);
         println!("cargo:rustc-link-arg=-lc");
     }

@@ -12,7 +12,6 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-once_cell = { workspace = true }
 async-channel = { workspace = true }
 serde_yaml = { workspace = true }
 hex = { workspace = true }

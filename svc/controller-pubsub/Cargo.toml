@@ -18,12 +18,11 @@ logreducer = { path = "../../logreducer" }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 psrpc = { path = "../../psrpc" }
-psrt = "0.2"
-paho-mqtt = "0.12.3"
+psrt = { workspace = true }
+paho-mqtt = { workspace = true }
 serde_json = { workspace = true }
-once_cell = { workspace = true }
 async-recursion = { workspace = true }
-parking_lot = "0.12.1"
+parking_lot = { workspace = true }
 
 [features]
 std-alloc = []

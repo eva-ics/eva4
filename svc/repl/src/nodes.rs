@@ -1,14 +1,14 @@
 use eva_common::events::{
-    NodeInfo, NodeStateEvent, NodeStatus, RawStateEventOwned, ReplicationInventoryItem,
-    RAW_STATE_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    NodeInfo, NodeStateEvent, NodeStatus, RAW_STATE_TOPIC, REPLICATION_NODE_STATE_TOPIC,
+    RawStateEventOwned, ReplicationInventoryItem,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;

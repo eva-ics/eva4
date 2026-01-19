@@ -1,10 +1,10 @@
+use crate::MEMORY_WARN_DEFAULT;
 use crate::eapi::EAPI_VERSION;
 use crate::logs::LogLevel;
-use crate::MEMORY_WARN_DEFAULT;
-use crate::{EResult, Error};
 use crate::{BUILD, VERSION};
-use busrt::rpc::{Rpc, RpcClient};
+use crate::{EResult, Error};
 use busrt::QoS;
+use busrt::rpc::{Rpc, RpcClient};
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
@@ -12,12 +12,11 @@ use eva_common::registry;
 use eva_common::services::{BusConfig, CoreInfo, Initial, RealtimeConfig, Timeout};
 use eva_common::tools::{format_path, get_eva_dir};
 use log::{debug, error, info, trace, warn};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::{OnceLock, atomic};
 use std::time::{Duration, Instant};
 use yedb::Database;
 
@@ -33,8 +32,8 @@ fn default_launcher() -> Arc<String> {
 #[derive(Default)]
 pub struct Manager {
     services: Mutex<HashMap<String, Params>>,
-    rpc: OnceCell<Arc<RpcClient>>,
-    core_active: OnceCell<Arc<atomic::AtomicBool>>,
+    rpc: OnceLock<Arc<RpcClient>>,
+    core_active: OnceLock<Arc<atomic::AtomicBool>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -324,7 +323,7 @@ impl Manager {
             .lock()
             .unwrap()
             .iter()
-            .filter(|(_, c)| c.enabled && launcher.map_or(true, |l| l == c.launcher.as_str()))
+            .filter(|(_, c)| c.enabled && launcher.is_none_or(|l| l == c.launcher.as_str()))
         {
             srv.insert(
                 id.clone(),
@@ -350,10 +349,9 @@ impl Manager {
                     &rpc,
                 )
                 .await
+                    && (log_not_reg || e.kind() != ErrorKind::BusClientNotRegistered)
                 {
-                    if log_not_reg || e.kind() != ErrorKind::BusClientNotRegistered {
-                        error!("unable to {} {} with {}: {}", method, id, launcher, e);
-                    }
+                    error!("unable to {} {} with {}: {}", method, id, launcher, e);
                 }
             });
             futs.push(fut);

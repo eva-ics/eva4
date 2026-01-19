@@ -1,7 +1,7 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::events::{
-    FullItemStateAndInfoOwned, LocalStateEvent, RemoteStateEvent, AAA_KEY_TOPIC, LOCAL_STATE_TOPIC,
-    REMOTE_STATE_TOPIC,
+    AAA_KEY_TOPIC, FullItemStateAndInfoOwned, LOCAL_STATE_TOPIC, LocalStateEvent,
+    REMOTE_STATE_TOPIC, RemoteStateEvent,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -10,7 +10,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{aaa, ReplicationData};
+use crate::{ReplicationData, aaa};
 use crate::{get_mtu, pubsub_publish};
 
 err_logger!();

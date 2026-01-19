@@ -1,21 +1,21 @@
 use crate::items::{Inventory, ItemState};
 use async_trait::async_trait;
 use eva_common::prelude::*;
-use eva_common::{events::DbState, SLEEP_STEP};
+use eva_common::{SLEEP_STEP, events::DbState};
 use futures::TryStreamExt;
 use log::{error, warn};
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions, SqliteSynchronous};
 use sqlx::{ConnectOptions, Sqlite};
 use sqlx::{FromRow, Pool, Postgres};
 use std::borrow::Cow;
+use std::sync::OnceLock;
 use std::{collections::BTreeMap, mem, time::Duration};
 use std::{str::FromStr, sync::Arc};
 use tokio::task::JoinHandle;
 
-static DB: OnceCell<Arc<Database>> = OnceCell::new();
+static DB: OnceLock<Arc<Database>> = OnceLock::new();
 
 const FLUSH_INTERVAL: Duration = Duration::from_millis(200);
 const SLOW_STATEMENT: Duration = Duration::from_secs(2);
@@ -105,7 +105,7 @@ impl Storage for Pool<Postgres> {
             )
             .bind(oids)
             .bind(serialized_cfgs)
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await?;
         }
         tx.commit().await?;
@@ -168,7 +168,7 @@ impl Storage for Pool<Sqlite> {
                 b.push_bind(oid);
                 b.push_bind(cfg);
             });
-            qb.build().execute(&mut tx).await?;
+            qb.build().execute(&mut *tx).await?;
         }
         tx.commit().await?;
         Ok(())
@@ -181,7 +181,7 @@ impl Storage for Pool<Sqlite> {
                     if let Err(e) = sqlx::query("UPDATE inventory SET state=? WHERE oid=?")
                         .bind(v)
                         .bind(&oid)
-                        .execute(&mut tx)
+                        .execute(&mut *tx)
                         .await
                     {
                         error!("unable to save state for {}: {}", oid, e);
@@ -198,7 +198,7 @@ impl Storage for Pool<Sqlite> {
         for oid in oids {
             sqlx::query("DELETE FROM inventory WHERE oid=?")
                 .bind(oid)
-                .execute(&mut tx)
+                .execute(&mut *tx)
                 .await?;
         }
         tx.commit().await?;
@@ -228,8 +228,8 @@ impl Database {
         }
         let db: Arc<Database> = match sp.next().unwrap() {
             "postgres" => {
-                let mut opts = PgConnectOptions::from_str(db_uri)?;
-                opts.log_statements(log::LevelFilter::Trace)
+                let opts = PgConnectOptions::from_str(db_uri)?
+                    .log_statements(log::LevelFilter::Trace)
                     .log_slow_statements(log::LevelFilter::Warn, SLOW_STATEMENT);
                 let pool = PgPoolOptions::new()
                     .max_connections(pool_size)
@@ -252,10 +252,9 @@ impl Database {
                     )
                     .into()
                 };
-                let mut opts = SqliteConnectOptions::from_str(&sqlite_db_uri)?;
-                opts.log_statements(log::LevelFilter::Trace)
-                    .log_slow_statements(log::LevelFilter::Warn, SLOW_STATEMENT);
-                opts = opts
+                let opts = SqliteConnectOptions::from_str(&sqlite_db_uri)?
+                    .log_statements(log::LevelFilter::Trace)
+                    .log_slow_statements(log::LevelFilter::Warn, SLOW_STATEMENT)
                     .create_if_missing(true)
                     .synchronous(SqliteSynchronous::Extra)
                     .busy_timeout(timeout);
@@ -279,10 +278,10 @@ impl Database {
             int.tick().await;
             let _lock = self.busy.lock().await;
             let states: BTreeMap<OID, DbState> = mem::take(&mut self.state_buf.lock());
-            if !states.is_empty() {
-                if let Err(e) = self.engine.save_states(states).await {
-                    error!("unable to save: {}, states dropped", e);
-                }
+            if !states.is_empty()
+                && let Err(e) = self.engine.save_states(states).await
+            {
+                error!("unable to save: {}, states dropped", e);
             }
         }
     }

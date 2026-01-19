@@ -103,7 +103,6 @@ async fn spawn_input_listener(
                 }
                 Err(e) => {
                     error!("data object {} input error: {}", data_object, e);
-                    continue;
                 }
             }
         }

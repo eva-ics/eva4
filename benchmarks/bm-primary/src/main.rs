@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate bma_benchmark;
 
+use busrt::QoS;
 use busrt::ipc::{Client, Config};
 use busrt::rpc::{Rpc, RpcClient};
-use busrt::QoS;
 use clap::Parser;
 use eva_common::common_payloads::ParamsId;
-use eva_common::events::{RawStateEvent, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEvent};
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use log::{error, info};
@@ -55,7 +55,7 @@ struct ParamsItemsUndeploy {
 mod prepare {
     use busrt::ipc::{Client, Config};
     use busrt::rpc::RpcClient;
-    use busrt::{rpc::Rpc, QoS};
+    use busrt::{QoS, rpc::Rpc};
     use eva_common::payload::pack;
     use eva_common::prelude::*;
     use serde::Serialize;

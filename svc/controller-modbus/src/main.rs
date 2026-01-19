@@ -1,16 +1,15 @@
-use eva_common::events::RawStateEvent;
 use eva_common::events::RAW_STATE_TOPIC;
+use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
-use eva_sdk::controller::{actt, Action};
+use eva_sdk::controller::{Action, actt};
 use eva_sdk::prelude::*;
 use eva_sdk::service::set_poc;
 use itertools::Itertools;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::sync::atomic;
 use std::time::Duration;
 
 err_logger!();
@@ -23,15 +22,12 @@ mod modbus;
 mod pull;
 mod types;
 
-lazy_static! {
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref VERIFY_DELAY: OnceCell<Option<Duration>> = <_>::default();
-    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
-        <_>::default();
-    static ref ACTT: OnceCell<actt::Actt> = <_>::default();
-    static ref MODBUS_CLIENT: OnceCell<client::Client> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-}
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static VERIFY_DELAY: OnceLock<Option<Duration>> = OnceLock::new();
+static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
+static ACTT: OnceLock<actt::Actt> = OnceLock::new();
+static MODBUS_CLIENT: OnceLock<client::Client> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -144,32 +140,32 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .set(modbus_client)
         .map_err(|_| Error::core("Unable to set MODBUS_CLIENT"))?;
     svc_start_signal_handlers();
-    if !config.pull.is_empty() {
-        if let Some(interval) = config.pull_interval {
-            let tags = config.pull;
-            let rpc_c = rpc.clone();
-            let tx_c = tx.clone();
-            let startup_timeout = initial.startup_timeout();
-            let pull_cache_sec = config.pull_cache_sec;
-            let workers = initial.workers();
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            #[allow(clippy::cast_precision_loss)]
-            let tasks_per_worker = (tags.len() as f64 / f64::from(workers)).ceil() as usize;
-            tokio::spawn(async move {
-                let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
-                for (id, ch) in (&tags.into_iter().chunks(tasks_per_worker))
-                    .into_iter()
-                    .enumerate()
-                {
-                    let tx_cc = tx_c.clone();
-                    let tasks = ch.collect();
-                    tokio::spawn(async move {
-                        pull::launch(tasks, interval, pull_cache_sec, tx_cc, id + 1, timeout).await;
-                    });
-                }
-            });
-        }
+    if !config.pull.is_empty()
+        && let Some(interval) = config.pull_interval
+    {
+        let tags = config.pull;
+        let rpc_c = rpc.clone();
+        let tx_c = tx.clone();
+        let startup_timeout = initial.startup_timeout();
+        let pull_cache_sec = config.pull_cache_sec;
+        let workers = initial.workers();
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_precision_loss)]
+        let tasks_per_worker = (tags.len() as f64 / f64::from(workers)).ceil() as usize;
+        tokio::spawn(async move {
+            let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
+            for (id, ch) in (&tags.into_iter().chunks(tasks_per_worker))
+                .into_iter()
+                .enumerate()
+            {
+                let tx_cc = tx_c.clone();
+                let tasks = ch.collect();
+                tokio::spawn(async move {
+                    pull::launch(tasks, interval, pull_cache_sec, tx_cc, id + 1, timeout).await;
+                });
+            }
+        });
     }
     let mut action_queues: HashMap<OID, async_channel::Sender<Action>> = HashMap::new();
     for (oid, map) in config.action_map {

@@ -1,21 +1,20 @@
 /// Contains the action manager and its types
 use crate::{EResult, Error};
-use busrt::rpc::{Rpc, RpcClient};
 use busrt::QoS;
+use busrt::rpc::{Rpc, RpcClient};
 use eva_common::acl::OIDMask;
-use eva_common::actions::{ActionEvent, Params, ParamsView, Status, ACTION_COMPLETED};
+use eva_common::actions::{ACTION_COMPLETED, ActionEvent, Params, ParamsView, Status};
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_common::time;
 use log::error;
 use log::trace;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Write as _;
-use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -94,27 +93,26 @@ impl Default for Filter {
 impl Filter {
     #[inline]
     fn matches(&self, action: &Action, ts_now: f64) -> bool {
-        if let Some(ref mask) = self.i {
-            if !mask.matches(&action.i) {
-                return false;
-            }
+        if let Some(ref mask) = self.i
+            && !mask.matches(&action.i)
+        {
+            return false;
         }
-        if let Some(sq) = self.sq {
-            if !sq.matches(action.status) {
-                return false;
-            }
+        if let Some(sq) = self.sq
+            && !sq.matches(action.status)
+        {
+            return false;
         }
-        if let Some(ref svc) = self.svc {
-            if svc != &action.target {
-                return false;
-            }
+        if let Some(ref svc) = self.svc
+            && svc != &action.target
+        {
+            return false;
         }
-        if let Some(time) = self.time {
-            if let Some(created) = action.time.get(&Status::Created) {
-                if created < &(ts_now - f64::from(time)) {
-                    return false;
-                }
-            }
+        if let Some(time) = self.time
+            && let Some(created) = action.time.get(&Status::Created)
+            && created < &(ts_now - f64::from(time))
+        {
+            return false;
         }
         true
     }
@@ -358,7 +356,7 @@ pub struct Manager {
     actions: Arc<Mutex<HashMap<Uuid, Action>>>,
     remote_actions: Arc<Mutex<HashMap<Uuid, Arc<RemoteActionData>>>>,
     keep_for: Mutex<Duration>,
-    rpc: OnceCell<Arc<RpcClient>>,
+    rpc: OnceLock<Arc<RpcClient>>,
 }
 
 impl Default for Manager {
@@ -544,7 +542,7 @@ impl Manager {
         } else {
             error!("action {} not found", uuid);
             return false;
-        };
+        }
         self.terminate_action(uuid, timeout).await.log_ef();
         false
     }

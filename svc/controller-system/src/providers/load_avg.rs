@@ -1,12 +1,12 @@
 use crate::metric::Metric;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::OnceLock;
 use std::time::Duration;
 use sysinfo::System;
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 const REFRESH: Duration = Duration::from_secs(1);
 

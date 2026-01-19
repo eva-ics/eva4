@@ -1,7 +1,7 @@
+use crate::ApiKeyId;
 use crate::aaa::{self, Auth, Token};
 use crate::aci::{self, ACI};
 use crate::db;
-use crate::ApiKeyId;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::{IdOrListOwned, ValueOrList};
 use eva_common::common_payloads::{ParamsIdOrListOwned, ParamsIdOwned};
@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use log::{error, trace};
 use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{btree_map, BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, btree_map};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -1389,7 +1389,9 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsAction::deserialize(params)?;
     if p.status.is_some() {
-        warn!("status field in actions is ignored and deprecated. remove the field from API call payloads");
+        warn!(
+            "status field in actions is ignored and deprecated. remove the field from API call payloads"
+        );
     }
     aci.log_param("i", &p.i)?;
     if let Some(status) = p.status {

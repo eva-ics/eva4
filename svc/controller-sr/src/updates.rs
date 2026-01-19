@@ -1,7 +1,6 @@
-use crate::common::{
-    self, init_cmd_options, init_cmd_options_basic, safe_run_macro, OIDSingleOrMulti,
-};
-use eva_common::events::{Force, RawStateEventOwned, RAW_STATE_TOPIC};
+use crate::common::{self, init_cmd_options, init_cmd_options_basic, safe_run_macro};
+use eva_common::common_payloads::ValueOrList;
+use eva_common::events::{Force, RAW_STATE_TOPIC, RawStateEventOwned};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::Deserialize;
@@ -17,7 +16,7 @@ const RESTART_DELAY: u64 = 2;
 #[serde(deny_unknown_fields)]
 pub struct Update {
     command: String,
-    oid: OIDSingleOrMulti,
+    oid: ValueOrList<OID>,
     #[serde(deserialize_with = "eva_common::tools::de_float_as_duration")]
     interval: Duration,
     #[serde(
@@ -63,7 +62,7 @@ pub async fn update_handler(update: Update) -> EResult<()> {
         .timeout
         .unwrap_or_else(|| *crate::TIMEOUT.get().unwrap());
     let kind_str;
-    let cmd_options = if let OIDSingleOrMulti::Single(ref oid) = update.oid {
+    let cmd_options = if let ValueOrList::Single(ref oid) = update.oid {
         kind_str = oid.kind().to_string();
         init_cmd_options(oid, &kind_str)
     } else {

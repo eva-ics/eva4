@@ -19,12 +19,10 @@ eva-common = { features = [
 log = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
 mimalloc = { workspace = true }
-once_cell = { workspace = true }
-lazy_static = { workspace = true }
 hyper = { features = ["server", "http1", "http2"] , workspace = true }
 eva-rjrpc = { version = "0.3.3", features = ["http"] }
 bmart = { workspace = true }
-sqlx = { features = [ "runtime-tokio-native-tls" , "sqlite", "any", "mysql", "postgres" ] , workspace = true }
+sqlx = { features = [ "runtime-tokio-native-tls" , "sqlite", "any", "postgres" ] , workspace = true }
 futures = { workspace = true }
 chrono = { workspace = true }
 serde_yaml = { workspace = true }

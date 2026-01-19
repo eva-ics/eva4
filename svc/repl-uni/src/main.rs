@@ -1,8 +1,8 @@
 use busrt::QoS;
 use eva_common::acl::OIDMaskList;
 use eva_common::events::{
-    NodeInfo, ReplicationInventoryItem, ReplicationNodeInventoryItem,
-    ReplicationStateEventExtended, AAA_ACL_TOPIC, AAA_KEY_TOPIC,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, NodeInfo, ReplicationInventoryItem, ReplicationNodeInventoryItem,
+    ReplicationStateEventExtended,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
@@ -10,7 +10,7 @@ use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_NODE_STATE_TOPIC};
 use eva_sdk::types::FullItemState;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]

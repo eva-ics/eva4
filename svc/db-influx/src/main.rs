@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use simple_pool::ResourcePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 err_logger!();

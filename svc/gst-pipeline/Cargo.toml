@@ -1,27 +1,20 @@
 [package]
 name = "eva-gst-pipeline"
-version = "4.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+publish = false
 
 [dependencies]
-async-channel = "2.5.0"
-async-trait = "0.1"
-eva-common = { version = "0.3.117", features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
-eva-sdk = { version = "0.3", features = ["controller"] }
-gstreamer = { version = "0.22" }
-gstreamer-app = "0.22"
+async-channel = { workspace = true }
+async-trait = { workspace = true }
+eva-common = { workspace = true, features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
+eva-sdk = { workspace = true, features = ["controller"] }
+gstreamer = { version = "0.24" }
+gstreamer-app = "0.24"
 log = "0.4"
-mimalloc = "0.1"
-once_cell = "1.20"
-serde = { version = "1.0", features = ["derive", "rc"] }
-tokio = { version = "1.36", features = ["full"] }
+mimalloc = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
+tokio = { workspace = true, features = ["full"] }
 
 [features]
 std-alloc = []
-openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
-openssl3 = ["eva-common/openssl3"]
-
-[profile.release]
-strip = true
-lto = true
-codegen-units = 1

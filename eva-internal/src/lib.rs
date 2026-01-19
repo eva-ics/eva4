@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use eva_common::time::{now, Time};
+use eva_common::time::{Time, now};
 use tokio::time::Interval;
 
 pub struct RtcSyncedInterval {

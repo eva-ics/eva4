@@ -1,25 +1,24 @@
 use crate::{EResult, Error};
-use busrt::rpc::{Rpc, RpcClient};
 use busrt::QoS;
+use busrt::rpc::{Rpc, RpcClient};
 use bytes::{BufMut, BytesMut};
 use chrono::prelude::*;
 use colored::Colorize;
 use eva_common::events::LOG_EVENT_TOPIC;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_common::tools::{format_path, SocketPath};
+use eva_common::tools::{SocketPath, format_path};
 use log::trace;
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use once_cell::sync::OnceCell;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::collections::HashMap;
 use std::fmt::Write as _;
-use std::io::stdout;
 use std::io::Write;
+use std::io::stdout;
 use std::str::FromStr;
-use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::{LazyLock, OnceLock, atomic};
 
 const DEFAULT_KEEP: i64 = 86_400_i64;
 const INTERVAL_CLEAN_MEMORY_LOGS: std::time::Duration = std::time::Duration::from_secs(60);
@@ -30,28 +29,26 @@ static MIN_LOG_LEVEL: atomic::AtomicU8 = atomic::AtomicU8::new(eva_common::LOG_L
 static CONSOLE_LOG_TIMESTAMP: atomic::AtomicBool = atomic::AtomicBool::new(true);
 
 pub fn disable_console_log() {
-    CAN_LOG_CONSOLE.store(false, atomic::Ordering::SeqCst);
+    CAN_LOG_CONSOLE.store(false, atomic::Ordering::Relaxed);
 }
 
 type BusReceiver = async_channel::Receiver<(&'static String, Vec<u8>)>;
 
-lazy_static! {
-    static ref KEEP_MEM: OnceCell<chrono::Duration> = <_>::default();
-    static ref KEEP_MEM_MAX_RECORDS: OnceCell<usize> = <_>::default();
-    static ref MEMORY_LOG: Mutex<Vec<Arc<LogRecord>>> = Mutex::new(Vec::new());
-    static ref CONSOLE_LOCK: Mutex<()> = Mutex::new(());
-    static ref BUS_RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-    static ref BUS_RX: Mutex<Option<BusReceiver>> = <_>::default();
-    static ref BUS_LOG_TOPIC: HashMap<Level, String> = {
-        let mut h = HashMap::new();
-        h.insert(Level::Trace, format!("{LOG_EVENT_TOPIC}trace"));
-        h.insert(Level::Debug, format!("{LOG_EVENT_TOPIC}debug"));
-        h.insert(Level::Info, format!("{LOG_EVENT_TOPIC}info"));
-        h.insert(Level::Warn, format!("{LOG_EVENT_TOPIC}warn"));
-        h.insert(Level::Error, format!("{LOG_EVENT_TOPIC}error"));
-        h
-    };
-}
+static KEEP_MEM: OnceLock<chrono::Duration> = OnceLock::new();
+static KEEP_MEM_MAX_RECORDS: OnceLock<usize> = OnceLock::new();
+static MEMORY_LOG: Mutex<Vec<Arc<LogRecord>>> = Mutex::new(Vec::new());
+static CONSOLE_LOCK: Mutex<()> = Mutex::new(());
+static BUS_RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static BUS_RX: LazyLock<Mutex<Option<BusReceiver>>> = LazyLock::new(<_>::default);
+static BUS_LOG_TOPIC: LazyLock<HashMap<Level, String>> = LazyLock::new(|| {
+    let mut h = HashMap::new();
+    h.insert(Level::Trace, format!("{LOG_EVENT_TOPIC}trace"));
+    h.insert(Level::Debug, format!("{LOG_EVENT_TOPIC}debug"));
+    h.insert(Level::Info, format!("{LOG_EVENT_TOPIC}info"));
+    h.insert(Level::Warn, format!("{LOG_EVENT_TOPIC}warn"));
+    h.insert(Level::Error, format!("{LOG_EVENT_TOPIC}error"));
+    h
+});
 
 #[inline]
 pub fn set_rpc(rpc: Arc<RpcClient>) -> EResult<()> {
@@ -93,25 +90,25 @@ impl<'a> RecordFilter<'a> {
         if record.l < self.level {
             return false;
         }
-        if let Some(not_before) = self.not_before {
-            if record.time < not_before {
-                return false;
-            }
+        if let Some(not_before) = self.not_before
+            && record.time < not_before
+        {
+            return false;
         }
-        if let Some(module) = self.module {
-            if record.module != module {
-                return false;
-            }
+        if let Some(module) = self.module
+            && record.module != module
+        {
+            return false;
         }
-        if let Some(regex_filter) = self.regex_filter {
-            if !regex_filter.is_match(&record.msg.to_lowercase()) {
-                return false;
-            }
+        if let Some(regex_filter) = self.regex_filter
+            && !regex_filter.is_match(&record.msg.to_lowercase())
+        {
+            return false;
         }
-        if let Some(ref msg) = self.msg {
-            if !record.msg.to_lowercase().contains(msg) {
-                return false;
-            }
+        if let Some(ref msg) = self.msg
+            && !record.msg.to_lowercase().contains(msg)
+        {
+            return false;
         }
         true
     }
@@ -131,11 +128,7 @@ pub fn get_log_records(filter: RecordFilter) -> Vec<Arc<LogRecord>> {
     let len = records.len();
     records
         .iter()
-        .skip(if len > filter.limit as usize {
-            len - filter.limit as usize
-        } else {
-            0
-        })
+        .skip(len.saturating_sub(filter.limit as usize))
         .map(|v| (*v).clone())
         .collect()
 }
@@ -150,7 +143,7 @@ pub fn purge_log_records() {
 
 #[inline]
 pub fn get_min_log_level() -> LogLevel {
-    LogLevel(MIN_LOG_LEVEL.load(atomic::Ordering::SeqCst))
+    LogLevel(MIN_LOG_LEVEL.load(atomic::Ordering::Relaxed))
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -337,7 +330,7 @@ impl Log for ConsoleLogger {
             && !metadata.target().starts_with("mio::")
     }
     fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) && CAN_LOG_CONSOLE.load(atomic::Ordering::SeqCst) {
+        if self.enabled(record.metadata()) && CAN_LOG_CONSOLE.load(atomic::Ordering::Relaxed) {
             let log_string = format_console_log_string!(record, self.system_name, self.format);
             let _console = CONSOLE_LOCK.lock().unwrap();
             match record.level() {
@@ -383,11 +376,12 @@ impl Log for BusLogger {
             && !metadata.target().starts_with("mio::")
     }
     fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) && CAN_LOG_CONSOLE.load(atomic::Ordering::SeqCst) {
-            if let Some(topic) = BUS_LOG_TOPIC.get(&record.level()) {
-                let payload = record.as_msgpack(&self.system_name);
-                let _r = self.tx.try_send((topic, payload));
-            }
+        if self.enabled(record.metadata())
+            && CAN_LOG_CONSOLE.load(atomic::Ordering::Relaxed)
+            && let Some(topic) = BUS_LOG_TOPIC.get(&record.level())
+        {
+            let payload = record.as_msgpack(&self.system_name);
+            let _r = self.tx.try_send((topic, payload));
         }
     }
 
@@ -426,14 +420,12 @@ impl Log for FileLogger {
             use std::os::unix::fs::MetadataExt;
             let mut fd_guard = self.fd.lock().unwrap();
             let mut fd_opt = None;
-            if let Some(ref mut fd) = *fd_guard {
-                if let Ok(path_metadata) = std::fs::metadata(&self.path) {
-                    let metadata = fd.metadata().unwrap();
-                    if metadata.dev() == path_metadata.dev()
-                        && metadata.ino() == path_metadata.ino()
-                    {
-                        fd_opt = Some(fd);
-                    }
+            if let Some(ref mut fd) = *fd_guard
+                && let Ok(path_metadata) = std::fs::metadata(&self.path)
+            {
+                let metadata = fd.metadata().unwrap();
+                if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
+                    fd_opt = Some(fd);
                 }
             }
             #[allow(clippy::option_if_let_else)]
@@ -659,7 +651,7 @@ pub fn init(
         eva_common::console_logger::console_log_with_timestamp(),
         atomic::Ordering::Relaxed,
     );
-    let mut loggers: Vec<Box<(dyn Log + 'static)>> = Vec::new();
+    let mut loggers: Vec<Box<dyn Log + 'static>> = Vec::new();
     let mut max_filter = LevelFilter::Error;
     let mut keep_mem: Option<chrono::Duration> = None;
     let mut keep_mem_max_records: Option<usize> = None;
@@ -792,7 +784,7 @@ pub fn init(
         .expect("Unable to init logging system");
         MIN_LOG_LEVEL.store(
             Into::<LogLevel>::into(max_filter.to_level().unwrap()).as_code(),
-            atomic::Ordering::SeqCst,
+            atomic::Ordering::Relaxed,
         );
         if let Some(keep) = keep_mem {
             KEEP_MEM.set(keep).expect("Unable to set KEEP_MEM");
@@ -809,19 +801,19 @@ pub fn init(
 ///
 /// Will panic if the mutex is poisoned
 pub fn start_bus_logger() {
-    if let Some(rx) = BUS_RX.lock().unwrap().take() {
-        if let Some(rpc) = BUS_RPC.get() {
-            let client = rpc.client();
-            tokio::spawn(async move {
-                while let Ok((topic, msg)) = rx.recv().await {
-                    let _r = client
-                        .lock()
-                        .await
-                        .publish(topic, msg.into(), QoS::No)
-                        .await;
-                }
-            });
-        }
+    if let Some(rx) = BUS_RX.lock().unwrap().take()
+        && let Some(rpc) = BUS_RPC.get()
+    {
+        let client = rpc.client();
+        tokio::spawn(async move {
+            while let Ok((topic, msg)) = rx.recv().await {
+                let _r = client
+                    .lock()
+                    .await
+                    .publish(topic, msg.into(), QoS::No)
+                    .await;
+            }
+        });
     }
 }
 

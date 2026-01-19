@@ -1,8 +1,8 @@
 use crate::aaa;
 use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::events::{
-    LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC,
-    LOCAL_STATE_TOPIC, LOG_EVENT_TOPIC, REMOTE_STATE_TOPIC,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, LOCAL_STATE_TOPIC, LOG_EVENT_TOPIC,
+    LocalStateEvent, REMOTE_STATE_TOPIC, RemoteStateEvent,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;

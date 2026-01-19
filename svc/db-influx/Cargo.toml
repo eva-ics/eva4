@@ -14,7 +14,6 @@ eva-common = { features = ["events", "time", "common-payloads"] , workspace = tr
 log = { workspace = true }
 async-channel = { workspace = true }
 eva-sdk = { workspace = true }
-once_cell = { workspace = true }
 hyper = { version = "0.14.18", features = ["client", "http1", "http2", "tcp", "stream"] }
 hyper-tls = "0.5"
 base64 = "0.13"

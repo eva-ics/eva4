@@ -13,7 +13,6 @@ nix = { version = "0.25", features = ["time"] }
 hex = { workspace = true }
 serde = { features = ["derive"] , workspace = true }
 tokio = { features = ["time", "test-util", "rt", "macros"] , workspace = true }
-once_cell = { workspace = true }
 
 [features]
 openssl-vendored = ["openssl/vendored"]

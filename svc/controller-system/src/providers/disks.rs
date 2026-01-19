@@ -3,7 +3,6 @@ use crate::tools::{calc_usage, format_name};
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -11,13 +10,15 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
 use sysinfo::Disks;
 
 err_logger!();
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
-static MOUNTPOINT_NAME_CACHE: Lazy<Mutex<BTreeMap<PathBuf, Arc<String>>>> = Lazy::new(<_>::default);
+static CONFIG: OnceLock<Config> = OnceLock::new();
+static MOUNTPOINT_NAME_CACHE: LazyLock<Mutex<BTreeMap<PathBuf, Arc<String>>>> =
+    LazyLock::new(<_>::default);
 
 const REFRESH: Duration = Duration::from_secs(10);
 
@@ -72,10 +73,10 @@ pub async fn report_worker() {
     if !config.enabled {
         return;
     }
-    if let Some(ref i) = config.mount_points {
-        if i.is_empty() {
-            return;
-        }
+    if let Some(ref i) = config.mount_points
+        && i.is_empty()
+    {
+        return;
     }
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -90,7 +91,7 @@ pub async fn report_worker() {
         let mut disks_s = None;
         if let Ok(disks) = tokio::task::spawn_blocking(move || {
             let mut disks = Disks::new();
-            disks.refresh_list();
+            disks.refresh(true);
             disks
         })
         .await
@@ -99,10 +100,10 @@ pub async fn report_worker() {
             disks_s.replace(disks);
             for disk in disks_s.as_ref().unwrap() {
                 let path = disk.mount_point();
-                if let Some(ref i) = config.mount_points {
-                    if !i.contains(path) {
-                        continue;
-                    }
+                if let Some(ref i) = config.mount_points
+                    && !i.contains(path)
+                {
+                    continue;
                 }
                 let name = format_mountpoint_name(path);
                 Metric::new("disk", &name, "total")

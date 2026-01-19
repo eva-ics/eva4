@@ -2,18 +2,18 @@ use eva_common::common_payloads::ValueOrList;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use lettre::{
-    message::{header::ContentType, Mailbox, MultiPart, SinglePart},
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+    message::{Mailbox, MultiPart, SinglePart, header::ContentType},
     transport::smtp::{
+        PoolConfig,
         authentication::Credentials,
         client::{Tls, TlsParameters},
-        PoolConfig,
     },
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map, HashMap};
+use std::collections::{HashMap, hash_map};
 use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

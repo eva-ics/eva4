@@ -6,8 +6,8 @@ use eva_sdk::types::Fill;
 use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -286,8 +286,8 @@ struct Source {
 
 impl Source {
     async fn start(&mut self) -> EResult<()> {
-        let gen = self.kind.to_generator();
-        match gen
+        let g = self.kind.to_generator();
+        match g
             .start(
                 &self.name,
                 self.params.clone(),
@@ -307,8 +307,8 @@ impl Source {
         }
     }
     fn plan(&self, duration: Duration, fill: Option<Fill>) -> EResult<Vec<GenData>> {
-        let gen = self.kind.to_generator();
-        let data = gen.plan(
+        let g = self.kind.to_generator();
+        let data = g.plan(
             self.params.clone(),
             prepare_sampling(self.sampling)?,
             duration,
@@ -337,8 +337,8 @@ impl Source {
         }
     }
     async fn apply(&self, t_start: f64, t_end: f64, targets: Vec<OID>) -> EResult<Uuid> {
-        let gen = self.kind.to_generator();
-        gen.apply(
+        let g = self.kind.to_generator();
+        g.apply(
             self.params.clone(),
             prepare_sampling(self.sampling)?,
             t_start,

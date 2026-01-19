@@ -16,9 +16,7 @@ log = { workspace = true }
 async-channel = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
 mimalloc = { workspace = true }
-once_cell = { workspace = true }
 itertools = { workspace = true }
-lazy_static = { workspace = true }
 logreducer = { path = "../../logreducer" }
 bmart = { workspace = true }
 rmodbus = { version = "0.6", features = [ "std" ] }

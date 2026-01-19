@@ -1,15 +1,18 @@
-/// The core module
+//! The core module
+
+use crate::Mode;
 use crate::actmgr;
 use crate::inventory_db;
 use crate::items::{self, Filter, Inventory, InventoryStats, Item, ItemConfigData, NodeFilter};
 use crate::spoint;
 use crate::svcmgr;
-use crate::Mode;
 use crate::{EResult, Error};
 use atty::Stream;
+use busrt::QoS;
 use busrt::client::AsyncClient;
 use busrt::rpc::{Rpc, RpcClient};
-use busrt::QoS;
+use eva_common::ITEM_STATUS_ERROR;
+use eva_common::SLEEP_STEP;
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::NodeData;
 use eva_common::dobj::{DataObject, Endianess, ObjectMap};
@@ -19,32 +22,29 @@ use eva_common::events::Force;
 use eva_common::events::OnModifiedOwned;
 use eva_common::events::ReplicationStateEventExtended;
 use eva_common::events::{
-    DbState, LocalStateEvent, NodeInfo, RawStateBulkEventOwned, RawStateEventOwned,
-    RemoteStateEvent, ReplicationInventoryItem, ReplicationState, LOCAL_STATE_TOPIC,
-    LOG_INPUT_TOPIC, RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC,
-    REMOTE_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
-    REPLICATION_STATE_TOPIC, SERVICE_STATUS_TOPIC,
+    DbState, LOCAL_STATE_TOPIC, LOG_INPUT_TOPIC, LocalStateEvent, NodeInfo, RAW_STATE_BULK_TOPIC,
+    RAW_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
+    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC, RawStateBulkEventOwned,
+    RawStateEventOwned, RemoteStateEvent, ReplicationInventoryItem, ReplicationState,
+    SERVICE_STATUS_TOPIC,
 };
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_common::registry;
-use eva_common::time::monotonic_ns;
 use eva_common::time::Time;
+use eva_common::time::monotonic_ns;
 use eva_common::tools::format_path;
-use eva_common::ITEM_STATUS_ERROR;
-use eva_common::SLEEP_STEP;
 use log::{debug, error, info, trace, warn};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::mem;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::sync::atomic;
 use std::time::Duration;
 use std::time::Instant;
-use sysinfo::{ProcessExt, SystemExt};
 use tokio::io::AsyncWriteExt;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
@@ -326,7 +326,7 @@ macro_rules! prepare_state_data {
 #[serde(untagged)]
 enum InstantSave {
     Strict(bool),
-    ByMask(OIDMaskList),
+    ByMask(Box<OIDMaskList>),
 }
 
 impl InstantSave {
@@ -408,9 +408,9 @@ pub struct Core {
     #[serde(skip)]
     inventory: Arc<RwLock<Inventory>>,
     #[serde(skip)]
-    rpc: OnceCell<Arc<RpcClient>>,
+    rpc: OnceLock<Arc<RpcClient>>,
     #[serde(skip)]
-    state_db_tx: OnceCell<async_channel::Sender<(OID, DbState)>>,
+    state_db_tx: OnceLock<async_channel::Sender<(OID, DbState)>>,
     #[serde(skip)]
     inv_process: std::sync::Mutex<HashSet<String>>, // locked sources
     #[serde(skip)]
@@ -457,11 +457,11 @@ pub fn start_node_checker(core: Arc<Core>) {
                 }
             }
             for (s, nodes) in ntc {
-                if let Ok(v) = c.service_manager.is_service_online(&s, timeout).await {
-                    if !v {
-                        for (node, timeout) in nodes {
-                            c.mark_source_online(&node, &s, false, None, timeout).await;
-                        }
+                if let Ok(v) = c.service_manager.is_service_online(&s, timeout).await
+                    && !v
+                {
+                    for (node, timeout) in nodes {
+                        c.mark_source_online(&node, &s, false, None, timeout).await;
                     }
                 }
             }
@@ -848,21 +848,21 @@ impl Core {
             }
             inventory_db::save_items_bulk(configs_to_save).await?;
             for oid in oids {
-                if let Some(item) = self.inventory.read().await.get_item(&oid) {
-                    if let Some(stc) = item.state() {
-                        let _stp_lock = if lock {
-                            Some(self.state_processor_lock.lock().await)
-                        } else {
-                            None
-                        };
-                        let (s_state, db_st) =
-                            prepare_state_data!(item, &*stc.lock(), self.instant_save);
-                        //process new state without db_st, manually save
-                        self.process_new_state(item.oid(), s_state, None, rpc)
-                            .await?;
-                        if let Some(db_state) = db_st {
-                            inventory_db::push_state(oid, db_state);
-                        }
+                if let Some(item) = self.inventory.read().await.get_item(&oid)
+                    && let Some(stc) = item.state()
+                {
+                    let _stp_lock = if lock {
+                        Some(self.state_processor_lock.lock().await)
+                    } else {
+                        None
+                    };
+                    let (s_state, db_st) =
+                        prepare_state_data!(item, &*stc.lock(), self.instant_save);
+                    //process new state without db_st, manually save
+                    self.process_new_state(item.oid(), s_state, None, rpc)
+                        .await?;
+                    if let Some(db_state) = db_st {
+                        inventory_db::push_state(oid, db_state);
                     }
                 }
             }
@@ -1068,22 +1068,22 @@ impl Core {
                 }
                 if oid.kind() == ItemKind::Unit {
                     let inv = inventory.read().await;
-                    if let Some(unit) = inv.get_item(&oid) {
-                        if unit.source().is_none() {
-                            let _stp_lock = state_processor_lock.lock().await;
-                            let s_st = if let Some(stc) = unit.state() {
-                                let mut state = stc.lock();
-                                let ieid = IEID::new(boot_id, monotonic_ns());
-                                state.act_decr(ieid);
-                                Some(Into::<LocalStateEvent>::into(&*state))
-                            } else {
-                                None
-                            };
-                            if let Some(s_state) = s_st {
-                                announce_local_state(unit.oid(), &s_state, &rpc.client())
-                                    .await
-                                    .log_ef();
-                            }
+                    if let Some(unit) = inv.get_item(&oid)
+                        && unit.source().is_none()
+                    {
+                        let _stp_lock = state_processor_lock.lock().await;
+                        let s_st = if let Some(stc) = unit.state() {
+                            let mut state = stc.lock();
+                            let ieid = IEID::new(boot_id, monotonic_ns());
+                            state.act_decr(ieid);
+                            Some(Into::<LocalStateEvent>::into(&*state))
+                        } else {
+                            None
+                        };
+                        if let Some(s_state) = s_st {
+                            announce_local_state(unit.oid(), &s_state, &rpc.client())
+                                .await
+                                .log_ef();
                         }
                     }
                 }
@@ -1603,29 +1603,28 @@ impl Core {
                 // lvars with status 0 are not set from RAW
                 return Ok(());
             }
-            if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified {
-                if let ValueOptionOwned::Value(ref value) = raw.value {
-                    let prev_value = state.value();
-                    if *prev_value != Value::Unit {
-                        let current: f64 = value.try_into().unwrap_or_default();
-                        let previous: f64 = prev_value.try_into().unwrap_or_default();
-                        if let Some(period) = om.period {
-                            let elapsed = now - state.t();
-                            if elapsed > 0.0 {
-                                delta = Some(
-                                    calc_delta(current, previous, om.on_negative) / period
-                                        * elapsed,
-                                );
-                            } else {
-                                warn!(
-                                    "ignoring delta for {} - non-positive time delta",
-                                    item.oid()
-                                );
-                            }
+            if let Some(OnModifiedOwned::SetOtherValueDelta(ref om)) = on_modified
+                && let ValueOptionOwned::Value(ref value) = raw.value
+            {
+                let prev_value = state.value();
+                if *prev_value != Value::Unit {
+                    let current: f64 = value.try_into().unwrap_or_default();
+                    let previous: f64 = prev_value.try_into().unwrap_or_default();
+                    if let Some(period) = om.period {
+                        let elapsed = now - state.t();
+                        if elapsed > 0.0 {
+                            delta = Some(
+                                calc_delta(current, previous, om.on_negative) / period * elapsed,
+                            );
                         } else {
-                            // no period
-                            delta = Some(calc_delta(current, previous, om.on_negative));
+                            warn!(
+                                "ignoring delta for {} - non-positive time delta",
+                                item.oid()
+                            );
                         }
+                    } else {
+                        // no period
+                        delta = Some(calc_delta(current, previous, om.on_negative));
                     }
                 }
             }
@@ -1649,7 +1648,7 @@ impl Core {
         if let Some(om) = on_modified {
             self.process_modified(om, really_modified, force, delta, t, sender)
                 .await?;
-        };
+        }
         Ok(())
     }
     /// # Panics
@@ -1693,10 +1692,8 @@ impl Core {
 
     async fn auto_create_item_from_raw(&self, oid: &OID, raw: RawStateEventOwned, sender: &str) {
         // do not auto-create items if event time is 0 (not modified)
-        if let Some(t) = raw.t {
-            if t == 0.0 {
-                return;
-            }
+        if raw.t.is_some_and(|t| t == 0.0) {
+            return;
         }
         let item_config = ItemConfigData::from_raw_event(oid, raw, sender);
         info!("auto-creating local item {} source: {}", oid, sender);
@@ -1824,44 +1821,48 @@ impl Core {
                         if ex.enabled() != remote.enabled {
                             ex.set_enabled(remote.enabled);
                         }
-                        if check_state(&remote) && remote.oid.kind() != ItemKind::Lmacro {
-                            if let Some(st) = ex.state() {
-                                if let Some(s_state) = {
-                                    let mut state = st.lock();
-                                    let rs: ReplicationState = match remote.try_into() {
-                                        Ok(v) => v,
-                                        Err(e) => {
-                                            error!("unable to process remote item state: {}", e);
-                                            continue;
-                                        }
-                                    };
-                                    if &rs.ieid > state.ieid() {
-                                        state.set_from_rs(rs);
-                                        let ev: LocalStateEvent = (&*state).into();
-                                        Some(RemoteStateEvent::from_local_state_event(
-                                            ev,
-                                            source.node(),
-                                            online,
-                                        ))
-                                    } else {
-                                        if !rs.ieid.is_phantom()
-                                            && !state.ieid().is_phantom()
-                                            && rs.ieid.boot_id() < state.ieid().boot_id()
-                                        {
-                                            warn!("fatal replication problem for {}, node {} boot_id went backward", ex.oid(), source_id);
-                                        }
-                                        None
+                        if check_state(&remote)
+                            && remote.oid.kind() != ItemKind::Lmacro
+                            && let Some(st) = ex.state()
+                            && let Some(s_state) = {
+                                let mut state = st.lock();
+                                let rs: ReplicationState = match remote.try_into() {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        error!("unable to process remote item state: {}", e);
+                                        continue;
                                     }
-                                } {
-                                    announce_remote_state(ex.oid(), &s_state, true, &rpc.client())
-                                        .await
-                                        .log_ef();
+                                };
+                                if &rs.ieid > state.ieid() {
+                                    state.set_from_rs(rs);
+                                    let ev: LocalStateEvent = (&*state).into();
+                                    Some(RemoteStateEvent::from_local_state_event(
+                                        ev,
+                                        source.node(),
+                                        online,
+                                    ))
+                                } else {
+                                    if !rs.ieid.is_phantom()
+                                        && !state.ieid().is_phantom()
+                                        && rs.ieid.boot_id() < state.ieid().boot_id()
+                                    {
+                                        warn!(
+                                            "fatal replication problem for {}, node {} boot_id went backward",
+                                            ex.oid(),
+                                            source_id
+                                        );
+                                    }
+                                    None
                                 }
                             }
+                        {
+                            announce_remote_state(ex.oid(), &s_state, true, &rpc.client())
+                                .await
+                                .log_ef();
                         }
                         continue;
                     }
-                };
+                }
                 debug!(
                     "creating remote item {}, node: {} from rpl {}",
                     remote.oid, source_id, sender
@@ -1872,24 +1873,23 @@ impl Core {
                     .await
                     .append_remote_item(remote, source.clone())
                     .log_err()
+                    && item.oid().kind() != ItemKind::Lmacro
                 {
-                    if item.oid().kind() != ItemKind::Lmacro {
-                        if let Some(s_state) = item.local_state_event() {
-                            announce_remote_state(
-                                item.oid(),
-                                &RemoteStateEvent::from_local_state_event(
-                                    s_state,
-                                    source.node(),
-                                    online,
-                                ),
-                                true,
-                                &rpc.client(),
-                            )
-                            .await
-                            .log_ef();
-                        } else {
-                            warn!("no state property in {}", item.oid());
-                        }
+                    if let Some(s_state) = item.local_state_event() {
+                        announce_remote_state(
+                            item.oid(),
+                            &RemoteStateEvent::from_local_state_event(
+                                s_state,
+                                source.node(),
+                                online,
+                            ),
+                            true,
+                            &rpc.client(),
+                        )
+                        .await
+                        .log_ef();
+                    } else {
+                        warn!("no state property in {}", item.oid());
                     }
                 }
             }
@@ -1903,32 +1903,30 @@ impl Core {
                     "creating remote item {}, node: {} from rpl {}",
                     remote.oid, source_id, sender
                 );
-                if check_state(&remote) {
-                    if let Ok(item) = self
+                if check_state(&remote)
+                    && let Ok(item) = self
                         .inventory
                         .write()
                         .await
                         .append_remote_item(remote, source.clone())
                         .log_err()
-                    {
-                        if item.oid().kind() != ItemKind::Lmacro {
-                            if let Some(s_state) = item.local_state_event() {
-                                announce_remote_state(
-                                    item.oid(),
-                                    &RemoteStateEvent::from_local_state_event(
-                                        s_state,
-                                        source.node(),
-                                        online,
-                                    ),
-                                    true,
-                                    &rpc.client(),
-                                )
-                                .await
-                                .log_ef();
-                            } else {
-                                warn!("no state property in {}", item.oid());
-                            }
-                        }
+                    && item.oid().kind() != ItemKind::Lmacro
+                {
+                    if let Some(s_state) = item.local_state_event() {
+                        announce_remote_state(
+                            item.oid(),
+                            &RemoteStateEvent::from_local_state_event(
+                                s_state,
+                                source.node(),
+                                online,
+                            ),
+                            true,
+                            &rpc.client(),
+                        )
+                        .await
+                        .log_ef();
+                    } else {
+                        warn!("no state property in {}", item.oid());
                     }
                 }
             }
@@ -2092,10 +2090,10 @@ impl Core {
     /// # Panics
     ///
     /// Will panic if RPC is not set
-    pub async fn force_announce_state<'a>(
+    pub async fn force_announce_state(
         &self,
         mask_list: &OIDMaskList,
-        source_id: Option<NodeFilter<'a>>,
+        source_id: Option<NodeFilter<'_>>,
     ) -> EResult<()> {
         // skip if initial announce hasn't been done yet
         if !*self.initial_announced.lock().await {
@@ -2123,10 +2121,10 @@ impl Core {
     /// # Panics
     ///
     /// Will panic if RPC is not set
-    pub async fn force_announce_state_for<'a>(
+    pub async fn force_announce_state_for(
         &self,
         mask_list: &OIDMaskList,
-        source_id: Option<NodeFilter<'a>>,
+        source_id: Option<NodeFilter<'_>>,
         receiver: &str,
     ) -> EResult<()> {
         // skip if initial announce hasn't been done yet
@@ -2154,12 +2152,12 @@ impl Core {
         Ok(())
     }
     #[inline]
-    pub async fn list_items<'a>(
+    pub async fn list_items(
         &self,
         mask_list: &OIDMaskList,
         include: Option<&OIDMaskList>,
         exclude: Option<&OIDMaskList>,
-        source_id: Option<NodeFilter<'a>>,
+        source_id: Option<NodeFilter<'_>>,
         include_stateless: bool,
     ) -> Vec<Item> {
         let mut filter = Filter::default();
@@ -2265,12 +2263,12 @@ impl Core {
             None => false,
         };
         // always handle cc if run with cargo
-        if let Some(v) = std::env::var_os("CARGO_PKG_NAME") {
-            if !v.is_empty() {
-                handle_cc = true;
-                trace!("running under cargo");
-            }
-        };
+        if let Some(v) = std::env::var_os("CARGO_PKG_NAME")
+            && !v.is_empty()
+        {
+            handle_cc = true;
+            trace!("running under cargo");
+        }
         if handle_cc {
             let running = self.running.clone();
             handle_term_signal!(
@@ -2292,14 +2290,14 @@ impl Core {
         &self,
         state: &eva_common::services::ServiceStatusBroadcastEvent,
     ) -> EResult<()> {
-        if self.mode == Mode::Regular {
-            if let Some(rpc) = self.rpc.get() {
-                rpc.client()
-                    .lock()
-                    .await
-                    .publish(SERVICE_STATUS_TOPIC, pack(state)?.into(), QoS::No)
-                    .await?;
-            }
+        if self.mode == Mode::Regular
+            && let Some(rpc) = self.rpc.get()
+        {
+            rpc.client()
+                .lock()
+                .await
+                .publish(SERVICE_STATUS_TOPIC, pack(state)?.into(), QoS::No)
+                .await?;
         }
         Ok(())
     }
@@ -2570,10 +2568,10 @@ fn spawn_mem_checker(mem_warn: u64) {
 }
 
 fn calc_delta(current: f64, prev: f64, on_negative: events::OnNegativeDelta) -> f64 {
-    if let events::OnNegativeDelta::Overflow { floor, ceil } = on_negative {
-        if current < prev {
-            return (ceil - prev) + (current - floor);
-        }
+    if let events::OnNegativeDelta::Overflow { floor, ceil } = on_negative
+        && current < prev
+    {
+        return (ceil - prev) + (current - floor);
     }
     // other negative variants are processed later
     current - prev

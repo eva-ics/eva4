@@ -3,9 +3,9 @@ use crate::tools::format_name;
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use sysinfo::{CpuRefreshKind, System};
 use tokio::sync::Mutex;
@@ -15,7 +15,7 @@ err_logger!();
 const REFRESH: Duration = Duration::from_secs(1);
 const REPORT_CPU_INFO_EVERY: usize = 10;
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub fn set_config(config: Config) -> EResult<()> {
     CONFIG

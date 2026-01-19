@@ -1,14 +1,14 @@
-use crate::core::{get_hostname, Core};
+use crate::core::{Core, get_hostname};
 use crate::eapi;
 use crate::{EResult, Error};
-use busrt::rpc::{self, Rpc, RpcClient};
 use busrt::QoS;
+use busrt::rpc::{self, Rpc, RpcClient};
 use eva_common::common_payloads::ParamsId;
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::registry;
 use eva_common::services::RealtimeConfig;
-use log::{info, trace, LevelFilter};
+use log::{LevelFilter, info, trace};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -102,7 +102,7 @@ pub async fn run(
             let lf = LevelFilter::from_str(&l.level).map_err(Error::failed)?;
             if lf > max_filter {
                 max_filter = lf;
-            };
+            }
         }
         (bus_config_data, core_timeouts, max_filter)
     };

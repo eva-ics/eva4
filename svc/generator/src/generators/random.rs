@@ -1,5 +1,5 @@
 use super::{GenData, GeneratorSource};
-use crate::target::{notify, notify_archive, Target};
+use crate::target::{Target, notify, notify_archive};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use rand::distributions::{Distribution, Uniform};

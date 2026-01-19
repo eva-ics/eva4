@@ -149,10 +149,10 @@ impl Client for paho_mqtt::async_client::AsyncClient {
         let (tx, rx) = async_channel::bounded::<Box<dyn Message + Send + Sync>>(queue_size);
         tokio::spawn(async move {
             while let Ok(message) = dc.recv().await {
-                if let Some(msg) = message {
-                    if tx.send(Box::new(msg)).await.is_err() {
-                        break;
-                    }
+                if let Some(msg) = message
+                    && tx.send(Box::new(msg)).await.is_err()
+                {
+                    break;
                 }
             }
         });

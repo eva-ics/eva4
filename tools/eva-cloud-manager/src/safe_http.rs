@@ -1,7 +1,7 @@
 use crate::manifest::Manifest;
 use eva_common::op::Op;
 use eva_common::{EResult, Error};
-use hyper::{body::HttpBody, client::HttpConnector, Body, Response, StatusCode, Uri};
+use hyper::{Body, Response, StatusCode, Uri, body::HttpBody, client::HttpConnector};
 use hyper_tls::HttpsConnector;
 use log::info;
 use openssl::sha::Sha256;

@@ -1,19 +1,19 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ParamsId;
 use eva_common::events::{
-    FullItemStateAndInfoOwned, LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC,
-    LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, FullItemStateAndInfoOwned, LOCAL_STATE_TOPIC, LocalStateEvent,
+    REMOTE_STATE_TOPIC, RemoteStateEvent,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullItemState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 use crate::nodes;
-use crate::{aaa, ReplicationData};
+use crate::{ReplicationData, aaa};
 
 err_logger!();
 

@@ -3,11 +3,11 @@ use crate::w1;
 use eva_common::events::RawStateEventOwned;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_sdk::controller::{format_raw_state_topic, RawStateCache};
+use eva_sdk::controller::{RawStateCache, format_raw_state_topic};
 use eva_sdk::prelude::err_logger;
 use log::{error, trace, warn};
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Instant;
 
 err_logger!();
@@ -29,10 +29,10 @@ pub async fn launch(
     let oid = config.oid();
     loop {
         let t = ticker.tick().await.into_std();
-        if let Some(prev) = last_ticked {
-            if t - prev > interval {
-                warn!("{} puller timeout", oid);
-            }
+        if let Some(prev) = last_ticked
+            && t - prev > interval
+        {
+            warn!("{} puller timeout", oid);
         }
         let ev_prep = match pull(config).await {
             Ok(Some(ev)) => Some((ev, config.value_delta())),
@@ -48,16 +48,16 @@ pub async fn launch(
                 ))
             }
         };
-        if let Some((raw_state, value_delta)) = ev_prep {
-            if raw_state_cache.push_check(oid, &raw_state, value_delta) {
-                match pack(&raw_state) {
-                    Ok(payload) => {
-                        if let Err(e) = tx.try_send((format_raw_state_topic(oid), payload)) {
-                            error!("state queue error for {}: {}", oid, e);
-                        }
+        if let Some((raw_state, value_delta)) = ev_prep
+            && raw_state_cache.push_check(oid, &raw_state, value_delta)
+        {
+            match pack(&raw_state) {
+                Ok(payload) => {
+                    if let Err(e) = tx.try_send((format_raw_state_topic(oid), payload)) {
+                        error!("state queue error for {}: {}", oid, e);
                     }
-                    Err(e) => error!("state serialization error for {}: {}", oid, e),
                 }
+                Err(e) => error!("state serialization error for {}: {}", oid, e),
             }
         }
         last_ticked.replace(t);
@@ -76,12 +76,11 @@ async fn pull(config: &Pull) -> EResult<Option<RawStateEventOwned>> {
     )
     .await?;
     let mut value: Value = val_str.parse().unwrap();
-    if config.need_transform() {
-        if let Ok(val_f64) = TryInto::<f64>::try_into(value.clone()).log_err() {
-            if let Ok(n) = config.transform_value(val_f64, config.oid()).log_err() {
-                value = Value::F64(n);
-            }
-        }
+    if config.need_transform()
+        && let Ok(val_f64) = TryInto::<f64>::try_into(value.clone()).log_err()
+        && let Ok(n) = config.transform_value(val_f64, config.oid()).log_err()
+    {
+        value = Value::F64(n);
     }
     if let Some(ref mut event) = raw_state {
         event.value = ValueOptionOwned::Value(value);

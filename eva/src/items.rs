@@ -7,8 +7,8 @@ use eva_common::events::{
 };
 use eva_common::logic::Range;
 use eva_common::prelude::*;
-use eva_common::time::monotonic_ns;
 use eva_common::time::Time;
+use eva_common::time::monotonic_ns;
 use eva_common::tools::default_true;
 use eva_common::{ITEM_STATUS_ERROR, OID_MASK_PREFIX_FORMULA, OID_MASK_PREFIX_REGEX};
 use log::warn;
@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::str::Split;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 use submap::mkmf::MapKeysMatchFormula as _;
 
@@ -168,7 +168,7 @@ fn create_source(source_id: &str, svc: &str) -> Source {
 #[inline]
 fn validate_logic(value: Option<&Value>, logic: Option<&Logic>) -> bool {
     if let Some(range) = logic.and_then(|l| l.range.as_ref()) {
-        value.map_or(false, |v| {
+        value.is_some_and(|v| {
             if let Ok(val) = TryInto::<f64>::try_into(v) {
                 range.matches(val)
             } else {
@@ -338,11 +338,11 @@ impl ItemState {
         let mut modified = false;
         let mut status = raw.status;
         let mut value = raw.value;
-        let mut compared_match = raw.status_compare.map_or(true, |v| v == self.status);
-        if let ValueOptionOwned::Value(v) = raw.value_compare {
-            if v != self.value {
-                compared_match = false;
-            }
+        let mut compared_match = raw.status_compare.is_none_or(|v| v == self.status);
+        if let ValueOptionOwned::Value(v) = raw.value_compare
+            && v != self.value
+        {
+            compared_match = false;
         }
         if !compared_match {
             status = raw.status_else.unwrap_or(ITEM_STATUS_ERROR);
@@ -353,22 +353,23 @@ impl ItemState {
                 self.status = status;
                 modified = true;
             }
-            if let Some(val) = Into::<Option<Value>>::into(value) {
-                if self.value != val {
-                    self.value = val;
-                    modified = true;
-                }
+            if let Some(val) = Into::<Option<Value>>::into(value)
+                && self.value != val
+            {
+                self.value = val;
+                modified = true;
             }
         } else {
             mark_out_of_range!(self, oid, value);
             modified = true;
         }
         #[allow(clippy::float_cmp)]
-        if let Some(t) = raw.t {
-            if t != 0.0 && self.t != t {
-                self.t = t;
-                modified = true;
-            }
+        if let Some(t) = raw.t
+            && t != 0.0
+            && self.t != t
+        {
+            self.t = t;
+            modified = true;
         }
         if modified || raw.force != Force::None {
             self.ieid = IEID::generate(boot_id);
@@ -880,10 +881,10 @@ impl Inventory {
     }
     #[inline]
     fn get_or_generate_state(&self, oid: &OID, boot_id: u64) -> ItemState {
-        if let Some(item) = self.get_item(oid) {
-            if let Some(ref old_stc) = item.state {
-                return old_stc.lock().clone();
-            }
+        if let Some(item) = self.get_item(oid)
+            && let Some(ref old_stc) = item.state
+        {
+            return old_stc.lock().clone();
         }
         ItemState::new0(IEID::generate(boot_id), oid.kind())
     }
@@ -1115,10 +1116,10 @@ impl<'a> Filter<'a> {
                 }
             }
         }
-        if let Some(f) = self.include {
-            if !f.matches(&item.oid) {
-                return false;
-            }
+        if let Some(f) = self.include
+            && !f.matches(&item.oid)
+        {
+            return false;
         }
         if let Some(f) = self.exclude {
             !f.matches(item.oid.as_ref())

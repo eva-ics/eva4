@@ -53,8 +53,8 @@ enum BusSocket {
 impl BusSocket {
     fn path(&self) -> &str {
         match self {
-            BusSocket::Simple(ref s) => s,
-            BusSocket::WithConfig(ref v) => &v.path,
+            BusSocket::Simple(s) => s,
+            BusSocket::WithConfig(v) => &v.path,
         }
     }
     fn with_path(self, path: String) -> Self {
@@ -77,7 +77,7 @@ impl BusSocket {
                 .buf_size(default_buf_size)
                 .buf_ttl(default_buf_ttl)
                 .timeout(default_timeout),
-            BusSocket::WithConfig(ref v) => {
+            BusSocket::WithConfig(v) => {
                 let server_config = ServerConfig::new()
                     .buf_size(v.buf_size.unwrap_or(default_buf_size))
                     .buf_ttl(v.buf_ttl.unwrap_or(default_buf_ttl))
@@ -180,15 +180,17 @@ impl ThreadAsyncAllocator {
     }
     pub fn run(&self) {
         let rx = self.rx.clone();
-        std::thread::spawn(move || loop {
-            while let Ok(req) = rx.recv_blocking() {
-                log::warn!(
-                    "ThreadAsyncAllocator: allocating {} bytes for {}",
-                    req.size,
-                    req.client
-                );
-                let buf = vec![0; req.size];
-                req.response.send(buf).ok();
+        std::thread::spawn(move || {
+            loop {
+                while let Ok(req) = rx.recv_blocking() {
+                    log::warn!(
+                        "ThreadAsyncAllocator: allocating {} bytes for {}",
+                        req.size,
+                        req.client
+                    );
+                    let buf = vec![0; req.size];
+                    req.response.send(buf).ok();
+                }
             }
         });
     }

@@ -6,6 +6,5 @@ publish = false
 
 [dependencies]
 log = { workspace = true }
-once_cell = { workspace = true }
 parking_lot = { workspace = true }
 ttl_cache = { workspace = true }

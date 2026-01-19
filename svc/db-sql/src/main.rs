@@ -11,7 +11,7 @@ use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 err_logger!();

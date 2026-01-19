@@ -1,4 +1,4 @@
-use crate::common::{safe_run_macro, ParamsCow, ParamsRun};
+use crate::common::{ParamsCow, ParamsRun, safe_run_macro};
 use crate::common::{Source, SourceOwned, StateX};
 use eva_common::acl::OIDMask;
 use eva_common::logic::Range;
@@ -161,7 +161,7 @@ impl Rule {
     pub fn set_priority(&mut self, p: usize) {
         self.priority = p;
     }
-    pub fn info(&self) -> Info {
+    pub fn info(&self) -> Info<'_> {
         let (chillout_remaining, chillout_event_pending) =
             if let Some(chillout_time) = self.chillout_time {
                 let ch = self.chillout.lock().unwrap();
