@@ -1,17 +1,14 @@
 use eva_sdk::prelude::*;
 use hyper::header::HeaderMap;
-use lazy_static::lazy_static;
 use log::info;
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::net::IpAddr;
+use std::{collections::HashMap, sync::LazyLock};
 use tera::{Context, Tera};
 
-lazy_static! {
-    pub static ref TERA_UI: RwLock<Tera> = <_>::default();
-    pub static ref TERA_PVT: RwLock<Tera> = <_>::default();
-}
+pub static TERA_UI: LazyLock<RwLock<Tera>> = LazyLock::new(<_>::default);
+pub static TERA_PVT: LazyLock<RwLock<Tera>> = LazyLock::new(<_>::default);
 
 #[derive(Serialize)]
 struct RequestInfo<'a> {

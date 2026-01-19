@@ -189,18 +189,17 @@ impl RpcHandlers for Handlers {
             m => svc_handle_default_rpc(m, &self.info),
         }
     }
-    async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
         svc_need_ready!();
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
             }
         }
     }

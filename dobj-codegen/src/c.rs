@@ -1,4 +1,8 @@
-use eva_common::dobj::{DataObject, Kind};
+use eva_common::{
+    EResult,
+    dobj::{DataObject, Kind},
+};
+use std::fmt::Write as _;
 
 use crate::CodeGen;
 
@@ -12,31 +16,33 @@ impl C {
 }
 
 impl CodeGen for C {
-    fn generate_struct(&self, dobj: &DataObject) -> String {
+    fn try_generate_struct(&self, dobj: &DataObject) -> EResult<String> {
         let mut result = format!("typedef struct {} {{\n", dobj.name);
         for field in &dobj.fields {
             match &field.kind {
                 Kind::Array(size, kind) => {
-                    result.push_str(&format!(
-                        "{}{} {}[{}];\n",
+                    writeln!(
+                        result,
+                        "{}{} {}[{}];",
                         self.ident(),
                         self.kind_to_string(kind),
                         field.name,
                         size
-                    ));
+                    )?;
                 }
                 kind => {
-                    result.push_str(&format!(
-                        "{}{} {};\n",
+                    writeln!(
+                        result,
+                        "{}{} {};",
                         self.ident(),
                         self.kind_to_string(kind),
                         field.name
-                    ));
+                    )?;
                 }
             }
         }
-        result.push_str(&format!("}} {};", dobj.name));
-        result
+        write!(result, "}} {};", dobj.name)?;
+        Ok(result)
     }
 
     fn kind_to_string(&self, kind: &Kind) -> String {

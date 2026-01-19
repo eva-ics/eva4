@@ -11,7 +11,7 @@ busrt = { features = ["rpc", "ipc"] , workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 async-channel = { workspace = true }
-submap = { version = "0.3.3" }
+submap = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 eva-common = { features = [
 "events", "workers", "acl", "dataconv", "time", "data-objects",
@@ -20,7 +20,7 @@ log = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
 mimalloc = { workspace = true }
 hyper = { features = ["server", "http1", "http2"] , workspace = true }
-eva-rjrpc = { version = "0.3.3", features = ["http"] }
+eva-rjrpc = { version = "0.4.0", features = ["http"] }
 bmart = { workspace = true }
 sqlx = { features = [ "runtime-tokio-native-tls" , "sqlite", "any", "postgres" ] , workspace = true }
 futures = { workspace = true }
@@ -49,7 +49,6 @@ oidc-verifier = "0.1.0"
 
 [features]
 std-alloc = []
-openssl-vendored = ["openssl/vendored"]
 
 [build-dependencies]
 cargo_metadata = "0.18.1"

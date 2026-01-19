@@ -22,7 +22,7 @@ impl Converter {
         path.extend(&PathBuf::from(format!("{}/LC_MESSAGES", lang)));
         path.extend(&uri_path);
         let mut mo_path = path.with_extension("mo");
-        trace!("i18n trying {:?}", mo_path);
+        trace!("i18n trying {}", mo_path.display());
         if mo_path.exists() {
             return Some(mo_path);
         }
@@ -30,7 +30,7 @@ impl Converter {
         loop {
             mo_path.pop();
             mo_path.push("messages.mo");
-            trace!("i18n trying {:?}", mo_path);
+            trace!("i18n trying {}", mo_path.display());
             if mo_path.exists() {
                 return Some(mo_path);
             } else if !uri_path.pop() {

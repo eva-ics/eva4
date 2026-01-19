@@ -1,11 +1,11 @@
 use eva_common::prelude::*;
 use eva_common::time::{ts_from_ns, ts_to_ns};
+use eva_internal::DbKind;
 use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
-use sqlx::any::AnyConnectOptions;
-use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{AnyPool, ConnectOptions, Row, sqlite};
+use sqlx::any::{AnyConnectOptions, AnyPoolOptions};
+use sqlx::{AnyPool, ConnectOptions, Row};
 use std::fmt::Write as _;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -15,27 +15,6 @@ err_logger!();
 
 pub static POOL: OnceLock<AnyPool> = OnceLock::new();
 static DB_KIND: OnceLock<DbKind> = OnceLock::new();
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DbKind {
-    Sqlite,
-    Postgres,
-}
-
-impl FromStr for DbKind {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s_lower = s.to_lowercase();
-        if s_lower.starts_with("sqlite:") {
-            Ok(DbKind::Sqlite)
-        } else if s_lower.starts_with("postgres:") || s_lower.starts_with("postgresql:") {
-            Ok(DbKind::Postgres)
-        } else {
-            Err(Error::unsupported("unsupported database kind"))
-        }
-    }
-}
 
 fn safe_sql_string(s: &str) -> EResult<&str> {
     for ch in s.chars() {
@@ -48,31 +27,26 @@ fn safe_sql_string(s: &str) -> EResult<&str> {
 
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
     let kind = DbKind::from_str(conn)?;
-    let opts = if kind == DbKind::Sqlite {
-        SqliteConnectOptions::from_str(conn)?
-            .create_if_missing(true)
-            .synchronous(sqlite::SqliteSynchronous::Extra)
-            .busy_timeout(timeout)
-            .try_into()?
-    } else {
-        AnyConnectOptions::from_str(conn)?
-            .log_statements(log::LevelFilter::Trace)
-            .log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(2))
-    };
-    if let Some(o) = opts.as_sqlite_mut() {
-        opts = o
-            .clone()
-            .create_if_missing(true)
-            .synchronous(sqlite::SqliteSynchronous::Extra)
-            .busy_timeout(timeout)
-            .into();
-    }
+    kind.create_if_missing(conn).await?;
     DB_KIND
         .set(kind)
         .map_err(|_| Error::core("unable to set db kind"))?;
+    let opts = AnyConnectOptions::from_str(conn)?
+        .log_statements(log::LevelFilter::Trace)
+        .log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(2));
     let pool = AnyPoolOptions::new()
         .max_connections(size)
         .acquire_timeout(timeout)
+        .after_connect(move |conn, _| {
+            Box::pin(async move {
+                if kind == DbKind::Sqlite {
+                    sqlx::query("PRAGMA synchronous = EXTRA; PRAGMA journal_mode = WAL;")
+                        .execute(conn)
+                        .await?;
+                }
+                Ok(())
+            })
+        })
         .connect_with(opts)
         .await?;
     match kind {
@@ -91,7 +65,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
                 .execute(&pool)
                 .await?;
         }
-        DbKind::MySql | DbKind::Postgres => {
+        DbKind::Postgres => {
             sqlx::query(
                 r"CREATE TABLE IF NOT EXISTS state_history
                 (t BIGINT NOT NULL,
@@ -117,9 +91,6 @@ macro_rules! insert {
         let q = match $kind {
             DbKind::Sqlite => {
                 "INSERT OR REPLACE INTO state_history(t,oid,status,value) VALUES(?,?,?,?)"
-            }
-            DbKind::MySql => {
-                "REPLACE INTO state_history(t,oid,status,value) VALUES(?,?,?,?)"
             }
             DbKind::Postgres => {
                 "INSERT INTO state_history(t,oid,status,value) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING"
@@ -193,7 +164,7 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
     } else {
         let mut tx = pool.begin().await?;
         for s in state {
-            insert!(&mut tx, kind, s);
+            insert!(&mut *tx, kind, s);
         }
         tx.commit().await?;
     }
@@ -368,7 +339,7 @@ async fn cleanup_records(keep: u64, simple: bool) -> EResult<()> {
                 "DELETE FROM state_history WHERE oid='{}' AND t<{}",
                 oid, maxt
             );
-            sqlx::query(&q).execute(&mut tx).await?;
+            sqlx::query(&q).execute(&mut *tx).await?;
         }
         tx.commit().await?;
     }

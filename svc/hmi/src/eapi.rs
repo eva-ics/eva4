@@ -181,26 +181,26 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), true).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), false).log_ef();
-                } else if let Some(o) = topic.strip_prefix(LOG_EVENT_TOPIC) {
-                    process_log(topic, o, frame.payload());
-                } else if let Some(acl_id) = topic.strip_prefix(AAA_ACL_TOPIC) {
-                    debug!("deleting tokens/web sockets which contain ACL {}", acl_id);
-                    crate::aaa::clear_tokens_by_acl_id(acl_id);
-                    crate::handler::remove_websocket_by_acl_id(acl_id).await;
-                } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
-                    debug!("deleting tokens/web sockets for API key {}", key_id);
-                    crate::handler::remove_websocket_by_key_id(key_id).await;
-                    crate::aaa::clear_tokens_by_key_id(key_id);
-                } else if let Some(user) = topic.strip_prefix(AAA_USER_TOPIC) {
-                    debug!("deleting tokens which belong to user {}", user);
-                    crate::aaa::clear_tokens_by_user(user);
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), true).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), false).log_ef();
+            } else if let Some(o) = topic.strip_prefix(LOG_EVENT_TOPIC) {
+                process_log(topic, o, frame.payload());
+            } else if let Some(acl_id) = topic.strip_prefix(AAA_ACL_TOPIC) {
+                debug!("deleting tokens/web sockets which contain ACL {}", acl_id);
+                crate::aaa::clear_tokens_by_acl_id(acl_id);
+                crate::handler::remove_websocket_by_acl_id(acl_id).await;
+            } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
+                debug!("deleting tokens/web sockets for API key {}", key_id);
+                crate::handler::remove_websocket_by_key_id(key_id).await;
+                crate::aaa::clear_tokens_by_key_id(key_id);
+            } else if let Some(user) = topic.strip_prefix(AAA_USER_TOPIC) {
+                debug!("deleting tokens which belong to user {}", user);
+                crate::aaa::clear_tokens_by_user(user);
             }
         }
     }

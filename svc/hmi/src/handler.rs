@@ -14,16 +14,14 @@ use futures::{
 };
 use hyper::{Body, Method, Request, Response, StatusCode, http};
 use hyper_tungstenite::{HyperWebsocket, WebSocketStream, tungstenite};
-use lazy_static::lazy_static;
 use log::error;
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use rjrpc::http::HyperJsonRpcServer;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, hash_map};
 use std::net::IpAddr;
-use std::sync::{Arc, atomic};
+use std::sync::{Arc, LazyLock, OnceLock, atomic};
 use std::time::Duration;
 use submap::SubMap;
 use tungstenite::Message;
@@ -52,26 +50,38 @@ pub enum ServerEvent {
 const ERR_INVALID_IP: &str = "Invalid IP address";
 const WS_QUEUE: usize = 32768;
 
-lazy_static! {
-    pub static ref HJRPC: OnceCell<HyperJsonRpcServer> = <_>::default();
-    pub static ref WS_SUB: Mutex<SubMap<Arc<WsTx>>> =
-        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#")
-                .formula_prefix(OID_MASK_PREFIX_FORMULA)
-        .regex_prefix(OID_MASK_PREFIX_REGEX));
-    pub static ref WS_SUB_LOG: Mutex<SubMap<Arc<WsTx>>> =
-        Mutex::new(SubMap::new().separator('/').match_any("+").wildcard("#")
-                .formula_prefix(OID_MASK_PREFIX_FORMULA)
-        .regex_prefix(OID_MASK_PREFIX_REGEX));
+pub static HJRPC: OnceLock<HyperJsonRpcServer> = OnceLock::new();
+pub static WS_SUB: LazyLock<Mutex<SubMap<Arc<WsTx>>>> = LazyLock::new(|| {
+    Mutex::new(
+        SubMap::new()
+            .separator('/')
+            .match_any("+")
+            .wildcard("#")
+            .formula_prefix(OID_MASK_PREFIX_FORMULA)
+            .regex_prefix(OID_MASK_PREFIX_REGEX),
+    )
+});
+pub static WS_SUB_LOG: LazyLock<Mutex<SubMap<Arc<WsTx>>>> = LazyLock::new(|| {
+    Mutex::new(
+        SubMap::new()
+            .separator('/')
+            .match_any("+")
+            .wildcard("#")
+            .formula_prefix(OID_MASK_PREFIX_FORMULA)
+            .regex_prefix(OID_MASK_PREFIX_REGEX),
+    )
+});
 
-    // web sockets not registered with any token
-    pub static ref WS_STANDALONE: tokio::sync::Mutex<HashMap<Uuid, WebSocket>> = <_>::default();
+// web sockets not registered with any token
+pub static WS_STANDALONE: LazyLock<tokio::sync::Mutex<HashMap<Uuid, WebSocket>>> =
+    LazyLock::new(<_>::default);
 
-    // streams
-    pub static ref WS_STREAMS: tokio::sync::Mutex<BTreeMap<Arc<OID>, BTreeSet<Arc<WsTx>>>> =
-        tokio::sync::Mutex::new(BTreeMap::new());
-    pub static ref WS_STREAM_HANDLER_TX: OnceCell<async_channel::Sender<(OID, Arc<WsTx>)>> =
-        OnceCell::new();
-}
+type WsStreamMap = BTreeMap<Arc<OID>, BTreeSet<Arc<WsTx>>>;
+
+// streams
+pub static WS_STREAMS: LazyLock<tokio::sync::Mutex<WsStreamMap>> = LazyLock::new(<_>::default);
+pub static WS_STREAM_HANDLER_TX: OnceLock<async_channel::Sender<(OID, Arc<WsTx>)>> =
+    OnceLock::new();
 
 #[derive(Serialize)]
 pub struct StreamInfo {
@@ -233,14 +243,14 @@ impl WsFrame {
     }
     #[inline]
     fn is_data(&self) -> bool {
-        let Self::Text(ref s) = self else {
+        let Self::Text(s) = self else {
             return false;
         };
         s.s == Topic::State
     }
     #[inline]
     fn is_bye(&self) -> bool {
-        let Self::Text(ref s) = self else {
+        let Self::Text(s) = self else {
             return false;
         };
         s.s == Topic::Bye
@@ -551,10 +561,10 @@ async fn serve_websocket(
         match message {
             Err(e) => {
                 sender_fut.abort();
-                if let tungstenite::Error::Protocol(ref p_e) = e {
-                    if *p_e == tungstenite::error::ProtocolError::ResetWithoutClosingHandshake {
-                        return Ok(());
-                    }
+                if let tungstenite::Error::Protocol(ref p_e) = e
+                    && *p_e == tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
+                {
+                    return Ok(());
                 }
                 return Err(Error::io(e));
             }
@@ -607,24 +617,24 @@ async fn serve_websocket(
                                 .log_ef();
                         }
                         "subscribe.state" => {
-                            if let Some(p) = cmd.params {
-                                if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
-                                    let mut sub_oid_masks: HashSet<OIDMask> =
-                                        HashSet::with_capacity(masks.len());
-                                    for mask in masks {
-                                        let Ok(oid_mask) = mask.parse::<OIDMask>() else {
-                                            warn!(
-                                                "invalid OID mask from web socket subscription: {}",
-                                                mask
-                                            );
-                                            continue;
-                                        };
-                                        sub_oid_masks.insert(oid_mask);
-                                    }
-                                    let mut map = WS_SUB.lock();
-                                    for mask in sub_oid_masks {
-                                        map.subscribe(&mask.as_path(), &ws_tx);
-                                    }
+                            if let Some(p) = cmd.params
+                                && let Ok(masks) = HashSet::<String>::deserialize(p).log_err()
+                            {
+                                let mut sub_oid_masks: HashSet<OIDMask> =
+                                    HashSet::with_capacity(masks.len());
+                                for mask in masks {
+                                    let Ok(oid_mask) = mask.parse::<OIDMask>() else {
+                                        warn!(
+                                            "invalid OID mask from web socket subscription: {}",
+                                            mask
+                                        );
+                                        continue;
+                                    };
+                                    sub_oid_masks.insert(oid_mask);
+                                }
+                                let mut map = WS_SUB.lock();
+                                for mask in sub_oid_masks {
+                                    map.subscribe(&mask.as_path(), &ws_tx);
                                 }
                             }
                         }
@@ -633,44 +643,44 @@ async fn serve_websocket(
                             map.unsubscribe_all(&ws_tx);
                         }
                         "subscribe.state_initial" => {
-                            if let Some(p) = cmd.params {
-                                if let Ok(masks) = HashSet::<String>::deserialize(p).log_err() {
-                                    let mut sub_oid_masks: HashSet<OIDMask> =
-                                        HashSet::with_capacity(masks.len());
-                                    for mask in masks {
-                                        let Ok(oid_mask) = mask.parse::<OIDMask>() else {
-                                            warn!(
-                                                "invalid OID mask from web socket subscription: {}",
-                                                mask
-                                            );
-                                            continue;
-                                        };
-                                        sub_oid_masks.insert(oid_mask);
-                                    }
-                                    let mut map = WS_SUB.lock();
-                                    for mask in &sub_oid_masks {
-                                        map.subscribe(&mask.as_path(), &ws_tx);
-                                    }
-                                    let ws_tx_c = ws_tx.clone();
-                                    tokio::spawn(async move {
-                                        ws_tx_c
-                                            .send_initial(Some(OIDMaskList::new(sub_oid_masks)))
-                                            .await
-                                            .log_ef();
-                                    });
+                            if let Some(p) = cmd.params
+                                && let Ok(masks) = HashSet::<String>::deserialize(p).log_err()
+                            {
+                                let mut sub_oid_masks: HashSet<OIDMask> =
+                                    HashSet::with_capacity(masks.len());
+                                for mask in masks {
+                                    let Ok(oid_mask) = mask.parse::<OIDMask>() else {
+                                        warn!(
+                                            "invalid OID mask from web socket subscription: {}",
+                                            mask
+                                        );
+                                        continue;
+                                    };
+                                    sub_oid_masks.insert(oid_mask);
                                 }
+                                let mut map = WS_SUB.lock();
+                                for mask in &sub_oid_masks {
+                                    map.subscribe(&mask.as_path(), &ws_tx);
+                                }
+                                let ws_tx_c = ws_tx.clone();
+                                tokio::spawn(async move {
+                                    ws_tx_c
+                                        .send_initial(Some(OIDMaskList::new(sub_oid_masks)))
+                                        .await
+                                        .log_ef();
+                                });
                             }
                         }
                         "subscribe.log" => {
-                            if let Some(p) = cmd.params {
-                                if let Ok(level) = u8::deserialize(p).log_err() {
-                                    let mut map = WS_SUB_LOG.lock();
-                                    for t in get_log_topics(0) {
-                                        map.unsubscribe(t, &ws_tx);
-                                    }
-                                    for t in get_log_topics(level) {
-                                        map.subscribe(t, &ws_tx);
-                                    }
+                            if let Some(p) = cmd.params
+                                && let Ok(level) = u8::deserialize(p).log_err()
+                            {
+                                let mut map = WS_SUB_LOG.lock();
+                                for t in get_log_topics(0) {
+                                    map.unsubscribe(t, &ws_tx);
+                                }
+                                for t in get_log_topics(level) {
+                                    map.subscribe(t, &ws_tx);
                                 }
                             }
                         }
@@ -730,21 +740,21 @@ impl WebSocket {
         unsubscribe_web_socket(&self.ws_tx);
     }
     fn acl_modified_keep(&self, acl_id: &str) -> bool {
-        if let aaa::Auth::Key(_, acl) = &self.ws_tx.auth {
-            if acl.id() == acl_id {
-                self.terminate();
-                return false;
-            }
+        if let aaa::Auth::Key(_, acl) = &self.ws_tx.auth
+            && acl.id() == acl_id
+        {
+            self.terminate();
+            return false;
         }
         true
     }
     fn key_modified_keep(&self, key_id: &str) -> bool {
         let k = format!(".{}", key_id);
-        if let aaa::Auth::Key(id, _) = &self.ws_tx.auth {
-            if *id == k {
-                self.terminate();
-                return false;
-            }
+        if let aaa::Auth::Key(id, _) = &self.ws_tx.auth
+            && *id == k
+        {
+            self.terminate();
+            return false;
         }
         true
     }
@@ -756,15 +766,15 @@ fn get_real_ip(
     headers: &hyper::header::HeaderMap,
     real_ip_header: Arc<Option<String>>,
 ) -> Result<IpAddr, Error> {
-    if let Some(ref ip_header) = *real_ip_header {
-        if let Some(h) = headers.get(ip_header) {
-            let s = h
-                .to_str()
-                .map_err(|e| Error::failed(format!("invalid real ip header: {}", e)))?;
-            return s.parse::<IpAddr>().map_err(|e| {
-                Error::invalid_params(format!("Unable to parse client address {}: {}", s, e))
-            });
-        }
+    if let Some(ref ip_header) = *real_ip_header
+        && let Some(h) = headers.get(ip_header)
+    {
+        let s = h
+            .to_str()
+            .map_err(|e| Error::failed(format!("invalid real ip header: {}", e)))?;
+        return s.parse::<IpAddr>().map_err(|e| {
+            Error::invalid_params(format!("Unable to parse client address {}: {}", s, e))
+        });
     }
     Ok(ip)
 }
@@ -827,7 +837,7 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
         return hyper_response!(StatusCode::SERVICE_UNAVAILABLE);
     }
     let path = req.uri().path();
-    if (path == "/ws" || WS_URI.get().map_or(false, |ws_uri| path == ws_uri))
+    if (path == "/ws" || WS_URI.get().is_some_and(|ws_uri| path == ws_uri))
         && hyper_tungstenite::is_upgrade_request(&req)
     {
         let params: Option<HashMap<String, String>> = req.uri().query().map(|v| {
@@ -882,9 +892,9 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                     } else {
                         None
                     };
-                    let send_initial: bool = params.as_ref().map_or(false, |p| {
-                        p.get("initial").map_or(false, |v| v == "1" || v == "true")
-                    });
+                    let send_initial: bool = params
+                        .as_ref()
+                        .is_some_and(|p| p.get("initial").is_some_and(|v| v == "1" || v == "true"));
                     let ws_id = Uuid::new_v4();
                     let (tx, rx) = async_channel::bounded::<WsFrame>(WS_QUEUE);
                     let auth_token = auth.clone_token();
@@ -964,16 +974,16 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         .header(hyper::header::LOCATION, "/ui/vendored-apps/")
                         .body(Body::from(""));
                 }
-                if let Some(vendored_app) = uri.strip_prefix("/va/") {
-                    if crate::VENDORED_APPS_PATH.get().is_some() {
-                        return Response::builder()
-                            .status(StatusCode::MOVED_PERMANENTLY)
-                            .header(
-                                hyper::header::LOCATION,
-                                format!("/ui/vendored-apps/{}", vendored_app),
-                            )
-                            .body(Body::from(""));
-                    }
+                if let Some(vendored_app) = uri.strip_prefix("/va/")
+                    && crate::VENDORED_APPS_PATH.get().is_some()
+                {
+                    return Response::builder()
+                        .status(StatusCode::MOVED_PERMANENTLY)
+                        .header(
+                            hyper::header::LOCATION,
+                            format!("/ui/vendored-apps/{}", vendored_app),
+                        )
+                        .body(Body::from(""));
                 }
                 if uri == "/favicon.ico" {
                     if let Some(ui_path) = crate::UI_PATH.get().unwrap() {
@@ -993,76 +1003,76 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         .log_err()
                         .into_hyper_response();
                     }
-                } else if uri.starts_with("/.evahi/") {
-                    if let Some(ui_path) = crate::UI_PATH.get().unwrap() {
-                        return serve::file(
-                            uri,
-                            ui_path,
-                            false,
-                            &uri[1..],
-                            None,
-                            false,
-                            &parts.headers,
-                            ip,
-                            serve::TplDirKind::No,
-                            false,
-                        )
-                        .await
-                        .log_err()
-                        .into_hyper_response();
-                    }
+                } else if uri.starts_with("/.evahi/")
+                    && let Some(ui_path) = crate::UI_PATH.get().unwrap()
+                {
+                    return serve::file(
+                        uri,
+                        ui_path,
+                        false,
+                        &uri[1..],
+                        None,
+                        false,
+                        &parts.headers,
+                        ip,
+                        serve::TplDirKind::No,
+                        false,
+                    )
+                    .await
+                    .log_err()
+                    .into_hyper_response();
                 }
                 let params: Option<HashMap<String, String>> = parts.uri.query().map(|v| {
                     url::form_urlencoded::parse(v.as_bytes())
                         .into_owned()
                         .collect()
                 });
-                if let Some(va_file) = uri.strip_prefix("/ui/vendored-apps/") {
-                    if let Some(va_path) = crate::VENDORED_APPS_PATH.get() {
-                        return serve::file(
-                            uri,
-                            va_path,
-                            false,
-                            va_file,
-                            params.as_ref(),
-                            true,
-                            &parts.headers,
-                            ip,
-                            serve::TplDirKind::No,
-                            false,
-                        )
-                        .await
-                        .log_err()
-                        .into_hyper_response();
-                    }
+                if let Some(va_file) = uri.strip_prefix("/ui/vendored-apps/")
+                    && let Some(va_path) = crate::VENDORED_APPS_PATH.get()
+                {
+                    return serve::file(
+                        uri,
+                        va_path,
+                        false,
+                        va_file,
+                        params.as_ref(),
+                        true,
+                        &parts.headers,
+                        ip,
+                        serve::TplDirKind::No,
+                        false,
+                    )
+                    .await
+                    .log_err()
+                    .into_hyper_response();
                 }
-                if let Some(ui_file) = uri.strip_prefix("/ui/") {
-                    if let Some(ui_path) = crate::UI_PATH.get().unwrap() {
-                        return serve::file(
-                            uri,
-                            ui_path,
-                            UI_NOT_FOUND_TO_BASE.load(atomic::Ordering::Relaxed),
-                            ui_file,
-                            params.as_ref(),
-                            true,
-                            &parts.headers,
-                            ip,
-                            serve::TplDirKind::Ui,
-                            true,
-                        )
-                        .await
-                        .log_err()
-                        .into_hyper_response();
-                    }
+                if let Some(ui_file) = uri.strip_prefix("/ui/")
+                    && let Some(ui_path) = crate::UI_PATH.get().unwrap()
+                {
+                    return serve::file(
+                        uri,
+                        ui_path,
+                        UI_NOT_FOUND_TO_BASE.load(atomic::Ordering::Relaxed),
+                        ui_file,
+                        params.as_ref(),
+                        true,
+                        &parts.headers,
+                        ip,
+                        serve::TplDirKind::Ui,
+                        true,
+                    )
+                    .await
+                    .log_err()
+                    .into_hyper_response();
                 }
                 if uri == "/pvt" {
-                    if let Some(ref q) = params {
-                        if let Some(f) = q.get("f") {
-                            return serve::pvt(uri, f, params.as_ref(), &parts.headers, ip)
-                                .await
-                                .log_err()
-                                .into_hyper_response();
-                        }
+                    if let Some(ref q) = params
+                        && let Some(f) = q.get("f")
+                    {
+                        return serve::pvt(uri, f, params.as_ref(), &parts.headers, ip)
+                            .await
+                            .log_err()
+                            .into_hyper_response();
                     }
                     return hyper_response!(StatusCode::BAD_REQUEST);
                 }
@@ -1073,13 +1083,13 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                         .into_hyper_response();
                 }
                 if uri == "/rpvt" {
-                    if let Some(ref q) = params {
-                        if let Some(f) = q.get("f") {
-                            return serve::remote_pvt(uri, f, params.as_ref(), &parts.headers, ip)
-                                .await
-                                .log_err()
-                                .into_hyper_response();
-                        }
+                    if let Some(ref q) = params
+                        && let Some(f) = q.get("f")
+                    {
+                        return serve::remote_pvt(uri, f, params.as_ref(), &parts.headers, ip)
+                            .await
+                            .log_err()
+                            .into_hyper_response();
                     }
                     return hyper_response!(StatusCode::BAD_REQUEST);
                 }
@@ -1104,18 +1114,17 @@ async fn handle_web_request(req: Request<Body>, ip: IpAddr) -> Result<Response<B
                 hyper_response!(StatusCode::NOT_FOUND)
             }
             Method::POST => {
-                if uri == "/upload" {
-                    if let Some(boundary) = parts
+                if uri == "/upload"
+                    && let Some(boundary) = parts
                         .headers
                         .get(hyper::header::CONTENT_TYPE)
                         .and_then(|ct| ct.to_str().ok())
                         .and_then(|ct| multer::parse_boundary(ct).ok())
-                    {
-                        return upload::process(body, boundary, &parts.headers, ip)
-                            .await
-                            .log_err()
-                            .into_hyper_response();
-                    }
+                {
+                    return upload::process(body, boundary, &parts.headers, ip)
+                        .await
+                        .log_err()
+                        .into_hyper_response();
                 }
                 hyper_response!(StatusCode::NOT_FOUND)
             }
@@ -1132,7 +1141,8 @@ fn push_oid_state_topic(oid: &OID, topics: &mut Vec<String>) {
     topics.push(format!("{}{}", REMOTE_STATE_TOPIC, oid.as_path()));
 }
 
-pub async fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResult<()> {
+#[allow(clippy::too_many_lines)]
+pub fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResult<()> {
     let event_rx = bus_client
         .take_event_channel()
         .ok_or_else(|| Error::core("Failed to take stream event channel"))?;

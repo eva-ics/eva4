@@ -6,12 +6,12 @@ use eva_sdk::prelude::*;
 use hyper::header::HeaderMap;
 use hyper_static::serve::static_file;
 use log::warn;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::path::Path;
+use std::sync::LazyLock;
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_UI_INDEX: &[u8] = include_bytes!("../default/index.html");
@@ -25,7 +25,7 @@ struct FileData {
     mime: &'static str,
 }
 
-static DEFAULT_UI_FILES: Lazy<BTreeMap<&'static str, FileData>> = Lazy::new(|| {
+static DEFAULT_UI_FILES: LazyLock<BTreeMap<&'static str, FileData>> = LazyLock::new(|| {
     let mut map = BTreeMap::new();
     map.insert(
         "index.html",
@@ -58,10 +58,10 @@ impl TplDirKind {
 }
 
 fn serve_ui_default(allow: bool, path: &str, file_path: &str) -> HResult {
-    if allow {
-        if let Some(f) = DEFAULT_UI_FILES.get(if path.is_empty() { "index.html" } else { path }) {
-            return Ok(HContent::Data(f.content.to_vec(), Some(f.mime), None));
-        }
+    if allow
+        && let Some(f) = DEFAULT_UI_FILES.get(if path.is_empty() { "index.html" } else { path })
+    {
+        return Ok(HContent::Data(f.content.to_vec(), Some(f.mime), None));
     }
     Err(Error::not_found(file_path))
 }
@@ -238,24 +238,23 @@ pub async fn pvt<'a>(
     }
     if let Some(pvt_path) = crate::PVT_PATH.get().unwrap() {
         let auth = crate::aaa::parse_auth(params, headers);
-        if let Some(ref k) = auth {
-            if let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await {
-                if a.acl().check_pvt_read(pvt_file) {
-                    return file(
-                        uri,
-                        pvt_path,
-                        false,
-                        pvt_file,
-                        params,
-                        false,
-                        headers,
-                        ip,
-                        TplDirKind::Pvt,
-                        false,
-                    )
-                    .await;
-                }
-            }
+        if let Some(ref k) = auth
+            && let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await
+            && a.acl().check_pvt_read(pvt_file)
+        {
+            return file(
+                uri,
+                pvt_path,
+                false,
+                pvt_file,
+                params,
+                false,
+                headers,
+                ip,
+                TplDirKind::Pvt,
+                false,
+            )
+            .await;
         }
     }
     Err(Error::access(pvt_file))
@@ -290,41 +289,39 @@ pub async fn remote_pvt<'a>(
                 .try_into()?)));
         };
     }
-    if let Some(ref k) = auth {
-        if let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await {
-            if a.acl().check_rpvt_read(target.as_ref()) {
-                let mut sp = target.splitn(2, '/');
-                let node = sp.next().unwrap();
-                let uri = sp
-                    .next()
-                    .ok_or_else(|| Error::invalid_data("target not specified"))?;
-                let client = crate::HTTP_CLIENT.get().unwrap();
-                if node == ".local" || node == crate::SYSTEM_NAME.get().unwrap() {
-                    serve_local!(client, uri);
-                }
-                let res =
-                    eapi_bus::call("eva.core", "node.get", pack(&ParamsId { i: node })?.into())
-                        .await?;
-                let p: NodeGetResponse = unpack(res.payload())?;
-                if let Some(ref svc) = p.svc {
-                    let res: eva_sdk::http::Response = unpack(
-                        eapi_bus::call(
-                            svc,
-                            "rpvt",
-                            pack(&ParamsReplRpvt {
-                                i: &format!(".local/{uri}"),
-                                node,
-                            })?
-                            .into(),
-                        )
-                        .await?
-                        .payload(),
-                    )?;
-                    return Ok(HContent::HyperResult(Ok(res.try_into()?)));
-                }
-                serve_local!(client, uri);
-            }
+    if let Some(ref k) = auth
+        && let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await
+        && a.acl().check_rpvt_read(target.as_ref())
+    {
+        let mut sp = target.splitn(2, '/');
+        let node = sp.next().unwrap();
+        let uri = sp
+            .next()
+            .ok_or_else(|| Error::invalid_data("target not specified"))?;
+        let client = crate::HTTP_CLIENT.get().unwrap();
+        if node == ".local" || node == crate::SYSTEM_NAME.get().unwrap() {
+            serve_local!(client, uri);
         }
+        let res =
+            eapi_bus::call("eva.core", "node.get", pack(&ParamsId { i: node })?.into()).await?;
+        let p: NodeGetResponse = unpack(res.payload())?;
+        if let Some(ref svc) = p.svc {
+            let res: eva_sdk::http::Response = unpack(
+                eapi_bus::call(
+                    svc,
+                    "rpvt",
+                    pack(&ParamsReplRpvt {
+                        i: &format!(".local/{uri}"),
+                        node,
+                    })?
+                    .into(),
+                )
+                .await?
+                .payload(),
+            )?;
+            return Ok(HContent::HyperResult(Ok(res.try_into()?)));
+        }
+        serve_local!(client, uri);
     }
     Err(Error::access(rpvt_file))
 }
