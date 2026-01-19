@@ -5,12 +5,11 @@ use eva_common::events::{AAA_KEY_TOPIC, AAA_USER_TOPIC};
 use eva_common::op::Op;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use genpass_native::{random_string, Password, PasswordPolicy};
-use once_cell::sync::{Lazy, OnceCell};
+use genpass_native::{Password, PasswordPolicy, random_string};
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map, HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::{HashMap, HashSet, hash_map};
 use std::sync::Mutex;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::{Duration, Instant};
 
 err_logger!();
@@ -29,14 +28,14 @@ const ONE_TIME_USER_PREFIX: &str = "OT.";
 
 pub const ID_ALLOWED_SYMBOLS: &str = "_.()[]-\\";
 
-static KEYDB: Lazy<Mutex<KeyDb>> = Lazy::new(<_>::default);
-static USERS: Lazy<tokio::sync::Mutex<HashMap<String, User>>> = Lazy::new(<_>::default);
-static ONE_TIME_USERS: Lazy<tokio::sync::Mutex<HashMap<String, OneTimeUser>>> =
-    Lazy::new(<_>::default);
-static ONE_TIME_EXPIRES: OnceCell<Duration> = OnceCell::new();
-static REG: OnceCell<Registry> = OnceCell::new();
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static KEYDB: LazyLock<Mutex<KeyDb>> = LazyLock::new(<_>::default);
+static USERS: LazyLock<tokio::sync::Mutex<HashMap<String, User>>> = LazyLock::new(<_>::default);
+static ONE_TIME_USERS: LazyLock<tokio::sync::Mutex<HashMap<String, OneTimeUser>>> =
+    LazyLock::new(<_>::default);
+static ONE_TIME_EXPIRES: OnceLock<Duration> = OnceLock::new();
+static REG: OnceLock<Registry> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
 
 #[derive(Deserialize, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -242,17 +241,17 @@ struct KeyDb {
 
 impl KeyDb {
     #[inline]
-    fn values(&self) -> std::collections::hash_map::Values<String, Arc<Key>> {
+    fn values(&self) -> std::collections::hash_map::Values<'_, String, Arc<Key>> {
         self.keys_by_id.values()
     }
     fn append(&mut self, key: Arc<Key>) -> EResult<()> {
-        if let Some(k) = self.keys_by_k.get(&key.key) {
-            if key.id != k.id {
-                return Err(Error::busy(format!(
-                    "API key {} has the same value as the existing: {}",
-                    key.id, k.id
-                )));
-            }
+        if let Some(k) = self.keys_by_k.get(&key.key)
+            && key.id != k.id
+        {
+            return Err(Error::busy(format!(
+                "API key {} has the same value as the existing: {}",
+                key.id, k.id
+            )));
         }
         self.keys_by_id.insert(key.id.clone(), key.clone());
         self.keys_by_k.insert(key.key.clone(), key);
@@ -903,7 +902,7 @@ impl RpcHandlers for Handlers {
                 } else {
                     debug!("user {} authentication failed: not found", p.login);
                     return Err(Error::access(ERR_INVALID_LOGIN_PASS).into());
-                };
+                }
                 let rpc = RPC.get().unwrap();
                 if let Some(otp_svc) = self.otp_svc.as_ref() {
                     safe_rpc_call(
@@ -932,10 +931,9 @@ impl RpcHandlers for Handlers {
                         *TIMEOUT.get().unwrap(),
                     )
                     .await
+                        && e.kind() != ErrorKind::ResourceNotFound
                     {
-                        if e.kind() != ErrorKind::ResourceNotFound {
-                            return Err(e.into());
-                        }
+                        return Err(e.into());
                     }
                 }
                 Ok(None)
@@ -986,26 +984,27 @@ impl RpcHandlers for Handlers {
                     };
                 let rpc = RPC.get().unwrap();
                 let op = Op::new(p.timeout);
-                if !one_time && !p.externally_verified {
-                    if let Some(otp_svc) = self.otp_svc.as_ref() {
-                        safe_rpc_call(
-                            rpc,
-                            otp_svc,
-                            "otp.check",
-                            pack(&ParamsOtpCheck {
-                                login: p.login,
-                                otp: if let Some(xopts) = p.xopts.as_ref() {
-                                    xopts.get("otp")
-                                } else {
-                                    None
-                                },
-                            })?
-                            .into(),
-                            QoS::Processed,
-                            op.timeout()?,
-                        )
-                        .await?;
-                    }
+                if !one_time
+                    && !p.externally_verified
+                    && let Some(otp_svc) = self.otp_svc.as_ref()
+                {
+                    safe_rpc_call(
+                        rpc,
+                        otp_svc,
+                        "otp.check",
+                        pack(&ParamsOtpCheck {
+                            login: p.login,
+                            otp: if let Some(xopts) = p.xopts.as_ref() {
+                                xopts.get("otp")
+                            } else {
+                                None
+                            },
+                        })?
+                        .into(),
+                        QoS::Processed,
+                        op.timeout()?,
+                    )
+                    .await?;
                 }
                 let result = safe_rpc_call(
                     rpc,

@@ -2,10 +2,9 @@ use bmart::tools::Sorting;
 use eva_common::common_payloads::ParamsId;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex, OnceLock};
 
 err_logger!();
 
@@ -17,10 +16,8 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "OTP auth service";
 
-lazy_static::lazy_static! {
-    static ref OTPS: Mutex<HashMap<String, Otp>> = <_>::default();
-    static ref REG: OnceCell<Registry> = <_>::default();
-}
+static OTPS: LazyLock<Mutex<HashMap<String, Otp>>> = LazyLock::new(<_>::default);
+static REG: OnceLock<Registry> = OnceLock::new();
 
 /// full otp object, stored in the registry
 #[derive(Debug, Serialize, Deserialize, Sorting)]

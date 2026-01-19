@@ -3,16 +3,15 @@ use eva_common::prelude::*;
 use eva_common::services::Initial;
 use eva_sdk::service::poc;
 use log::{error, warn};
-use once_cell::sync::OnceCell;
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 type OpcSession = Arc<RwLock<Session>>;
 
-static SESSION: OnceCell<OpcSession> = OnceCell::new();
+static SESSION: OnceLock<OpcSession> = OnceLock::new();
 
 pub async fn write(
     node: NodeId,

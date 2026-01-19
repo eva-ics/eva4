@@ -1,4 +1,4 @@
-use crate::server::{handle_frame, Server};
+use crate::server::{Server, handle_frame};
 use async_trait::async_trait;
 use eva_common::err_logger;
 use eva_common::{EResult, Error};
@@ -64,7 +64,7 @@ impl SerialServer {
                 return Err(Error::invalid_params(format!(
                     "unsupported data bits value: {}",
                     v
-                )))
+                )));
             }
         };
         let parity: Parity = match sp
@@ -78,7 +78,7 @@ impl SerialServer {
                 return Err(Error::invalid_params(format!(
                     "unsupported parity value: {}",
                     v
-                )))
+                )));
             }
         };
         let stop_bits: StopBits = match sp
@@ -91,7 +91,7 @@ impl SerialServer {
                 return Err(Error::invalid_params(format!(
                     "unsupported stop bits value: {}",
                     v
-                )))
+                )));
             }
         };
         let stream = tokio_serial::new(port_path, baud_rate)

@@ -1,4 +1,4 @@
-use crate::{aaa, Config, Proto, MAX_TRAP_SIZE};
+use crate::{Config, MAX_TRAP_SIZE, Proto, aaa};
 use eva_common::actions::Params as ActionParams;
 use eva_common::actions::UnitParams as UnitActionParams;
 use eva_common::events::RAW_STATE_TOPIC;
@@ -13,7 +13,7 @@ struct Frame {
 }
 
 impl Message for Frame {
-    fn topic(&self) -> &str {
+    fn topic(&self) -> &'static str {
         ""
     }
     fn data(&self) -> &[u8] {

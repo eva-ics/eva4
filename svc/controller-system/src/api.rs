@@ -12,22 +12,21 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use log::error;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::net::SocketAddr;
-use std::sync::atomic;
+use std::sync::{OnceLock, atomic};
 use std::time::Duration;
 use tokio::net::TcpListener;
 
 err_logger!();
 
-static HOSTS: OnceCell<BTreeMap<String, String>> = OnceCell::new();
-static OID_PREFIX: OnceCell<String> = OnceCell::new();
+static HOSTS: OnceLock<BTreeMap<String, String>> = OnceLock::new();
+static OID_PREFIX: OnceLock<String> = OnceLock::new();
 static PREFIX_CONTAINS_HOST: atomic::AtomicBool = atomic::AtomicBool::new(false);
-static REAL_IP_HEADER: OnceCell<String> = OnceCell::new();
-static HEADER_TRUSTED_API_SYSTEM: OnceCell<String> = OnceCell::new();
+static REAL_IP_HEADER: OnceLock<String> = OnceLock::new();
+static HEADER_TRUSTED_API_SYSTEM: OnceLock<String> = OnceLock::new();
 
 fn default_max_clients() -> usize {
     128
@@ -62,38 +61,38 @@ struct Host {
 }
 
 fn get_real_ip(headers: &HeaderMap, remote_ip: IpAddr) -> EResult<IpAddr> {
-    if let Some(real_ip_header) = REAL_IP_HEADER.get() {
-        if let Some(val) = headers.get(real_ip_header) {
-            return val
-                .to_str()
-                .map_err(Error::invalid_data)?
-                .parse()
-                .map_err(Error::invalid_data);
-        }
+    if let Some(real_ip_header) = REAL_IP_HEADER.get()
+        && let Some(val) = headers.get(real_ip_header)
+    {
+        return val
+            .to_str()
+            .map_err(Error::invalid_data)?
+            .parse()
+            .map_err(Error::invalid_data);
     }
     Ok(remote_ip)
 }
 
 fn authorize_request(headers: &HeaderMap) -> EResult<String> {
-    if let Some(trusted_api_system) = HEADER_TRUSTED_API_SYSTEM.get() {
-        if let Some(val) = headers.get(trusted_api_system) {
-            let host = val.to_str().map_err(Error::invalid_data)?;
-            if host.contains('=') {
-                for part in host.split(',') {
-                    let mut parts = part.splitn(2, '=');
-                    let key = parts.next().unwrap();
-                    if key.trim() != "CN" {
-                        continue;
-                    }
-                    let value = parts
-                        .next()
-                        .ok_or_else(|| Error::invalid_data("missing common name value"))?;
-                    return Ok(value.trim().to_owned());
+    if let Some(trusted_api_system) = HEADER_TRUSTED_API_SYSTEM.get()
+        && let Some(val) = headers.get(trusted_api_system)
+    {
+        let host = val.to_str().map_err(Error::invalid_data)?;
+        if host.contains('=') {
+            for part in host.split(',') {
+                let mut parts = part.splitn(2, '=');
+                let key = parts.next().unwrap();
+                if key.trim() != "CN" {
+                    continue;
                 }
-                return Err(Error::access("no trusted system common name"));
+                let value = parts
+                    .next()
+                    .ok_or_else(|| Error::invalid_data("missing common name value"))?;
+                return Ok(value.trim().to_owned());
             }
-            return Ok(host.trim().to_owned());
+            return Err(Error::access("no trusted system common name"));
         }
+        return Ok(host.trim().to_owned());
     }
     let Some(host_header) = headers.get(HEADER_API_SYSTEM_NAME) else {
         return Err(Error::access(format!("{} not set", HEADER_API_SYSTEM_NAME)));
@@ -102,7 +101,7 @@ fn authorize_request(headers: &HeaderMap) -> EResult<String> {
         return Err(Error::access(format!("{} not set", HEADER_API_AUTH_KEY)));
     };
     let host = host_header.to_str().map_err(Error::invalid_data)?;
-    if HOSTS.get().unwrap().get(host).map_or(false, |v| v == key) {
+    if HOSTS.get().unwrap().get(host).is_some_and(|v| v == key) {
         Ok(host.to_owned())
     } else {
         Err(Error::access("invalid credentials"))

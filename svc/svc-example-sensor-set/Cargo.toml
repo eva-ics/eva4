@@ -1,17 +1,16 @@
 [package]
 name = "eva-svc-example-sensor-set"
-version = "0.0.1"
-edition = "2021"
+version = "4.2.0"
+edition = "2024"
 publish = false
 
 [dependencies]
-eva-common = { version = "0.3", features = ["events", "common-payloads", "payload", "acl"] }
-eva-sdk = { version = "0.3", features = ["hmi"] }
-tokio = { version = "1.36.0", features = ["full"] }
-async-trait = { version = "0.1.77" }
-serde = { version = "1.0.196", features = ["derive", "rc"] }
-log = "0.4.20"
-mimalloc = { version = "0.1.43" }
+eva-common = { version = "0.4", features = ["events", "common-payloads", "payload", "acl"] }
+eva-sdk = { version = "0.4", features = ["hmi"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive", "rc"] }
+log = "0.4"
+mimalloc = { version = "0.1" }
 
 [features]
 std-alloc = []

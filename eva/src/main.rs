@@ -2,7 +2,7 @@ use clap::Parser;
 use eva::Mode;
 use eva::{AUTHOR, PRODUCT_NAME, VERSION};
 use eva_common::err_logger;
-use eva_common::{services, ErrorKind};
+use eva_common::{ErrorKind, services};
 use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;

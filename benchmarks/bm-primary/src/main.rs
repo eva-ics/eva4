@@ -1,19 +1,19 @@
 #[macro_use]
 extern crate bma_benchmark;
 
+use busrt::QoS;
 use busrt::ipc::{Client, Config};
 use busrt::rpc::{Rpc, RpcClient};
-use busrt::QoS;
 use clap::Parser;
 use eva_common::common_payloads::ParamsId;
-use eva_common::events::{RawStateEvent, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEvent};
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use sysinfo::{Pid, ProcessExt, System, SystemExt};
+use sysinfo::{Pid, ProcessesToUpdate, System};
 
 const SENSOR_PFX: &str = "sensor:bm_primary/s";
 const ITEMS_PER_BATCH: u32 = 1000;
@@ -55,7 +55,7 @@ struct ParamsItemsUndeploy {
 mod prepare {
     use busrt::ipc::{Client, Config};
     use busrt::rpc::RpcClient;
-    use busrt::{rpc::Rpc, QoS};
+    use busrt::{QoS, rpc::Rpc};
     use eva_common::payload::pack;
     use eva_common::prelude::*;
     use serde::Serialize;
@@ -136,8 +136,7 @@ mod prepare {
         set_config_key(&rpc, "core", to_value(value)?).await?;
         let mut value = serde_json::from_str(CONFIG_BUS).map_err(Error::failed)?;
         if let Value::Map(ref mut v) = value {
-            if let Value::Seq(ref mut a) = v.get_mut(&Value::String("sockets".to_owned())).unwrap()
-            {
+            if let Value::Seq(a) = v.get_mut(&Value::String("sockets".to_owned())).unwrap() {
                 for w in 0..workers {
                     a.push(Value::String(format!("var/bus{}.ipc", w)));
                 }
@@ -211,9 +210,8 @@ async fn publish_raw(rpc: &RpcClient, oid: &OID) -> EResult<()> {
 }
 
 fn get_mem_kb(sys: &mut System, pid: Pid) -> u64 {
-    sys.refresh_process(pid);
-    let mem = sys.process(pid).unwrap().memory();
-    mem
+    sys.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+    sys.process(pid).unwrap().memory()
 }
 
 #[tokio::main]
@@ -262,10 +260,10 @@ async fn benchmark() -> EResult<()> {
     .await?;
     assert!(res.ok());
     tokio::time::sleep(Duration::from_secs(5)).await;
-    let core_pid = Pid::from(
+    let core_pid = Pid::from_u32(
         tokio::fs::read_to_string("/opt/eva4/var/eva.pid")
             .await?
-            .parse::<i32>()?,
+            .parse::<u32>()?,
     );
     let client = Client::connect(&Config::new("/opt/eva4/var/bus.ipc", &name)).await?;
     let rpc = Arc::new(RpcClient::new0(client));
@@ -319,10 +317,10 @@ async fn benchmark() -> EResult<()> {
                     .await
                     .unwrap();
                 let st: Vec<ItemState> = unpack(res.payload()).unwrap();
-                if let Ok(v) = u32::try_from(st[0].value.clone()) {
-                    if v == 77 {
-                        break;
-                    }
+                if let Ok(v) = u32::try_from(st[0].value.clone())
+                    && v == 77
+                {
+                    break;
                 }
                 tokio::time::sleep(Duration::from_millis(1)).await;
             }

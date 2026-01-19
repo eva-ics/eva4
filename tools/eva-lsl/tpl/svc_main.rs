@@ -17,7 +17,7 @@ struct Handlers {
     info: ServiceInfo,
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();

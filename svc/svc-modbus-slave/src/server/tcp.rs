@@ -1,4 +1,4 @@
-use crate::server::{handle_frame, parse_host_port, Server};
+use crate::server::{Server, handle_frame, parse_host_port};
 use async_trait::async_trait;
 use eva_common::err_logger;
 use eva_common::{EResult, Error};
@@ -27,9 +27,7 @@ impl Server for TcpServer {
             let (socket, addr) = self.listener.accept().await?;
             trace!(
                 "TCP {}:{}: connected client: {}",
-                self.host,
-                self.port,
-                addr
+                self.host, self.port, addr
             );
             let unit = self.unit;
             let timeout = self.timeout;

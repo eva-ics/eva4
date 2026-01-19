@@ -4,10 +4,9 @@ use eva_common::common_payloads::{IdOrList, ParamsId};
 use eva_common::events::AAA_ACL_TOPIC;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::{atomic, Mutex};
+use std::sync::{LazyLock, Mutex, OnceLock, atomic};
 
 err_logger!();
 
@@ -20,8 +19,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "ACL service";
 const ACL_NONE: &str = "none";
 
-static ACLS: Lazy<Mutex<HashMap<String, Acl>>> = Lazy::new(<_>::default);
-static REG: OnceCell<Registry> = OnceCell::new();
+static ACLS: LazyLock<Mutex<HashMap<String, Acl>>> = LazyLock::new(<_>::default);
+static REG: OnceLock<Registry> = OnceLock::new();
 static STRICT_ACL_FORMATTING: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static FORBID_EMPTY_ACLS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
@@ -212,7 +211,7 @@ impl<'a> From<Vec<&'a Acl>> for AclData<'a> {
                     let v = ops.iter().map(String::as_str).collect();
                     acl_data.ops.replace(v);
                 }
-            };
+            }
             form_field!(acl.meta, acl_data.meta);
         }
         ids.sort();

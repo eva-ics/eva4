@@ -4,13 +4,13 @@ use eva_common::err_logger;
 use eva_common::prelude::*;
 use eva_common::transform;
 use log::{error, info};
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 err_logger!();
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub fn set_config(mut config: Config) -> EResult<()> {
     for task in &mut config.tasks {

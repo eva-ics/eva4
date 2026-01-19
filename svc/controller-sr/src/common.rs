@@ -29,45 +29,6 @@ pub struct Config {
     pub action_queue_size: usize,
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub enum OIDSingleOrMulti {
-    Single(OID),
-    Multi(Vec<OID>),
-}
-
-impl OIDSingleOrMulti {
-    pub fn iter(&self) -> OIDSingleOrMultiIter {
-        OIDSingleOrMultiIter { osm: self, curr: 0 }
-    }
-}
-
-pub struct OIDSingleOrMultiIter<'a> {
-    osm: &'a OIDSingleOrMulti,
-    curr: usize,
-}
-
-impl<'a> Iterator for OIDSingleOrMultiIter<'a> {
-    type Item = &'a OID;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.osm {
-            OIDSingleOrMulti::Single(oid) => {
-                if self.curr > 0 {
-                    None
-                } else {
-                    self.curr += 1;
-                    Some(oid)
-                }
-            }
-            OIDSingleOrMulti::Multi(h) => {
-                let res = h.get(self.curr);
-                self.curr += 1;
-                res
-            }
-        }
-    }
-}
-
 pub fn init_cmd_options_basic<'a>() -> bmart::process::Options<'a> {
     bmart::process::Options::new()
         .env("EVA_DIR", crate::EVA_DIR.get().unwrap())

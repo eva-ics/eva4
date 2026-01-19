@@ -1,3 +1,4 @@
+use eva_common::EResult;
 use eva_common::dobj::{DataObject, Kind};
 use eva_common::tools::default_true;
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,7 @@ pub struct Rust {
 }
 
 impl CodeGen for Rust {
-    fn generate_struct(&self, dobj: &DataObject) -> String {
+    fn try_generate_struct(&self, dobj: &DataObject) -> EResult<String> {
         let mut scope = codegen::Scope::new();
         let mut s = codegen::Struct::new(&dobj.name);
         if self.config.derive_clone {
@@ -65,7 +66,7 @@ impl CodeGen for Rust {
             s.push_field(sf);
         }
         scope.push_struct(s);
-        scope.to_string()
+        Ok(scope.to_string())
     }
 
     fn kind_to_string(&self, kind: &Kind) -> String {

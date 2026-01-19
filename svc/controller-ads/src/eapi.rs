@@ -1,6 +1,6 @@
 use eva_common::common_payloads::{ParamsOID, ParamsUuid};
 use eva_common::prelude::*;
-use eva_sdk::controller::{format_action_topic, Action};
+use eva_sdk::controller::{Action, format_action_topic};
 use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic;

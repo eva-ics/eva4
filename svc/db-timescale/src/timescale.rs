@@ -41,34 +41,34 @@ struct NullFiller {
 }
 
 impl NullFiller {
-    fn format_status(&mut self, maybe_status: Option<i16>, is_first: bool) -> EResult<Value> {
+    fn format_status(&mut self, maybe_status: Option<i16>, is_first: bool) -> Value {
         match self.kind {
             FillNull::None | FillNull::NaN => {
                 if let Some(s) = maybe_status {
-                    Ok(Value::I16(s))
+                    Value::I16(s)
                 } else {
-                    Ok(Value::Unit)
+                    Value::Unit
                 }
             }
             FillNull::Zero => {
                 if let Some(s) = maybe_status {
-                    Ok(Value::I16(s))
+                    Value::I16(s)
                 } else if is_first {
-                    Ok(Value::Unit)
+                    Value::Unit
                 } else {
-                    Ok(Value::I16(0))
+                    Value::I16(0)
                 }
             }
             FillNull::Previous => {
                 if let Some(s) = maybe_status {
                     self.previous = Some(Value::I16(s));
-                    Ok(Value::I16(s))
+                    Value::I16(s)
                 } else if let Some(ref v) = self.previous {
-                    Ok(v.clone())
+                    v.clone()
                 } else if is_first {
-                    Ok(Value::Unit)
+                    Value::Unit
                 } else {
-                    Ok(Value::I16(0))
+                    Value::I16(0)
                 }
             }
         }
@@ -106,7 +106,7 @@ impl NullFiller {
                                 Ok(Value::F64(0.0))
                             }
                         }
-                        _ => unreachable!(),
+                        FillNull::None => unreachable!(),
                     }
                 }
             }
@@ -174,7 +174,7 @@ pub async fn state_history_combined(
             write!(q, " OR oid_match(oid, '{}')", oid_mask)?;
         } else {
             return Err(Error::invalid_data("invalid OID/mask"));
-        };
+        }
     }
     if !oids.is_empty() {
         q = format!(
@@ -185,7 +185,7 @@ pub async fn state_history_combined(
                 .collect::<Vec<_>>()
                 .join(",")
         );
-    };
+    }
     let mut rows = sqlx::query(&q).fetch(pool);
     let mut cols = Vec::new();
     while let Some(row) = rows.try_next().await? {
@@ -247,10 +247,10 @@ ORDER BY bucket
     while let Some(row) = rows.try_next().await? {
         let t_n: NaiveDateTime = row.try_get(0)?;
         let t = naive_to_ts(t_n);
-        if let Some(e) = t_end {
-            if t > e {
-                break;
-            }
+        if let Some(e) = t_end
+            && t > e
+        {
+            break;
         }
         result.t.push(t);
         for (i, (_, oid)) in cols.iter().enumerate() {
@@ -329,7 +329,7 @@ pub async fn state_history_filled(
         eva_common::time::now_ns_float()
     };
     let mut query = format!(
-        r#"SELECT CAST(period AS TIMESTAMP) AS t,{} FROM
+        "SELECT CAST(period AS TIMESTAMP) AS t,{} FROM
 (SELECT time_bucket_gapfill(
     '{} seconds'::interval,
     t,
@@ -337,7 +337,7 @@ pub async fn state_history_filled(
     finish=>to_timestamp({})) AS period, {} FROM {} AS she
     JOIN state_history_oids
     ON she.oid_id=state_history_oids.id
-    {} AND t>=to_timestamp({}) and t<=to_timestamp({}) GROUP BY period"#,
+    {} AND t>=to_timestamp({}) and t<=to_timestamp({}) GROUP BY period",
         cols,
         fill.as_secs(),
         t_start,
@@ -359,14 +359,14 @@ pub async fn state_history_filled(
     while let Some(row) = rows.try_next().await? {
         let t_n: NaiveDateTime = row.try_get("t")?;
         let t = naive_to_ts(t_n);
-        if let Some(e) = t_end {
-            if t > e {
-                break;
-            }
+        if let Some(e) = t_end
+            && t > e
+        {
+            break;
         }
         let status: Option<Value> = if need_status {
             let s: Option<i16> = row.try_get("status")?;
-            Some(null_filler.format_status(s, is_first)?)
+            Some(null_filler.format_status(s, is_first))
         } else {
             None
         };

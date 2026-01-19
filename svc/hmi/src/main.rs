@@ -2,18 +2,16 @@ use eva_common::acl::{Acl, OIDMaskList};
 use eva_common::events::{AAA_ACL_TOPIC, AAA_KEY_TOPIC, AAA_USER_TOPIC, LOG_EVENT_TOPIC};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
+use hyper::Server;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
-use lazy_static::lazy_static;
 use oidc_verifier::Verifier as OidcVerifier;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::atomic;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 err_logger!();
@@ -24,12 +22,11 @@ trait ApiKeyId {
 
 impl ApiKeyId for Acl {
     fn api_key_id(&self) -> Option<&str> {
-        if let Some(Value::Map(map)) = self.meta() {
-            if let Some(Value::Seq(s)) = map.get(&Value::String("api_key_id".to_owned())) {
-                if let Some(Value::String(val)) = s.first() {
-                    return Some(val);
-                }
-            }
+        if let Some(Value::Map(map)) = self.meta()
+            && let Some(Value::Seq(s)) = map.get(&Value::String("api_key_id".to_owned()))
+            && let Some(Value::String(val)) = s.first()
+        {
+            return Some(val);
         }
         None
     }
@@ -62,22 +59,20 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Default HMI service";
 
-lazy_static! {
-    static ref UI_PATH: OnceCell<Option<String>> = <_>::default();
-    static ref PVT_PATH: OnceCell<Option<String>> = <_>::default();
-    static ref USER_DIRS: OnceCell<String> = <_>::default();
-    static ref VENDORED_APPS_PATH: OnceCell<String> = <_>::default();
-    static ref REG: OnceCell<Registry> = <_>::default();
-    static ref MIME_TYPES: OnceCell<HashMap<String, String>> = <_>::default();
-    static ref SYSTEM_NAME: OnceCell<String> = <_>::default();
-    static ref DEFAULT_HISTORY_DB_SVC: OnceCell<String> = <_>::default();
-    static ref I18N: OnceCell<lang::Converter> = <_>::default();
-    static ref HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = <_>::default();
-    static ref SVC_ID: OnceCell<String> = <_>::default();
-    static ref API_FILTER: OnceCell<OID> = <_>::default();
-    static ref WS_URI: OnceCell<String> = <_>::default();
-    static ref OIDC_VERIFIER: OnceCell<OidcVerifier> = <_>::default();
-}
+static UI_PATH: OnceLock<Option<String>> = OnceLock::new();
+static PVT_PATH: OnceLock<Option<String>> = OnceLock::new();
+static USER_DIRS: OnceLock<String> = OnceLock::new();
+static VENDORED_APPS_PATH: OnceLock<String> = OnceLock::new();
+static REG: OnceLock<Registry> = OnceLock::new();
+static MIME_TYPES: OnceLock<HashMap<String, String>> = OnceLock::new();
+static SYSTEM_NAME: OnceLock<String> = OnceLock::new();
+static DEFAULT_HISTORY_DB_SVC: OnceLock<String> = OnceLock::new();
+static I18N: OnceLock<lang::Converter> = OnceLock::new();
+static HTTP_CLIENT: OnceLock<eva_sdk::http::Client> = OnceLock::new();
+static SVC_ID: OnceLock<String> = OnceLock::new();
+static API_FILTER: OnceLock<OID> = OnceLock::new();
+static WS_URI: OnceLock<String> = OnceLock::new();
+static OIDC_VERIFIER: OnceLock<OidcVerifier> = OnceLock::new();
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
@@ -127,6 +122,7 @@ struct ApiBind {
 
 #[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 struct SessionConfig {
     timeout: Option<f64>,
     #[serde(default)]
@@ -360,7 +356,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let handlers = eapi::Handlers::new(info);
     let rpc: Arc<RpcClient> = initial.init_rpc(handlers).await?;
     let stream_client = initial.init_bus_client_sub("stream").await?;
-    handler::spawn_stream_processor(stream_client).await?;
+    handler::spawn_stream_processor(stream_client)?;
     initial.drop_privileges()?;
     aaa::set_session_config(
         config.session.timeout,
@@ -411,7 +407,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         OIDC_VERIFIER
             .set(verifier)
             .map_err(|_| Error::core("Unable to set OIDC_VERIFIER"))?;
-    };
+    }
     eva_sdk::service::subscribe_oids(rpc.as_ref(), &config.oids, eva_sdk::service::EventKind::Any)
         .await?;
     eva_sdk::service::exclude_oids(

@@ -1,11 +1,10 @@
 use eva_common::common_payloads::{ParamsOID, ParamsUuid};
 use eva_common::prelude::*;
-use eva_sdk::controller::{actt::Actt, format_action_topic, Action};
+use eva_sdk::controller::{Action, actt::Actt, format_action_topic};
 use eva_sdk::prelude::*;
-use once_cell::sync::{Lazy, OnceCell};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::Duration;
 
 mod actions;
@@ -18,13 +17,13 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Script-runner controller service";
 
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static EVA_DIR: OnceCell<String> = OnceCell::new();
-static UPDATE_TRIGGERS: Lazy<Mutex<HashMap<OID, async_channel::Sender<()>>>> =
-    Lazy::new(<_>::default);
-static ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> = OnceCell::new();
-static ACTT: OnceCell<Actt> = OnceCell::new();
-static BUS_PATH: OnceCell<String> = OnceCell::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static EVA_DIR: OnceLock<String> = OnceLock::new();
+static UPDATE_TRIGGERS: LazyLock<Mutex<HashMap<OID, async_channel::Sender<()>>>> =
+    LazyLock::new(<_>::default);
+static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
+static ACTT: OnceLock<Actt> = OnceLock::new();
+static BUS_PATH: OnceLock<String> = OnceLock::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]

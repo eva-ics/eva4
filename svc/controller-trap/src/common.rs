@@ -30,9 +30,9 @@ struct MacroResult {
     exitcode: Option<i16>,
 }
 
-pub async fn safe_run_macro<'a>(
+pub async fn safe_run_macro(
     rpc: &RpcClient,
-    params: ParamsRun<'a>,
+    params: ParamsRun<'_>,
     timeout: Duration,
 ) -> EResult<()> {
     let res = tokio::time::timeout(

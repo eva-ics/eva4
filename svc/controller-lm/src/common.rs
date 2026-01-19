@@ -49,9 +49,9 @@ pub enum ParamsCow<'a> {
     Packed(Vec<u8>),
 }
 
-pub async fn safe_run_macro<'a>(
+pub async fn safe_run_macro(
     rpc: &RpcClient,
-    params: ParamsCow<'a>,
+    params: ParamsCow<'_>,
     timeout: Duration,
 ) -> Result<(), MacroErr> {
     let payload = match params {

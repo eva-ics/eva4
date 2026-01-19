@@ -1,14 +1,14 @@
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 const NAME_CACHE_SIZE: usize = 16384;
 
-static NAME_CACHE: Lazy<Mutex<FIFOCache<String, Arc<String>>>> =
-    Lazy::new(|| Mutex::new(FIFOCache::bounded(NAME_CACHE_SIZE)));
+static NAME_CACHE: LazyLock<Mutex<FIFOCache<String, Arc<String>>>> =
+    LazyLock::new(|| Mutex::new(FIFOCache::bounded(NAME_CACHE_SIZE)));
 
 struct FIFOCache<K, V>
 where
@@ -34,10 +34,10 @@ where
     where
         K: Clone,
     {
-        if self.keys.len() >= self.limit {
-            if let Some(k) = self.keys.pop_front() {
-                self.map.remove(&k);
-            }
+        if self.keys.len() >= self.limit
+            && let Some(k) = self.keys.pop_front()
+        {
+            self.map.remove(&k);
         }
         self.keys.push_back(key.clone());
         self.map.insert(key, value);

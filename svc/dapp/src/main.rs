@@ -1,8 +1,10 @@
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
 err_logger!();
 
@@ -10,7 +12,7 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Docker App Runner";
 
-static PATH: OnceCell<PathBuf> = OnceCell::new();
+static PATH: OnceLock<PathBuf> = OnceLock::new();
 
 mod dc;
 

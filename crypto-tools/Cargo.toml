@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 tokio-native-tls = "0.3.1"
 eva-common = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
 
 [features]
 openssl-vendored = ["tokio-native-tls/vendored"]

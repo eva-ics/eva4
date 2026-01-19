@@ -1,16 +1,22 @@
+#[cfg(target_os = "linux")]
 use crate::metric::Metric;
+#[cfg(target_os = "linux")]
 use crate::tools::format_name;
 use eva_common::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashSet;
+use std::sync::OnceLock;
 use std::time::Duration;
+#[cfg(target_os = "linux")]
 use tokio::fs;
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+#[allow(dead_code)]
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
+#[allow(dead_code)]
 const REFRESH: Duration = Duration::from_secs(1);
 
+#[allow(dead_code)]
 struct Stat {
     sectors_read: u64,
     sectors_written: u64,
@@ -35,6 +41,7 @@ impl Stat {
     }
 }
 
+#[allow(dead_code)]
 trait Diff {
     fn counter_diff(self, other: Self) -> Self;
 }
@@ -55,6 +62,7 @@ pub fn set_config(config: Config) -> EResult<()> {
         .map_err(|_| Error::core("Unable to set BLK CONFIG"))
 }
 
+#[allow(dead_code)]
 #[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -69,6 +77,7 @@ pub async fn report_worker() {
     log::warn!("blk worker exited, platform not supported");
 }
 
+#[cfg(target_os = "linux")]
 async fn get_sector_size(dev: &str) -> Option<u64> {
     fs::read_to_string(format!("/sys/block/{}/queue/hw_sector_size", dev))
         .await
@@ -76,6 +85,7 @@ async fn get_sector_size(dev: &str) -> Option<u64> {
         .and_then(|v| v.trim_end().parse().ok())
 }
 
+#[cfg(target_os = "linux")]
 #[allow(clippy::cast_precision_loss)]
 async fn report_device(name: &str, current: &Stat, prev: &Stat) -> bool {
     if let Some(sector_size) = get_sector_size(name).await {
@@ -132,10 +142,10 @@ pub async fn report_worker() {
     if !config.enabled {
         return;
     }
-    if let Some(ref i) = config.devices {
-        if i.is_empty() {
-            return;
-        }
+    if let Some(ref i) = config.devices
+        && i.is_empty()
+    {
+        return;
     }
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);

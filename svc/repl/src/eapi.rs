@@ -1,19 +1,19 @@
 use eva_common::acl::OIDMaskList;
 use eva_common::common_payloads::ParamsId;
 use eva_common::events::{
-    FullItemStateAndInfoOwned, LocalStateEvent, RemoteStateEvent, AAA_ACL_TOPIC, AAA_KEY_TOPIC,
-    LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC,
+    AAA_ACL_TOPIC, AAA_KEY_TOPIC, FullItemStateAndInfoOwned, LOCAL_STATE_TOPIC, LocalStateEvent,
+    REMOTE_STATE_TOPIC, RemoteStateEvent,
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::FullItemState;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
 
 use crate::nodes;
-use crate::{aaa, ReplicationData};
+use crate::{ReplicationData, aaa};
 
 err_logger!();
 
@@ -181,7 +181,7 @@ impl RpcHandlers for Handlers {
                     let nodes = nodes::NODES.read().await;
                     if p.i == "*" || p.i == "#" {
                         let mut res = NodesExportRes {
-                            nodes: nodes.iter().map(|(_, v)| v).collect::<Vec<&nodes::Node>>(),
+                            nodes: nodes.values().collect::<Vec<&nodes::Node>>(),
                         };
                         res.nodes.sort();
                         Ok(Some(pack(&res)?))
@@ -283,28 +283,28 @@ impl RpcHandlers for Handlers {
         if !crate::NODES_LOADED.load(atomic::Ordering::SeqCst) {
             return;
         }
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_local_state(topic, o, frame.payload(), &self.tx)
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_local_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                if self.replicate_remote {
+                    process_remote_state(topic, o, frame.payload(), &self.tx)
                         .await
                         .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    if self.replicate_remote {
-                        process_remote_state(topic, o, frame.payload(), &self.tx)
-                            .await
-                            .log_ef();
-                    }
-                } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
-                    aaa::KEYS.lock().unwrap().remove(key_id);
-                    aaa::ENC_OPTS.lock().unwrap().remove(key_id);
-                    aaa::ACLS.lock().unwrap().remove(key_id);
-                } else if let Some(acl_id) = topic.strip_prefix(AAA_ACL_TOPIC) {
-                    aaa::ACLS
-                        .lock()
-                        .unwrap()
-                        .retain(|_, v| !v.contains_acl(acl_id));
                 }
+            } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
+                aaa::KEYS.lock().unwrap().remove(key_id);
+                aaa::ENC_OPTS.lock().unwrap().remove(key_id);
+                aaa::ACLS.lock().unwrap().remove(key_id);
+            } else if let Some(acl_id) = topic.strip_prefix(AAA_ACL_TOPIC) {
+                aaa::ACLS
+                    .lock()
+                    .unwrap()
+                    .retain(|_, v| !v.contains_acl(acl_id));
             }
         }
     }

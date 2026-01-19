@@ -1,14 +1,12 @@
 use ::ads::AmsAddr;
-use eva_common::events::{RawStateEvent, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEvent};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 err_logger!();
@@ -26,12 +24,9 @@ macro_rules! get_client {
     };
 }
 
-lazy_static! {
-    static ref ADS_CLIENT: OnceCell<Mutex<::ads::Client>> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref VERIFY_DELAY: OnceCell<Option<Duration>> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-}
+static ADS_CLIENT: OnceLock<Mutex<::ads::Client>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -5,10 +5,10 @@ use eva_system_common::{
     metric::client,
 };
 use log::{error, info};
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::ffi::OsString;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use std::sync::atomic;
 use std::time::Duration;
 use windows_service::service::{
@@ -32,10 +32,10 @@ const SVC_NAME: &str = "EvaCSAgent";
 const SVC_ID: &str = "EVA.cs-agent";
 
 #[cfg(debug_assertions)]
-const CONFIG_PATH: Lazy<PathBuf> =
-    Lazy::new(|| std::path::Path::new("./dev/agent-config.yml").to_owned());
+const CONFIG_PATH: LazyLock<PathBuf> =
+    LazyLock::new(|| std::path::Path::new("./dev/agent-config.yml").to_owned());
 #[cfg(not(debug_assertions))]
-static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
+static CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut path = std::env::current_exe()
         .expect("Unable to get working directory")
         .parent()

@@ -16,8 +16,7 @@ async-channel = { workspace = true }
 uuid = { features = ["serde", "v4"] , workspace = true }
 mimalloc = { workspace = true }
 bmart = { workspace = true }
-tagmap ="0.0.9"
-once_cell = { workspace = true }
+tagmap ="0.1.0"
 
 [features]
 std-alloc = []

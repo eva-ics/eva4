@@ -133,20 +133,20 @@ pub struct TracingMutexGuard<'a, T: ?Sized> {
     inner: MutexGuard<'a, T>,
 }
 
-impl<'a, T: ?Sized> Drop for TracingMutexGuard<'a, T> {
+impl<T: ?Sized> Drop for TracingMutexGuard<'_, T> {
     fn drop(&mut self) {
         self.owner.store(0, atomic::Ordering::Release);
     }
 }
 
-impl<'a, T: ?Sized> Deref for TracingMutexGuard<'a, T> {
+impl<T: ?Sized> Deref for TracingMutexGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for TracingMutexGuard<'a, T> {
+impl<T: ?Sized> DerefMut for TracingMutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
@@ -222,20 +222,20 @@ pub struct TracingNamedMutexGuard<'a, T: ?Sized> {
     inner: MutexGuard<'a, T>,
 }
 
-impl<'a, T: ?Sized> Drop for TracingNamedMutexGuard<'a, T> {
+impl<T: ?Sized> Drop for TracingNamedMutexGuard<'_, T> {
     fn drop(&mut self) {
         *self.owner.lock() = None;
     }
 }
 
-impl<'a, T: ?Sized> Deref for TracingNamedMutexGuard<'a, T> {
+impl<T: ?Sized> Deref for TracingNamedMutexGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for TracingNamedMutexGuard<'a, T> {
+impl<T: ?Sized> DerefMut for TracingNamedMutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }

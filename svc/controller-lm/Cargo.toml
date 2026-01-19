@@ -13,16 +13,14 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 bmart = { workspace = true }
-once_cell = { workspace = true }
 chrono = "0.4.33"
 cron = "0.12.0"
-submap = { version = "0.2.7", features = ["native-digest"] }
+submap = { workspace = true, features = ["native-digest"] }
 uuid = { features = ["serde", "v4"] , workspace = true }
-eva-robots = "0.3.0"
+eva-robots = "0.4.0"
 
 [features]
 std-alloc = []

@@ -6,25 +6,24 @@ use eva_common::prelude::*;
 use eva_internal::RtcSyncedInterval;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
-use once_cell::sync::{Lazy, OnceCell};
 use openssl::sha::Sha256;
 use parking_lot::Mutex;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, btree_map};
 use std::fmt::Write as _;
 use std::io::SeekFrom;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, LazyLock, OnceLock, atomic};
 use std::time::Duration;
 use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 err_logger!();
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 static NEED_DEDUP_LINES: atomic::AtomicBool = atomic::AtomicBool::new(false);
-static LINE_CACHE: Lazy<Mutex<BTreeMap<[u8; 32], Instant>>> = Lazy::new(<_>::default);
+static LINE_CACHE: LazyLock<Mutex<BTreeMap<[u8; 32], Instant>>> = LazyLock::new(<_>::default);
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -235,21 +234,21 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
             }
         }
     }
@@ -397,7 +396,7 @@ async fn file_handler(
     rx: &async_channel::Receiver<Event>,
     base_file_path: &str,
     base_rotated_path: Option<&str>,
-    gen: &DataGen,
+    g: &DataGen,
     auto_flush: bool,
 ) -> EResult<()> {
     macro_rules! explain_io {
@@ -410,15 +409,15 @@ async fn file_handler(
     let mut fx: Option<tokio::fs::File> = None;
     while let Ok(event) = rx.recv().await {
         let mut fd_opt = None;
-        if let Some(ref mut existing_fh) = fx {
-            if let Ok(path_metadata) = tokio::fs::metadata(&file_path).await {
-                let metadata = existing_fh
-                    .metadata()
-                    .await
-                    .map_err(|e| explain_io!("unable to get metadata", e))?;
-                if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
-                    fd_opt = Some(existing_fh);
-                }
+        if let Some(ref mut existing_fh) = fx
+            && let Ok(path_metadata) = tokio::fs::metadata(&file_path).await
+        {
+            let metadata = existing_fh
+                .metadata()
+                .await
+                .map_err(|e| explain_io!("unable to get metadata", e))?;
+            if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
+                fd_opt = Some(existing_fh);
             }
         }
         let fd = if let Some(fd) = fd_opt {
@@ -448,16 +447,16 @@ async fn file_handler(
             .seek(SeekFrom::Current(0))
             .await
             .map_err(|e| explain_io!("unable to seek file from current", e))?;
-        if pos == 0 {
-            if let Some(header) = gen.header() {
-                fd.write_all(&header)
-                    .await
-                    .map_err(|e| explain_io!("unable to write file header", e))?;
-            }
+        if pos == 0
+            && let Some(header) = g.header()
+        {
+            fd.write_all(&header)
+                .await
+                .map_err(|e| explain_io!("unable to write file header", e))?;
         }
         match event {
             Event::State(state) => {
-                let line = gen.line(state)?;
+                let line = g.line(state)?;
                 if !can_write_line(&line) {
                     continue;
                 }
@@ -468,7 +467,7 @@ async fn file_handler(
             Event::BulkState(states) => {
                 let mut buf = Vec::new();
                 for state in states {
-                    let line = gen.line(state)?;
+                    let line = g.line(state)?;
                     buf.extend(line);
                 }
                 if buf.is_empty() {
@@ -695,7 +694,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let file_path = config.file_path;
     let rotated_path = config.rotated_path;
     let auto_flush = config.auto_flush;
-    let gen = DataGen::new(config.format, config.dos_cr, config.fields);
+    let g = DataGen::new(config.format, config.dos_cr, config.fields);
     if let Some(dedup_lines) = config.dedup_lines {
         NEED_DEDUP_LINES.store(true, atomic::Ordering::Relaxed);
         let d = Duration::from_secs(dedup_lines);
@@ -709,7 +708,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     }
     let fh_fut = tokio::spawn(async move {
         loop {
-            if file_handler(&rx, &file_path, rotated_path.as_deref(), &gen, auto_flush)
+            if file_handler(&rx, &file_path, rotated_path.as_deref(), &g, auto_flush)
                 .await
                 .log_err()
                 .is_ok()

@@ -1,4 +1,4 @@
-use std::sync::atomic;
+use std::sync::{LazyLock, atomic};
 use std::time::Duration;
 
 use bma_ts::Monotonic;
@@ -9,8 +9,7 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::{poc, set_poc};
 use gst::glib::object::{Cast as _, ObjectExt as _};
 use gst::prelude::{ElementExt as _, GstBinExt as _};
-use once_cell::sync::Lazy;
-use parking_lot_rt::Mutex;
+use parking_lot::Mutex;
 use rtsc::event_map::EventMap;
 use serde::{Deserialize, Serialize};
 
@@ -24,8 +23,8 @@ const DESCRIPTION: &str = "GStreamer Audio/Video sink service";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static STREAM_HEADER: Lazy<Mutex<Option<FrameHeader>>> = Lazy::new(<_>::default);
-static FRAMES: Lazy<Mutex<EventMap<Monotonic, (), Duration>>> = Lazy::new(<_>::default);
+static STREAM_HEADER: LazyLock<Mutex<Option<FrameHeader>>> = LazyLock::new(<_>::default);
+static FRAMES: LazyLock<Mutex<EventMap<Monotonic, (), Duration>>> = LazyLock::new(<_>::default);
 static FRAMES_PROCESSED: atomic::AtomicU64 = atomic::AtomicU64::new(0);
 
 #[derive(Serialize)]

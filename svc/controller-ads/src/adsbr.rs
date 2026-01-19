@@ -6,8 +6,8 @@ use eva_sdk::service::safe_rpc_call;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 use zerocopy::{AsBytes, FromBytes};
 
@@ -35,7 +35,7 @@ pub trait ParseAmsNetId {
 impl ParseAmsNetId for String {
     fn ams_net_id(&self) -> EResult<[u8; 6]> {
         let chunks: Vec<&str> = self.split('.').collect();
-        if chunks.len() == 6 || chunks.get(6).map_or(false, |v| v.is_empty()) {
+        if chunks.len() == 6 || chunks.get(6).is_some_and(|v| v.is_empty()) {
             let mut res = Vec::with_capacity(6);
             for c in chunks.iter().take(6) {
                 res.push(
@@ -448,11 +448,11 @@ async fn create_handles(names: &[&str]) -> EResult<Vec<u32>> {
             .map_err(|e| Error::io(format!("write_read_multi GET_SYMHANDLE_BYNAME: {}", e)))?;
         for r in sres {
             let mut processed = false;
-            if r.code == 0 {
-                if let Some(data) = r.data {
-                    result.push(u32::read_from(data.as_slice()).unwrap_or_default());
-                    processed = true;
-                }
+            if r.code == 0
+                && let Some(data) = r.data
+            {
+                result.push(u32::read_from(data.as_slice()).unwrap_or_default());
+                processed = true;
             }
             if !processed {
                 result.push(0);
@@ -536,12 +536,11 @@ fn is_array_by_definition(definition: Option<&str>) -> bool {
 fn string_len_by_definition(definition: Option<&str>) -> Option<u32> {
     if let Some(def) = definition {
         let s = def.trim_end();
-        if s.ends_with(')') {
-            if let Some(pos) = s.rfind('(') {
-                if let Ok(len) = s[pos + 1..s.len() - 1].parse() {
-                    return Some(len);
-                }
-            }
+        if s.ends_with(')')
+            && let Some(pos) = s.rfind('(')
+            && let Ok(len) = s[pos + 1..s.len() - 1].parse()
+        {
+            return Some(len);
         }
     }
     None
@@ -565,87 +564,84 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
             .map_err(|e| Error::io(format!("write_read_multi GET_SYMINFO_BYNAME_EX: {}", e)))?;
         for r in sres {
             let mut processed = false;
-            if r.code == 0 {
-                if let Some(buf) = r.data {
-                    if buf.len() > 24 {
-                        let len: u32 = u32::from_le_bytes(buf[0..4].try_into().unwrap());
-                        if len == 0 {
-                            result.push(SymbolInfo {
-                                kind: Kind::NotFound,
-                                array_len: None,
-                                string_len: None,
-                                size: 0,
-                            });
-                        } else {
-                            let size: u32 = u32::from_le_bytes(buf[12..16].try_into().unwrap());
-                            let mut kind: Kind =
-                                u32::from_le_bytes(buf[16..20].try_into().unwrap()).into();
-                            let flags: u16 = u16::from_le_bytes(buf[20..22].try_into().unwrap());
-                            let kind_size = kind.size();
-                            if kind_size == 0 {
-                                kind = Kind::Other;
-                            }
-                            if flags & 0x1000 == 0 {
-                                let definition = parse_symbol_definition(&buf);
-                                let (array_len, string_len) = match kind {
-                                    Kind::Str => {
-                                        if let Some(len) = string_len_by_definition(definition) {
-                                            if is_array_by_definition(definition) {
-                                                (Some(size / len + 1), Some(len))
-                                            } else {
-                                                (None, Some(len))
-                                            }
-                                        } else {
-                                            (None, None)
-                                        }
+            if r.code == 0
+                && let Some(buf) = r.data
+                && buf.len() > 24
+            {
+                let len: u32 = u32::from_le_bytes(buf[0..4].try_into().unwrap());
+                if len == 0 {
+                    result.push(SymbolInfo {
+                        kind: Kind::NotFound,
+                        array_len: None,
+                        string_len: None,
+                        size: 0,
+                    });
+                } else {
+                    let size: u32 = u32::from_le_bytes(buf[12..16].try_into().unwrap());
+                    let mut kind: Kind = u32::from_le_bytes(buf[16..20].try_into().unwrap()).into();
+                    let flags: u16 = u16::from_le_bytes(buf[20..22].try_into().unwrap());
+                    let kind_size = kind.size();
+                    if kind_size == 0 {
+                        kind = Kind::Other;
+                    }
+                    if flags & 0x1000 == 0 {
+                        let definition = parse_symbol_definition(&buf);
+                        let (array_len, string_len) = match kind {
+                            Kind::Str => {
+                                if let Some(len) = string_len_by_definition(definition) {
+                                    if is_array_by_definition(definition) {
+                                        (Some(size / len + 1), Some(len))
+                                    } else {
+                                        (None, Some(len))
                                     }
-                                    Kind::WStr => {
-                                        if let Some(len) = string_len_by_definition(definition) {
-                                            if is_array_by_definition(definition) {
-                                                (Some(size / len * 2 + 2), Some(len))
-                                            } else {
-                                                (None, Some(len))
-                                            }
-                                        } else {
-                                            (None, None)
-                                        }
-                                    }
-                                    _ => {
-                                        let arr_len =
-                                            if kind_size > 0 { size / kind_size } else { 0 };
-                                        if arr_len > 1 || is_array_by_definition(definition) {
-                                            (Some(arr_len), None)
-                                        } else {
-                                            (None, None)
-                                        }
-                                    }
-                                };
-                                result.push(SymbolInfo {
-                                    kind,
-                                    size,
-                                    array_len,
-                                    string_len,
-                                });
-                            } else {
-                                match kind {
-                                    Kind::Other | Kind::NotFound | Kind::UnsupportedImpl => {}
-                                    _ => {
-                                        if size != kind_size {
-                                            kind = Kind::UnsupportedImpl;
-                                        }
-                                    }
+                                } else {
+                                    (None, None)
                                 }
-                                result.push(SymbolInfo {
-                                    kind,
-                                    array_len: None,
-                                    string_len: None,
-                                    size,
-                                });
+                            }
+                            Kind::WStr => {
+                                if let Some(len) = string_len_by_definition(definition) {
+                                    if is_array_by_definition(definition) {
+                                        (Some(size / len * 2 + 2), Some(len))
+                                    } else {
+                                        (None, Some(len))
+                                    }
+                                } else {
+                                    (None, None)
+                                }
+                            }
+                            _ => {
+                                let arr_len = if kind_size > 0 { size / kind_size } else { 0 };
+                                if arr_len > 1 || is_array_by_definition(definition) {
+                                    (Some(arr_len), None)
+                                } else {
+                                    (None, None)
+                                }
+                            }
+                        };
+                        result.push(SymbolInfo {
+                            kind,
+                            size,
+                            array_len,
+                            string_len,
+                        });
+                    } else {
+                        match kind {
+                            Kind::Other | Kind::NotFound | Kind::UnsupportedImpl => {}
+                            _ => {
+                                if size != kind_size {
+                                    kind = Kind::UnsupportedImpl;
+                                }
                             }
                         }
-                        processed = true;
+                        result.push(SymbolInfo {
+                            kind,
+                            array_len: None,
+                            string_len: None,
+                            size,
+                        });
                     }
                 }
+                processed = true;
             }
             if !processed {
                 result.push(SymbolInfo {

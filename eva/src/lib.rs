@@ -2,21 +2,19 @@ use eva_common::err_logger;
 use eva_common::events::NodeInfo;
 use eva_common::prelude::*;
 use log::warn;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 use std::time::Duration;
 use std::{path::Path, sync::atomic};
+use sysinfo::{Disks, System};
 
 err_logger!();
 
 static FIPS: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 const ARCH_SFX: &str = env!("ARCH_SFX");
-
-#[macro_use]
-extern crate lazy_static;
 
 pub const LOCAL_NODE_ALIAS: &str = ".local";
 pub const REMOTE_ANY_NODE_ALIAS: &str = ".remote-any";
@@ -25,14 +23,15 @@ pub const PRODUCT_NAME: &str = "EVA ICS node server";
 pub const PRODUCT_CODE: &str = "eva4node";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[allow(clippy::unreadable_literal)]
-pub const BUILD: u64 = 2025121801;
+pub const BUILD: u64 = 2026012301;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
 pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 pub const MEMORY_WARN_DEFAULT: u64 = 134_217_728;
-use sysinfo::{DiskExt as _, System, SystemExt};
 
-pub static SYSTEM_INFO: Lazy<Mutex<System>> = Lazy::new(|| Mutex::new(System::new()));
+pub static SYSTEM_INFO: LazyLock<Mutex<System>> = LazyLock::new(|| Mutex::new(System::new()));
+pub static DISK_INFO: LazyLock<Mutex<Disks>> =
+    LazyLock::new(|| Mutex::new(Disks::new_with_refreshed_list()));
 
 pub fn apply_current_thread_params(
     params: &eva_common::services::RealtimeConfig,
@@ -77,7 +76,6 @@ pub fn apply_current_thread_params(
 }
 
 pub fn launch_sysinfo(full: bool) -> EResult<()> {
-    SYSTEM_INFO.lock().refresh_disks_list();
     std::thread::Builder::new()
         .name("EVAsysinfo".to_owned())
         .spawn(move || {
@@ -93,15 +91,18 @@ pub fn launch_sysinfo(full: bool) -> EResult<()> {
                 int.tick();
                 let d = eva_common::tools::get_eva_dir();
                 let eva_dir = Path::new(&d);
-                let mut s = SYSTEM_INFO.lock();
-                s.refresh_memory();
-                for disk in s.disks_mut() {
+                let mut disks = DISK_INFO.lock();
+                for disk in &mut *disks {
                     if eva_dir.starts_with(disk.mount_point()) {
                         disk.refresh();
                     }
                 }
-                if full {
-                    s.refresh_processes();
+                {
+                    let mut s = SYSTEM_INFO.lock();
+                    s.refresh_memory();
+                    if full {
+                        s.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+                    }
                 }
             }
         })?;

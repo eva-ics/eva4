@@ -10,19 +10,16 @@ busrt = { features = ["rpc", "ipc"] , workspace = true }
 tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
-eva-common = { features = ["common-payloads"] , workspace = true }
+eva-common = { features = ["common-payloads", "openssl"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
 eva-sdk = { workspace = true }
 mimalloc = { workspace = true }
-hex = "0.4.3"
-once_cell = { workspace = true }
-lazy_static = "1.4.0"
+openssl = { workspace = true }
+hex = { workspace = true }
 bmart = { workspace = true }
 boringauth = "0.9.0"
 base32 = "0.4.0"
-openssl = "0.10.72"
 
 [features]
 std-alloc = []
-openssl-vendored = ["openssl/vendored"]

@@ -3,17 +3,17 @@ use crate::tools::format_name;
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use sysinfo::Networks;
 use tokio::sync::Mutex;
 
 err_logger!();
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 const REFRESH: Duration = Duration::from_secs(1);
 
@@ -40,10 +40,10 @@ pub async fn report_worker() {
     if !config.enabled {
         return;
     }
-    if let Some(ref i) = config.interfaces {
-        if i.is_empty() {
-            return;
-        }
+    if let Some(ref i) = config.interfaces
+        && i.is_empty()
+    {
+        return;
     }
     let mut int = tokio::time::interval(REFRESH);
     int.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -58,17 +58,17 @@ pub async fn report_worker() {
         };
         let nets = networks.clone();
         if tokio::task::spawn_blocking(move || {
-            let _ = nets.try_lock().map(|mut n| n.refresh_list());
+            let _ = nets.try_lock().map(|mut n| n.refresh(true));
         })
         .await
         .log_err_with("networks")
         .is_ok()
         {
             for (interface, i) in networks.lock().await.iter() {
-                if let Some(ref i) = config.interfaces {
-                    if !i.contains(interface) {
-                        continue;
-                    }
+                if let Some(ref i) = config.interfaces
+                    && !i.contains(interface)
+                {
+                    continue;
                 }
                 let name = format_name(interface, false);
                 Metric::new("network", &name, "rxb")

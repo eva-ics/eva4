@@ -1,9 +1,9 @@
+use crate::Mode;
 use crate::bus::{EvaBroker, ThreadAsyncAllocator};
 use crate::core::Core;
 use crate::eapi;
-use crate::Mode;
-use crate::{EResult, Error};
 use crate::{ARCH_SFX, BUILD, PRODUCT_CODE, PRODUCT_NAME, VERSION};
+use crate::{EResult, Error};
 use busrt::rpc::{self, RpcClient};
 use eva_common::err_logger;
 use eva_common::registry;

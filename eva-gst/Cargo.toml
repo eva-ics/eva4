@@ -14,7 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 atomic-timer = "0.2.2"
 binrw = "0.15.0"
-busrt = { version = "0.4.21", features = ["ipc-sync", "rpc-sync", "cursors"] }
+busrt = { version = "0.5.21", features = ["ipc-sync", "rpc-sync", "cursors"] }
 dateparser = "0.2.1"
 eva-common = { version = "0.3.117", features = ["payload", "events", "multimedia"] }
 gst = { version = "0.22", package = "gstreamer" }

@@ -1,25 +1,25 @@
+use crate::ApiKeyId;
 use crate::db;
 use crate::handler::WebSocket;
-use crate::ApiKeyId;
 use eva_common::acl::Acl;
 use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::{EResult, Error};
 use eva_sdk::prelude::*;
 use genpass_native::random_string;
-use lazy_static::lazy_static;
 use log::error;
 use log::{debug, trace};
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::future::Future;
 use std::net::IpAddr;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::LazyLock;
+use std::sync::OnceLock;
+use std::sync::atomic;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -41,11 +41,10 @@ const ERR_INVALID_TOKEN_IP: &str = "token access denied";
 const ERR_INVALID_TOKEN_FORMAT: &str = "invalid token format";
 const ERR_SESSIONS_DISABLED: &str = "sessions are disabled";
 
-lazy_static! {
-    static ref SESSION_TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref TOKEN_WEBSOCKETS: Mutex<HashMap<TokenId, HashMap<Uuid, WebSocket>>> = <_>::default();
-    static ref AUTH_SVCS: OnceCell<Vec<String>> = <_>::default();
-}
+static SESSION_TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static TOKEN_WEBSOCKETS: LazyLock<Mutex<HashMap<TokenId, HashMap<Uuid, WebSocket>>>> =
+    LazyLock::new(<_>::default);
+static AUTH_SVCS: OnceLock<Vec<String>> = OnceLock::new();
 
 #[inline]
 pub fn auth_svcs() -> &'static [String] {
@@ -78,21 +77,22 @@ pub fn parse_auth(
     } else {
         None
     };
-    if auth.is_none() {
-        if let Some(ch) = headers.get(hyper::header::COOKIE) {
-            for c in ch.to_str().unwrap_or_default().split(';') {
-                if let Ok(cookie) = cookie::Cookie::parse(c) {
-                    if cookie.name() == "auth" {
-                        auth = Some(cookie.value().to_owned());
-                        break;
-                    }
-                }
+    if auth.is_none()
+        && let Some(ch) = headers.get(hyper::header::COOKIE)
+    {
+        for c in ch.to_str().unwrap_or_default().split(';') {
+            if let Ok(cookie) = cookie::Cookie::parse(c)
+                && cookie.name() == "auth"
+            {
+                auth = Some(cookie.value().to_owned());
+                break;
             }
         }
     }
     auth
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
 pub fn set_session_config(
     timeout: Option<f64>,
     prolong: bool,
@@ -132,9 +132,9 @@ pub enum Auth {
 impl std::fmt::Display for Auth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Auth::Token(ref token) => write!(f, "user:{}", token.user()),
-            Auth::Key(ref key_id, _) => write!(f, "key:{}", key_id),
-            Auth::Login(ref login, _) => write!(f, "login:{}", login),
+            Auth::Token(token) => write!(f, "user:{}", token.user()),
+            Auth::Key(key_id, _) => write!(f, "key:{}", key_id),
+            Auth::Login(login, _) => write!(f, "login:{}", login),
             Auth::LoginKey(key_id, _) => {
                 write!(f, "key:{}", key_id.as_deref().unwrap_or_default())
             }
@@ -159,7 +159,7 @@ impl Auth {
         match self {
             Auth::Token(token) => token.acl.id(),
             Auth::Key(_, acl) => acl.id(),
-            Auth::Login(_, ref acl_id) | Auth::LoginKey(_, ref acl_id) => {
+            Auth::Login(_, acl_id) | Auth::LoginKey(_, acl_id) => {
                 acl_id.as_deref().unwrap_or_default()
             }
             Auth::No => "",
@@ -177,7 +177,7 @@ impl Auth {
     #[inline]
     pub fn token(&self) -> Option<&Token> {
         match self {
-            Auth::Token(ref token) => Some(token),
+            Auth::Token(token) => Some(token),
             Auth::Key(_, _) | Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => None,
         }
     }
@@ -191,9 +191,9 @@ impl Auth {
     #[inline]
     pub fn user(&self) -> Option<&str> {
         match self {
-            Auth::Token(ref token) => Some(token.user()),
-            Auth::Login(ref login, _) => Some(login),
-            Auth::Key(ref key_id, _) => Some(key_id),
+            Auth::Token(token) => Some(token.user()),
+            Auth::Login(login, _) => Some(login),
+            Auth::Key(key_id, _) => Some(key_id),
             Auth::LoginKey(key_id, _) => key_id.as_deref(),
             Auth::No => None,
         }
@@ -201,7 +201,7 @@ impl Auth {
     #[inline]
     pub fn key_id(&self) -> Option<&str> {
         match self {
-            Auth::Key(ref key_id, _) => Some(key_id),
+            Auth::Key(key_id, _) => Some(key_id),
             Auth::Token(_) | Auth::Login(_, _) | Auth::LoginKey(_, _) | Auth::No => None,
         }
     }
@@ -316,13 +316,13 @@ impl fmt::Display for TokenId {
 }
 
 fn check_token_ip(token: &Token, ip: Option<IpAddr>) -> EResult<()> {
-    if let Some(token_ip) = token.ip {
-        if SESSION_STICK_IP.load(atomic::Ordering::Relaxed) {
-            if ip.map_or(false, |i| i == token_ip) {
-                return Ok(());
-            }
-            return Err(Error::access(ERR_INVALID_TOKEN_IP));
+    if let Some(token_ip) = token.ip
+        && SESSION_STICK_IP.load(atomic::Ordering::Relaxed)
+    {
+        if ip == Some(token_ip) {
+            return Ok(());
         }
+        return Err(Error::access(ERR_INVALID_TOKEN_IP));
     }
     Ok(())
 }
@@ -542,10 +542,10 @@ impl Token {
         }
     }
     pub fn unregister_websocket(&self, id: Uuid) {
-        if let Some(websockets) = TOKEN_WEBSOCKETS.lock().get_mut(&self.id) {
-            if let Some(ws) = websockets.get(&id) {
-                ws.terminate();
-            }
+        if let Some(websockets) = TOKEN_WEBSOCKETS.lock().get_mut(&self.id)
+            && let Some(ws) = websockets.get(&id)
+        {
+            ws.terminate();
         }
     }
 }

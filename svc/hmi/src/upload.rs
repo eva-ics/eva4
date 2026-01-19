@@ -83,40 +83,40 @@ pub async fn process(
             }
         }
     }
-    if let Some(u) = ufile {
-        if let Some(macro_id) = process_macro_id {
-            let auth = crate::aaa::parse_auth(Some(&params), headers);
-            if let Some(ref k) = auth {
-                if let Ok(auth) = crate::aaa::authenticate(k, Some(ip)).await {
-                    let mut aci = crate::aci::ACI::new(auth, "upload", ip.to_string());
-                    let upload_data = UploadData {
-                        aci: to_value(&aci)?,
-                        content_type: u.content_type,
-                        file_name: u.file_name,
-                        sha256: hex::encode(u.sha256),
-                        form,
-                        system_name: crate::SYSTEM_NAME.get().unwrap(),
-                    };
-                    let mut kwargs = HashMap::new();
-                    kwargs.insert("content".to_owned(), Value::Bytes(u.content));
-                    kwargs.insert("data".to_owned(), to_value(upload_data)?);
-                    let p = crate::api::ParamsRun {
-                        i: macro_id,
-                        args: vec![],
-                        kwargs,
-                        priority,
-                        wait,
-                        note: None,
-                    };
-                    let result = crate::api::method_run(to_value(p)?, &mut aci).await?;
-                    if let Some(uri) = rdr {
-                        return Ok(HContent::Redirect(uri));
-                    }
-                    return Ok(HContent::Value(result));
-                }
+    if let Some(u) = ufile
+        && let Some(macro_id) = process_macro_id
+    {
+        let auth = crate::aaa::parse_auth(Some(&params), headers);
+        if let Some(ref k) = auth
+            && let Ok(auth) = crate::aaa::authenticate(k, Some(ip)).await
+        {
+            let mut aci = crate::aci::ACI::new(auth, "upload", ip.to_string());
+            let upload_data = UploadData {
+                aci: to_value(&aci)?,
+                content_type: u.content_type,
+                file_name: u.file_name,
+                sha256: hex::encode(u.sha256),
+                form,
+                system_name: crate::SYSTEM_NAME.get().unwrap(),
+            };
+            let mut kwargs = HashMap::new();
+            kwargs.insert("content".to_owned(), Value::Bytes(u.content));
+            kwargs.insert("data".to_owned(), to_value(upload_data)?);
+            let p = crate::api::ParamsRun {
+                i: macro_id,
+                args: vec![],
+                kwargs,
+                priority,
+                wait,
+                note: None,
+            };
+            let result = crate::api::method_run(to_value(p)?, &mut aci).await?;
+            if let Some(uri) = rdr {
+                return Ok(HContent::Redirect(uri));
             }
-            return Err(Error::new0(ErrorKind::AccessDenied));
+            return Ok(HContent::Value(result));
         }
+        return Err(Error::new0(ErrorKind::AccessDenied));
     }
     if let Some(uri) = rdr {
         Ok(HContent::Redirect(uri))

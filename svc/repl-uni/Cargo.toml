@@ -16,7 +16,6 @@ log = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 serde_json = { workspace = true }
-once_cell = { workspace = true }
 bmart = { workspace = true }
 triggered = "0.1.2"
 uuid = { features = ["serde", "v4"] , workspace = true }

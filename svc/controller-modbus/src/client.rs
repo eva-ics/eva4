@@ -1,7 +1,7 @@
 use crate::types::{ProtocolKind, Register, RegisterKind};
 use async_trait::async_trait;
-use busrt::rpc::Rpc;
 use busrt::QoS;
+use busrt::rpc::Rpc;
 use eva_common::{EResult, Error};
 use eva_sdk::service::poc;
 use log::{error, trace};
@@ -77,7 +77,7 @@ impl Serial {
                 return Err(Error::invalid_params(format!(
                     "unsupported data bits value: {}",
                     v
-                )))
+                )));
             }
         };
         let parity: Parity = match sp
@@ -91,7 +91,7 @@ impl Serial {
                 return Err(Error::invalid_params(format!(
                     "unsupported parity value: {}",
                     v
-                )))
+                )));
             }
         };
         let stop_bits: StopBits = match sp
@@ -104,7 +104,7 @@ impl Serial {
                 return Err(Error::invalid_params(format!(
                     "unsupported stop bits value: {}",
                     v
-                )))
+                )));
             }
         };
         let stream = tokio_serial::new(port_path, baud_rate)
@@ -164,18 +164,19 @@ impl ModbusClient for Serial {
             let mut buf = [0u8; 3];
             unwrap_or_err!(client.stream.read_exact(&mut buf).await.map_err(Into::into));
             let mut response = buf.to_vec();
-            let len = unwrap_or_err!(rmodbus::guess_response_frame_len(
-                &buf,
-                rmodbus::ModbusProto::Rtu
-            )
-            .map_err(Error::io));
+            let len = unwrap_or_err!(
+                rmodbus::guess_response_frame_len(&buf, rmodbus::ModbusProto::Rtu)
+                    .map_err(Error::io)
+            );
             if len > 3 {
                 let mut rest = vec![0u8; (len - 3) as usize];
-                unwrap_or_err!(client
-                    .stream
-                    .read_exact(&mut rest)
-                    .await
-                    .map_err(Into::into));
+                unwrap_or_err!(
+                    client
+                        .stream
+                        .read_exact(&mut rest)
+                        .await
+                        .map_err(Into::into)
+                );
                 response.extend(rest);
             }
             client.last_frame.replace(Instant::now());
@@ -187,18 +188,19 @@ impl ModbusClient for Serial {
             let mut buf = [0u8; 7];
             unwrap_or_err!(client.stream.read_exact(&mut buf).await.map_err(Into::into));
             let mut response = buf.to_vec();
-            let len = unwrap_or_err!(rmodbus::guess_response_frame_len(
-                &buf,
-                rmodbus::ModbusProto::Ascii
-            )
-            .map_err(Error::io));
+            let len = unwrap_or_err!(
+                rmodbus::guess_response_frame_len(&buf, rmodbus::ModbusProto::Ascii)
+                    .map_err(Error::io)
+            );
             if len > 7 {
                 let mut rest = vec![0u8; (len - 7) as usize];
-                unwrap_or_err!(client
-                    .stream
-                    .read_exact(&mut rest)
-                    .await
-                    .map_err(Into::into));
+                unwrap_or_err!(
+                    client
+                        .stream
+                        .read_exact(&mut rest)
+                        .await
+                        .map_err(Into::into)
+                );
                 response.extend(rest);
             }
             client.last_frame.replace(Instant::now());
@@ -425,9 +427,7 @@ impl Client {
         count: u16,
         timeout: Duration,
     ) -> EResult<Vec<u16>> {
-        tokio::time::timeout(timeout, self.get_u16(unit_id, reg, count))
-            .await?
-            .map_err(Into::into)
+        tokio::time::timeout(timeout, self.get_u16(unit_id, reg, count)).await?
     }
     pub async fn get_u16(&self, unit_id: u8, reg: Register, count: u16) -> EResult<Vec<u16>> {
         let mut mreq = req!(self, unit_id);
@@ -442,7 +442,7 @@ impl Client {
                     .map_err(Error::failed)?;
             }
             _ => panic!("u16 req for coils"),
-        };
+        }
         let response = self.inner.process_request(request).await?;
         let mut result = Vec::new();
         mreq.parse_u16(&response, &mut result)
@@ -458,7 +458,7 @@ impl Client {
                     .map_err(Error::failed)?;
             }
             _ => panic!("bool set req for read/only or u16 regs"),
-        };
+        }
         let response = self.inner.process_request(request).await?;
         mreq.parse_ok(&response).map_err(Error::failed)?;
         Ok(())
@@ -476,7 +476,7 @@ impl Client {
                         .map_err(Error::failed)?;
                 }
                 _ => panic!("u16 set req for read/only or u16 regs"),
-            };
+            }
             let response = self.inner.process_request(request).await?;
             mreq.parse_ok(&response).map_err(Error::failed)?;
         } else {
@@ -493,7 +493,7 @@ impl Client {
                     }
                 }
                 _ => panic!("u16 set req for read/only or u16 regs"),
-            };
+            }
         }
         Ok(())
     }
@@ -504,9 +504,7 @@ impl Client {
         count: u16,
         timeout: Duration,
     ) -> EResult<Vec<bool>> {
-        tokio::time::timeout(timeout, self.get_bool(unit_id, reg, count))
-            .await?
-            .map_err(Into::into)
+        tokio::time::timeout(timeout, self.get_bool(unit_id, reg, count)).await?
     }
     pub async fn get_bool(&self, unit_id: u8, reg: Register, count: u16) -> EResult<Vec<bool>> {
         let mut mreq = req!(self, unit_id);
@@ -521,7 +519,7 @@ impl Client {
                     .map_err(Error::failed)?;
             }
             _ => panic!("bool req for u16 regs"),
-        };
+        }
         let response = self.inner.process_request(request).await?;
         let mut result = Vec::new();
         mreq.parse_bool(&response, &mut result)

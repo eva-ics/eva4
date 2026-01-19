@@ -1,5 +1,5 @@
 use super::GeneratorSource;
-use crate::target::{notify, Target};
+use crate::target::{Target, notify};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::{Deserialize, Serialize};

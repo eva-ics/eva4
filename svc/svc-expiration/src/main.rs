@@ -3,9 +3,9 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic;
 use std::time::{Duration, Instant};
 
 err_logger!();
@@ -112,17 +112,18 @@ impl RpcHandlers for Handlers {
         svc_handle_default_rpc(event.parse_method()?, &self.info)
     }
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish && frame.primary_sender() != self.me {
-            if let Some(topic) = frame.topic() {
-                if let Some(oid_path) = topic.strip_prefix(events::RAW_STATE_TOPIC) {
-                    if let Some(i) = self.watchers.get(oid_path) {
-                        i.handle_event();
-                    }
-                } else if let Some(oid_path) = topic.strip_prefix(events::LOCAL_STATE_TOPIC) {
-                    // handle for lvars
-                    if let Some(i) = self.watchers.get(oid_path) {
-                        i.handle_event();
-                    }
+        if frame.kind() == busrt::FrameKind::Publish
+            && frame.primary_sender() != self.me
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(oid_path) = topic.strip_prefix(events::RAW_STATE_TOPIC) {
+                if let Some(i) = self.watchers.get(oid_path) {
+                    i.handle_event();
+                }
+            } else if let Some(oid_path) = topic.strip_prefix(events::LOCAL_STATE_TOPIC) {
+                // handle for lvars
+                if let Some(i) = self.watchers.get(oid_path) {
+                    i.handle_event();
                 }
             }
         }

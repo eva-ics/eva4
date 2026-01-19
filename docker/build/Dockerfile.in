@@ -1,11 +1,11 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN env DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install --no-install-recommends -y tzdata && \
     ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
     apt-get install -y --no-install-recommends bash jq curl procps ca-certificates tar gzip adduser nano && \
-    apt-get install -y --no-install-recommends python3 python3-venv && \
-    apt-get install  -y --no-install-recommends vim-tiny && \
+    apt-get install -y --no-install-recommends python3 python3-venv vim-tiny && \
+    apt-get install  -y --no-install-recommends libbsd-dev libsnmp-dev libjpeg-dev libz-dev libssl-dev libffi-dev && \
     apt-get clean
 
 RUN addgroup --system eva && \
@@ -14,7 +14,7 @@ RUN addgroup --system eva && \
 RUN touch /.eva_container
 
 RUN mkdir -p /opt/eva4 && \
-  curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64-ubuntu20.04.tgz \
+  curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64.tgz \
     | tar xzf - -C /opt/eva4  --strip-components 1 && \
   curl https://pub.bma.ai/eva4/%VERSION%/nightly/update-%BUILD%.sh -o /opt/eva4/update.sh
 

@@ -1,3 +1,4 @@
+use crate::Error;
 use crate::actmgr;
 use crate::core::{ActionLaunchResult, Core, LvarOp};
 use crate::items::{ItemConfigData, NodeFilter};
@@ -5,11 +6,10 @@ use crate::logs::LogLevel;
 use crate::seq;
 use crate::svc::emit;
 use crate::svcmgr;
-use crate::Error;
 use busrt::tools::pubsub;
 use busrt::{
-    rpc::{rpc_err_str, RpcError, RpcEvent, RpcHandlers, RpcResult},
     Frame, FrameKind,
+    rpc::{RpcError, RpcEvent, RpcHandlers, RpcResult, rpc_err_str},
 };
 use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::{ParamsId, ParamsUuid, ValueOrList};
@@ -17,11 +17,11 @@ use eva_common::dobj::{DataObject, Endianess};
 use eva_common::err_logger;
 use eva_common::events::{
     FullItemStateAndInfo, ItemStateAndInfo, NodeInfo, NodeStateEvent, NodeStatus,
-    RawStateBulkEventOwned, RawStateEventOwned, ReplicationInventoryItem, RAW_STATE_BULK_TOPIC,
-    RAW_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC, REPLICATION_NODE_STATE_TOPIC,
-    REPLICATION_STATE_TOPIC,
+    RAW_STATE_BULK_TOPIC, RAW_STATE_TOPIC, REPLICATION_INVENTORY_TOPIC,
+    REPLICATION_NODE_STATE_TOPIC, REPLICATION_STATE_TOPIC, RawStateBulkEventOwned,
+    RawStateEventOwned, ReplicationInventoryItem,
 };
-use eva_common::events::{ReplicationStateEventExtended, LOG_INPUT_TOPIC};
+use eva_common::events::{LOG_INPUT_TOPIC, ReplicationStateEventExtended};
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use log::{trace, warn};
@@ -30,9 +30,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::Path;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use std::time::Duration;
-use sysinfo::{DiskExt, SystemExt};
 
 const HANDLER_ID_RAW_STATE: usize = 1;
 const HANDLER_ID_RAW_STATE_BULK: usize = 2;
@@ -340,10 +339,10 @@ async fn replication_node_state_handler(
 
 async fn log_emit_handler(rx: async_channel::Receiver<pubsub::Publication>) {
     while let Ok(frame) = rx.recv().await {
-        if let Ok(lvl) = frame.subtopic().parse::<LogLevel>() {
-            if let Ok(msg) = std::str::from_utf8(frame.payload()) {
-                emit(lvl, frame.primary_sender(), msg);
-            }
+        if let Ok(lvl) = frame.subtopic().parse::<LogLevel>()
+            && let Ok(msg) = std::str::from_utf8(frame.payload())
+        {
+            emit(lvl, frame.primary_sender(), msg);
         }
     }
 }
@@ -723,7 +722,7 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsId = unpack(event.payload()).log_err()?;
-                    let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
+                    let oid: OID = p.i.parse()?;
                     self.core.create_local_item(oid).await?;
                     Ok(None)
                 }
@@ -734,7 +733,7 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsId = unpack(event.payload()).log_err()?;
-                    let mask: OIDMask = p.i.parse().map_err(Into::<Error>::into)?;
+                    let mask: OIDMask = p.i.parse()?;
                     self.core.destroy_local_items(&mask).await;
                     Ok(None)
                 }
@@ -777,7 +776,7 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsId = unpack(event.payload()).log_err()?;
-                    let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
+                    let oid: OID = p.i.parse()?;
                     let items = self
                         .core
                         .list_items(
@@ -1067,7 +1066,7 @@ impl RpcHandlers for BusApi {
                     return Err(RpcError::params(None));
                 }
                 let p: ParamsId = unpack(payload).log_err()?;
-                let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
+                let oid: OID = p.i.parse()?;
                 self.core.kill_actions(&oid).await?;
                 Ok(None)
             }
@@ -1100,7 +1099,7 @@ impl RpcHandlers for BusApi {
                     Err(RpcError::params(None))
                 } else {
                     let p: ParamsSet = unpack(event.payload()).log_err()?;
-                    let oid: OID = p.i.parse().map_err(Into::<Error>::into)?;
+                    let oid: OID = p.i.parse()?;
                     self.core
                         .lvar_op(
                             &oid,
@@ -1191,10 +1190,9 @@ impl RpcHandlers for BusApi {
                             self.core.timeout(),
                         )
                         .await
+                        && e.kind() != ErrorKind::ResourceNotFound
                     {
-                        if e.kind() != ErrorKind::ResourceNotFound {
-                            return Err(e.into());
-                        }
+                        return Err(e.into());
                     }
                 }
                 Ok(None)
@@ -1366,21 +1364,24 @@ impl RpcHandlers for BusApi {
                     la15: f64,
                 }
                 if payload.is_empty() {
-                    let system = crate::SYSTEM_INFO.lock();
                     let d = eva_common::tools::get_eva_dir();
                     let eva_dir = Path::new(&d);
                     let mut disk_usage: Option<f64> = None;
-                    for disk in system.disks() {
-                        if eva_dir.starts_with(disk.mount_point()) {
-                            let total = disk.total_space();
-                            if total > 0 {
-                                disk_usage = Some(
-                                    (1.0 - disk.available_space() as f64 / total as f64) * 100.0,
-                                );
-                                break;
+                    {
+                        for disk in &*crate::DISK_INFO.lock() {
+                            if eva_dir.starts_with(disk.mount_point()) {
+                                let total = disk.total_space();
+                                if total > 0 {
+                                    disk_usage = Some(
+                                        (1.0 - disk.available_space() as f64 / total as f64)
+                                            * 100.0,
+                                    );
+                                    break;
+                                }
                             }
                         }
                     }
+                    let system = crate::SYSTEM_INFO.lock();
                     let ram_usage: Option<f64> = {
                         let total = system.total_memory();
                         if (total) > 0 {
@@ -1389,7 +1390,8 @@ impl RpcHandlers for BusApi {
                             None
                         }
                     };
-                    let la = system.load_average();
+                    drop(system);
+                    let la = sysinfo::System::load_average();
                     let la1 = la.one;
                     let la5 = la.five;
                     let la15 = la.fifteen;
@@ -1400,7 +1402,6 @@ impl RpcHandlers for BusApi {
                         la5,
                         la15,
                     };
-                    drop(system);
                     Ok(Some(pack(&info)?))
                 } else {
                     Err(RpcError::params(None))

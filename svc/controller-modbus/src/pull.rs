@@ -1,11 +1,11 @@
 use crate::common;
 use crate::modbus::parse_block_value;
 use crate::types::RegisterKind;
+use eva_common::ITEM_STATUS_ERROR;
 use eva_common::events::RawStateEventOwned;
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_common::ITEM_STATUS_ERROR;
-use eva_sdk::controller::{format_raw_state_topic, RawStateCache, RawStateEventPreparedOwned};
+use eva_sdk::controller::{RawStateCache, RawStateEventPreparedOwned, format_raw_state_topic};
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use log::{error, trace, warn};
@@ -127,14 +127,14 @@ async fn pull(
                             ) {
                                 Ok(value) => {
                                     if task.need_transform() {
-                                        if let Ok(val) = TryInto::<f64>::try_into(value).log_err() {
-                                            if let Ok(n) = task.transform_value(val).log_err() {
-                                                save_val!(task, Value::F64(n));
-                                                logreducer::clear_error!(format!(
-                                                    "pull::{}",
-                                                    task.oid()
-                                                ));
-                                            }
+                                        if let Ok(val) = TryInto::<f64>::try_into(value).log_err()
+                                            && let Ok(n) = task.transform_value(val).log_err()
+                                        {
+                                            save_val!(task, Value::F64(n));
+                                            logreducer::clear_error!(format!(
+                                                "pull::{}",
+                                                task.oid()
+                                            ));
                                         }
                                     } else {
                                         save_val!(task, value);
@@ -209,10 +209,10 @@ pub async fn launch(
     let raw_state_cache = Arc::new(RawStateCache::new(cache_time));
     loop {
         let t = ticker.tick().await.into_std();
-        if let Some(prev) = last_ticked {
-            if t - prev > interval {
-                warn!("PLC puller timeout");
-            }
+        if let Some(prev) = last_ticked
+            && t - prev > interval
+        {
+            warn!("PLC puller timeout");
         }
         if let Err(e) = pull(&regs, tx.clone(), raw_state_cache.clone(), timeout).await {
             logreducer::error!("pull", "PLC error: {}", e);

@@ -14,10 +14,8 @@ eva-common = { features = ["events", "db", "workers", "common-payloads", "time"]
 log = { workspace = true }
 async-channel = { workspace = true }
 eva-sdk = { workspace = true }
-once_cell = { workspace = true }
 bmart = { workspace = true }
-sqlx = { version = "0.6.3", features = [
-"runtime-tokio-native-tls", "postgres", "chrono" ] }
+sqlx = { workspace = true, default-features = false, features = [ "runtime-tokio-native-tls", "postgres", "chrono" ] }
 futures = { workspace = true }
 chrono = { workspace = true }
 mimalloc = { workspace = true }

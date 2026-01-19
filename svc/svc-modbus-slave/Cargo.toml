@@ -12,12 +12,10 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 rmodbus = "0.6"
 tokio-serial = "5.4.4"
-once_cell = { workspace = true }
 
 [features]
 std-alloc = []

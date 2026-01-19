@@ -1,20 +1,17 @@
 use eva_common::common_payloads::{ParamsId, ParamsUuid};
-use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEventOwned};
 use eva_common::payload::pack;
 use eva_common::prelude::*;
-use eva_sdk::controller::{format_action_topic, Action};
+use eva_sdk::controller::{Action, format_action_topic};
 use eva_sdk::prelude::*;
-use lazy_static::lazy_static;
 use log::error;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 use uuid::Uuid;
 
-lazy_static! {
-    static ref ACTIVE: Mutex<ActiveOpeners> = <_>::default();
-}
+static ACTIVE: LazyLock<Mutex<ActiveOpeners>> = LazyLock::new(<_>::default);
 
 #[derive(Default)]
 struct ActiveOpeners {
@@ -114,14 +111,15 @@ impl Plan {
             std::cmp::Ordering::Equal => {}
             std::cmp::Ordering::Less => {
                 // going up
-                if let Some(te) = config.te {
-                    if requested_pos >= te && requested_pos != end_pos {
-                        let plan_te =
-                            Plan::generate(config, current_pos, end_pos, break_on_status_error)?;
-                        let plan_tgt =
-                            Plan::generate(config, end_pos, requested_pos, break_on_status_error)?;
-                        return Ok(plan_te + plan_tgt);
-                    }
+                if let Some(te) = config.te
+                    && requested_pos >= te
+                    && requested_pos != end_pos
+                {
+                    let plan_te =
+                        Plan::generate(config, current_pos, end_pos, break_on_status_error)?;
+                    let plan_tgt =
+                        Plan::generate(config, end_pos, requested_pos, break_on_status_error)?;
+                    return Ok(plan_te + plan_tgt);
                 }
                 match config.logic {
                     Logic::Ac => {
@@ -151,14 +149,13 @@ impl Plan {
             }
             std::cmp::Ordering::Greater => {
                 // going down
-                if let Some(ts) = config.ts {
-                    if requested_pos <= ts && requested_pos != 0 {
-                        let plan_ts =
-                            Plan::generate(config, current_pos, 0, break_on_status_error)?;
-                        let plan_tgt =
-                            Plan::generate(config, 0, requested_pos, break_on_status_error)?;
-                        return Ok(plan_ts + plan_tgt);
-                    }
+                if let Some(ts) = config.ts
+                    && requested_pos <= ts
+                    && requested_pos != 0
+                {
+                    let plan_ts = Plan::generate(config, current_pos, 0, break_on_status_error)?;
+                    let plan_tgt = Plan::generate(config, 0, requested_pos, break_on_status_error)?;
+                    return Ok(plan_ts + plan_tgt);
                 }
                 match config.logic {
                     Logic::Ac => {

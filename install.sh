@@ -250,7 +250,7 @@ fi
 case $ID_LIKE in
   debian)
     apt-get install -y -q --no-install-recommends \
-      bash jq curl procps ca-certificates tar gzip adduser || exit 10
+      bash jq curl procps ca-certificates tar gzip adduser libbsd-dev libsnmp-dev || exit 10
     if [ $MODE -ge 1 ]; then
       apt-get install -y -q --no-install-recommends \
         python3 || exit 10
@@ -288,7 +288,7 @@ case $ID_LIKE in
     ADDGROUP=$(command -v addgroup || echo /usr/sbin/addgroup)
     ;;
   fedora)
-    yum install -y bash jq curl procps ca-certificates tar gzip hostname which || exit 10
+    yum install -y bash jq curl procps ca-certificates tar gzip hostname which libbsd net-snmp-libs || exit 10
     if [ $MODE -ge 1 ]; then
       yum install -y python3
     fi

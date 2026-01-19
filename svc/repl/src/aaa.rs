@@ -1,15 +1,15 @@
 use eva_common::acl::Acl;
 use eva_sdk::prelude::*;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
 
-pub static KEYS: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(<_>::default);
-pub static ENC_OPTS: Lazy<Mutex<HashMap<String, psrpc::options::Options>>> =
-    Lazy::new(<_>::default);
-pub static ACLS: Lazy<Mutex<HashMap<String, Arc<Acl>>>> = Lazy::new(<_>::default);
+pub static KEYS: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(<_>::default);
+pub static ENC_OPTS: LazyLock<Mutex<HashMap<String, psrpc::options::Options>>> =
+    LazyLock::new(<_>::default);
+pub static ACLS: LazyLock<Mutex<HashMap<String, Arc<Acl>>>> = LazyLock::new(<_>::default);
 
 pub async fn get_acl(key_id: &str) -> EResult<Arc<Acl>> {
     #[derive(Serialize)]

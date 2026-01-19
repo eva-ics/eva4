@@ -1,7 +1,7 @@
 use crate::types::ModbusType;
 use crate::types::{Register, RegisterKind, RegisterValue};
 use eva_common::op::Op;
-use eva_common::{value::Value, EResult, Error};
+use eva_common::{EResult, Error, value::Value};
 use eva_sdk::bitman::BitMan;
 use ieee754::{Bits, Ieee754};
 use std::time::Duration;
@@ -135,9 +135,7 @@ async fn set_reg(
             } else {
                 TryInto::<u64>::try_into(value)? > 0
             };
-            tokio::time::timeout(op.timeout()?, modbus_client.set_bool(unit, reg, val))
-                .await?
-                .map_err(Into::into)
+            tokio::time::timeout(op.timeout()?, modbus_client.set_bool(unit, reg, val)).await?
         }
         RegisterKind::Holding => {
             let vals: Vec<u16> = match tp {
@@ -244,7 +242,6 @@ async fn set_reg(
             };
             tokio::time::timeout(op.timeout()?, modbus_client.set_u16_bulk(unit, reg, &vals))
                 .await?
-                .map_err(Into::into)
         }
     }
 }
@@ -277,7 +274,7 @@ async fn bus_get(
                     let rn = i + reg_no as usize;
                     if rn > u16::MAX as usize {
                         break;
-                    };
+                    }
                     result.push(RegisterValue::new0(
                         reg_kind,
                         rn as u16,

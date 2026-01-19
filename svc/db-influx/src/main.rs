@@ -8,12 +8,11 @@ use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, ItemState, ShortItemStateConnected, State, StateProp};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use simple_pool::ResourcePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, OnceLock, atomic};
 use std::time::Duration;
 
 err_logger!();
@@ -29,9 +28,9 @@ const DESCRIPTION: &str = "InfluxDB database service";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static CLIENT_POOL: OnceCell<ResourcePool<influx::InfluxClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static CLIENT_POOL: OnceLock<ResourcePool<influx::InfluxClient>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 struct Handlers {
@@ -48,7 +47,7 @@ fn process_state(
     match OID::from_path(path) {
         Ok(oid) => match unpack::<State>(payload) {
             Ok(v) => {
-                if v.value.as_ref().map_or(true, Value::is_numeric) {
+                if v.value.as_ref().is_none_or(Value::is_numeric) {
                     // TODO move to task pool (remove try_send)
                     let res = tx
                         .try_send(Event::State(ItemState::from_state(v, oid)))
@@ -177,15 +176,15 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
             }
         }
     }
@@ -204,7 +203,7 @@ enum Event {
 }
 
 impl Event {
-    fn as_data(&self) -> Data {
+    fn as_data(&self) -> Data<'_> {
         match self {
             Event::State(v) => Data::Single(v),
             Event::BulkState(v) => Data::Bulk(v),
@@ -282,7 +281,7 @@ async fn sender(rx: async_channel::Receiver<Event>, buf_ttl: Option<Duration>) {
             match event {
                 Event::State(state) => notify(Data::Single(&state)).await.log_ef(),
                 Event::BulkState(data) => notify(Data::Bulk(&data)).await.log_ef(),
-            };
+            }
         }
     }
 }

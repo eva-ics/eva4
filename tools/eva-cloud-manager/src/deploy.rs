@@ -67,15 +67,13 @@ async fn execute_extra(
                 } else {
                     None
                 };
-                if verbose {
-                    if let Some(ref p) = params {
-                        match serde_json::to_string_pretty(p) {
-                            Ok(s) => info!("bus command parameters:\n{}", s),
-                            Err(e) => error!("unable to print bus command parameters: {}", e),
-                        }
+                if verbose && let Some(ref p) = params {
+                    match serde_json::to_string_pretty(p) {
+                        Ok(s) => info!("bus command parameters:\n{}", s),
+                        Err(e) => error!("unable to print bus command parameters: {}", e),
                     }
                 }
-                match client.call::<Value>(node, target, method, params).await {
+                match client.rpc_call::<Value>(node, target, method, params).await {
                     Ok(v) => {
                         if verbose {
                             match serde_json::to_string_pretty(&v) {
@@ -316,7 +314,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             }
         }
     }
-    let client = EvaCloudClient::new(&system_name, bus_client, node_map);
+    let client = EvaCloudClient::from_eva_client(&system_name, bus_client, node_map);
     macro_rules! test_mp {
         ($method: expr, $x: expr) => {{
             let mut params: BTreeMap<&str, Vec<()>> = BTreeMap::new();
@@ -327,7 +325,9 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
     for node in &payload.content {
         let mut svcs_to_test: BTreeMap<&str, Option<(&str, Value)>> = BTreeMap::new();
         info!("testing node {}", node.node);
-        let _r: SystemInfo = client.call(&node.node, "eva.core", "test", None).await?;
+        let _r: SystemInfo = client
+            .rpc_call(&node.node, "eva.core", "test", None)
+            .await?;
         for f in &node.upload {
             svcs_to_test.insert(&f.svc, None);
         }
@@ -362,9 +362,13 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             }
             info!("testing service {}/{}", node.node, svc);
             if let Some((method, params)) = p {
-                client.call(&node.node, svc, method, Some(params)).await?;
+                client
+                    .rpc_call::<Value>(&node.node, svc, method, Some(params))
+                    .await?;
             } else {
-                client.call(&node.node, svc, "test", None).await?;
+                client
+                    .rpc_call::<Value>(&node.node, svc, "test", None)
+                    .await?;
             }
         }
     }
@@ -452,7 +456,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     download,
                 };
                 client
-                    .call(&node.node, &f.svc, "file.put", Some(to_value(params)?))
+                    .rpc_call::<Value>(&node.node, &f.svc, "file.put", Some(to_value(params)?))
                     .await?;
             }
             macro_rules! deploy_resource {
@@ -460,7 +464,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     if let ValueOptionOwned::Value(res) = $src {
                         info!("deploying {}", $name.replace("_", " "));
                         client
-                            .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
+                            .rpc_call::<Value>(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
                     }
                 };
@@ -477,7 +481,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     svcs_wait.insert(&svc.id);
                 }
                 client
-                    .call(
+                    .rpc_call::<Value>(
                         &node.node,
                         "eva.core",
                         "svc.deploy",
@@ -567,7 +571,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     if let ValueOptionOwned::Value(res) = $src {
                         info!("undeploying {}", $name.replace("_", " "));
                         client
-                            .call(&node.node, $svc, $fn, dp!($field, to_value(res)?))
+                            .rpc_call::<Value>(&node.node, $svc, $fn, dp!($field, to_value(res)?))
                             .await?;
                     }
                 };
@@ -606,7 +610,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
             if !node.svcs.is_empty() {
                 info!("undeploying services");
                 client
-                    .call(
+                    .rpc_call::<Value>(
                         &node.node,
                         "eva.core",
                         "svc.undeploy",
@@ -620,7 +624,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
                     path: &f.target.to_string_lossy(),
                 };
                 if let Err(e) = client
-                    .call::<()>(&node.node, &f.svc, "file.unlink", Some(to_value(params)?))
+                    .rpc_call::<()>(&node.node, &f.svc, "file.unlink", Some(to_value(params)?))
                     .await
                 {
                     warn!("{}", e);

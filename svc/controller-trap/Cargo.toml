@@ -13,14 +13,12 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
-ipnetwork = "0.20.0"
+ipnetwork = { workspace = true }
 snmp-parser = "0.8"
 snmptools = { version = "0.0.11", features = ["static"] }
 psrpc = { path = "../../psrpc" }
-once_cell = { workspace = true }
 
 [features]
 std-alloc = []

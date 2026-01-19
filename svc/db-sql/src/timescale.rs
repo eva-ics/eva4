@@ -67,13 +67,13 @@ pub async fn state_history_filled(
         eva_common::time::now_ns_float()
     };
     let mut query = format!(
-        r#"SELECT CAST(EXTRACT(EPOCH FROM period) AS DOUBLE PRECISION) AS t,{} FROM
+        "SELECT CAST(EXTRACT(EPOCH FROM period) AS DOUBLE PRECISION) AS t,{} FROM
 (SELECT time_bucket_gapfill(
     '{} seconds'::interval,
     to_timestamp(t/1000000000),
     start=>to_timestamp({}),
     finish=>to_timestamp({})) AS period, {} FROM state_history
-    WHERE oid='{}' AND t>={} and t<={} GROUP BY period"#,
+    WHERE oid='{}' AND t>={} and t<={} GROUP BY period",
         cols,
         fill.as_secs(),
         t_start,
@@ -92,10 +92,10 @@ pub async fn state_history_filled(
     let mut data = Vec::new();
     while let Some(row) = rows.try_next().await? {
         let t: f64 = row.try_get("t")?;
-        if let Some(e) = t_end {
-            if t > e {
-                break;
-            }
+        if let Some(e) = t_end
+            && t > e
+        {
+            break;
         }
         let status: Option<Value> = if need_status {
             let s: Option<i32> = row.try_get("status")?;

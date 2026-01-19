@@ -4,10 +4,9 @@ use eva_common::prelude::*;
 use eva_robots::{
     SequenceActionEntryOwned, SequenceActionOwned, SequenceEntryOwned, SequenceOwned,
 };
-use lazy_static::lazy_static;
 use log::{error, warn};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -18,9 +17,7 @@ struct SeqFut {
     wait: Duration,
 }
 
-lazy_static! {
-    static ref FUTS: Mutex<HashMap<Uuid, SeqFut>> = <_>::default();
-}
+static FUTS: LazyLock<Mutex<HashMap<Uuid, SeqFut>>> = LazyLock::new(<_>::default);
 
 async fn launch_action_entry(core: Arc<Core>, a: SequenceActionOwned) -> EResult<()> {
     let res = core

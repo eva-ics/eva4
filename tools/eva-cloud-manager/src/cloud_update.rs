@@ -243,7 +243,8 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     let system_name = info.system_name;
     info!("local node: {}", system_name);
     let mut node_map = NodeMap::new();
-    let nodes_all: Vec<NodeDataN> = match bus_client.call("eva.core", "node.list", None).await {
+    let nodes_all: Vec<NodeDataN> = match bus_client.call("eva.core", "node.list", None::<()>).await
+    {
         Ok(v) => v,
         Err(e) => {
             error!("unable to fetch node list");
@@ -266,7 +267,11 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     for node in nodes {
         if let Some(svc) = node.data.svc() {
             let ns = match bus_client
-                .call::<NodeDataS>(svc, "node.get", Some(to_value(ParamsId { i: &node.name })?))
+                .rpc_call::<NodeDataS, Value>(
+                    svc,
+                    "node.get",
+                    Some(to_value(ParamsId { i: &node.name })?),
+                )
                 .await
             {
                 Ok(v) => Some(v),
@@ -279,15 +284,13 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
                 if ns.managed {
                     node_map.insert(node.name.clone(), svc.to_owned());
                     managed.insert(node.name.clone());
-                    if update_all || requested_nodes.contains(&node.name) {
-                        if let Some(i) = node.data.info() {
-                            if info.ver.major_matches(&i.version).unwrap_or_default()
-                                && i.build < info.ver.build
-                            {
-                                info!("adding node {} to the update plan", node.name);
-                                update_candidates.push(node);
-                            }
-                        }
+                    if (update_all || requested_nodes.contains(&node.name))
+                        && let Some(i) = node.data.info()
+                        && info.ver.major_matches(&i.version).unwrap_or_default()
+                        && i.build < info.ver.build
+                    {
+                        info!("adding node {} to the update plan", node.name);
+                        update_candidates.push(node);
                     }
                 } else {
                     warn!("node {} is not managed, skipped", node.name);
@@ -296,13 +299,13 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
         }
     }
     let mut spoint_update_candidates: Vec<SPointDataFull> = Vec::new();
-    let client = EvaCloudClient::new(&system_name, bus_client, node_map);
+    let client = EvaCloudClient::from_eva_client(&system_name, bus_client, node_map);
     for node in &nodes_all {
         if (update_all && managed.contains(&node.name))
             || requested_spoint_nodes.contains(&node.name)
         {
             let spoint_node_data: Vec<SPointDataFull> = match client
-                .call::<Vec<SPointDataS>>(&node.name, "eva.core", "spoint.list", None)
+                .rpc_call::<Vec<SPointDataS>>(&node.name, "eva.core", "spoint.list", None)
                 .await
             {
                 Ok(v) => v
@@ -312,7 +315,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
                             || requested_nodes.contains(&sp.id(&node.name))
                             || requested_nodes.contains(&format!("{}/*", node.name))
                             || requested_nodes.contains(&format!("{}/#", node.name)))
-                            && sp.ver.as_ref().map_or(false, |i| {
+                            && sp.ver.as_ref().is_some_and(|i| {
                                 info.ver.major_matches(&i.version).unwrap_or_default()
                                     && i.build < info.ver.build
                             })
@@ -385,7 +388,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     for c in update_candidates {
         info!("sending update command to the node {}", c.name);
         match client
-            .call::<()>(&c.name, "eva.core", "update", Some(payload.clone()))
+            .rpc_call::<()>(&c.name, "eva.core", "update", Some(payload.clone()))
             .await
         {
             Ok(()) => {
@@ -409,11 +412,11 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
         tokio::time::sleep(WAIT_SLEEP_STEP).await;
         let mut updated = HashSet::new();
         for c in &wait_candidates {
-            if let Ok(v) = client.get_system_info(&c.name).await {
-                if v.ver == info.ver {
-                    updated.insert(c.name.clone());
-                    result.insert(c.name.clone(), UpdateResult::success(v.ver));
-                }
+            if let Ok(v) = client.get_system_info(&c.name).await
+                && v.ver == info.ver
+            {
+                updated.insert(c.name.clone());
+                result.insert(c.name.clone(), UpdateResult::success(v.ver));
             }
         }
         wait_candidates.retain(|n| !updated.contains(&n.name));
@@ -422,7 +425,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     // process failed nodes
     for n in wait_candidates {
         match client
-            .call::<NodeDataS>(
+            .rpc_call::<NodeDataS>(
                 ".local",
                 n.data.svc().unwrap(),
                 "node.get",
@@ -451,7 +454,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     // update s-points
     let mut wait_candidates = Vec::new();
     spoint_update_candidates.retain(|s| {
-        if result.get(&s.node).map_or(true, UpdateResult::is_success) {
+        if result.get(&s.node).is_none_or(UpdateResult::is_success) {
             true
         } else {
             result.insert(s.id(), UpdateResult::upd_fail(s.ver.clone()));
@@ -462,7 +465,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
         for c in spoint_update_candidates {
             info!("sending update command to the s-point {}", c.id());
             match client
-                .call::<()>(&c.node, &c.name, "update", Some(payload.clone()))
+                .rpc_call::<()>(&c.node, &c.name, "update", Some(payload.clone()))
                 .await
             {
                 Ok(()) => {
@@ -485,13 +488,12 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
         let mut updated = HashSet::new();
         for c in &wait_candidates {
             if let Ok(v) = client
-                .call::<SystemInfo>(&c.node, &c.name, "test", None)
+                .rpc_call::<SystemInfo>(&c.node, &c.name, "test", None)
                 .await
+                && v.ver == info.ver
             {
-                if v.ver == info.ver {
-                    updated.insert(c.id());
-                    result.insert(c.id(), UpdateResult::success(v.ver));
-                }
+                updated.insert(c.id());
+                result.insert(c.id(), UpdateResult::success(v.ver));
             }
         }
         wait_candidates.retain(|n| !updated.contains(&n.id()));
@@ -500,7 +502,7 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     // process failed s-points
     for n in wait_candidates {
         match client
-            .call::<SystemInfo>(&n.node, &n.name, "test", None)
+            .rpc_call::<SystemInfo>(&n.node, &n.name, "test", None)
             .await
         {
             Ok(v) => {

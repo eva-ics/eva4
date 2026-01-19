@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
-use crate::{aaa, ReplicationData};
-use crate::{nodes, ReplicationStateEventExtended};
+use crate::{ReplicationData, aaa};
+use crate::{ReplicationStateEventExtended, nodes};
 
 err_logger!();
 
@@ -183,7 +183,7 @@ impl psrpc::RpcHandlers for PubSubHandlers {
                         let oid_c = result
                             .get("oid")
                             .ok_or_else(|| Error::invalid_data("no OID in the result"))?;
-                        if let Value::String(ref o) = oid_c {
+                        if let Value::String(o) = oid_c {
                             let oid: OID = o.parse()?;
                             acl.require_item_read(&oid)?;
                         } else {
@@ -363,11 +363,11 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
         let p = opts.unpack_payload(msg.message, len).await?;
         let data: Vec<ReplicationData> = unpack(&p)?;
         for d in data {
-            if let Some((ref acl, ref key_id)) = auth {
-                if !acl.check_item_write(d.oid()) {
-                    warn!("key {} is not allowed to replicate {}", key_id, d.oid());
-                    continue;
-                }
+            if let Some((ref acl, ref key_id)) = auth
+                && !acl.check_item_write(d.oid())
+            {
+                warn!("key {} is not allowed to replicate {}", key_id, d.oid());
+                continue;
             }
             let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid().as_path());
             let rse = d.into_replication_state_event_extended(&system_name);

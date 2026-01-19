@@ -2,8 +2,8 @@ use crate::metric::Metric;
 use eva_common::err_logger;
 use eva_common::prelude::*;
 use log::info;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::OnceLock;
 use std::time::Duration;
 use sysinfo::System;
 
@@ -12,7 +12,7 @@ err_logger!();
 const REFRESH: Duration = Duration::from_secs(1);
 const REPORT_OS_INFO_EVERY: usize = 10;
 
-static CONFIG: OnceCell<Config> = OnceCell::new();
+static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub fn set_config(config: Config) -> EResult<()> {
     CONFIG
@@ -56,7 +56,7 @@ pub async fn report_worker() {
                 os_version: System::os_version(),
                 kernel_version: System::kernel_version(),
                 distribution_id: System::distribution_id(),
-                arch: System::cpu_arch(),
+                arch: Some(System::cpu_arch()),
             })
             .await
             .log_err_with("os info")

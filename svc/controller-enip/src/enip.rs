@@ -325,7 +325,7 @@ fn write_tag_sync(
         EipType::Int64 => unsafe { process_tag!(plctag::plc_tag_set_int64) },
         EipType::Real32 => unsafe { process_tag!(plctag::plc_tag_set_float32) },
         EipType::Real64 => unsafe { process_tag!(plctag::plc_tag_set_float64) },
-    };
+    }
     plc_write_tag(&path, id, op.timeout()?)?;
     if verify {
         if let Some(d) = crate::VERIFY_DELAY.get().unwrap() {

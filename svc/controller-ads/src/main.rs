@@ -1,16 +1,16 @@
-use eva_common::events::RawStateEvent;
 use eva_common::events::RAW_STATE_TOPIC;
+use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
-use eva_sdk::controller::{actt, Action};
+use eva_sdk::controller::{Action, actt};
 use eva_sdk::prelude::*;
 use eva_sdk::service::set_poc;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
+use std::sync::OnceLock;
+use std::sync::atomic;
 use std::time::Duration;
 
 err_logger!();
@@ -29,17 +29,14 @@ pub fn need_check_ready() -> bool {
     CHECK_READY.load(atomic::Ordering::Relaxed)
 }
 
-lazy_static! {
-    static ref ADS_VARS: Mutex<HashMap<String, Arc<adsbr::Var>>> = <_>::default();
-    static ref BRIDGE_ID: OnceCell<String> = <_>::default();
-    static ref DEVICE_ADDR: OnceCell<::ads::AmsAddr> = <_>::default();
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref VERIFY_DELAY: OnceCell<Option<Duration>> = <_>::default();
-    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
-        <_>::default();
-    static ref ACTT: OnceCell<actt::Actt> = <_>::default();
-    static ref RPC: OnceCell<Arc<RpcClient>> = <_>::default();
-}
+static ADS_VARS: LazyLock<Mutex<HashMap<String, Arc<adsbr::Var>>>> = LazyLock::new(<_>::default);
+static BRIDGE_ID: OnceLock<String> = OnceLock::new();
+static DEVICE_ADDR: OnceLock<::ads::AmsAddr> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static VERIFY_DELAY: OnceLock<Option<Duration>> = OnceLock::new();
+static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
+static ACTT: OnceLock<actt::Actt> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 
 fn get_device() -> ([u8; 6], u16) {
     let a = DEVICE_ADDR.get().unwrap();
@@ -241,25 +238,25 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     });
     adsbr::ping().await?;
-    if !config.pull.is_empty() {
-        if let Some(interval) = config.pull_interval {
-            let symbols: Vec<common::PullSymbol> = config
-                .pull
-                .into_iter()
-                .filter(|pull| pull.var().is_some())
-                .collect();
-            let rpc_c = rpc.clone();
-            let tx_c = tx.clone();
-            let startup_timeout = initial.startup_timeout();
-            let pull_cache_sec = config.pull_cache_sec;
+    if !config.pull.is_empty()
+        && let Some(interval) = config.pull_interval
+    {
+        let symbols: Vec<common::PullSymbol> = config
+            .pull
+            .into_iter()
+            .filter(|pull| pull.var().is_some())
+            .collect();
+        let rpc_c = rpc.clone();
+        let tx_c = tx.clone();
+        let startup_timeout = initial.startup_timeout();
+        let pull_cache_sec = config.pull_cache_sec;
+        tokio::spawn(async move {
+            let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
+            let tx_cc = tx_c.clone();
             tokio::spawn(async move {
-                let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
-                let tx_cc = tx_c.clone();
-                tokio::spawn(async move {
-                    pull::launch(symbols, interval, pull_cache_sec, tx_cc).await;
-                });
+                pull::launch(symbols, interval, pull_cache_sec, tx_cc).await;
             });
-        }
+        });
     }
     let mut action_queues: HashMap<OID, async_channel::Sender<Action>> = HashMap::new();
     for (oid, map) in config.action_map {

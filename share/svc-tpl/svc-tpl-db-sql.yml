@@ -4,9 +4,8 @@ workers: 1
 bus:
   path: var/bus.ipc
 config:
-  # database URI (supported: sqlite, mysql, postgres)
+  # database URI (supported: sqlite, postgres)
   db: sqlite:///tmp/eva_history.db
-  # db: mysql://USER:PASSWORD@HOST/DB
   # db: postgres://USER:PASSWORD@HOST/DB
   # TS extension (supported: timescale), required for fills
   #ts_extension: timescale

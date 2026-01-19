@@ -1,17 +1,17 @@
 use super::Metric;
 use eva_common::err_logger;
-use eva_common::events::{RawStateEvent, RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEvent, RawStateEventOwned};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::collections::HashSet;
+use std::sync::{LazyLock, OnceLock};
 
 err_logger!();
 
-static OID_PREFIX: OnceCell<String> = OnceCell::new();
-static OIDS_CREATED: Lazy<Mutex<HashSet<OID>>> = Lazy::new(<_>::default);
+static OID_PREFIX: OnceLock<String> = OnceLock::new();
+static OIDS_CREATED: LazyLock<Mutex<HashSet<OID>>> = LazyLock::new(<_>::default);
 
 pub fn set_oid_prefix(prefix: String) -> EResult<()> {
     format!("{}/id", prefix).parse::<OID>()?;

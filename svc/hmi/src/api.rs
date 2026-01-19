@@ -1,7 +1,7 @@
+use crate::ApiKeyId;
 use crate::aaa::{self, Auth, Token};
 use crate::aci::{self, ACI};
 use crate::db;
-use crate::ApiKeyId;
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::{IdOrListOwned, ValueOrList};
 use eva_common::common_payloads::{ParamsIdOrListOwned, ParamsIdOwned};
@@ -10,11 +10,10 @@ use eva_common::prelude::*;
 use eva_sdk::fs as sdkfs;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{CompactStateHistory, Fill, HistoricalState, StateProp};
-use lazy_static::lazy_static;
 use log::{error, trace};
 use rjrpc::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{btree_map, BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, btree_map};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -32,9 +31,7 @@ const ERR_DEMO_MODE: &str = "disabled in demo mode";
 
 const API_VERSION: u16 = 4;
 
-lazy_static! {
-    static ref EHMI_LOCK: Mutex<()> = <_>::default();
-}
+static EHMI_LOCK: Mutex<()> = Mutex::const_new(());
 
 macro_rules! parse_ts {
     ($t: expr) => {
@@ -83,28 +80,26 @@ async fn login_meta(meta: JsonRpcRequestMeta, ip: Option<IpAddr>) -> EResult<Val
         let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
         Box::pin(login(&creds.0, &creds.1, None, None, ip, &source, false)).await
     } else {
-        if let Some(token) = meta.external_token() {
-            if let Some(verifier) = crate::OIDC_VERIFIER.get() {
-                match verifier.verify(token) {
-                    Ok(sub) => {
-                        debug!("external token verified for user: {}", sub);
-                        let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
-                        if let Ok(v) =
-                            Box::pin(login(&sub, "", None, None, ip, &source, true)).await
-                        {
-                            return Ok(v);
-                        }
+        if let Some(token) = meta.external_token()
+            && let Some(verifier) = crate::OIDC_VERIFIER.get()
+        {
+            match verifier.verify(token) {
+                Ok(sub) => {
+                    debug!("external token verified for user: {}", sub);
+                    let source = ip.map_or_else(|| "-".to_owned(), |v| v.to_string());
+                    if let Ok(v) = Box::pin(login(&sub, "", None, None, ip, &source, true)).await {
+                        return Ok(v);
                     }
-                    Err(e) => {
-                        debug!("external token verification failed: {}", e);
-                    }
+                }
+                Err(e) => {
+                    debug!("external token verification failed: {}", e);
                 }
             }
         }
-        if let Some(agent) = meta.agent() {
-            if agent.starts_with("evaHI ") {
-                return Err(Error::new0(ErrorKind::EvaHIAuthenticationRequired));
-            }
+        if let Some(agent) = meta.agent()
+            && agent.starts_with("evaHI ")
+        {
+            return Err(Error::new0(ErrorKind::EvaHIAuthenticationRequired));
         }
         Err(Error::access("No authentication data provided"))
     }
@@ -230,15 +225,15 @@ async fn run_api_filter(
         if code == 0 {
             Ok(())
         } else {
-            if let Some(err) = res.err {
-                if !err.is_empty() {
-                    return Err(Error::access(err));
-                }
+            if let Some(err) = res.err
+                && !err.is_empty()
+            {
+                return Err(Error::access(err));
             }
-            if let Some(out) = res.out {
-                if !out.is_empty() {
-                    return Err(Error::access(out));
-                }
+            if let Some(out) = res.out
+                && !out.is_empty()
+            {
+                return Err(Error::access(out));
             }
             Err(Error::access("Denied by API filter"))
         }
@@ -351,10 +346,10 @@ async fn login(
             Err(e) => {
                 match e.kind() {
                     ErrorKind::AccessDenied => {
-                        if let Some(msg) = e.message() {
-                            if msg.starts_with('|') {
-                                return Err(e);
-                            }
+                        if let Some(msg) = e.message()
+                            && msg.starts_with('|')
+                        {
+                            return Err(e);
                         }
                     }
                     ErrorKind::AccessDeniedMoreDataRequired => {
@@ -387,12 +382,11 @@ async fn method_call(params: Value, meta: JsonRpcRequestMeta) -> EResult<Value> 
     }
     let p = Params::deserialize(params)?;
     let (call_method, mut call_params) = crate::call_parser::parse_call_str(&p.q)?;
-    if let Some(key) = p.k {
-        if let Value::Map(ref mut m) = call_params {
-            if let btree_map::Entry::Vacant(entry) = m.entry(Value::String("k".to_owned())) {
-                entry.insert(Value::String(key));
-            }
-        }
+    if let Some(key) = p.k
+        && let Value::Map(ref mut m) = call_params
+        && let btree_map::Entry::Vacant(entry) = m.entry(Value::String("k".to_owned()))
+    {
+        entry.insert(Value::String(key));
     }
     if call_method == "call" {
         Err(Error::new(ErrorKind::MethodNotFound, ERR_NO_METHOD))
@@ -699,7 +693,7 @@ async fn method_session_list_neighbors(params: Value, aci: &mut ACI) -> EResult<
     let tokens = aaa::list_neighbors().await?;
     let result: Vec<TokenInfo> = tokens
         .iter()
-        .filter(|v| aci.token().map_or(true, |t| t.id() != v.id()))
+        .filter(|v| aci.token().is_none_or(|t| t.id() != v.id()))
         .map(Into::into)
         .collect();
     to_value(result).map_err(Into::into)
@@ -1119,15 +1113,15 @@ async fn method_item_state_history(params: Value, aci: &mut ACI) -> EResult<Valu
                                     // possible if the new time serie period has been started
                                     // between requests - simply shrink the received data to match
                                     result.set_time.drain(ts.len()..);
-                                    if let Some(ref mut s) = result.status {
-                                        if s.len() > ts.len() {
-                                            s.drain(ts.len()..);
-                                        }
+                                    if let Some(ref mut s) = result.status
+                                        && s.len() > ts.len()
+                                    {
+                                        s.drain(ts.len()..);
                                     }
-                                    if let Some(ref mut v) = result.value {
-                                        if v.len() > ts.len() {
-                                            v.drain(ts.len()..);
-                                        }
+                                    if let Some(ref mut v) = result.value
+                                        && v.len() > ts.len()
+                                    {
+                                        v.drain(ts.len()..);
                                     }
                                 }
                                 std::cmp::Ordering::Equal => {}
@@ -1389,7 +1383,9 @@ async fn method_action(params: Value, aci: &mut ACI) -> EResult<Value> {
     let p_f = prepare_api_filter_params!(params);
     let p = ParamsAction::deserialize(params)?;
     if p.status.is_some() {
-        warn!("status field in actions is ignored and deprecated. remove the field from API call payloads");
+        warn!(
+            "status field in actions is ignored and deprecated. remove the field from API call payloads"
+        );
     }
     aci.log_param("i", &p.i)?;
     if let Some(status) = p.status {
@@ -1564,7 +1560,7 @@ async fn method_action_result(params: Value, aci: &mut ACI) -> EResult<Value> {
     let oid_c = result
         .get("oid")
         .ok_or_else(|| Error::invalid_data("no OID in the result"))?;
-    if let Value::String(ref o) = oid_c {
+    if let Value::String(o) = oid_c {
         let oid: OID = o.parse()?;
         aci.acl().require_item_read(&oid)?;
     } else {
@@ -1599,11 +1595,11 @@ async fn method_action_terminate(params: Value, aci: &mut ACI) -> EResult<Value>
             .await?
             .payload(),
     )?;
-    if let Value::Map(ref m) = info {
+    if let Value::Map(m) = info {
         let oid_c = m
             .get(&Value::String("oid".to_owned()))
             .ok_or_else(|| Error::invalid_data("no OID in the result"))?;
-        if let Value::String(ref o) = oid_c {
+        if let Value::String(o) = oid_c {
             let oid: OID = o.parse()?;
             aci.acl().require_item_write(&oid)?;
         } else {
@@ -2287,7 +2283,7 @@ async fn method_dobj_get_struct_code(params: Value, aci: &mut ACI) -> EResult<Va
         if !code.is_empty() {
             code.push('\n');
         }
-        code.push_str(&code_gen.generate_struct(&data_object));
+        code.push_str(&code_gen.try_generate_struct(&data_object)?);
         code.push('\n');
     }
     to_value(Response { code }).map_err(Into::into)

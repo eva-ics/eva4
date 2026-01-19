@@ -1,9 +1,6 @@
 #!/bin/sh
 
-ARCHS="aarch64-musl x86_64-musl x86_64-ubuntu20.04"
-RUST_VER_REQUIRED="1.86.0"
-
-export RUST_VER_REQUIRED
+ARCHS="aarch64 x86_64"
 
 export NVM_DIR="$HOME/.nvm"
 
@@ -13,6 +10,8 @@ nvm use v20.7.0
 npm config set fund false
 
 [ -d /build/eva4 ] && export BUILD_DIR=/build
+
+make docker-cross || exit 1
 
 ./dev/make-vendored-apps || exit 1
 

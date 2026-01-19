@@ -1,5 +1,5 @@
 use eva_common::err_logger;
-use eva_common::events::{RawStateEventOwned, RAW_STATE_TOPIC};
+use eva_common::events::{RAW_STATE_TOPIC, RawStateEventOwned};
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_sdk::hmi::XParamsOwned;
@@ -21,7 +21,7 @@ struct Handlers {
     info: ServiceInfo,
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl RpcHandlers for Handlers {
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
         svc_rpc_need_ready!();

@@ -1,5 +1,5 @@
-use crate::common::{safe_run_macro, LParams, ParamsRun, TrapData};
-use crate::{Config, Proto, MAX_TRAP_SIZE};
+use crate::common::{LParams, ParamsRun, TrapData, safe_run_macro};
+use crate::{Config, MAX_TRAP_SIZE, Proto};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use snmp_parser::ObjectSyntax;
@@ -11,6 +11,7 @@ err_logger!();
 #[allow(clippy::too_many_lines)]
 pub async fn launch_handler(socket: &UdpSocket, config: &Config, rpc: &RpcClient) -> EResult<()> {
     loop {
+        #[allow(clippy::large_stack_arrays)]
         let mut buf = [0; MAX_TRAP_SIZE];
         let (_len, addr) = socket.recv_from(&mut buf).await?;
         let ip = addr.ip();
@@ -37,13 +38,13 @@ pub async fn launch_handler(socket: &UdpSocket, config: &Config, rpc: &RpcClient
                 if config.verbose {
                     info!("SNMP trap addr: {}, community: {}", ip, msg.community);
                 }
-                if let Some(ref comm) = config.communities {
-                    if !comm.contains(&msg.community) {
-                        warn!(
-                            "community {} is not in communities list, ignoring SNMP trap from {}",
-                            msg.community, ip
-                        );
-                    }
+                if let Some(ref comm) = config.communities
+                    && !comm.contains(&msg.community)
+                {
+                    warn!(
+                        "community {} is not in communities list, ignoring SNMP trap from {}",
+                        msg.community, ip
+                    );
                 }
                 let mut vars = HashMap::new();
                 for var in msg.vars_iter() {

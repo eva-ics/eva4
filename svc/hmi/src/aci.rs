@@ -1,5 +1,5 @@
 use crate::aaa::{Auth, Token};
-use crate::{db, USER_DIRS};
+use crate::{USER_DIRS, db};
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, Utc};
 use eva_common::acl::Acl;
 use eva_common::err_logger;
@@ -7,7 +7,7 @@ use eva_common::prelude::*;
 use futures::TryStreamExt;
 use log::{error, trace};
 use serde::Deserialize;
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeMap};
 use sqlx::Row;
 use std::collections::BTreeMap;
 use std::sync::atomic;
@@ -130,7 +130,7 @@ where
     }
     let mut map = serializer.serialize_map(Some(map_len))?;
     map.serialize_entry("auth", auth.as_str())?;
-    if let Auth::Token(ref token) = auth {
+    if let Auth::Token(token) = auth {
         map.serialize_entry("token_mode", token.mode_as_str())?;
         map.serialize_entry("u", token.user())?;
         map.serialize_entry("auth_svc", token.auth_svc().trim_start_matches("eva.aaa."))?;
@@ -227,10 +227,10 @@ impl ACI {
             if s == user_path {
                 return true;
             }
-            if let Some(x) = s.strip_prefix(&user_path) {
-                if x.starts_with('/') {
-                    return true;
-                }
+            if let Some(x) = s.strip_prefix(&user_path)
+                && x.starts_with('/')
+            {
+                return true;
             }
         }
         self.acl().check_pvt_read(s)
@@ -240,16 +240,16 @@ impl ACI {
             if s == user_path {
                 return true;
             }
-            if let Some(x) = s.strip_prefix(&user_path) {
-                if x.starts_with('/') {
-                    return true;
-                }
+            if let Some(x) = s.strip_prefix(&user_path)
+                && x.starts_with('/')
+            {
+                return true;
             }
         }
         self.acl().check_pvt_write(s)
     }
     #[inline]
-    pub fn as_extended_info(&self) -> ACIExtendedInfo {
+    pub fn as_extended_info(&self) -> ACIExtendedInfo<'_> {
         ACIExtendedInfo {
             auth: &self.auth,
             source: &self.source,
@@ -295,10 +295,10 @@ impl ACI {
     }
     #[inline]
     pub fn writable(&self) -> bool {
-        if let Auth::Token(ref token) = self.auth {
-            if token.is_readonly() {
-                return false;
-            }
+        if let Auth::Token(ref token) = self.auth
+            && token.is_readonly()
+        {
+            return false;
         }
         true
     }
@@ -342,8 +342,9 @@ impl ACI {
             self.source,
             self.method
         );
-        if api_log_enabled() && level <= log::Level::Info {
-            if let Err(e) = db::api_log_insert(
+        if api_log_enabled()
+            && level <= log::Level::Info
+            && let Err(e) = db::api_log_insert(
                 &self.id_str,
                 &self.auth,
                 &self.source,
@@ -353,9 +354,8 @@ impl ACI {
                 self.note.as_deref(),
             )
             .await
-            {
-                error!("db log req error: {}", e);
-            }
+        {
+            error!("db log req error: {}", e);
         }
         Ok(())
     }
@@ -370,10 +370,10 @@ impl ACI {
         );
         if self.log_level <= log::Level::Info {
             self.do_accounting(None).await;
-            if api_log_enabled() {
-                if let Err(e) = db::api_log_mark_success(&self.id_str, elapsed).await {
-                    error!("db log mark success error: {}", e);
-                }
+            if api_log_enabled()
+                && let Err(e) = db::api_log_mark_success(&self.id_str, elapsed).await
+            {
+                error!("db log mark success error: {}", e);
             }
         }
     }
@@ -383,10 +383,10 @@ impl ACI {
         error!("API request {} failed. {} ({} sec)", self.id, err, elapsed);
         if self.log_level <= log::Level::Info {
             self.do_accounting(Some(err)).await;
-            if api_log_enabled() {
-                if let Err(e) = db::api_log_mark_error(&self.id_str, elapsed, err).await {
-                    error!("db log mark err error: {}", e);
-                }
+            if api_log_enabled()
+                && let Err(e) = db::api_log_mark_error(&self.id_str, elapsed, err).await
+            {
+                error!("db log mark err error: {}", e);
             }
         }
     }

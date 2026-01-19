@@ -1,15 +1,14 @@
-use eva_common::events::RawStateEvent;
 use eva_common::events::RAW_STATE_TOPIC;
+use eva_common::events::RawStateEvent;
 use eva_common::prelude::*;
 use eva_sdk::controller::RawStateCache;
-use eva_sdk::controller::{actt, Action};
+use eva_sdk::controller::{Action, actt};
 use eva_sdk::prelude::*;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::sync::atomic;
 use std::time::Duration;
 
 err_logger!();
@@ -20,13 +19,10 @@ mod eapi;
 mod pull;
 mod w1;
 
-lazy_static! {
-    static ref TIMEOUT: OnceCell<Duration> = <_>::default();
-    static ref VERIFY_DELAY: OnceCell<Option<Duration>> = <_>::default();
-    static ref ACTION_QUEUES: OnceCell<HashMap<OID, async_channel::Sender<Action>>> =
-        <_>::default();
-    static ref ACTT: OnceCell<actt::Actt> = <_>::default();
-}
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static VERIFY_DELAY: OnceLock<Option<Duration>> = OnceLock::new();
+static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
+static ACTT: OnceLock<actt::Actt> = OnceLock::new();
 
 const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");

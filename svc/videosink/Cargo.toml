@@ -1,30 +1,23 @@
 [package]
 name = "eva-videosink"
-version = "4.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+publish = false
 
 [dependencies]
-async-channel = "1.9"
-async-trait = "0.1"
-bma-ts = "0.1.15"
-eva-common = { version = "0.3.117", features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
-eva-sdk = { version = "0.3", features = ["controller"] }
-gst = { version = "0.22", package = "gstreamer" }
-gst-app = { version = "0.22", package = "gstreamer-app" }
-log = "0.4"
-mimalloc = "0.1"
-once_cell = "1.20"
-parking_lot_rt = "0.12.1"
-rtsc = "0.3.15"
-serde = { version = "1", features = ["derive", "rc"] }
-tokio = { version = "1.36", features = ["full"] }
+async-channel = { workspace = true }
+async-trait = { workspace = true }
+bma-ts = { workspace = true }
+eva-common = { workspace = true, features = ["events", "common-payloads", "payload", "acl", "multimedia"] }
+eva-sdk = { workspace = true, features = ["controller"] }
+gst = { version = "0.24", package = "gstreamer" }
+gst-app = { version = "0.24", package = "gstreamer-app" }
+log = { workspace = true }
+mimalloc = { workspace = true }
+parking_lot = { workspace = true }
+rtsc = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
+tokio = { workspace = true, features = ["full"] }
 
 [features]
 std-alloc = []
-openssl-vendored = ["eva-common/openssl-vendored", "eva-common/openssl-no-fips"]
-openssl3 = ["eva-common/openssl3"]
-
-[profile.release]
-strip = true
-lto = true
-codegen-units = 1

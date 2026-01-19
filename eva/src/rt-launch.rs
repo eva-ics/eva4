@@ -44,10 +44,10 @@ fn apply_current_thread_params(params: &services::RealtimeConfig) -> EResult<()>
             )));
         }
     }
-    if let Some(prealloc_heap) = params.prealloc_heap {
-        if prealloc_heap > 0 {
-            eprintln!("Heap preallocation is not available");
-        }
+    if let Some(prealloc_heap) = params.prealloc_heap
+        && prealloc_heap > 0
+    {
+        eprintln!("Heap preallocation is not available");
     }
     Ok(())
 }

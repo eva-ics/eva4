@@ -1,17 +1,17 @@
 use base64::{decode, encode};
 use eva_common::prelude::*;
-use once_cell::sync::OnceCell;
 use openssl::pkcs5;
 use openssl::rand::rand_bytes;
 use openssl::sha::{Sha256, Sha512};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{self, Write as _};
 use std::str::FromStr;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 const DEFAULT_MIN_CTIME: Duration = Duration::from_millis(200);
 
-static MIN_CTIME: OnceCell<Duration> = OnceCell::new();
+static MIN_CTIME: OnceLock<Duration> = OnceLock::new();
 
 /// Must be called only once
 pub fn set_min_ctime(duration: Duration) -> EResult<()> {
@@ -328,7 +328,7 @@ impl PasswordPolicy {
 
 #[cfg(test)]
 mod test {
-    use super::{aes_gcm_nonce, random_string, Password};
+    use super::{Password, aes_gcm_nonce, random_string};
     #[test]
     fn test_random_string() {
         for _ in 0..1000 {

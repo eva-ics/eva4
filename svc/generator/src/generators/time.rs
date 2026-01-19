@@ -1,5 +1,5 @@
 use super::GeneratorSource;
-use crate::target::{notify, Target};
+use crate::target::{Target, notify};
 use chrono::{Datelike, Local, Timelike, Utc};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;

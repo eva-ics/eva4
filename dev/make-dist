@@ -2,13 +2,6 @@
 
 . ~/.cargo/env
 
-RUST_VER=$(rustc --version|awk '{ print $2 }')
-
-if [ "$RUST_VER" != "$RUST_VER_REQUIRED" ]; then
-  echo "Rust compiler version differs, required: ${RUST_VER_REQUIRED}, got: ${RUST_VER}"
-  exit 2
-fi
-
 ARCH=$1
 [ -z "${BUILD_DIR}" ] && BUILD_DIR=/tdata/_eva4_build
 
@@ -18,40 +11,23 @@ if [ -z "$ARCH" ]; then
 fi
 
 case $ARCH in
-  x86_64-musl)
-    TARGET=x86_64-unknown-linux-musl
-    GNU_TARGET=x86_64-unknown-linux-gnu
+  x86_64)
+    TARGET=x86_64-unknown-linux-gnu
     STRIP=strip
     YEDB_ARCH=x86_64
     CARGO=cross
-    CARGO_ARGS="--features openssl-vendored"
+    CARGO_ARGS="--features fips"
     CARGO_WORKSPACE_EXTRA_ARGS=
     CARGO_TARGET_DIR=target
     ;;
-  aarch64-musl)
-    TARGET=aarch64-unknown-linux-musl
-    GNU_TARGET=aarch64-unknown-linux-gnu
+  aarch64)
+    TARGET=aarch64-unknown-linux-gnu
     STRIP=aarch64-linux-gnu-strip
     YEDB_ARCH=aarch64
     CARGO=cross
-    CARGO_ARGS="--features openssl-vendored"
+    CARGO_ARGS="--features fips"
     CARGO_WORKSPACE_EXTRA_ARGS=
     CARGO_TARGET_DIR=target
-    ;;
-  x86_64-ubuntu20.04)
-    TARGET=x86_64-unknown-linux-gnu
-    GNU_TARGET=${TARGET}
-    STRIP=strip
-    YEDB_ARCH=x86_64-ubuntu20.04
-    CARGO=cargo
-    CARGO_ARGS=
-    CARGO_WORKSPACE_EXTRA_ARGS="--features aws-lc-rs/fips"
-    CARGO_TARGET_DIR=target-native
-    export CARGO_TARGET_DIR
-    if ! lsb_release -cs|grep ^focal$ ; then
-      echo "not ubuntu20.04"
-      exit 5
-    fi
     ;;
   *)
     echo "Unsupported architecture"
@@ -116,7 +92,7 @@ else
 fi
 
 cd yml2mp || exit 1
-"${CARGO}" build --target "${TARGET}" --release || exit 1
+CROSS_CONFIG=../eva4/Cross.toml "${CARGO}" build --target "${TARGET}" --release || exit 1
 cd ..
 
 #echo "Building rsatool..."
@@ -144,7 +120,7 @@ else
 fi
 
 cd busrt || exit 1
-"${CARGO}" build --target "${TARGET}" --release --features cli || exit 1
+CROSS_CONFIG=../eva4/Cross.toml "${CARGO}" build --target "${TARGET}" --release --features cli || exit 1
 cd ..
 
 echo "Downloading EVA ICS sources..."
@@ -166,35 +142,9 @@ ARCH=$YEDB_ARCH ./install/install-yedb || exit 1
 echo "Building EVA ICS..."
 ARCH_SFX=$ARCH
 export ARCH_SFX
-DOCKER_OPTS="-v /opt/libplctag:/opt/libplctag -v /opt/libnetsnmp:/opt/libnetsnmp -v /opt/libow:/opt/libow -v /tdata/src:/tdata/src -e ARCH_SFX=${ARCH}" \
+DOCKER_OPTS="-v /tdata/src:/tdata/src" \
   "${CARGO}" build --target "${TARGET}" --release ${CARGO_ARGS} ${CARGO_WORKSPACE_EXTRA_ARGS} || exit 1
 cd .. || exit 1
-
-echo "Building controller system SVC..."
-cd eva4/svc/controller-system || exit 1
-"${CARGO}" build --target "${TARGET}" --release --features service ${CARGO_ARGS} || exit 1
-cd ../../.. || exit 1
-
-echo "Building FFI SVC..."
-cd eva4/svc/ffi || exit 1
-"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
-cd ../../.. || exit 1
-
-echo "Building VideoSink SVC..."
-cd eva4/svc/videosink || exit 1
-just prepare || exit 1
-"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
-cd ../../.. || exit 1
-
-echo "Building GST pipeline SVC..."
-cd eva4/svc/gst-pipeline || exit 1
-"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
-cd ../../.. || exit 1
-
-echo "Building VideoServer Enterprise extension..."
-cd eva4-enterprise/eva4-esvc/videosrv || exit 1
-"${CARGO}" build --target "${GNU_TARGET}" --release ${CARGO_ARGS} || exit 1
-cd ../../.. || exit 1
 
 echo "Building Enterprise extensions..."
 if [ -d eva4-enterprise ]; then
@@ -239,14 +189,19 @@ for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
   eva-controller-modbus \
   eva-controller-opcua \
   eva-controller-pubsub \
+  eva-gst-pipeline \
+  eva-controller-system \
+  eva-ffi \
+  eva-videosink \
   eva-controller-w1 \
   eva-controller-sr \
   eva-controller-virtual \
   eva-controller-lm \
   eva-controller-trap \
   eva-controller-dobj \
+  eva-controller-netmon \
   eva-svc-modbus-slave \
-  eva-db-influx eva-db-sql eva-db-timescale eva-svc-filewriter \
+  eva-db-influx eva-db-sql eva-db-timescale eva-svc-filewriter eva-db-json \
   eva-hmi eva-repl eva-repl-uni eva-svc-mirror eva-svc-generator \
   eva-svc-expiration eva-filemgr eva-dapp \
   eva-svc-locker eva-svc-mailer; do
@@ -254,15 +209,9 @@ for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
-cp -vf "../eva4/svc/controller-system/${CARGO_TARGET_DIR}/${TARGET}/release/eva-controller-system" svc/ || exit 1
-cp -vf "../eva4/svc/ffi/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-ffi" svc/ || exit 1
-cp -vf "../eva4/svc/videosink/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosink" svc/ || exit 1
-cp -vf "../eva4/svc/gst-pipeline/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-gst-pipeline" svc/ || exit 1
-
-cp -vf "../eva4-enterprise/eva4-esvc/videosrv/${CARGO_TARGET_DIR}/${GNU_TARGET}/release/eva-videosrv" svc/ || exit 1
 for svc in eva-aaa-msad \
   eva-kioskman eva-rtmon eva-aaa-accounting eva-svc-alarms \
-  eva-zfrepl; do
+  eva-zfrepl eva-videosrv; do
   cp -rvf "../eva4-enterprise/eva4-esvc/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done

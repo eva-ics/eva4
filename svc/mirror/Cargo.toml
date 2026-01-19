@@ -12,11 +12,9 @@ tokio = { features = ["full"] , workspace = true }
 async-trait = { workspace = true }
 serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
-lazy_static = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 hyper = { features = ["server", "tcp", "http1", "http2"] , workspace = true }
-once_cell = { workspace = true }
 serde_yaml = { workspace = true }
 hyper-static = "0.1"
 

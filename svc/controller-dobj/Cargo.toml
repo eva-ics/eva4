@@ -15,7 +15,6 @@ serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
-once_cell = { workspace = true }
 
 [features]
 std-alloc = []

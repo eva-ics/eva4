@@ -2,9 +2,8 @@ use async_trait::async_trait;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::{poc, set_poc};
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::RwLock;
@@ -51,7 +50,7 @@ mod server {
                 frame
                     .process_write(&mut *crate::CONTEXT.write().await)
                     .map_err(Error::io)?;
-            };
+            }
         }
         Ok(())
     }
@@ -61,11 +60,9 @@ mod server {
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-lazy_static! {
-    pub static ref CONTEXT: RwLock<rmodbus::server::context::ModbusContext> =
-        RwLock::new(rmodbus::server::context::ModbusContext::new());
-    static ref DATA_FILE: OnceCell<String> = <_>::default();
-}
+pub static CONTEXT: LazyLock<RwLock<rmodbus::server::context::ModbusContext>> =
+    LazyLock::new(|| RwLock::new(rmodbus::server::context::ModbusContext::new()));
+static DATA_FILE: OnceLock<String> = OnceLock::new();
 
 struct Handlers {
     info: ServiceInfo,
@@ -248,29 +245,29 @@ async fn main(mut initial: Initial) -> EResult<()> {
         }
     }
     initial.drop_privileges()?;
-    if config.persistent {
-        if let Some(data_path) = initial.data_path() {
-            let data_file = format!("{}/{}", data_path, "context");
-            DATA_FILE
-                .set(data_file)
-                .map_err(|_| Error::core("Unable to set DATA_FILE"))?;
-            match load_context_data().await {
-                Ok(Some(data)) => {
-                    info!("context loaded");
-                    CONTEXT
-                        .write()
-                        .await
-                        .create_writer()
-                        .write_bulk(&data)
-                        .map_err(Error::io)?;
-                }
-                Ok(None) => {}
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                    info!("context not loaded (file not found), empty context created");
-                }
-                Err(e) => {
-                    return Err(e.into());
-                }
+    if config.persistent
+        && let Some(data_path) = initial.data_path()
+    {
+        let data_file = format!("{}/{}", data_path, "context");
+        DATA_FILE
+            .set(data_file)
+            .map_err(|_| Error::core("Unable to set DATA_FILE"))?;
+        match load_context_data().await {
+            Ok(Some(data)) => {
+                info!("context loaded");
+                CONTEXT
+                    .write()
+                    .await
+                    .create_writer()
+                    .write_bulk(&data)
+                    .map_err(Error::io)?;
+            }
+            Ok(None) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                info!("context not loaded (file not found), empty context created");
+            }
+            Err(e) => {
+                return Err(e.into());
             }
         }
     }

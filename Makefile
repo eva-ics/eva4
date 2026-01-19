@@ -1,4 +1,4 @@
-VERSION=4.1.0
+VERSION=4.2.0
 
 all:
 	@echo select target
@@ -74,3 +74,8 @@ update-version:
 
 repo-cleanup:
 	@./dev/repo-cleanup.sh
+
+docker-cross:
+	cd docker.cross && \
+		docker build -t bmauto/eva4-cross-aarch64 . -f Dockerfile.rust.aarch64 && \
+		docker build -t bmauto/eva4-cross-x86_64 . -f Dockerfile.rust.x86_64

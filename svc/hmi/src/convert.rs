@@ -69,28 +69,28 @@ pub fn parse_convert_to<'a>(
     uri: &'a str,
     params: Option<&'a HashMap<String, String>>,
 ) -> EResult<Option<Convert<'a>>> {
-    if let Some(q) = params {
-        if let Some(a) = q.get("as") {
-            let format = match a.as_str() {
-                "yaml" | "yml" => Format::Yaml,
-                "json" => Format::Json,
-                "js" => {
-                    if let Some(var) = q.get("var") {
-                        Format::Js(Js::Var(var))
-                    } else if let Some(func) = q.get("func") {
-                        Format::Js(Js::Func(func))
-                    } else {
-                        return Err(Error::new0(ErrorKind::InvalidParameter));
-                    }
+    if let Some(q) = params
+        && let Some(a) = q.get("as")
+    {
+        let format = match a.as_str() {
+            "yaml" | "yml" => Format::Yaml,
+            "json" => Format::Json,
+            "js" => {
+                if let Some(var) = q.get("var") {
+                    Format::Js(Js::Var(var))
+                } else if let Some(func) = q.get("func") {
+                    Format::Js(Js::Func(func))
+                } else {
+                    return Err(Error::new0(ErrorKind::InvalidParameter));
                 }
-                _ => return Err(Error::new0(ErrorKind::InvalidParameter)),
-            };
-            return Ok(Some(Convert {
-                uri,
-                format,
-                lang: q.get("lang").map(String::as_str),
-            }));
+            }
+            _ => return Err(Error::new0(ErrorKind::InvalidParameter)),
         };
+        return Ok(Some(Convert {
+            uri,
+            format,
+            lang: q.get("lang").map(String::as_str),
+        }));
     }
     Ok(None)
 }
