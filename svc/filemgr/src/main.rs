@@ -4,8 +4,6 @@ use eva_common::time::Time;
 use eva_sdk::fs as sdkfs;
 use eva_sdk::http;
 use eva_sdk::prelude::*;
-use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 use openssl::sha::Sha256;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -15,6 +13,8 @@ use std::mem;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::LazyLock;
+use std::sync::OnceLock;
 use std::sync::atomic;
 use std::time::Duration;
 use std::time::Instant;
@@ -27,8 +27,9 @@ use virtual_terminal as terminal;
 
 err_logger!();
 
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static TERMINALS: Lazy<Mutex<BTreeMap<Uuid, Arc<TerminalProcess>>>> = Lazy::new(<_>::default);
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static TERMINALS: LazyLock<Mutex<BTreeMap<Uuid, Arc<TerminalProcess>>>> =
+    LazyLock::new(<_>::default);
 
 static TERMINALS_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
@@ -279,12 +280,6 @@ enum Permissions {
     Oct(String),
     Dec(u32),
     Executable(bool),
-}
-
-#[derive(Serialize, Deserialize)]
-struct Executable {
-    #[serde(alias = "x")]
-    executable: bool,
 }
 
 impl Permissions {
@@ -573,7 +568,7 @@ impl RpcHandlers for Handlers {
                     }
                     let p: GetParams = unpack(payload)?;
                     let f = PathBuf::from(&p.path);
-                    info!("file.get {:?}", f);
+                    info!("file.get {}", f.display());
                     let fpath = self.format_path(&f).log_err()?;
                     if !fpath.exists() {
                         return Err(Error::not_found("file not found").into());
@@ -650,7 +645,7 @@ impl RpcHandlers for Handlers {
                     }
                     let p: PutParams = unpack(payload)?;
                     let f = PathBuf::from(&p.path);
-                    info!("file.put {:?}", f);
+                    info!("file.put {}", f.display());
                     let perm: u32 = p.permissions.try_into()?;
                     let http_resp = if p.download {
                         let client =
@@ -722,12 +717,12 @@ impl RpcHandlers for Handlers {
                     }
                     let p: UnlinkParams = unpack(payload)?;
                     let f = PathBuf::from(&p.path);
-                    info!("file.unlink {:?}", f);
+                    info!("file.unlink {}", f.display());
                     let fpath = self.format_path(&f).log_err()?;
-                    if let Err(e) = fs::remove_file(&fpath).await {
-                        if e.kind() != std::io::ErrorKind::NotFound {
-                            return Err(e.into());
-                        }
+                    if let Err(e) = fs::remove_file(&fpath).await
+                        && e.kind() != std::io::ErrorKind::NotFound
+                    {
+                        return Err(e.into());
                     }
                     Ok(None)
                 }
@@ -755,11 +750,11 @@ impl RpcHandlers for Handlers {
                     unpack(payload)?
                 };
                 let mut rel_path = "/";
-                if let Some(ref p) = params.path {
-                    if !p.is_empty() {
-                        rel_path = p;
-                    }
-                };
+                if let Some(ref p) = params.path
+                    && !p.is_empty()
+                {
+                    rel_path = p;
+                }
                 let path = self.format_path(Path::new(rel_path))?;
                 let masks: Vec<String> = if let Some(m) = params.masks {
                     m.to_vec()

@@ -46,7 +46,7 @@ impl Target {
                 )
                 .await?;
             }
-        };
+        }
         Ok(())
     }
 }

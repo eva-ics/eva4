@@ -9,12 +9,11 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_ITEM_STATE_TOPIC, PS_NODE_STATE_TOPIC};
 use eva_sdk::types::FullItemState;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::sync::Arc;
 use std::sync::atomic;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -79,20 +78,20 @@ const DEFAULT_PING_INTERVAL: Duration = Duration::from_secs(10);
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = OnceCell::new();
-static BULK_STATE_TOPIC: OnceCell<String> = OnceCell::new();
-static PUBSUB_RPC: OnceCell<Arc<psrpc::RpcClient>> = OnceCell::new();
-static KEY_SVC: OnceCell<String> = OnceCell::new();
-static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static STATE_LVAR: OnceCell<OID> = OnceCell::new();
-static DEFAULT_KEY_ID: OnceCell<String> = OnceCell::new();
-static HTTP_CLIENT: OnceCell<eva_sdk::http::Client> = OnceCell::new();
-static PULL_DATA: OnceCell<nodes::PullData> = OnceCell::new();
-static BULK_SECURE_TOPICS: OnceCell<HashSet<String>> = OnceCell::new();
+static BULK_SEND_CONFIG: OnceLock<BulkSendConfig> = OnceLock::new();
+static BULK_STATE_TOPIC: OnceLock<String> = OnceLock::new();
+static PUBSUB_RPC: OnceLock<Arc<psrpc::RpcClient>> = OnceLock::new();
+static KEY_SVC: OnceLock<String> = OnceLock::new();
+static SYSTEM_NAME: OnceLock<String> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static STATE_LVAR: OnceLock<OID> = OnceLock::new();
+static DEFAULT_KEY_ID: OnceLock<String> = OnceLock::new();
+static HTTP_CLIENT: OnceLock<eva_sdk::http::Client> = OnceLock::new();
+static PULL_DATA: OnceLock<nodes::PullData> = OnceLock::new();
+static BULK_SECURE_TOPICS: OnceLock<HashSet<String>> = OnceLock::new();
 
-static OIDS: OnceCell<OIDMaskList> = OnceCell::new();
-static OIDS_EXCLUDE: OnceCell<Vec<String>> = OnceCell::new();
+static OIDS: OnceLock<OIDMaskList> = OnceLock::new();
+static OIDS_EXCLUDE: OnceLock<Vec<String>> = OnceLock::new();
 
 static DISCOVERY_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 static SUBSCRIBE_EACH: atomic::AtomicBool = atomic::AtomicBool::new(false);
@@ -389,25 +388,24 @@ async fn main(mut initial: Initial) -> EResult<()> {
     }
     let mut bulk_recv_topics: HashSet<String> = HashSet::new();
     let mut bulk_secure_topics: HashSet<String> = HashSet::new();
-    if let Some(ref mut bulk) = config.bulk {
-        if let Some(bulk_recv) = bulk.receive.take() {
-            if let Some(ref bulk_send) = bulk.send {
-                if bulk_recv.topics.contains(&bulk_send.topic)
-                    || bulk_recv.secure_topics.contains(&bulk_send.topic)
-                {
-                    warn!(
-                        "bulk.receive.topics contain bulk.send.topic. \
+    if let Some(ref mut bulk) = config.bulk
+        && let Some(bulk_recv) = bulk.receive.take()
+    {
+        if let Some(ref bulk_send) = bulk.send
+            && (bulk_recv.topics.contains(&bulk_send.topic)
+                || bulk_recv.secure_topics.contains(&bulk_send.topic))
+        {
+            warn!(
+                "bulk.receive.topics contain bulk.send.topic. \
                         This may slow down network operations. Consider using \
                         a dedicated topic to send/receive"
-                    );
-                }
-            }
-            for topic in bulk_recv.topics {
-                bulk_recv_topics.insert(topic);
-            }
-            for topic in bulk_recv.secure_topics {
-                bulk_secure_topics.insert(topic);
-            }
+            );
+        }
+        for topic in bulk_recv.topics {
+            bulk_recv_topics.insert(topic);
+        }
+        for topic in bulk_recv.secure_topics {
+            bulk_secure_topics.insert(topic);
         }
     }
     svc_start_signal_handlers();

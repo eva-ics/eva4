@@ -11,7 +11,7 @@ eva-common = { workspace = true, features = ["events", "common-payloads", "paylo
 eva-sdk = { workspace = true, features = ["controller"] }
 gstreamer = { version = "0.24" }
 gstreamer-app = "0.24"
-log = "0.4"
+log = { workspace = true }
 mimalloc = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 tokio = { workspace = true, features = ["full"] }

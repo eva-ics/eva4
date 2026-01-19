@@ -28,8 +28,9 @@ impl RtcSyncedInterval {
             loop {
                 self.interval.tick().await;
                 let t_secs = now();
-                if t_secs % self.d.as_secs() == 0 && t_secs != self.tick_prev {
+                if t_secs.is_multiple_of(self.d.as_secs()) && t_secs != self.tick_prev {
                     self.tick_prev = t_secs;
+                    #[allow(clippy::cast_precision_loss)]
                     break Time::from_timestamp(t_secs as f64);
                 }
             }

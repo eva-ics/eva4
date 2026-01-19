@@ -1,6 +1,6 @@
 use std::str::FromStr;
-use std::sync::atomic;
 use std::sync::Arc;
+use std::sync::atomic;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -8,19 +8,19 @@ use async_channel::Receiver;
 use async_channel::Sender;
 use eva_common::acl::OIDMask;
 use eva_common::err_logger;
-use eva_common::events::RawStateEventOwned;
 use eva_common::events::RAW_STATE_TOPIC;
+use eva_common::events::RawStateEventOwned;
 use eva_common::multimedia::FrameHeader;
 use eva_common::multimedia::VideoFormat;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::poc;
 use eva_sdk::types::State;
+use gstreamer::Caps;
 use gstreamer::glib::object::Cast as _;
 use gstreamer::glib::object::ObjectExt as _;
 use gstreamer::prelude::ElementExt as _;
 use gstreamer::prelude::GstBinExt as _;
-use gstreamer::Caps;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -193,6 +193,7 @@ struct Config {
     caps_dst: String,
 }
 
+#[allow(clippy::too_many_lines)]
 fn pipeline_loop(
     pipeline: &str,
     caps_src_str: Option<&str>,

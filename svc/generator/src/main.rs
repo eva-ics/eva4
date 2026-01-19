@@ -3,10 +3,11 @@ use eva_common::common_payloads::ParamsIdOwned;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::types::Fill;
-use once_cell::sync::{Lazy, OnceCell};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::LazyLock;
+use std::sync::OnceLock;
 use std::sync::atomic;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -17,14 +18,14 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "SIM Generator";
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static REG: OnceCell<Registry> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static REG: OnceLock<Registry> = OnceLock::new();
 
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
 static VERBOSE: atomic::AtomicBool = atomic::AtomicBool::new(false);
-static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
+static SYSTEM_NAME: OnceLock<String> = OnceLock::new();
 
-static SOURCES: Lazy<Mutex<BTreeMap<String, Source>>> = Lazy::new(<_>::default);
+static SOURCES: LazyLock<Mutex<BTreeMap<String, Source>>> = LazyLock::new(<_>::default);
 
 const DEFAULT_PLANNING_DURATION: Duration = Duration::from_secs(30);
 

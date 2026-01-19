@@ -6,7 +6,6 @@ use eva_common::prelude::*;
 use eva_internal::RtcSyncedInterval;
 use eva_sdk::prelude::*;
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
-use once_cell::sync::{Lazy, OnceCell};
 use openssl::sha::Sha256;
 use parking_lot::Mutex;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -15,16 +14,16 @@ use std::fmt::Write as _;
 use std::io::SeekFrom;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use std::sync::{Arc, atomic};
+use std::sync::{Arc, LazyLock, OnceLock, atomic};
 use std::time::Duration;
 use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 err_logger!();
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 static NEED_DEDUP_LINES: atomic::AtomicBool = atomic::AtomicBool::new(false);
-static LINE_CACHE: Lazy<Mutex<BTreeMap<[u8; 32], Instant>>> = Lazy::new(<_>::default);
+static LINE_CACHE: LazyLock<Mutex<BTreeMap<[u8; 32], Instant>>> = LazyLock::new(<_>::default);
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -235,21 +234,21 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_notification(&self, _event: RpcEvent) {}
     async fn handle_frame(&self, frame: Frame) {
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx)
-                        .await
-                        .log_ef();
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
             }
         }
     }
@@ -410,15 +409,15 @@ async fn file_handler(
     let mut fx: Option<tokio::fs::File> = None;
     while let Ok(event) = rx.recv().await {
         let mut fd_opt = None;
-        if let Some(ref mut existing_fh) = fx {
-            if let Ok(path_metadata) = tokio::fs::metadata(&file_path).await {
-                let metadata = existing_fh
-                    .metadata()
-                    .await
-                    .map_err(|e| explain_io!("unable to get metadata", e))?;
-                if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
-                    fd_opt = Some(existing_fh);
-                }
+        if let Some(ref mut existing_fh) = fx
+            && let Ok(path_metadata) = tokio::fs::metadata(&file_path).await
+        {
+            let metadata = existing_fh
+                .metadata()
+                .await
+                .map_err(|e| explain_io!("unable to get metadata", e))?;
+            if metadata.dev() == path_metadata.dev() && metadata.ino() == path_metadata.ino() {
+                fd_opt = Some(existing_fh);
             }
         }
         let fd = if let Some(fd) = fd_opt {
@@ -448,12 +447,12 @@ async fn file_handler(
             .seek(SeekFrom::Current(0))
             .await
             .map_err(|e| explain_io!("unable to seek file from current", e))?;
-        if pos == 0 {
-            if let Some(header) = g.header() {
-                fd.write_all(&header)
-                    .await
-                    .map_err(|e| explain_io!("unable to write file header", e))?;
-            }
+        if pos == 0
+            && let Some(header) = g.header()
+        {
+            fd.write_all(&header)
+                .await
+                .map_err(|e| explain_io!("unable to write file header", e))?;
         }
         match event {
             Event::State(state) => {

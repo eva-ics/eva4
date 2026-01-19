@@ -3,20 +3,39 @@ use eva_common::time::{ts_from_ns, ts_to_ns};
 use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
-use once_cell::sync::OnceCell;
-use sqlx::{
-    ConnectOptions, Row,
-    any::{AnyConnectOptions, AnyKind, AnyPool, AnyPoolOptions},
-    sqlite,
-};
+use sqlx::any::AnyConnectOptions;
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::{AnyPool, ConnectOptions, Row, sqlite};
 use std::fmt::Write as _;
 use std::str::FromStr;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 err_logger!();
 
-pub static POOL: OnceCell<AnyPool> = OnceCell::new();
-static DB_KIND: OnceCell<AnyKind> = OnceCell::new();
+pub static POOL: OnceLock<AnyPool> = OnceLock::new();
+static DB_KIND: OnceLock<DbKind> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DbKind {
+    Sqlite,
+    Postgres,
+}
+
+impl FromStr for DbKind {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s_lower = s.to_lowercase();
+        if s_lower.starts_with("sqlite:") {
+            Ok(DbKind::Sqlite)
+        } else if s_lower.starts_with("postgres:") || s_lower.starts_with("postgresql:") {
+            Ok(DbKind::Postgres)
+        } else {
+            Err(Error::unsupported("unsupported database kind"))
+        }
+    }
+}
 
 fn safe_sql_string(s: &str) -> EResult<&str> {
     for ch in s.chars() {
@@ -28,9 +47,18 @@ fn safe_sql_string(s: &str) -> EResult<&str> {
 }
 
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
-    let mut opts = AnyConnectOptions::from_str(conn)?;
-    opts.log_statements(log::LevelFilter::Trace)
-        .log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(2));
+    let kind = DbKind::from_str(conn)?;
+    let opts = if kind == DbKind::Sqlite {
+        SqliteConnectOptions::from_str(conn)?
+            .create_if_missing(true)
+            .synchronous(sqlite::SqliteSynchronous::Extra)
+            .busy_timeout(timeout)
+            .try_into()?
+    } else {
+        AnyConnectOptions::from_str(conn)?
+            .log_statements(log::LevelFilter::Trace)
+            .log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(2))
+    };
     if let Some(o) = opts.as_sqlite_mut() {
         opts = o
             .clone()
@@ -39,7 +67,6 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
             .busy_timeout(timeout)
             .into();
     }
-    let kind = opts.kind();
     DB_KIND
         .set(kind)
         .map_err(|_| Error::core("unable to set db kind"))?;
@@ -49,7 +76,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
         .connect_with(opts)
         .await?;
     match kind {
-        AnyKind::Sqlite => {
+        DbKind::Sqlite => {
             sqlx::query(
                 r"CREATE TABLE IF NOT EXISTS state_history
                 (t INTEGER NOT NULL,
@@ -64,7 +91,7 @@ pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
                 .execute(&pool)
                 .await?;
         }
-        AnyKind::MySql | AnyKind::Postgres => {
+        DbKind::MySql | DbKind::Postgres => {
             sqlx::query(
                 r"CREATE TABLE IF NOT EXISTS state_history
                 (t BIGINT NOT NULL,
@@ -88,13 +115,13 @@ macro_rules! insert {
     ($x: expr, $kind: expr, $state: expr) => {{
         log::trace!("submitting state for {} at {}", $state.oid, $state.set_time);
         let q = match $kind {
-            AnyKind::Sqlite => {
+            DbKind::Sqlite => {
                 "INSERT OR REPLACE INTO state_history(t,oid,status,value) VALUES(?,?,?,?)"
             }
-            AnyKind::MySql => {
+            DbKind::MySql => {
                 "REPLACE INTO state_history(t,oid,status,value) VALUES(?,?,?,?)"
             }
-            AnyKind::Postgres => {
+            DbKind::Postgres => {
                 "INSERT INTO state_history(t,oid,status,value) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING"
             }
         };
@@ -125,7 +152,7 @@ pub async fn submit_bulk(state: Vec<ItemState>) -> EResult<()> {
     }
     let pool = POOL.get().unwrap();
     let kind = DB_KIND.get().unwrap();
-    if *kind == AnyKind::Postgres {
+    if *kind == DbKind::Postgres {
         // TODO move to bind when switch out from Any
         let mut ts = String::new();
         let mut oids = String::new();

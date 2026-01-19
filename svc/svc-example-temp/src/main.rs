@@ -17,13 +17,13 @@ use eva_sdk::prelude::*;
 use eva_sdk::types::State;
 // it is recommended to keep EVA ICS services simple and small and make majority of shared
 // variables as static ones, so OnceCell (and/or lazy_static) is here
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 // serde, used to process bus structures
 use serde::{Deserialize, Serialize};
 // and a few others
 use std::collections::HashMap;
-use std::sync::atomic;
 use std::sync::Mutex;
+use std::sync::atomic;
 
 // this macro alters Result with additional methods:
 // log_ef() - log error and forget the result
@@ -59,7 +59,7 @@ static COUNTER: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 // The notification map, keeps info which sensors were already processed
-static NOTIFIED: Lazy<Mutex<HashMap<OID, bool>>> = Lazy::new(<_>::default);
+static NOTIFIED: LazyLock<Mutex<HashMap<OID, bool>>> = LazyLock::new(<_>::default);
 
 // BUS/RT RPC handlers
 struct Handlers {
@@ -75,7 +75,7 @@ struct Handlers {
 }
 
 // Let us describe BUS/RT RPC handlers methods
-#[async_trait::async_trait]
+#[async_trait]
 impl RpcHandlers for Handlers {
     // Handle RPC call
     async fn handle_call(&self, event: RpcEvent) -> RpcResult {
@@ -138,31 +138,31 @@ impl Handlers {
         let state: State = unpack(payload)?;
         let mut letter_c = None;
         // The next lines represent common Rust code, so no comments are provided
-        if let Some(value) = state.value {
-            if let Ok(temperature) = f64::try_from(value) {
-                let mut notified = NOTIFIED.lock().unwrap();
-                let was_sensor_notified = notified.get(&oid).copied().unwrap_or_default();
-                if temperature > self.threshold && !was_sensor_notified {
-                    let text = format!("{} temperature is {}", oid, temperature);
-                    warn!("{}", text);
-                    letter_c = Some(Letter {
-                        rcp: &self.rcpt,
-                        subject: format!("{} is hot", oid),
-                        text,
-                    });
-                    notified.insert(oid, true);
-                } else if temperature < self.threshold - HYSTERESIS && was_sensor_notified {
-                    let text = format!("{} temperature is {}", oid, temperature);
-                    info!("{}", text);
-                    letter_c = Some(Letter {
-                        rcp: &self.rcpt,
-                        subject: format!("{} is back to normal", oid),
-                        text,
-                    });
-                    notified.insert(oid, false);
-                }
+        if let Some(value) = state.value
+            && let Ok(temperature) = f64::try_from(value)
+        {
+            let mut notified = NOTIFIED.lock().unwrap();
+            let was_sensor_notified = notified.get(&oid).copied().unwrap_or_default();
+            if temperature > self.threshold && !was_sensor_notified {
+                let text = format!("{} temperature is {}", oid, temperature);
+                warn!("{}", text);
+                letter_c = Some(Letter {
+                    rcp: &self.rcpt,
+                    subject: format!("{} is hot", oid),
+                    text,
+                });
+                notified.insert(oid, true);
+            } else if temperature < self.threshold - HYSTERESIS && was_sensor_notified {
+                let text = format!("{} temperature is {}", oid, temperature);
+                info!("{}", text);
+                letter_c = Some(Letter {
+                    rcp: &self.rcpt,
+                    subject: format!("{} is back to normal", oid),
+                    text,
+                });
+                notified.insert(oid, false);
             }
-        };
+        }
         if let Some(letter) = letter_c {
             COUNTER.fetch_add(1, atomic::Ordering::SeqCst);
             eapi_bus::call(&self.mailer_svc, "send", pack(&letter)?.into()).await?;

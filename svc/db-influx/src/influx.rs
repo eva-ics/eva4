@@ -280,30 +280,29 @@ impl InfluxClient {
                         )?
                     };
                 }
-                if let Some(mut series) = r0.series.take() {
-                    if !series.is_empty() {
-                        if let Some(values) = series.remove(0).values {
-                            for mut v in values {
-                                let (timestamp, status, value) = if let Some(p) = prop {
-                                    let (status, value) = match p {
-                                        StateProp::Status => (pop_status!(v), None),
-                                        StateProp::Value => (None, epop!(v)),
-                                    };
-                                    let timestamp = pop_timestamp!(v);
-                                    (timestamp, status, value)
-                                } else {
-                                    let value = epop!(v);
-                                    let status = pop_status!(v);
-                                    let timestamp = pop_timestamp!(v);
-                                    (timestamp, status, value)
-                                };
-                                data.push(InfluxState {
-                                    status,
-                                    value,
-                                    timestamp,
-                                });
-                            }
-                        }
+                if let Some(mut series) = r0.series.take()
+                    && !series.is_empty()
+                    && let Some(values) = series.remove(0).values
+                {
+                    for mut v in values {
+                        let (timestamp, status, value) = if let Some(p) = prop {
+                            let (status, value) = match p {
+                                StateProp::Status => (pop_status!(v), None),
+                                StateProp::Value => (None, epop!(v)),
+                            };
+                            let timestamp = pop_timestamp!(v);
+                            (timestamp, status, value)
+                        } else {
+                            let value = epop!(v);
+                            let status = pop_status!(v);
+                            let timestamp = pop_timestamp!(v);
+                            (timestamp, status, value)
+                        };
+                        data.push(InfluxState {
+                            status,
+                            value,
+                            timestamp,
+                        });
                     }
                 }
             }
@@ -320,11 +319,7 @@ impl InfluxClient {
                 }
                 let stream = res
                     .into_body()
-                    .map(|result| {
-                        result.map_err(|_| {
-                            std::io::Error::new(std::io::ErrorKind::Other, "body read error")
-                        })
-                    })
+                    .map(|result| result.map_err(|_| std::io::Error::other("body read error")))
                     .into_async_read();
                 let rdr = csv_async::AsyncDeserializer::from_reader(stream);
                 let mut records = rdr.into_deserialize::<InfluxState>();
@@ -334,10 +329,10 @@ impl InfluxClient {
                 }
             }
         }
-        if let Some(l) = limit {
-            if data.len() > l {
-                data.drain(..data.len() - l - 1);
-            }
+        if let Some(l) = limit
+            && data.len() > l
+        {
+            data.drain(..data.len() - l - 1);
         }
         Ok(data)
     }
@@ -406,9 +401,9 @@ impl InfluxClient {
                 let mut q = self.v2_from_bucket_range.clone().unwrap_or_default();
                 let (ts, fill_cond) = if let Some(ref f) = fill {
                     let fill_cond = format!(
-                        r#"
+                        "
  |> aggregateWindow(every: {}, fn: {})
- |> fill(usePrevious: true)"#,
+ |> fill(usePrevious: true)",
                         f.to_influx_fill(),
                         vfn
                     );

@@ -10,13 +10,15 @@ use lettre::{
         client::{Tls, TlsParameters},
     },
 };
-use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, hash_map};
 use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use std::{
+    collections::{HashMap, hash_map},
+    sync::{LazyLock, OnceLock},
+};
 use ttl_cache::TtlCache;
 
 err_logger!();
@@ -30,16 +32,16 @@ const CACHE_USER_EMAILS_SIZE: usize = 10_000;
 const MAX_PARALLEL_RESOLVERS: usize = 10;
 const MAX_PARALLEL_SENDS_DELAYED: usize = 10;
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static AUTH_SVCS: OnceCell<Vec<String>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static AUTH_SVCS: OnceLock<Vec<String>> = OnceLock::new();
 
-static USER_EMAILS: Lazy<Mutex<TtlCache<String, String>>> =
-    Lazy::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
+static USER_EMAILS: LazyLock<Mutex<TtlCache<String, String>>> =
+    LazyLock::new(|| Mutex::new(TtlCache::new(CACHE_USER_EMAILS_SIZE)));
 
 type DelayedEmailsMap = HashMap<DelayedMailKey, DelayedMail>;
 
-static DELAYED_EMAILS: Lazy<Mutex<DelayedEmailsMap>> = Lazy::new(<_>::default);
+static DELAYED_EMAILS: LazyLock<Mutex<DelayedEmailsMap>> = LazyLock::new(<_>::default);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -145,15 +147,15 @@ async fn resolve_email(user: &str) -> EResult<Option<String>> {
         {
             match unpack::<UserProfileField>(result.payload()) {
                 Ok(v) => {
-                    if let Some(addr) = v.value {
-                        if !addr.is_empty() {
-                            USER_EMAILS.lock().insert(
-                                user.to_owned(),
-                                addr.clone(),
-                                CACHE_USER_EMAILS_TTL,
-                            );
-                            return Ok(Some(addr));
-                        }
+                    if let Some(addr) = v.value
+                        && !addr.is_empty()
+                    {
+                        USER_EMAILS.lock().insert(
+                            user.to_owned(),
+                            addr.clone(),
+                            CACHE_USER_EMAILS_TTL,
+                        );
+                        return Ok(Some(addr));
                     }
                 }
                 Err(e) => {

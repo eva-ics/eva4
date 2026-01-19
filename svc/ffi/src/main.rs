@@ -2,15 +2,14 @@ use clap::Parser;
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::service::svc_block2;
-use log::{log, Level as LL};
-use once_cell::sync::{Lazy, OnceCell};
+use log::{Level as LL, log};
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::ffi::CString;
 use std::path::Path;
 use std::ptr;
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, LazyLock, OnceLock, mpsc};
 use std::time::Duration;
 
 const ABI_VERSION: u16 = 1;
@@ -29,14 +28,14 @@ macro_rules! addr_mut {
     };
 }
 
-static SVC_FFI_LIB: OnceCell<libloading::Library> = OnceCell::new();
-static SVC_FFI_GET_RESULT: OnceCell<FfiGetResult> = OnceCell::new();
-static SVC_FFI_ON_FRAME: OnceCell<FfiOnFrame> = OnceCell::new();
-static SVC_FFI_ON_RPC_CALL: OnceCell<FfiOnRpcCall> = OnceCell::new();
+static SVC_FFI_LIB: OnceLock<libloading::Library> = OnceLock::new();
+static SVC_FFI_GET_RESULT: OnceLock<FfiGetResult> = OnceLock::new();
+static SVC_FFI_ON_FRAME: OnceLock<FfiOnFrame> = OnceLock::new();
+static SVC_FFI_ON_RPC_CALL: OnceLock<FfiOnRpcCall> = OnceLock::new();
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static BUS_TX: OnceCell<async_channel::Sender<BusTask>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static BUS_TX: OnceLock<async_channel::Sender<BusTask>> = OnceLock::new();
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -76,8 +75,9 @@ macro_rules! check_ptr {
 #[allow(clippy::ptr_as_ptr, clippy::transmute_ptr_to_ref)]
 unsafe fn str_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<&'a str> {
     check_ptr!(ebuffer);
-    let buf_fb: &EBuffer = std::mem::transmute(ebuffer as *mut u8);
-    let mut buf: &[u8] = std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len);
+    let buf_fb: &EBuffer = unsafe { std::mem::transmute(ebuffer as *mut u8) };
+    let mut buf: &[u8] =
+        unsafe { std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len) };
     if !buf.is_empty() && buf[buf.len() - 1] == 0 {
         buf = &buf[0..buf.len() - 1];
     }
@@ -87,8 +87,9 @@ unsafe fn str_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<&'a str> {
 #[allow(clippy::ptr_as_ptr, clippy::transmute_ptr_to_ref)]
 unsafe fn str_vec_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<Vec<&'a str>> {
     check_ptr!(ebuffer);
-    let buf_fb: &EBuffer = std::mem::transmute(ebuffer as *mut u8);
-    let mut buf: &[u8] = std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len);
+    let buf_fb: &EBuffer = unsafe { std::mem::transmute(ebuffer as *mut u8) };
+    let mut buf: &[u8] =
+        unsafe { std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len) };
     let mut result = Vec::new();
     while let Some(pos) = buf.iter().position(|s| *s == 0u8) {
         let s = std::str::from_utf8(&buf[..pos])?;
@@ -106,8 +107,8 @@ unsafe fn str_vec_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<Vec<&'a str>> 
 #[allow(clippy::ptr_as_ptr, clippy::transmute_ptr_to_ref)]
 unsafe fn str_and_slice_from_ebuf_raw<'a>(ebuffer: *mut i32) -> EResult<(&'a str, &'a [u8])> {
     check_ptr!(ebuffer);
-    let buf_fb: &EBuffer = std::mem::transmute(ebuffer as *mut u8);
-    let buf: &[u8] = std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len);
+    let buf_fb: &EBuffer = unsafe { std::mem::transmute(ebuffer as *mut u8) };
+    let buf: &[u8] = unsafe { std::slice::from_raw_parts(buf_fb.data as *const u8, buf_fb.len) };
     let pos = buf.iter().position(|s| *s == 0u8).unwrap_or(buf.len());
     let s = std::str::from_utf8(&buf[..pos])?;
     let b = if pos < buf.len() {
@@ -131,7 +132,7 @@ thread_local! {
 unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
     macro_rules! log_message {
         ($lvl: expr) => {
-            return match str_from_ebuf_raw(payload) {
+            return match unsafe { str_from_ebuf_raw(payload) } {
                 Ok(s) => {
                     log!($lvl, "{}", s);
                     0
@@ -150,11 +151,11 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
         x if x == SvcOp::LogError as i16 => log_message!(LL::Error),
         x if x == SvcOp::POC as i16 => {
             let mut logged = false;
-            if let Ok(msg) = str_from_ebuf_raw(payload) {
-                if !msg.is_empty() {
-                    logged = true;
-                    eprintln!("critical: {}", msg);
-                }
+            if let Ok(msg) = unsafe { str_from_ebuf_raw(payload) }
+                && !msg.is_empty()
+            {
+                logged = true;
+                eprintln!("critical: {}", msg);
             }
             if !(logged) {
                 eprintln!("critical");
@@ -163,7 +164,7 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
             return 0;
         }
         _ => {}
-    };
+    }
     // functions which require active bus connection
     let Some(bus_tx) = BUS_TX.get() else {
         return eva_common::ERR_CODE_NOT_READY.into();
@@ -179,14 +180,15 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
         };
     }
     match op_code {
-        x if x == SvcOp::SubscribeTopic as i16 => match str_vec_from_ebuf_raw(payload) {
+        x if x == SvcOp::SubscribeTopic as i16 => match unsafe { str_vec_from_ebuf_raw(payload) } {
             Ok(topics) => {
                 let task = BusTask::Subscribe(topics.into_iter().map(ToOwned::to_owned).collect());
                 bus_task!(task)
             }
             Err(e) => e.code().into(),
         },
-        x if x == SvcOp::UnsubscribeTopic as i16 => match str_vec_from_ebuf_raw(payload) {
+        x if x == SvcOp::UnsubscribeTopic as i16 => match unsafe { str_vec_from_ebuf_raw(payload) }
+        {
             Ok(topics) => {
                 let task =
                     BusTask::Unsubscribe(topics.into_iter().map(ToOwned::to_owned).collect());
@@ -194,14 +196,16 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
             }
             Err(e) => e.code().into(),
         },
-        x if x == SvcOp::PublishTopic as i16 => match str_and_slice_from_ebuf_raw(payload) {
-            Ok((topic, payload)) => {
-                let task = BusTask::Publish(topic.to_owned(), payload.to_vec());
-                bus_task!(task)
+        x if x == SvcOp::PublishTopic as i16 => {
+            match unsafe { str_and_slice_from_ebuf_raw(payload) } {
+                Ok((topic, payload)) => {
+                    let task = BusTask::Publish(topic.to_owned(), payload.to_vec());
+                    bus_task!(task)
+                }
+                Err(e) => e.code().into(),
             }
-            Err(e) => e.code().into(),
-        },
-        x if x == SvcOp::RpcCall as i16 => match str_and_slice_from_ebuf_raw(payload) {
+        }
+        x if x == SvcOp::RpcCall as i16 => match unsafe { str_and_slice_from_ebuf_raw(payload) } {
             Ok((target, buf)) => {
                 let pos = buf.iter().position(|s| *s == 0u8).unwrap_or(buf.len());
                 let Ok(method) = std::str::from_utf8(&buf[..pos]) else {
@@ -248,7 +252,7 @@ unsafe fn svc_op(op_code: i16, payload: *mut i32) -> i32 {
             }
             if let Some(ev) = c.borrow().as_ref() {
                 let event_payload = ev.payload();
-                let buf_fb: &mut EBuffer = std::mem::transmute(payload as *mut u8);
+                let buf_fb: &mut EBuffer = unsafe { std::mem::transmute(payload as *mut u8) };
                 buf_fb.len = event_payload.len();
                 buf_fb.data = addr!(*event_payload);
                 buf_fb.max = event_payload.len();
@@ -357,7 +361,7 @@ type FfiOnRpcCall<'a> = libloading::Symbol<'a, unsafe extern "C" fn(ev: *mut i32
 
 const DEFAULT_METHODS_STRS: &[&[u8]] = &[b"test", b"info", b"stop"];
 
-static DEFAULT_METHODS: Lazy<BTreeSet<&'static [u8]>> = Lazy::new(|| {
+static DEFAULT_METHODS: LazyLock<BTreeSet<&'static [u8]>> = LazyLock::new(|| {
     DEFAULT_METHODS_STRS
         .iter()
         .copied()
@@ -437,13 +441,13 @@ impl IntoResultVec for i32 {
 }
 
 trait FfiBuf {
-    fn as_ffi_buf(&self) -> EResult<EBuffer>;
-    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer>;
+    fn as_ffi_buf(&self) -> EResult<EBuffer<'_>>;
+    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer<'_>>;
 }
 
 #[allow(clippy::cast_ptr_alignment, clippy::ptr_as_ptr)]
 impl FfiBuf for Vec<u8> {
-    fn as_ffi_buf(&self) -> EResult<EBuffer> {
+    fn as_ffi_buf(&self) -> EResult<EBuffer<'_>> {
         Ok(EBuffer {
             len: self.len(),
             data: self.as_ptr() as *mut i32,
@@ -451,7 +455,7 @@ impl FfiBuf for Vec<u8> {
             _src: self,
         })
     }
-    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer> {
+    fn as_ffi_buf_mut(&mut self) -> EResult<EBuffer<'_>> {
         Ok(EBuffer {
             len: self.len(),
             data: self.as_mut_ptr() as *mut i32,
@@ -473,7 +477,7 @@ enum BusTask {
     ),
 }
 
-static ARGS: OnceCell<Args> = OnceCell::new();
+static ARGS: OnceLock<Args> = OnceLock::new();
 
 fn main() -> EResult<()> {
     let args = Args::parse();

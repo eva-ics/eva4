@@ -16,7 +16,7 @@ lettre = { version = "0.11.19", features = ["tokio1-native-tls"] }
 mimalloc = { workspace = true }
 ttl_cache = { workspace = true }
 parking_lot = { workspace = true }
-tokio-task-pool = "0.1.5"
+tokio-task-pool = "0.1.8"
 async-channel = { workspace = true }
 
 [features]

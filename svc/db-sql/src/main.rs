@@ -8,10 +8,9 @@ use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, StateProp};
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, atomic};
+use std::sync::{Arc, OnceLock, atomic};
 use std::time::Duration;
 
 err_logger!();
@@ -32,8 +31,8 @@ const CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TS_EXTENSION: OnceCell<Option<TsExtension>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static TS_EXTENSION: OnceLock<Option<TsExtension>> = OnceLock::new();
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 struct Handlers {

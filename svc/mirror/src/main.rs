@@ -6,8 +6,6 @@ use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, StatusCode, http};
 use hyper_static::serve::static_file;
-use lazy_static::lazy_static;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -15,12 +13,11 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic;
 
-lazy_static! {
-    static ref MIME_TYPES: OnceCell<HashMap<String, String>> = <_>::default();
-    static ref MIRROR_PATH: OnceCell<PathBuf> = <_>::default();
-}
+static MIME_TYPES: OnceLock<HashMap<String, String>> = OnceLock::new();
+static MIRROR_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 static BUF_SIZE: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
@@ -94,58 +91,47 @@ async fn handler(
         ip
     };
     let uri = parts.uri.path();
-    if parts.method == Method::GET {
-        if let Some(file_path) = uri.strip_prefix('/') {
-            let mut path = MIRROR_PATH.get().unwrap().clone();
-            path.push(file_path);
-            if path.is_dir() {
-                path.push("index.html");
-            }
-            let mime_type = if let Some(ext) = path.extension().and_then(std::ffi::OsStr::to_str) {
-                MIME_TYPES.get().unwrap().get(ext)
-            } else {
-                None
-            };
-            //return match serve::file(
-            //&path,
-            //mime_type.map(String::as_str),
-            //&parts.headers,
-            //BUF_SIZE.load(atomic::Ordering::SeqCst),
-            //)
-            //.await
-            //{
-            //Ok(v) => v,
-            //Err(e) => e.into(),
-            //};
-            return match static_file(
-                &path,
-                mime_type.map(String::as_str),
-                &parts.headers,
-                BUF_SIZE.load(atomic::Ordering::SeqCst),
-            )
-            .await
-            {
-                Ok(v) => {
-                    debug!(
-                        r#"{} "GET {}" {}"#,
-                        ip_addr,
-                        uri,
-                        v.as_ref().map_or(0, |res| res.status().as_u16())
-                    );
-                    v
-                }
-                Err(e) => {
-                    let resp: Result<Response<Body>, http::Error> = e.into();
-                    warn!(
-                        r#"{} "GET {}" {}"#,
-                        ip_addr,
-                        uri,
-                        resp.as_ref().map_or(0, |res| res.status().as_u16())
-                    );
-                    resp
-                }
-            };
+    if parts.method == Method::GET
+        && let Some(file_path) = uri.strip_prefix('/')
+    {
+        let mut path = MIRROR_PATH.get().unwrap().clone();
+        path.push(file_path);
+        if path.is_dir() {
+            path.push("index.html");
         }
+        let mime_type = if let Some(ext) = path.extension().and_then(std::ffi::OsStr::to_str) {
+            MIME_TYPES.get().unwrap().get(ext)
+        } else {
+            None
+        };
+        return match static_file(
+            &path,
+            mime_type.map(String::as_str),
+            &parts.headers,
+            BUF_SIZE.load(atomic::Ordering::SeqCst),
+        )
+        .await
+        {
+            Ok(v) => {
+                debug!(
+                    r#"{} "GET {}" {}"#,
+                    ip_addr,
+                    uri,
+                    v.as_ref().map_or(0, |res| res.status().as_u16())
+                );
+                v
+            }
+            Err(e) => {
+                let resp: Result<Response<Body>, http::Error> = e.into();
+                warn!(
+                    r#"{} "GET {}" {}"#,
+                    ip_addr,
+                    uri,
+                    resp.as_ref().map_or(0, |res| res.status().as_u16())
+                );
+                resp
+            }
+        };
     }
     warn!("[{}] 405 {}", ip, parts.method);
     hyper_response!(StatusCode::METHOD_NOT_ALLOWED)

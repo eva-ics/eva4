@@ -1,12 +1,11 @@
 use eva_sdk::prelude::*;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 
-pub static KEYS: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(<_>::default);
-pub static ENC_OPTS: Lazy<Mutex<HashMap<String, psrpc::options::Options>>> =
-    Lazy::new(<_>::default);
+pub static KEYS: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(<_>::default);
+pub static ENC_OPTS: LazyLock<Mutex<HashMap<String, psrpc::options::Options>>> =
+    LazyLock::new(<_>::default);
 
 pub async fn get_enc_opts(rpc: &RpcClient, key_id: &str) -> EResult<psrpc::options::Options> {
     if let Some(opts) = ENC_OPTS.lock().unwrap().get(key_id) {

@@ -8,10 +8,9 @@ use eva_sdk::service::poc;
 use eva_sdk::service::set_poc;
 use eva_sdk::types::{Fill, StateProp};
 use eva_sdk::types::{ItemState, ShortItemStateConnected, State};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{Arc, atomic};
+use std::sync::{Arc, OnceLock, atomic};
 use std::time::Duration;
 
 err_logger!();
@@ -31,7 +30,7 @@ const OID_CLEANUP_INTERVAL: Duration = Duration::from_secs(3600);
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 static SKIP_DISCONNECTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 static EVA_PG_ENABLED: atomic::AtomicBool = atomic::AtomicBool::new(false);
@@ -170,7 +169,7 @@ impl RpcHandlers for Handlers {
                     match p {
                         Event::State(v) => db::submit(v).await?,
                         Event::BulkState(v) => db::submit_bulk(v, false).await?,
-                    };
+                    }
                     Ok(None)
                 }
             }
@@ -179,15 +178,15 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_frame(&self, frame: Frame) {
         svc_need_ready!();
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
-                    process_state(topic, o, frame.payload(), &self.tx).log_ef();
-                }
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_ARCHIVE_STATE_TOPIC) {
+                process_state(topic, o, frame.payload(), &self.tx).log_ef();
             }
         }
     }

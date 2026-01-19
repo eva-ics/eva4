@@ -8,9 +8,8 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use eva_sdk::pubsub::{PS_ITEM_BULK_STATE_TOPIC, PS_NODE_STATE_TOPIC};
 use eva_sdk::types::FullItemState;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, atomic};
+use std::sync::{Arc, OnceLock, atomic};
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -70,17 +69,17 @@ const DESCRIPTION: &str = "uni-directional replication service";
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-static BULK_STATE_TOPIC: OnceCell<String> = OnceCell::new();
-static BULK_SEND_CONFIG: OnceCell<BulkSendConfig> = OnceCell::new();
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static KEY_SVC: OnceCell<String> = OnceCell::new();
-static SYSTEM_NAME: OnceCell<String> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
+static BULK_STATE_TOPIC: OnceLock<String> = OnceLock::new();
+static BULK_SEND_CONFIG: OnceLock<BulkSendConfig> = OnceLock::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static KEY_SVC: OnceLock<String> = OnceLock::new();
+static SYSTEM_NAME: OnceLock<String> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
 
-static OIDS: OnceCell<OIDMaskList> = OnceCell::new();
-static OIDS_EXCLUDE: OnceCell<Vec<String>> = OnceCell::new();
+static OIDS: OnceLock<OIDMaskList> = OnceLock::new();
+static OIDS_EXCLUDE: OnceLock<Vec<String>> = OnceLock::new();
 
-static PUBSUB_CLIENT: OnceCell<psrt::client::UdpClient> = OnceCell::new();
+static PUBSUB_CLIENT: OnceLock<psrt::client::UdpClient> = OnceLock::new();
 
 static MTU: atomic::AtomicUsize = atomic::AtomicUsize::new(1200);
 
@@ -207,14 +206,14 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let mut ps_client = psrt::client::UdpClient::connect(&config.pubsub.host)
         .await
         .map_err(Error::io)?;
-    if let Some(ref username) = config.pubsub.username {
-        if let Some(ref pubsub_key) = config.pubsub.key.as_ref() {
-            ps_client = ps_client.with_encryption_auth(
-                username,
-                &hex::decode(pubsub_key)
-                    .map_err(|e| Error::invalid_data(format!("invalid pub/sub key: {}", e)))?,
-            );
-        }
+    if let Some(ref username) = config.pubsub.username
+        && let Some(ref pubsub_key) = config.pubsub.key.as_ref()
+    {
+        ps_client = ps_client.with_encryption_auth(
+            username,
+            &hex::decode(pubsub_key)
+                .map_err(|e| Error::invalid_data(format!("invalid pub/sub key: {}", e)))?,
+        );
     }
     PUBSUB_CLIENT
         .set(ps_client)

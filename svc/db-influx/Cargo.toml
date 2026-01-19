@@ -30,4 +30,3 @@ eva-internal = { path = "../../eva-internal" }
 
 [features]
 std-alloc = []
-openssl-vendored = ["tokio-native-tls/vendored"]

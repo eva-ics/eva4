@@ -4,11 +4,10 @@ use eva_common::events::{
 };
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::sync::atomic;
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -26,9 +25,9 @@ pub struct PullData {
     pub items: Option<Vec<ReplicationInventoryItem>>,
 }
 
-pub static NODES: Lazy<RwLock<HashMap<String, Node>>> = Lazy::new(<_>::default);
-pub static RELOAD_TRIGGERS: Lazy<RwLock<HashMap<String, async_channel::Sender<bool>>>> =
-    Lazy::new(<_>::default);
+pub static NODES: LazyLock<RwLock<HashMap<String, Node>>> = LazyLock::new(<_>::default);
+pub static RELOAD_TRIGGERS: LazyLock<RwLock<HashMap<String, async_channel::Sender<bool>>>> =
+    LazyLock::new(<_>::default);
 
 #[derive(Serialize)]
 struct NodeStateLvar {
@@ -105,64 +104,56 @@ async fn reload_node(
             .ok_or_else(|| Error::core("failed to reload node: no such object"))?;
         node.last_reload = Some(Instant::now());
         node.info.replace(res.info.clone());
-        if let Some(ref items) = res.items {
-            if crate::SUBSCRIBE_EACH.load(atomic::Ordering::Relaxed) {
-                let mut oids: HashSet<&OID> = HashSet::new();
-                for item in items {
-                    oids.insert(&item.oid);
+        if let Some(ref items) = res.items
+            && crate::SUBSCRIBE_EACH.load(atomic::Ordering::Relaxed)
+        {
+            let mut oids: HashSet<&OID> = HashSet::new();
+            for item in items {
+                oids.insert(&item.oid);
+            }
+            let mut to_subscribe: Vec<String> = Vec::new();
+            let mut to_unsubscribe: Vec<String> = Vec::new();
+            let mut to_remove: HashSet<OID> = HashSet::new();
+            for oid in &node.oids {
+                if !oids.contains(oid) {
+                    to_remove.insert(oid.clone());
+                    to_unsubscribe.push(format!("{}{}", crate::PS_ITEM_STATE_TOPIC, oid.as_path()));
                 }
-                let mut to_subscribe: Vec<String> = Vec::new();
-                let mut to_unsubscribe: Vec<String> = Vec::new();
-                let mut to_remove: HashSet<OID> = HashSet::new();
-                for oid in &node.oids {
-                    if !oids.contains(oid) {
-                        to_remove.insert(oid.clone());
-                        to_unsubscribe.push(format!(
-                            "{}{}",
-                            crate::PS_ITEM_STATE_TOPIC,
-                            oid.as_path()
-                        ));
-                    }
+            }
+            node.oids.retain(|v| !to_remove.contains(v));
+            for oid in oids {
+                if !node.oids.contains(oid) {
+                    to_subscribe.push(format!("{}{}", crate::PS_ITEM_STATE_TOPIC, oid.as_path()));
+                    node.oids.insert(oid.clone());
                 }
-                node.oids.retain(|v| !to_remove.contains(v));
-                for oid in oids {
-                    if !node.oids.contains(oid) {
-                        to_subscribe.push(format!(
-                            "{}{}",
-                            crate::PS_ITEM_STATE_TOPIC,
-                            oid.as_path()
-                        ));
-                        node.oids.insert(oid.clone());
-                    }
-                }
-                let ps_rpc = crate::PUBSUB_RPC.get().unwrap();
-                let ps_client = ps_rpc.client();
-                let qos = ps_rpc.qos();
-                trace!("new topics {:?}", to_subscribe);
-                trace!("removed {:?}", to_unsubscribe);
-                if !to_subscribe.is_empty() {
-                    ps_client
-                        .subscribe_bulk(
-                            to_subscribe
-                                .iter()
-                                .map(String::as_str)
-                                .collect::<Vec<&str>>()
-                                .as_slice(),
-                            qos,
-                        )
-                        .await?;
-                }
-                if !to_unsubscribe.is_empty() {
-                    ps_client
-                        .unsubscribe_bulk(
-                            to_unsubscribe
-                                .iter()
-                                .map(String::as_str)
-                                .collect::<Vec<&str>>()
-                                .as_slice(),
-                        )
-                        .await?;
-                }
+            }
+            let ps_rpc = crate::PUBSUB_RPC.get().unwrap();
+            let ps_client = ps_rpc.client();
+            let qos = ps_rpc.qos();
+            trace!("new topics {:?}", to_subscribe);
+            trace!("removed {:?}", to_unsubscribe);
+            if !to_subscribe.is_empty() {
+                ps_client
+                    .subscribe_bulk(
+                        to_subscribe
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<&str>>()
+                            .as_slice(),
+                        qos,
+                    )
+                    .await?;
+            }
+            if !to_unsubscribe.is_empty() {
+                ps_client
+                    .unsubscribe_bulk(
+                        to_unsubscribe
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<&str>>()
+                            .as_slice(),
+                    )
+                    .await?;
             }
         }
     }
@@ -236,17 +227,16 @@ async fn reloader(
             .get(name)
             .ok_or_else(|| Error::core("failed to get node data: no such object"))?
             .last_reload;
-        if !force {
-            if let Some(last) = last_reload {
-                if last.elapsed() > reload_interval / 2 {
-                    let lvl = if from_trig {
-                        log::Level::Warn
-                    } else {
-                        log::Level::Debug
-                    };
-                    log::log!(lvl, "{} reload triggered too often, skipping", name);
-                }
-            }
+        if !force
+            && let Some(last) = last_reload
+            && last.elapsed() > reload_interval / 2
+        {
+            let lvl = if from_trig {
+                log::Level::Warn
+            } else {
+                log::Level::Debug
+            };
+            log::log!(lvl, "{} reload triggered too often, skipping", name);
         }
         reloader_active.store(true, atomic::Ordering::SeqCst);
         if let Err(e) = reload_node(name, &key_id, compress, node_timeout, trusted).await {
@@ -281,11 +271,10 @@ async fn pinger(name: &str, ready: triggered::Listener) -> EResult<()> {
         int.tick().await;
         if online_beacon.load(atomic::Ordering::SeqCst)
             && !reloader_active.load(atomic::Ordering::SeqCst)
+            && let Err(e) = ping_node(name, &key_id, compress, node_timeout).await
         {
-            if let Err(e) = ping_node(name, &key_id, compress, node_timeout).await {
-                mark_node(name, false, None, false, None).await?;
-                error!("failed to ping the node {}: {}", name, e);
-            }
+            mark_node(name, false, None, false, None).await?;
+            error!("failed to ping the node {}: {}", name, e);
         }
     }
 }
@@ -532,10 +521,10 @@ pub async fn append_discovered_node(
     let mut recreate = false;
     if let Some(n) = nodes.get_mut(name) {
         if n.api_enabled == api_enabled {
-            if crate::discovery_enabled() {
-                if let Some(node_info) = info {
-                    n.info.replace(node_info);
-                }
+            if crate::discovery_enabled()
+                && let Some(node_info) = info
+            {
+                n.info.replace(node_info);
             }
             if n.enabled && n.api_enabled && !n.online() {
                 trace!(

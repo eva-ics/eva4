@@ -8,7 +8,7 @@ pub async fn read_tls_certificate(ca: &str, eva_dir: &str) -> EResult<native_tls
     let data = tokio::fs::read(&path).await?;
     let cert = if Path::new(ca)
         .extension()
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("der"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("der"))
     {
         native_tls::Certificate::from_der(&data)
             .map_err(|e| Error::invalid_params(format!("{}: {}", path, e)))?

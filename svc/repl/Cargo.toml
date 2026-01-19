@@ -26,4 +26,3 @@ openssl = { workspace = true }
 
 [features]
 std-alloc = []
-openssl-vendored = ["eva-common/openssl-vendored"]

@@ -45,22 +45,22 @@ impl RpcHandlers for Handlers {
     }
     async fn handle_frame(&self, frame: Frame) {
         svc_need_ready!();
-        if frame.kind() == busrt::FrameKind::Publish {
-            if let Some(topic) = frame.topic() {
-                if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
-                    process_local_state(topic, o, frame.payload(), &self.tx)
+        if frame.kind() == busrt::FrameKind::Publish
+            && let Some(topic) = frame.topic()
+        {
+            if let Some(o) = topic.strip_prefix(LOCAL_STATE_TOPIC) {
+                process_local_state(topic, o, frame.payload(), &self.tx)
+                    .await
+                    .log_ef();
+            } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
+                if self.replicate_remote {
+                    process_remote_state(topic, o, frame.payload(), &self.tx)
                         .await
                         .log_ef();
-                } else if let Some(o) = topic.strip_prefix(REMOTE_STATE_TOPIC) {
-                    if self.replicate_remote {
-                        process_remote_state(topic, o, frame.payload(), &self.tx)
-                            .await
-                            .log_ef();
-                    }
-                } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
-                    aaa::KEYS.lock().unwrap().remove(key_id);
-                    aaa::ENC_OPTS.lock().unwrap().remove(key_id);
                 }
+            } else if let Some(key_id) = topic.strip_prefix(AAA_KEY_TOPIC) {
+                aaa::KEYS.lock().unwrap().remove(key_id);
+                aaa::ENC_OPTS.lock().unwrap().remove(key_id);
             }
         }
     }

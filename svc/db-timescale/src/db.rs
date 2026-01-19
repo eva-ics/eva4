@@ -1,3 +1,4 @@
+use chrono::DateTime;
 use chrono::naive::NaiveDateTime;
 use eva_common::acl::OIDMask;
 use eva_common::prelude::*;
@@ -5,7 +6,6 @@ use eva_sdk::prelude::err_logger;
 use eva_sdk::types::{HistoricalState, ItemState, StateHistoryData, StateProp};
 use futures::TryStreamExt;
 use log::{info, warn};
-use once_cell::sync::OnceCell;
 use sqlx::{
     ConnectOptions, PgPool, Row,
     postgres::{PgConnectOptions, PgPoolOptions},
@@ -13,32 +13,35 @@ use sqlx::{
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::str::FromStr;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::history_table_name;
 
 err_logger!();
 
-pub static POOL: OnceCell<PgPool> = OnceCell::new();
+pub static POOL: OnceLock<PgPool> = OnceLock::new();
 
 const DEFAULT_COMPRESSION_POLICY: &str = "1d";
 
 #[allow(clippy::cast_sign_loss)]
 #[allow(clippy::cast_possible_truncation)]
 pub fn ts_to_naive(ts: f64) -> EResult<NaiveDateTime> {
-    NaiveDateTime::from_timestamp_opt(ts.trunc() as i64, (ts.fract() * 1_000_000_000_f64) as u32)
-        .ok_or_else(|| Error::invalid_data("unable to convert timestamp"))
+    let d = DateTime::from_timestamp(ts.trunc() as i64, (ts.fract() * 1_000_000_000_f64) as u32)
+        .ok_or_else(|| Error::invalid_data("unable to convert timestamp"))?;
+    Ok(d.naive_utc())
 }
 
 #[allow(clippy::cast_precision_loss)]
 pub fn naive_to_ts(t: NaiveDateTime) -> f64 {
-    t.timestamp() as f64 + f64::from(t.timestamp_subsec_nanos()) / 1_000_000_000.0
+    let u = t.and_utc();
+    u.timestamp() as f64 + f64::from(u.timestamp_subsec_nanos()) / 1_000_000_000.0
 }
 
 #[allow(clippy::too_many_lines)]
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
-    let mut opts = PgConnectOptions::from_str(conn)?;
-    opts.log_statements(log::LevelFilter::Trace)
+    let opts = PgConnectOptions::from_str(conn)?
+        .log_statements(log::LevelFilter::Trace)
         .log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(2));
     let pool = PgPoolOptions::new()
         .max_connections(size)
@@ -180,16 +183,16 @@ async fn init_hypertable(pool: &PgPool) -> EResult<()> {
 }
 
 pub async fn submit(state: ItemState) -> EResult<()> {
-    if let Some(val) = state.value {
-        if let Ok(value) = f64::try_from(val) {
-            sqlx::query("SELECT insert_state_history_events($1, $2, $3, $4)")
-                .bind([ts_to_naive(state.set_time)?])
-                .bind([state.oid.as_str()])
-                .bind([state.status])
-                .bind([value])
-                .execute(POOL.get().unwrap())
-                .await?;
-        }
+    if let Some(val) = state.value
+        && let Ok(value) = f64::try_from(val)
+    {
+        sqlx::query("SELECT insert_state_history_events($1, $2, $3, $4)")
+            .bind([ts_to_naive(state.set_time)?])
+            .bind([state.oid.as_str()])
+            .bind([state.status])
+            .bind([value])
+            .execute(POOL.get().unwrap())
+            .await?;
     }
     Ok(())
 }
@@ -203,13 +206,13 @@ pub async fn submit_bulk(state: Vec<ItemState>, replace: bool) -> EResult<()> {
     let mut statuses = Vec::with_capacity(state.len());
     let mut values = Vec::with_capacity(state.len());
     for s in &state {
-        if let Some(ref val) = s.value {
-            if let Ok(value) = f64::try_from(val) {
-                ts.push(ts_to_naive(s.set_time)?);
-                oids.push(s.oid.as_str());
-                statuses.push(s.status);
-                values.push(value);
-            }
+        if let Some(ref val) = s.value
+            && let Ok(value) = f64::try_from(val)
+        {
+            ts.push(ts_to_naive(s.set_time)?);
+            oids.push(s.oid.as_str());
+            statuses.push(s.status);
+            values.push(value);
         }
     }
     let q = if replace {
@@ -226,7 +229,7 @@ pub async fn submit_bulk(state: Vec<ItemState>, replace: bool) -> EResult<()> {
     Ok(())
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::too_many_arguments)]
 #[allow(clippy::cast_sign_loss)]
 pub async fn state_history(
     oid_str: &str,
