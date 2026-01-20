@@ -35,7 +35,12 @@ struct CommandFlash {
     service_id: String,
     #[clap(long, help = "Path to the service binary")]
     binary: String,
-    #[clap(short = 'b', long, default_value = "/opt/eva4/var/bus.ipc")]
+    #[clap(
+        short = 'b',
+        long,
+        default_value = "/opt/eva4/var/bus.ipc",
+        help = "Bus token can be specified in EVA_API_KEY environment variable"
+    )]
     bus: String,
     #[clap(short = 'T', long, default_value = "5")]
     timeout: u64,
@@ -56,7 +61,7 @@ struct CommandRun {
     #[clap(
         short = 'd',
         long,
-        help = "Override the service data path (use a local directory)"
+        help = "Bus token can be specified in EVA_API_KEY environment variable"
     )]
     data_path: Option<String>,
     #[clap(
@@ -136,19 +141,17 @@ async fn new(args: CommandNew) -> EResult<()> {
     std::env::set_current_dir(&args.name)?;
     add_dependency(
         "eva-common",
-        "0.3",
+        "0.4",
         &["events", "common-payloads", "payload", "acl"],
         None,
         false,
     )
     .await?;
-    add_dependency("eva-sdk", "0.3", &["controller"], None, false).await?;
-    add_dependency("tokio", "1.36", &["full"], None, false).await?;
-    add_dependency("async-trait", "0.1", &[], None, false).await?;
-    add_dependency("serde", "1.0", &["derive", "rc"], None, false).await?;
+    add_dependency("eva-sdk", "0.4", &["controller"], None, false).await?;
+    add_dependency("tokio", "1", &["full"], None, false).await?;
+    add_dependency("serde", "1", &["derive", "rc"], None, false).await?;
     add_dependency("log", "0.4", &[], None, false).await?;
     add_dependency("mimalloc", "0.1", &[], None, false).await?;
-    add_dependency("once_cell", "1.20", &[], None, false).await?;
     tokio::fs::write("src/main.rs", SVC_TPL).await?;
     tokio::fs::OpenOptions::new()
         .append(true)
@@ -173,6 +176,7 @@ fn client_config() -> eva_client::Config {
     config
 }
 
+#[allow(clippy::too_many_lines)]
 async fn run(args: CommandRun) -> EResult<()> {
     let timeout = Duration::from_secs(args.timeout);
     let hostname = hostname::get()?.to_string_lossy().to_string();
