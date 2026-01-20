@@ -1,8 +1,7 @@
 use log::{error, info, warn};
-use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 use tokio::signal::unix::{SignalKind, signal};
 
@@ -19,8 +18,8 @@ pub const DEFAULT_REPOSITORY_URL: &str = "https://pub.bma.ai/eva4";
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 
-static ARCH_SFX: Lazy<String> =
-    Lazy::new(|| std::env::var("EVA_ARCH_SFX").unwrap_or(env!("ARCH_SFX").to_string()));
+static ARCH_SFX: LazyLock<String> =
+    LazyLock::new(|| std::env::var("EVA_ARCH_SFX").unwrap_or(env!("ARCH_SFX").to_string()));
 
 pub fn arch_sfx() -> &'static str {
     &ARCH_SFX
@@ -55,14 +54,12 @@ impl FileCleaner {
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref FILE_CLEANER: FileCleaner = <_>::default();
-    pub static ref DEFAULT_CONNECTION_PATH: String = {
-        let mut p = ecm::EVA_DIR.clone();
-        p.push("var/bus.ipc");
-        p.to_string_lossy().to_string()
-    };
-}
+pub static FILE_CLEANER: LazyLock<FileCleaner> = LazyLock::new(<_>::default);
+pub static DEFAULT_CONNECTION_PATH: LazyLock<String> = LazyLock::new(|| {
+    let mut p = ecm::EVA_DIR.clone();
+    p.push("var/bus.ipc");
+    p.to_string_lossy().to_string()
+});
 
 #[allow(clippy::large_futures)]
 #[tokio::main(worker_threads = 2)]

@@ -212,8 +212,7 @@ async fn publish_raw(rpc: &RpcClient, oid: &OID) -> EResult<()> {
 
 fn get_mem_kb(sys: &mut System, pid: Pid) -> u64 {
     sys.refresh_process(pid);
-    let mem = sys.process(pid).unwrap().memory();
-    mem
+    sys.process(pid).unwrap().memory()
 }
 
 #[tokio::main]
@@ -319,10 +318,10 @@ async fn benchmark() -> EResult<()> {
                     .await
                     .unwrap();
                 let st: Vec<ItemState> = unpack(res.payload()).unwrap();
-                if let Ok(v) = u32::try_from(st[0].value.clone()) {
-                    if v == 77 {
-                        break;
-                    }
+                if let Ok(v) = u32::try_from(st[0].value.clone())
+                    && v == 77
+                {
+                    break;
                 }
                 tokio::time::sleep(Duration::from_millis(1)).await;
             }

@@ -1944,13 +1944,13 @@ dependencies = [
 
 [[package]]
 name = "eva-client"
-version = "0.3.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e847c9126ca975d61aa11caf637752d17eb3d01b9dbc031fd13df050ef2a0d6"
+checksum = "c3027267e092207b2a584b9bfa3da65c93acb3d3289f979a647f5abaea7decd9"
 dependencies = [
- "busrt 0.4.22",
- "eva-common 0.3.120",
- "eva-rjrpc 0.3.3",
+ "busrt 0.5.2",
+ "eva-common 0.4.2",
+ "eva-rjrpc",
  "hyper 0.14.32",
  "hyper-tls 0.5.0",
  "serde",
@@ -1967,7 +1967,7 @@ dependencies = [
  "bzip2",
  "cargo_metadata",
  "chrono",
- "clap 3.2.25",
+ "clap 4.5.54",
  "colored 2.2.0",
  "env_logger 0.11.8",
  "eva-client",
@@ -1994,8 +1994,6 @@ version = "0.3.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bff32233070c4b3d6c0a778b8b98b5fdc88c4ab909279d054149052c634d0611"
 dependencies = [
- "async-recursion",
- "bmart",
  "busrt 0.4.22",
  "env_logger 0.10.2",
  "ipnetwork",
@@ -2010,9 +2008,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
- "serde_yaml 0.8.26",
  "submap",
- "tokio",
  "uuid 1.19.0",
 ]
 
@@ -2507,7 +2503,7 @@ dependencies = [
  "dobj-codegen",
  "eva-common 0.4.2",
  "eva-internal",
- "eva-rjrpc 0.4.0",
+ "eva-rjrpc",
  "eva-sdk",
  "futures 0.3.31",
  "genpass-native",
@@ -2636,23 +2632,6 @@ dependencies = [
  "tokio",
  "triggered",
  "uuid 1.19.0",
-]
-
-[[package]]
-name = "eva-rjrpc"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96aae90792118615e897ae94a285ccd3dde7943276dc3d9aeff294df5c7a2723"
-dependencies = [
- "eva-common 0.3.120",
- "hyper 0.14.32",
- "lazy_static",
- "log",
- "rmp-serde",
- "serde",
- "serde_json",
- "tokio",
- "url 2.5.8",
 ]
 
 [[package]]
