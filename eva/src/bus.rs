@@ -260,7 +260,11 @@ impl EvaBroker {
             let server_config =
                 socket.server_config(self.config.buf_size, self.config.buf_ttl, core.timeout());
             #[allow(clippy::case_sensitive_file_extension_comparisons)]
-            if is_unix_socket!(socket.path()) {
+            if let Some(ws_path) = socket.path().strip_prefix("ws://") {
+                self.broker
+                    .spawn_websocket_server(ws_path, server_config, None)
+                    .await?;
+            } else if is_unix_socket!(socket.path()) {
                 core.add_file_to_remove(socket.path());
                 self.broker
                     .spawn_unix_server(socket.path(), server_config)
