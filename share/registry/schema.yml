@@ -279,6 +279,8 @@ svc:
   type: object
   additionalProperties: false
   properties:
+    prepare_command: &strornull
+      type: ["string", "null"]
     bus:
       type: object
       additionalProperties: false
@@ -286,6 +288,7 @@ svc:
         buf_size: *intpositiveornull
         buf_ttl: *intpositiveornull
         path: *str
+        token: *strornull
         ping_interval: *floatornull
         queue_size: *intpositiveornull
         timeout: *floatornull
@@ -296,8 +299,6 @@ svc:
     command: *str
     enabled: *bool
     workers: *intpositiveornull
-    prepare_command: &strornull
-      type: ["string", "null"]
     user: *strornull
     config: *any
     env:
