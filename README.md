@@ -44,6 +44,14 @@ Read <https://info.bma.ai/en/actual/eva4/install.html>
 cargo install cross --git https://github.com/cross-rs/cross
 ```
 
+* Install certain required dependencies
+
+```
+apt-get -y install \
+    libssl-dev libbsd-dev pkg-config build-essential cmake git autoconf\
+    libtool libsnmp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```
+
 * Prepare cross-build docker images
 
 (Assumes you have Docker or compatible installed and running):

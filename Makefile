@@ -15,7 +15,7 @@ test-build-mark:
 	git push origin main
 
 test-build-create:
-	cd /opt/eva-util/eva-builder && ./update.sh lab-builder1
+	cd ~/src/eva-util/eva-builder && ./update.sh lab-builder1
 	ssh -t lab-builder1 "cd /build/eva4 && git checkout main && make do-test-build-create"
 
 do-test-build-create:
