@@ -73,7 +73,7 @@ downloaded, installed and/or compiled:
 
 ```
 apt-get -y install \
-    libssl-dev libbsd-dev pkg-config build-essential cmake git autoconf\
+    libssl-dev libbsd-dev pkg-config build-essential cmake git autoconf \
     libtool libsnmp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 ```
 * **svc/controller-enip** requires [libplctag](https://libplctag.github.io)
