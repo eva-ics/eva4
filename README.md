@@ -36,20 +36,14 @@ Read <https://info.bma.ai/en/actual/eva4/install.html>
 
 ## Building from source
 
+### Docker cross-compilation (recommended)
+
 * [Install Rust](https://www.rust-lang.org/tools/install)
 
 * Install cross-rs:
 
 ```
 cargo install cross --git https://github.com/cross-rs/cross
-```
-
-* Install certain required dependencies
-
-```
-apt-get -y install \
-    libssl-dev libbsd-dev pkg-config build-essential cmake git autoconf\
-    libtool libsnmp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 ```
 
 * Prepare cross-build docker images
@@ -69,9 +63,19 @@ cross build --target x86_64-unknown-linux-gnu --release
 cross build --target aarch64-unknown-linux-gnu --release
 ```
 
+
+### Local build
+
 If building on the local machine, the following libraries must be manually
 downloaded, installed and/or compiled:
 
+* Certain required dependencies
+
+```
+apt-get -y install \
+    libssl-dev libbsd-dev pkg-config build-essential cmake git autoconf\
+    libtool libsnmp-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```
 * **svc/controller-enip** requires [libplctag](https://libplctag.github.io)
 
 * **svc/controller-trap** requires [libnetsnmp](http://www.net-snmp.org)
