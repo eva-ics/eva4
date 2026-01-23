@@ -17,7 +17,7 @@ path = "src/main.rs"
 serde = { features = ["derive", "rc"] , workspace = true }
 serde_yaml = { workspace = true }
 eva-common = { features = ["common-payloads", "console-logger"] , workspace = true }
-eva-client = "0.5.1"
+eva-client = "0.5.2"
 clap = { workspace = true, features = ["derive"] }
 tokio = { features = ["full"] , workspace = true }
 tera = "1.19.1"

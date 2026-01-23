@@ -1856,9 +1856,9 @@ dependencies = [
 
 [[package]]
 name = "eva-client"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3027267e092207b2a584b9bfa3da65c93acb3d3289f979a647f5abaea7decd9"
+checksum = "7364253c616610f3d7c6dd91ce7273df7980498270e039fd9e9ba9b0d7d7fa76"
 dependencies = [
  "busrt",
  "eva-common",
