@@ -361,6 +361,12 @@ if [ -z "$VERSION" ] || [ -z "$BUILD" ]; then
   exit 7
 fi
 
+VERSION_MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+if [ "$VERSION_MINOR" -lt 2 ]; then
+  ARCH_SFX="$ARCH_SFX-musl"
+fi
+
 echo "Installing EVA ICS version ${VERSION} build ${BUILD}"
 
 if ! curl -L "${REPO}/${VERSION}/nightly/eva-${VERSION}-${BUILD}-${ARCH_SFX}.tgz" \
