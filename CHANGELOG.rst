@@ -17,6 +17,11 @@ applying to production.
 Note that for mission-critical systems it is recommended to test every update
 before applying to production despite of the absence of warning marks.
 
+4.2.0-stable
+============
+
+* TBA: netmon & db-json svcs, UI and backend improvements, MUSL support dropped
+
 4.1.0-stable
 ============
 
