@@ -203,10 +203,10 @@ if [ -z "${ARCH_SFX}" ]; then
       #ARCH_SFX=armv7
       #;;
     x86_64)
-      ARCH_SFX=x86_64-musl
+      ARCH_SFX=x86_64
       ;;
     aarch64)
-      ARCH_SFX=aarch64-musl
+      ARCH_SFX=aarch64
       ;;
     *)
       echo "Unsupported CPU architecture. Please build the distro manually"
