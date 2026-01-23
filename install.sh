@@ -221,11 +221,12 @@ if [ -d "$PREFIX" ] && [ -z "${PREPARE_ONLY}" ]; then
 fi
 
 if [ $ID_LIKE = "debian" ]; then
+  export DEBIAN_FRONTEND=noninteractive
   if [ -z "$SKIP_SYSTEM_UPDATE" ]; then
     apt-get -q update || exit 10
   fi
   if [ ! -f /etc/localtime ]; then
-    env DEBIAN_FRONTEND=noninteractive apt-get install -q --no-install-recommends -y tzdata || exit 10
+    apt-get install -q --no-install-recommends -y tzdata || exit 10
     ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   fi
 fi
