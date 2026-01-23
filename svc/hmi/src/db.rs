@@ -738,6 +738,7 @@ ON CONFLICT ON CONSTRAINT user_data_pkey DO UPDATE SET v=$3"
 
 #[allow(clippy::too_many_lines)]
 pub async fn init(conn: &str, pool_size: u32, timeout: Duration) -> EResult<()> {
+    sqlx::any::install_default_drivers();
     let kind = DbKind::from_str(conn)?;
     kind.create_if_missing(conn).await?;
     DB_KIND

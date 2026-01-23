@@ -26,6 +26,7 @@ fn safe_sql_string(s: &str) -> EResult<&str> {
 }
 
 pub async fn init(conn: &str, size: u32, timeout: Duration) -> EResult<()> {
+    sqlx::any::install_default_drivers();
     let kind = DbKind::from_str(conn)?;
     kind.create_if_missing(conn).await?;
     DB_KIND
