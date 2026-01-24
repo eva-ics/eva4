@@ -143,9 +143,7 @@ impl Manager {
             debug!("loading service {}", id);
             let mut params: Params = serde_json::from_value(v)?;
             if params.mem_warn.is_none() {
-                params
-                    .mem_warn
-                    .replace(MEMORY_WARN_DEFAULT * u64::from(params.workers));
+                params.mem_warn.replace(MEMORY_WARN_DEFAULT);
             }
             services.insert(id.to_owned(), params);
         }

@@ -2314,10 +2314,7 @@ impl Core {
         tokio::spawn(async move {
             handle_save(rx, &rpc).await;
         });
-        spawn_mem_checker(
-            self.mem_warn
-                .unwrap_or(crate::MEMORY_WARN_DEFAULT * u64::from(self.workers)),
-        );
+        spawn_mem_checker(self.mem_warn.unwrap_or(crate::MEMORY_WARN_DEFAULT));
         self.action_manager.start().await
     }
     #[inline]
