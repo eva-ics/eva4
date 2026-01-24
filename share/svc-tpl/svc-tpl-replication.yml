@@ -63,3 +63,5 @@ config:
   #replicate_remote: true
 user: nobody
 mem_warn: 600000000
+timeout:
+  startup: 20
