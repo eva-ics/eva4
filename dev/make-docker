@@ -3,10 +3,18 @@
 VERSION=$(grep ^version Cargo.toml|cut -d \" -f2)
 BUILD=$(grep const\ BUILD eva/src/lib.rs|cut -d= -f2|cut -d\; -f1|awk '{ print $1 }')
 
+#SFX="-test"
+SFX=
+
 echo "Releasing Docker image for EVA distribution ver ${VERSION} build ${BUILD}"
 
-cd ./docker/build
-./build.sh "$VERSION" "$BUILD" || exit 1
-./push.sh "$BUILD" || exit 1
+cd ./docker/build || exit 1
+  #--pull --no-cache \
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --build-arg VERSION=${VERSION} \
+  --build-arg BUILD=${BUILD} \
+  -t bmauto/eva-ics4${SFX}:${BUILD} \
+  -t bmauto/eva-ics4${SFX}:latest \
+  --push .
 
 echo "Docker image uploaded for ${VERSION} build ${BUILD}"

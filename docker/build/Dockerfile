@@ -1,4 +1,8 @@
-FROM ubuntu:22.04
+FROM --platform=linux/${TARGETARCH} ubuntu:22.04
+
+ARG VERSION
+ARG BUILD
+ARG TARGETARCH
 
 RUN env DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install --no-install-recommends -y tzdata && \
@@ -13,17 +17,22 @@ RUN addgroup --system eva && \
 
 RUN touch /.eva_container
 
+RUN if [ "$TARGETARCH" = "arm64" ]; then echo "aarch64" > /tmp/eva_arch; \
+    elif [ "$TARGETARCH" = "amd64" ]; then echo "x86_64" > /tmp/eva_arch; \
+    else echo "unsupported architecture $TARGETARCH" >&2; exit 1; fi
+
 RUN mkdir -p /opt/eva4 && \
-  curl https://pub.bma.ai/eva4/%VERSION%/nightly/eva-%VERSION%-%BUILD%-x86_64.tgz \
+  curl https://pub.bma.ai/eva4/${VERSION}/nightly/eva-${VERSION}-${BUILD}-$(cat /tmp/eva_arch).tgz \
     | tar xzf - -C /opt/eva4  --strip-components 1 && \
-  curl https://pub.bma.ai/eva4/%VERSION%/nightly/update-%BUILD%.sh -o /opt/eva4/update.sh
+  curl https://pub.bma.ai/eva4/${VERSION}/nightly/update-${BUILD}.sh -o /opt/eva4/update.sh
 
 RUN /opt/eva4/prepare && \
     /opt/eva4/sbin/eva-registry-cli set-field eva/config/python-venv pip_extra_options -- --no-cache-dir && \
     /opt/eva4/sbin/venvmgr build && \
     /opt/eva4/sbin/venvmgr add eva-shell && \
     /opt/eva4/sbin/venvmgr add requests && \
-    ln -sf /opt/eva4/bin/eva /usr/local/bin/eva
+    ln -sf /opt/eva4/bin/eva /usr/local/bin/eva && \
+    rm -f /tmp/eva_arch
 
 RUN echo '{"buf_size":8192,"buf_ttl":10,"queue_size":32768,"sockets":["var/bus.ipc","0.0.0.0:7778"]}' | /opt/eva4/sbin/eva-registry-cli set eva/config/bus - --type json
 RUN echo '[{"level":"info","output":"console"},{"level":"info","output":"bus"},{"keep":86400,"level":"info","max_records":1000000,"output":"memory"}]' | /opt/eva4/sbin/eva-registry-cli set eva/config/logs - --type json
