@@ -1,8 +1,0 @@
-[target.x86_64-unknown-linux-gnu]
-image.name = "eva-gst:x86_64"
-image.toolchain = ["x86_64-unknown-linux-gnu"]
-
-[target.aarch64-unknown-linux-gnu]
-image.name = "eva-gst:aarch64"
-image.toolchain = ["x86_64-unknown-linux-gnu"]
-

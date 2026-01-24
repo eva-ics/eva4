@@ -298,11 +298,20 @@ dependencies = [
 
 [[package]]
 name = "atomic-timer"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "647fd252bf5d6f8036ac52e5c0cd320b676e62ca176bf478c835114f10125347"
+dependencies = [
+ "bma-ts 0.1.15",
+]
+
+[[package]]
+name = "atomic-timer"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0c02bb9e68df141bf20973226e9f689d22daf010f3230202d9a7692abf91a70"
 dependencies = [
- "bma-ts",
+ "bma-ts 0.2.4",
 ]
 
 [[package]]
@@ -489,7 +498,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "173901312e9850391d4d7c1318c4e099fdc037d61870fca427429830efdb4e5f"
 dependencies = [
  "array-init",
- "binrw_derive",
+ "binrw_derive 0.13.3",
+ "bytemuck",
+]
+
+[[package]]
+name = "binrw"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81419ff39e6ed10a92a7f125290859776ced35d9a08a665ae40b23e7ca702f30"
+dependencies = [
+ "array-init",
+ "binrw_derive 0.15.0",
  "bytemuck",
 ]
 
@@ -500,10 +520,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb515fdd6f8d3a357c8e19b8ec59ef53880807864329b1cb1cba5c53bf76557e"
 dependencies = [
  "either",
- "owo-colors",
+ "owo-colors 3.5.0",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "binrw_derive"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "376404e55ec40d0d6f8b4b7df3f87b87954bd987f0cf9a7207ea3b6ea5c9add4"
+dependencies = [
+ "either",
+ "owo-colors 4.2.3",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
 ]
 
 [[package]]
@@ -607,6 +640,18 @@ checksum = "7ed74c5bc947ec854e93a600d51fefc5f9ea1cf84d5e8b65619c8f9ab856994d"
 dependencies = [
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "bma-ts"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79cd620f7acca0589c9ba809dd090dc2a0eb79b785b133ced205ca355b2a63b9"
+dependencies = [
+ "instant",
+ "nix 0.27.1",
+ "once_cell",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -737,6 +782,7 @@ dependencies = [
  "triggered",
  "tungstenite 0.26.2",
  "unix-named-pipe",
+ "uuid 1.19.0",
  "ws_stream_tungstenite",
 ]
 
@@ -1368,6 +1414,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dateparser"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2ef451feee09ae5ecd8a02e738bd9adee9266b8fa9b44e22d3ce968d8694238"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1909,11 +1967,11 @@ dependencies = [
  "async-channel 1.9.0",
  "async-recursion",
  "axum",
- "binrw",
+ "binrw 0.13.3",
  "bmart",
  "busrt",
  "chrono",
- "dateparser",
+ "dateparser 0.1.8",
  "env_logger 0.10.2",
  "gstreamer",
  "gstreamer-video",
@@ -2052,7 +2110,7 @@ name = "eva-controller-netmon"
 version = "4.2.0"
 dependencies = [
  "async-trait",
- "atomic-timer",
+ "atomic-timer 0.3.2",
  "eva-common",
  "eva-sdk",
  "log",
@@ -2360,6 +2418,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "eva-gst"
+version = "0.2.0"
+dependencies = [
+ "atomic-timer 0.2.2",
+ "binrw 0.15.0",
+ "busrt",
+ "dateparser 0.2.1",
+ "eva-common",
+ "gst-plugin-version-helper",
+ "gstreamer",
+ "gstreamer-base",
+ "gstreamer-video",
+ "hostname 0.3.1",
+ "parking_lot_rt",
+ "rtsc",
+ "serde",
+]
+
+[[package]]
 name = "eva-gst-pipeline"
 version = "4.2.0"
 dependencies = [
@@ -2428,7 +2505,7 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "atty",
- "binrw",
+ "binrw 0.13.3",
  "bmart",
  "busrt",
  "bytes 1.11.0",
@@ -2734,7 +2811,7 @@ version = "4.2.0"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
- "bma-ts",
+ "bma-ts 0.2.4",
  "eva-common",
  "eva-sdk",
  "gstreamer",
@@ -3266,6 +3343,16 @@ dependencies = [
  "ff",
  "rand_core 0.6.4",
  "subtle",
+]
+
+[[package]]
+name = "gst-plugin-version-helper"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a68a894ef2d738054b950e1dbef5d9012b63fd968d4d32dbccd31bd8d8d4b219"
+dependencies = [
+ "chrono",
+ "toml_edit",
 ]
 
 [[package]]
@@ -3979,6 +4066,15 @@ checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "instant"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -4950,6 +5046,12 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "owo-colors"
+version = "4.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c6901729fa79e91a0913333229e9ca5dc725089d1c363b2f4b4760709dc4a52"
 
 [[package]]
 name = "p256"
@@ -6088,7 +6190,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d7696615e8d49a06c58a49d4b6f44eb06be20c4a246fdeef5b9c3c52f29a21d"
 dependencies = [
- "bma-ts",
+ "bma-ts 0.2.4",
  "libc",
  "linux-futex",
  "lock_api",

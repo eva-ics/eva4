@@ -1,23 +1,22 @@
 use std::{sync::LazyLock, thread};
 
-use busrt::{sync::rpc::SyncRpc as _, QoS};
+use busrt::{QoS, sync::rpc::SyncRpc as _};
 use eva_common::{
+    OID,
     multimedia::VideoFormat,
     payload::{pack, unpack},
-    OID,
 };
 use gst::{
+    Fraction, PadDirection, PadPresence, PadTemplate,
     glib::{
-        self,
+        self, ParamSpecBuilderExt as _,
         subclass::{
             object::{ObjectImpl, ObjectImplExt as _},
             types::{ObjectSubclass, ObjectSubclassExt as _},
         },
-        ParamSpecBuilderExt as _,
     },
     prelude::{GstParamSpecBuilderExt as _, ToValue as _},
     subclass::prelude::{ElementImpl, GstObjectImpl},
-    Fraction, PadDirection, PadPresence, PadTemplate,
 };
 use gst_base::{
     prelude::BaseSrcExt as _,
@@ -30,7 +29,7 @@ use gst_video::VideoInfo;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
-use crate::{default_bus_client_name, DEFAULT_BUS_PATH};
+use crate::{DEFAULT_BUS_PATH, default_bus_client_name};
 
 const DEFAULT_VIDEOSRV_SVC: &str = "eva.videosrv.default";
 
@@ -68,6 +67,7 @@ struct Session {
     pts: u64,
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn parse_timestamp(s: &str) -> f64 {
     if let Ok(t) = s.parse::<f64>() {
         return t;
@@ -96,6 +96,7 @@ struct Settings {
     oid: Option<OID>,
     bus_path: String,
     bus_client_name: String,
+    bus_token: Option<String>,
     videosrv_svc: String,
     t_start: Option<f64>,
     t_end: Option<f64>,
@@ -109,6 +110,7 @@ impl Default for Settings {
             oid: None,
             bus_path: DEFAULT_BUS_PATH.to_string(),
             bus_client_name: <_>::default(),
+            bus_token: None,
             videosrv_svc: DEFAULT_VIDEOSRV_SVC.to_string(),
             t_start: None,
             t_end: None,
@@ -178,6 +180,11 @@ impl ObjectImpl for EvaVideoSrvSrc {
                 glib::ParamSpecString::builder("bus-client-name")
                 .nick("Bus client name")
                 .blurb("Bus client name to use for this sink. If empty, a default name will be generated based on the hostname and process ID.")
+                .mutable_ready()
+                .build(),
+                glib::ParamSpecString::builder("bus-token")
+                .nick("Bus token")
+                .blurb("Bus token to use for authentication. If not set, no authentication will be used.")
                 .mutable_ready()
                 .build(),
                 glib::ParamSpecString::builder("videosrv-svc")
@@ -270,6 +277,12 @@ impl ObjectImpl for EvaVideoSrvSrc {
                     bus_client_name
                 );
                 settings.bus_client_name = bus_client_name;
+            }
+            "bus-token" => {
+                let mut settings = self.settings.lock();
+                let bus_token: String = value.get().expect("type checked upstream");
+                gst::info!(CAT, "Changing bus token",);
+                settings.bus_token = Some(bus_token);
             }
             "videosrv-svc" => {
                 let mut settings = self.settings.lock();
@@ -375,6 +388,7 @@ impl BaseSrcImpl for EvaVideoSrvSrc {
         gst::debug!(CAT, "Setting video info: {:?}", info);
         Ok(())
     }
+    #[allow(clippy::too_many_lines)]
     fn fixate(&self, mut caps: gst::Caps) -> gst::Caps {
         #[derive(Serialize)]
         struct RecInfoPayload<'a> {
@@ -398,7 +412,11 @@ impl BaseSrcImpl for EvaVideoSrvSrc {
             } else {
                 settings.bus_client_name.clone()
             };
-            let bus_config = busrt::sync::ipc::Config::new(&settings.bus_path, &bus_client_name);
+            let mut bus_config =
+                busrt::sync::ipc::Config::new(&settings.bus_path, &bus_client_name);
+            if let Some(token) = &settings.bus_token {
+                bus_config = bus_config.token(token);
+            }
             let (client, reader) = busrt::sync::ipc::Client::connect(&bus_config)
                 .expect("Failed to connect to bus IPC");
             thread::spawn(move || {

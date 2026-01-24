@@ -2,24 +2,23 @@ use std::{sync::LazyLock, thread};
 
 use busrt::sync::client::SyncClient as _;
 use eva_common::{
+    OID,
     events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC},
     multimedia::{FrameHeader, VideoFormat},
     payload::unpack,
     value::Value,
-    OID,
 };
 use gst::{
+    PadDirection, PadPresence, PadTemplate,
     glib::{
-        self,
+        self, ParamSpecBuilderExt as _,
         subclass::{
             object::{ObjectImpl, ObjectImplExt as _},
             types::{ObjectSubclass, ObjectSubclassExt as _},
         },
-        ParamSpecBuilderExt as _,
     },
     prelude::{GstParamSpecBuilderExt as _, ToValue as _},
     subclass::prelude::{ElementImpl, GstObjectImpl},
-    PadDirection, PadPresence, PadTemplate,
 };
 use gst_base::{
     prelude::BaseSrcExt as _,
@@ -35,7 +34,7 @@ use serde::Deserialize;
 type Sender = rtsc::channel::Sender<BusFrame, parking_lot::RawMutex, parking_lot::Condvar>;
 type Receiver = rtsc::channel::Receiver<BusFrame, parking_lot::RawMutex, parking_lot::Condvar>;
 
-use crate::{default_bus_client_name, DEFAULT_BUS_PATH};
+use crate::{DEFAULT_BUS_PATH, default_bus_client_name};
 
 static CAT: LazyLock<gst::DebugCategory> = LazyLock::new(|| {
     gst::DebugCategory::new(
@@ -51,12 +50,21 @@ struct BusFrame {
     data: Vec<u8>,
 }
 
-fn bus_reader(tx: Sender, bus_path: &str, bus_client_name: &str, oid: OID) {
+fn bus_reader(
+    tx: Sender,
+    bus_path: &str,
+    bus_client_name: &str,
+    bus_token: Option<&str>,
+    oid: OID,
+) {
     #[derive(Deserialize)]
     struct BusPayload {
         value: Value,
     }
-    let bus_config = busrt::sync::ipc::Config::new(bus_path, bus_client_name);
+    let mut bus_config = busrt::sync::ipc::Config::new(bus_path, bus_client_name);
+    if let Some(token) = bus_token {
+        bus_config = bus_config.token(token);
+    }
     let (mut client, reader) =
         busrt::sync::ipc::Client::connect(&bus_config).expect("Failed to connect to bus IPC");
     thread::spawn(move || {
@@ -89,10 +97,10 @@ fn bus_reader(tx: Sender, bus_path: &str, bus_client_name: &str, oid: OID) {
             video_format,
             data: data_bytes,
         };
-        if let Err(e) = tx.send(frame) {
-            if matches!(e, rtsc::Error::ChannelClosed) {
-                break;
-            }
+        if let Err(e) = tx.send(frame)
+            && matches!(e, rtsc::Error::ChannelClosed)
+        {
+            break;
         }
     }
 }
@@ -108,6 +116,7 @@ struct Settings {
     oid: Option<OID>,
     bus_path: String,
     bus_client_name: String,
+    bus_token: Option<String>,
 }
 
 impl Default for Settings {
@@ -116,6 +125,7 @@ impl Default for Settings {
             oid: None,
             bus_path: DEFAULT_BUS_PATH.to_string(),
             bus_client_name: <_>::default(),
+            bus_token: None,
         }
     }
 }
@@ -159,7 +169,12 @@ impl ObjectImpl for EvaSrc {
                 .nick("Bus client name")
                 .blurb("Bus client name to use for this sink. If empty, a default name will be generated based on the hostname and process ID.")
                 .mutable_ready()
-                .build()
+                .build(),
+                glib::ParamSpecString::builder("bus-token")
+                .nick("Bus token")
+                .blurb("EVA ICS bus authentication token")
+                .mutable_ready()
+                .build(),
             ]
         });
 
@@ -199,6 +214,16 @@ impl ObjectImpl for EvaSrc {
                 );
                 settings.bus_client_name = bus_client_name;
             }
+            "bus-token" => {
+                let mut settings = self.settings.lock();
+                let bus_token: String = value.get().expect("type checked upstream");
+                gst::info!(CAT, "Changing bus token");
+                settings.bus_token = if bus_token.is_empty() {
+                    None
+                } else {
+                    Some(bus_token)
+                };
+            }
             _ => unimplemented!(),
         }
     }
@@ -219,6 +244,14 @@ impl ObjectImpl for EvaSrc {
             "bus-client-name" => {
                 let settings = self.settings.lock();
                 settings.bus_client_name.to_value()
+            }
+            "bus-token" => {
+                let settings = self.settings.lock();
+                settings
+                    .bus_token
+                    .as_ref()
+                    .map_or_else(String::new, ToString::to_string)
+                    .to_value()
             }
             _ => unimplemented!(),
         }
@@ -278,7 +311,8 @@ impl BaseSrcImpl for EvaSrc {
                 } else {
                     settings.bus_client_name.clone()
                 };
-                move || bus_reader(tx, &bus_path, &bus_client_name, oid)
+                let bus_token = settings.bus_token.clone();
+                move || bus_reader(tx, &bus_path, &bus_client_name, bus_token.as_deref(), oid)
             });
             let frame = rx.recv().unwrap();
             let width = frame.header.width();

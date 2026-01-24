@@ -4,27 +4,26 @@ use std::{
     time::Duration,
 };
 
-use crate::{default_bus_client_name, DEFAULT_BUS_PATH};
+use crate::{DEFAULT_BUS_PATH, default_bus_client_name};
 use atomic_timer::AtomicTimer;
-use busrt::{sync::client::SyncClient, QoS};
+use busrt::{QoS, sync::client::SyncClient};
 use eva_common::{
-    events::{RawStateEventOwned, RAW_STATE_TOPIC},
+    OID,
+    events::{RAW_STATE_TOPIC, RawStateEventOwned},
     multimedia::{FrameHeader, VideoFormat},
     payload::pack,
     value::Value,
-    OID,
 };
 use gst::{
+    Buffer, ErrorMessage, FlowError, FlowSuccess, LoggableError, PadDirection, PadPresence,
+    PadTemplate,
     glib::{
-        self,
+        self, ParamSpecBuilderExt,
         subclass::{object::ObjectImpl, types::ObjectSubclass},
         value::ToValue as _,
-        ParamSpecBuilderExt,
     },
     prelude::GstParamSpecBuilderExt as _,
     subclass::prelude::{ElementImpl, GstObjectImpl, ObjectSubclassExt},
-    Buffer, ErrorMessage, FlowError, FlowSuccess, LoggableError, PadDirection, PadPresence,
-    PadTemplate,
 };
 use gst_base::subclass::prelude::BaseSinkImpl;
 use parking_lot::Mutex;
@@ -49,6 +48,7 @@ struct Settings {
     oid: Option<OID>,
     bus_path: String,
     bus_client_name: String,
+    bus_token: Option<String>,
     force_width: u32,
     force_height: u32,
 }
@@ -59,6 +59,7 @@ impl Default for Settings {
             oid: None,
             bus_path: DEFAULT_BUS_PATH.to_string(),
             bus_client_name: <_>::default(),
+            bus_token: None,
             force_width: 0,
             force_height: 0,
         }
@@ -116,6 +117,11 @@ impl ObjectImpl for EvaSink {
                 .blurb("Bus client name to use for this sink. If empty, a default name will be generated based on the hostname and process ID.")
                 .mutable_ready()
                 .build(),
+                glib::ParamSpecString::builder("bus-token")
+                .nick("Bus token")
+                .blurb("Bus authentication token (if required)")
+                .mutable_ready()
+                .build(),
                 glib::ParamSpecUInt::builder("force-width")
                 .nick("Force width")
                 .blurb("Force picture width (0 to disable)")
@@ -169,6 +175,16 @@ impl ObjectImpl for EvaSink {
                 );
                 settings.bus_client_name = bus_client_name;
             }
+            "bus-token" => {
+                let mut settings = self.settings.lock();
+                let bus_token: String = value.get().expect("type checked upstream");
+                gst::info!(CAT, "Changing bus token from");
+                settings.bus_token = if bus_token.is_empty() {
+                    None
+                } else {
+                    Some(bus_token)
+                };
+            }
             "force-width" => {
                 let mut settings = self.settings.lock();
                 let force_width: u32 = value.get().expect("type checked upstream");
@@ -211,6 +227,14 @@ impl ObjectImpl for EvaSink {
             "bus-client-name" => {
                 let settings = self.settings.lock();
                 settings.bus_client_name.to_value()
+            }
+            "bus-token" => {
+                let settings = self.settings.lock();
+                settings
+                    .bus_token
+                    .as_ref()
+                    .map_or_else(String::new, Clone::clone)
+                    .to_value()
             }
             "force-width" => {
                 let settings = self.settings.lock();
@@ -288,10 +312,12 @@ impl BaseSinkImpl for EvaSink {
         } else {
             settings.bus_client_name.clone()
         };
-        session.bus_client_config = Some(busrt::sync::ipc::Config::new(
-            &settings.bus_path,
-            &bus_client_name,
-        ));
+        let mut bus_client_config =
+            busrt::sync::ipc::Config::new(&settings.bus_path, &bus_client_name);
+        if let Some(token) = settings.bus_token.as_ref() {
+            bus_client_config = bus_client_config.token(token);
+        }
+        session.bus_client_config = Some(bus_client_config);
         Ok(())
     }
     fn start(&self) -> Result<(), ErrorMessage> {

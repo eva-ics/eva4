@@ -41,6 +41,7 @@ members = [
   "svc/videosink",
   "tools/eva-cloud-manager",
   "tools/gen-intl",
+  "eva-gst",
   "dobj-codegen",
   "logreducer",
   "psrpc",
@@ -60,7 +61,6 @@ exclude = [
   "svc/svc-example-temp",
   "svc/svc-example-sensor-set",
   "tools/eva-lsl",
-  "eva-gst",
 ]
 
 [workspace.package]
