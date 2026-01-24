@@ -62,6 +62,5 @@ config:
   # DANGEROUS, enable for multi-level clusters only
   #replicate_remote: true
 user: nobody
-mem_warn: 600000000
 timeout:
   startup: 20

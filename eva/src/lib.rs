@@ -27,7 +27,7 @@ pub const BUILD: u64 = 2026012403;
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
 pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
-pub const MEMORY_WARN_DEFAULT: u64 = 134_217_728;
+pub const MEMORY_WARN_DEFAULT: u64 = 201_326_592; // 192 MiB
 
 pub static SYSTEM_INFO: LazyLock<Mutex<System>> = LazyLock::new(|| Mutex::new(System::new()));
 pub static DISK_INFO: LazyLock<Mutex<Disks>> =

@@ -75,7 +75,6 @@ config:
   # available)
   #ws_uri: /ws
 user: eva
-mem_warn: 500000000
 timeout:
   default: 10
   startup: 45
