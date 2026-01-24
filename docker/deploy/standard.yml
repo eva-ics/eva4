@@ -74,3 +74,5 @@ content:
             max_records: 100
         user: eva
         workers: 1
+        timeout:
+          startup: 30
