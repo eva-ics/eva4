@@ -113,7 +113,7 @@ syslog = "6.1.0"
 sysinfo = "0.37.2"
 mimalloc = "^0.1.46"
 triggered = "^0.1.2"
-eva-sdk = "^0.4.1"
+eva-sdk = "^0.4.3"
 busrt = { version = "^0.5.2", features = ["rt"] }
 chrono = "^0.4.33"
 simple-pool = "^0.0.18"
