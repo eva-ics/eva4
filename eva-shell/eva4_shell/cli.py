@@ -967,7 +967,7 @@ class CLI:
                         d['type'] = 'local'
                     try:
                         info = d.pop('info')
-                        d['version'] = info.get('version')
+                        d['ver'] = info.get('version')
                         d['build'] = info.get('build')
                     except KeyError:
                         pass
