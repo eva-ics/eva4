@@ -27,3 +27,8 @@ sockets:
           #- "#"
         #subscribe: # allowed topics to subscribe
           #- "#"
+  # allow bus calls via websockets (config/ACLs can be applied as well)
+  # note: to secure websockets, use a compatible WAF/ingress, the bus clients may provide
+  # authentication tokens (as Authorization: Bearer <token>) that must be
+  # validated at the WAF level.
+  #- path: ws://0.0.0.0:7779

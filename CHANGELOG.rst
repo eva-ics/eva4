@@ -20,7 +20,10 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
-* TBA: ⚠️  netmon & db-json svcs, UI and backend improvements, MUSL support dropped
+* TBA: ⚠️  netmon & db-json svcs, UI and backend security and stability
+  improvements
+
+See also: https://info.bma.ai/en/actual/eva4/update/4.2.0.html
 
 4.1.0-stable
 ============

@@ -8,6 +8,8 @@ What is new
 * EAPI over websockets
 * Lots of small bug fixes and performance improvements
 
+See more: https://info.bma.ai/en/actual/eva4/update/4.2.0.html
+
 Update instructions
 ===================
 
