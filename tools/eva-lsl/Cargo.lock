@@ -622,14 +622,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "eva-client"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3027267e092207b2a584b9bfa3da65c93acb3d3289f979a647f5abaea7decd9"
+checksum = "7364253c616610f3d7c6dd91ce7273df7980498270e039fd9e9ba9b0d7d7fa76"
 dependencies = [
  "busrt",
  "eva-common",
@@ -669,7 +669,7 @@ dependencies = [
 
 [[package]]
 name = "eva-lsl"
-version = "4.2.0"
+version = "0.3.0"
 dependencies = [
  "ansi_term",
  "async-channel 2.3.1",
@@ -1902,7 +1902,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
