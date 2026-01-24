@@ -18,6 +18,9 @@ Update instructions
   minimal GLIBC version is 2.35 (Ubuntu 22.04 LTS, Debian 12 Bookworm). Custom
   builds may be still provided for Enterprise customers on request.
 
+* On certain embedded and low-power platforms, service startup times may
+  increase, consider settings timeout/startup parameters accordingly.
+
 * The EVA ICS 4.1.0 build 2025121801 is the only supported upgrade path to EVA
   ICS 4.2.0. Please make sure you are running this build before upgrading. To
   update the system to the mandatory intermediate version, run the following
