@@ -73,7 +73,7 @@ pub async fn update(opts: Options) -> EResult<()> {
     match new_version.build.cmp(&current_version.build) {
         Ordering::Greater => {}
         Ordering::Less => {
-            warn!("Your build is newer than then update server has");
+            warn!("Your build is newer than the update server has");
             return Ok(());
         }
         Ordering::Equal => {
