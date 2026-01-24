@@ -30,7 +30,7 @@ async fn call(path: &str, target: &str, method: &str, params: Option<Value>) -> 
     )
     .await
     {
-        Ok(client) => match client.call(target, method, params).await {
+        Ok(client) => match client.rpc_call(target, method, params).await {
             Ok(v) => v,
             Err(e) => Value::String(e.to_string()),
         },

@@ -243,7 +243,9 @@ pub async fn cloud_update(opts: Options) -> EResult<()> {
     let system_name = info.system_name;
     info!("local node: {}", system_name);
     let mut node_map = NodeMap::new();
-    let nodes_all: Vec<NodeDataN> = match bus_client.call("eva.core", "node.list", None::<()>).await
+    let nodes_all: Vec<NodeDataN> = match bus_client
+        .rpc_call("eva.core", "node.list", None::<()>)
+        .await
     {
         Ok(v) => v,
         Err(e) => {
