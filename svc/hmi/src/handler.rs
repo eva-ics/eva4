@@ -1167,6 +1167,7 @@ pub fn spawn_stream_processor(mut bus_client: busrt::ipc::Client) -> EResult<()>
                 }
             });
             if topics_to_unsubscribe.is_empty() {
+                bus_client_c.lock().await.ping().await.ok();
                 continue;
             }
             bus_client_c
