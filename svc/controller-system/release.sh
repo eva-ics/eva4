@@ -27,8 +27,8 @@ if [ $? -ne 0 ]; then
 fi
 
 make clean || exit 3
-make compile-musl-x86_64 || exit 3
-make compile-musl-aarch64 || exit 3
+make compile-x86_64 || exit 3
+make compile-aarch64 || exit 3
 make compile-windows || exit 3
 
 cd _build || exit 3
@@ -38,11 +38,11 @@ cd .. || exit 3
 make debian-pkg || exit 3
 
 gsutil cp -a public-read \
-  ./target-x86_64-musl/x86_64-unknown-linux-musl/release/eva-cs-agent-linux \
+  ./target-x86_64/x86_64-unknown-linux-gnu/release/eva-cs-agent-linux \
   "gs://${URI}/${LINUX_BINARY_X86_64}" || exit 4
 
 gsutil cp -a public-read \
-  ./target-aarch_64-musl/aarch64-unknown-linux-musl/release/eva-cs-agent-linux \
+  ./target-aarch_64/aarch64-unknown-linux-gnu/release/eva-cs-agent-linux \
   "gs://${URI}/${LINUX_BINARY_AARCH64}" || exit 4
 
 gsutil cp -a public-read \

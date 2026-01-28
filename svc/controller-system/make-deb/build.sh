@@ -11,7 +11,7 @@ DESCRIPTION=$(grep "^const DESCRIPTION" ${AGENT}/src/agent/linux.rs | awk -F\" '
 [ -z "$DESCRIPTION" ] && exit 1
 
 TARGET="${PACKAGE}-${VERSION}-${BUILD}-amd64${PACKAGE_SUFFIX}"
-[ -z "${RUST_TARGET}" ] && RUST_TARGET=x86_64-unknown-linux-musl
+[ -z "${RUST_TARGET}" ] && RUST_TARGET=x86_64-unknown-linux-gnu
 [ -z "${TARGET_DIR}" ] && TARGET_DIR=target
 
 rm -rf "./${TARGET}"
