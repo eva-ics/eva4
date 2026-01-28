@@ -57,11 +57,11 @@ impl Otp {
     }
     fn verify(&self, otp_password: &str, svc_id: &str) -> EResult<()> {
         #[allow(deprecated)]
-        let auth = boringauth::oath::TOTPBuilder::new()
+        let auth = libreauth::oath::TOTPBuilder::new()
             .base32_key(&self.secret)
             .output_len(6)
             .tolerance(1)
-            .hash_function(boringauth::oath::HashFunction::Sha1)
+            .hash_function(libreauth::hash::HashFunction::Sha1)
             .finalize()
             .map_err(|e| Error::failed(format!("{:?}", e)))?;
         if auth.generate() == otp_password {
