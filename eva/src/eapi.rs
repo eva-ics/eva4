@@ -275,6 +275,8 @@ async fn replication_bulk_state_handler(
 ) {
     while let Ok(frame) = rx.recv().await {
         if core.is_active() {
+            let mut inv_map = HashMap::new();
+            let mut source_id: Option<String> = None;
             match unpack::<Vec<ReplicationStateEventExtended>>(frame.payload()) {
                 Ok(rpl) => {
                     for r in rpl {
@@ -282,14 +284,41 @@ async fn replication_bulk_state_handler(
                             warn!("missing OID in replication bulk state event");
                             continue;
                         };
-                        core.update_state_from_repl(&oid, r, frame.primary_sender())
-                            .await
-                            .log_efd();
+                        match r {
+                            ReplicationStateEventExtended::Inventory(i) => {
+                                if let Some(ref node) = source_id {
+                                    if *node != i.node {
+                                        warn!(
+                                            "multiple source nodes in replication bulk state event: {} and {}, ignoring",
+                                            node, i.node
+                                        );
+                                    }
+                                } else {
+                                    source_id = Some(i.node);
+                                }
+                                inv_map.insert(oid, i.item);
+                            }
+                            ReplicationStateEventExtended::BasicItem { .. } => {
+                                core.update_state_from_repl(&oid, r, frame.primary_sender())
+                                    .await
+                                    .log_efd();
+                            }
+                            ReplicationStateEventExtended::Basic(_) => {
+                                core.update_state_from_repl(&oid, r, frame.primary_sender())
+                                    .await
+                                    .log_efd();
+                            }
+                        }
                     }
                 }
                 Err(e) => {
                     warn!("invalid payload in raw event {}: {}", frame.topic(), e);
                 }
+            }
+            if let Some(source) = source_id {
+                core.process_remote_inventory(inv_map, &source, frame.primary_sender(), true)
+                    .await
+                    .log_ef();
             }
         }
     }
