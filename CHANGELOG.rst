@@ -20,7 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
-* TBA: ⚠️  netmon & db-json svcs, UI and backend security and stability
+* 2026-01-28 build 2026012801: ⚠️  netmon & db-json svcs, UI and backend security and stability
   improvements
 
 See also: https://info.bma.ai/en/actual/eva4/update/4.2.0.html
