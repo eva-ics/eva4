@@ -48,7 +48,8 @@ stable-release-dist:
 	rci job run pub.bma.ai
 
 stable-release-docker:
-	ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
+	#ssh -t lab-builder1 "cd /build/eva4 && git checkout stable && ./dev/make-docker"
+	./dev/make-docker
 
 release-installer:
 	gsutil -h "Cache-Control:no-cache" -h "Content-Type:text/x-shellscript" \
