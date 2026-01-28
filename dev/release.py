@@ -5,7 +5,7 @@ import os
 import json
 import random
 
-archs = ['aarch64-musl', 'x86_64-musl', 'x86_64-ubuntu20.04']
+archs = ['aarch64', 'x86_64']
 
 ap = argparse.ArgumentParser()
 

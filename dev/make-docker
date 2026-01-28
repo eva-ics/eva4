@@ -9,8 +9,8 @@ SFX=
 echo "Releasing Docker image for EVA distribution ver ${VERSION} build ${BUILD}"
 
 cd ./docker/build || exit 1
-  #--pull --no-cache \
 docker buildx build --platform linux/amd64,linux/arm64 \
+  --pull --no-cache \
   --build-arg VERSION=${VERSION} \
   --build-arg BUILD=${BUILD} \
   -t bmauto/eva-ics4${SFX}:${BUILD} \
