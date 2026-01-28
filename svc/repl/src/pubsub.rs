@@ -362,6 +362,7 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
         let len = key_id_buf.len() + system_name_buf.len() + 7;
         let p = opts.unpack_payload(msg.message, len).await?;
         let data: Vec<ReplicationData> = unpack(&p)?;
+        let mut events: Vec<ReplicationStateEventExtended> = Vec::with_capacity(data.len());
         for d in data {
             if let Some((ref acl, ref key_id)) = auth
                 && !acl.check_item_write(d.oid())
@@ -369,10 +370,10 @@ async fn ps_process_bulk_state(msg: psrpc::tools::Publication) -> EResult<()> {
                 warn!("key {} is not allowed to replicate {}", key_id, d.oid());
                 continue;
             }
-            let topic = format!("{}{}", REPLICATION_STATE_TOPIC, d.oid().as_path());
-            let rse = d.into_replication_state_event_extended(&system_name);
-            eapi_bus::publish(&topic, pack(&rse)?.into()).await?;
+            let rse = d.into_replication_state_event_extended_bulk(&system_name);
+            events.push(rse);
         }
+        eapi_bus::publish(REPLICATION_STATE_TOPIC, pack(&events)?.into()).await?;
     }
     Ok(())
 }

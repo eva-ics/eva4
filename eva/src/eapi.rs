@@ -140,6 +140,13 @@ impl BusApi {
         });
         let (_, rx) = self
             .topic_broker
+            .register_topic(REPLICATION_STATE_TOPIC, self.channel_size)?;
+        let core = self.core.clone();
+        tokio::spawn(async move {
+            replication_bulk_state_handler(&core, rx).await;
+        });
+        let (_, rx) = self
+            .topic_broker
             .register_prefix(REPLICATION_INVENTORY_TOPIC, self.channel_size)?;
         let core = self.core.clone();
         tokio::spawn(async move {
@@ -257,6 +264,32 @@ async fn replication_state_handler(core: &Core, rx: async_channel::Receiver<pubs
                     }
                 },
                 Err(e) => warn!("invalid OID in raw event {}: {}", frame.topic(), e),
+            }
+        }
+    }
+}
+
+async fn replication_bulk_state_handler(
+    core: &Core,
+    rx: async_channel::Receiver<pubsub::Publication>,
+) {
+    while let Ok(frame) = rx.recv().await {
+        if core.is_active() {
+            match unpack::<Vec<ReplicationStateEventExtended>>(frame.payload()) {
+                Ok(rpl) => {
+                    for r in rpl {
+                        let Some(oid) = r.oid().cloned() else {
+                            warn!("missing OID in replication bulk state event");
+                            continue;
+                        };
+                        core.update_state_from_repl(&oid, r, frame.primary_sender())
+                            .await
+                            .log_efd();
+                    }
+                }
+                Err(e) => {
+                    warn!("invalid payload in raw event {}: {}", frame.topic(), e);
+                }
             }
         }
     }

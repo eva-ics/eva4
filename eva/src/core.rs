@@ -1955,6 +1955,7 @@ impl Core {
                     .process_remote_inventory(map, &i.node, sender, true)
                     .await;
             }
+            ReplicationStateEventExtended::BasicItem { oid: _, event } => event,
         };
         let tp = oid.kind();
         match tp {

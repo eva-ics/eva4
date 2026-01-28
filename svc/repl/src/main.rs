@@ -46,6 +46,23 @@ impl ReplicationData {
             }
         }
     }
+    pub fn into_replication_state_event_extended_bulk(
+        self,
+        system_name: &str,
+    ) -> ReplicationStateEventExtended {
+        match self {
+            ReplicationData::State(v) => ReplicationStateEventExtended::BasicItem {
+                oid: v.oid.clone(),
+                event: v.into_replication_state_event(system_name),
+            },
+            ReplicationData::Inventory(v) => {
+                ReplicationStateEventExtended::Inventory(ReplicationNodeInventoryItem {
+                    node: system_name.to_owned(),
+                    item: v,
+                })
+            }
+        }
+    }
 }
 
 impl From<FullItemState> for ReplicationData {
