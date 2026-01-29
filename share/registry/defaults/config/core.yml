@@ -23,8 +23,8 @@ instant_save: true
 # - sensor:group1/#
 # keep action history in memory (seconds)
 keep_action_history: 86400
-# core process memory usage warning (bytes), the default is 128 MiB per worker
-#mem_warn: 134217728
+# core process memory usage warning (bytes), the default is 192 MiB per worker
+#mem_warn: 201326592
 # optional inventory database (for large projects)
 # NOTE: MySQL support is deprecated, use SQLite or PostgreSQL only
 #inventory_db: postgres://USER:PASSWORD@HOST/DB
