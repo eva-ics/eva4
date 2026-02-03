@@ -23,7 +23,7 @@ pub const PRODUCT_NAME: &str = "EVA ICS node server";
 pub const PRODUCT_CODE: &str = "eva4node";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[allow(clippy::unreadable_literal)]
-pub const BUILD: u64 = 2026012805;
+pub const BUILD: u64 = 2026020301;
 
 pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
 
