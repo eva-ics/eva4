@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-02-03 build 2026020301: Security fixes, certain replication improvements
 * 2026-01-28 build 2026012801: ⚠️  netmon & db-json svcs, UI and backend security and stability
   improvements
 
