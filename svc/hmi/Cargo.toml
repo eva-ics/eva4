@@ -46,7 +46,7 @@ base64 = { workspace = true }
 eva-internal = { path = "../../eva-internal" }
 genpass-native = { path = "../../genpass-native" }
 dobj-codegen = { path = "../../dobj-codegen" }
-oidc-verifier = "0.1.0"
+oidc-verifier = "^0.1.1"
 
 [features]
 std-alloc = []

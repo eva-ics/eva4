@@ -4268,9 +4268,9 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "10.2.0"
+version = "10.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c76e1c7d7df3e34443b3621b459b066a7b79644f059fc8b2db7070c825fd417e"
+checksum = "0529410abe238729a60b108898784df8984c87f6054c9c4fcacc47e4803c1ce1"
 dependencies = [
  "aws-lc-rs",
  "base64 0.22.1",
@@ -4950,9 +4950,9 @@ checksum = "c587bd1cd63959a8520442afc0f92a875d83deea175c7b48dd9f104a2c5070a9"
 
 [[package]]
 name = "oidc-verifier"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec3377399088d0976304eb0975ddc46cfcca441d9a11d31a85eddd0833af679e"
+checksum = "dfd406073120ba404c1e5971b353740cde1c36756faeb8acd89c83478bab707b"
 dependencies = [
  "aws-lc-rs",
  "base64-url",
