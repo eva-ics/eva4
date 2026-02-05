@@ -29,9 +29,9 @@ Update instructions
   command:
 
 ```
-EVA_VERSION=4.1.0 EVA_BUILD=2025121801 eva update
+eva update --target-version 4.1.0:2025121801
 # or
-EVA_VERSION=4.1.0 EVA_BUILD=2025121801 /opt/eva4/bin/eva-cloud-manager node update
+EVA_UPDATE_FORCE_VERSION=4.1.0:2025121801 /opt/eva4/bin/eva-cloud-manager node update
 ```
 
 The intermediate version is available until 2027-01-01, if updating after,
