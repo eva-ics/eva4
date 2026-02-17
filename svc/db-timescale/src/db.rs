@@ -99,7 +99,7 @@ BEGIN
       UNNEST(oid_ids),
       UNNEST(statuses),
       UNNEST(vals)
-    ) ON CONFLICT (t, oid_id) DO UPDATE SET status=EXCLUDED.status, value=EXCLUDED.value;
+    ) ON CONFLICT (t, oid_id) DO NOTHING;
   END
 $$;",
     )
