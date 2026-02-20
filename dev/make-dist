@@ -210,7 +210,7 @@ for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
 done
 
 for svc in eva-aaa-msad \
-  eva-kioskman eva-rtmon eva-aaa-accounting eva-svc-alarms \
+  eva-kioskman eva-mcp eva-rtmon eva-aaa-accounting eva-svc-alarms \
   eva-zfrepl eva-videosrv; do
   cp -rvf "../eva4-enterprise/eva4-esvc/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
