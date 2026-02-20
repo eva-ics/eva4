@@ -204,13 +204,13 @@ for svc in eva-node rt-launch eva-aaa-acl eva-aaa-localauth \
   eva-db-influx eva-db-sql eva-db-timescale eva-svc-filewriter eva-db-json \
   eva-hmi eva-repl eva-repl-uni eva-svc-mirror eva-svc-generator \
   eva-svc-expiration eva-filemgr eva-dapp \
-  eva-svc-locker eva-svc-mailer; do
+  eva-svc-locker eva-svc-mailer eva-mcp; do
   cp -rvf "../eva4/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1
 done
 
 for svc in eva-aaa-msad \
-  eva-kioskman eva-mcp eva-rtmon eva-aaa-accounting eva-svc-alarms \
+  eva-kioskman eva-rtmon eva-aaa-accounting eva-svc-alarms \
   eva-zfrepl eva-videosrv; do
   cp -rvf "../eva4-enterprise/eva4-esvc/${CARGO_TARGET_DIR}/${TARGET}/release/${svc}" svc/ || exit 1
   [ "$STRIP" ] && ${STRIP} "svc/${svc}" || exit 1

@@ -1,0 +1,22 @@
+# EVA ICS MCP service
+command: svc/eva-mcp
+workers: 1
+bus:
+  path: var/bus.ipc
+config:
+  # to expose the MCP API to public, use a Web Application Firewall (WAF) or
+  # change the listener to 0.0.0.0 or the server's public IP address (should be
+  # done with caution and L4-firewall rules to restrict access to trusted IPs)
+  listen: 127.0.0.1:8765
+  allow: "*"
+  #allow:
+    #eva.core:
+      #- test
+      #- item.list
+      #- item.state
+    #eva.repl.default:
+      #- test
+      #- node.list
+    #eva.svc.test:
+      # - "*"
+user: nobody

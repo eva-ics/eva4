@@ -1,0 +1,22 @@
+[package]
+name = "eva-mcp"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+busrt = { workspace = true, features = ["rpc"] }
+eva-common = { workspace = true, features = ["events", "common-payloads", "payload", "acl"] }
+eva-sdk = { workspace = true, features = ["controller"] }
+log = { workspace = true }
+mimalloc = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+axum = "0.8"
+rmcp = { version = "0.16", features = ["server", "transport-streamable-http-server"] }
+schemars = { version = "1", features = ["derive"] }
+tokio-util = "0.7"
+
+[features]
+std-alloc = []

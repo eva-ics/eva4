@@ -39,6 +39,7 @@ members = [
   "svc/svc-locker",
   "svc/svc-mailer",
   "svc/videosink",
+  "svc/eva-mcp",
   "tools/eva-cloud-manager",
   "tools/gen-intl",
   "eva-gst",
