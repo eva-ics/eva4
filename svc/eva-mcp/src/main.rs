@@ -9,6 +9,7 @@ use eva_common::prelude::*;
 use eva_sdk::prelude::*;
 use rmcp::handler::server::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo};
 use rmcp::transport::streamable_http_server::{
     session::local::LocalSessionManager,
     tower::{StreamableHttpServerConfig, StreamableHttpService},
@@ -142,7 +143,16 @@ impl McpServer {
 }
 
 #[tool_handler(router = self.tool_router)]
-impl ServerHandler for McpServer {}
+impl ServerHandler for McpServer {
+    fn get_info(&self) -> ServerInfo {
+        ServerInfo {
+            protocol_version: ProtocolVersion::default(),
+            capabilities: ServerCapabilities::builder().enable_tools().build(),
+            server_info: Implementation::from_build_env(),
+            instructions: None,
+        }
+    }
+}
 
 struct Handlers {
     info: ServiceInfo,
