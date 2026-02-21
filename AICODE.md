@@ -26,7 +26,7 @@ Requirements:
 
 * Standard peer review
 
-### Level 1 - Functional Components
+### Level 1 - Functional Components (except fieldbus/IoT protocols)
 
 Examples:
 
@@ -40,11 +40,13 @@ Requirements:
 * Peer review
 * Static analysis checks must pass
 
-### Level 2 - Boundary Components
+### Level 2 - Boundary Components and Protocol Handling
 
 Examples:
 
 * Network protocol handling
+* Pub/Sub interfaces
+* Fieldbus/IoT protocol handling
 * Parsers and deserialization
 * IPC communication
 * Configuration loaders
