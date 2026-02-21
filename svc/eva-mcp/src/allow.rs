@@ -19,7 +19,10 @@ impl Allow {
         match self {
             Allow::All => true,
             Allow::Rules(r) => r.0.get(target).is_some_and(|methods| {
-                methods.0.iter().any(|m| m == "*" || m == "#" || m == method)
+                methods
+                    .0
+                    .iter()
+                    .any(|m| m == "*" || m == "#" || m == method)
             }),
         }
     }
@@ -73,7 +76,9 @@ impl<'de> Deserialize<'de> for Allow {
             type Value = Allow;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str(r##"allow: "*" or "#" or { "target": "*"|"#"|["method", ...], ... }"##)
+                formatter.write_str(
+                    r##"allow: "*" or "#" or { "target": "*"|"#"|["method", ...], ... }"##,
+                )
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Allow, E>
