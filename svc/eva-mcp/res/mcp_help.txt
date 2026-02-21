@@ -1,14 +1,33 @@
-You, agent, should use https://info.bma.ai/en/actual/eva4/ as the official EVA ICS documentation (preferred). For general questions you can also use DeepWiki alttch/bma-info.
+You, agent, should use https://info.bma.ai/en/actual/eva4/ as the official EVA
+ICS documentation (preferred). For general questions you can also use DeepWiki
+alttch/bma-info.
 
 Use the bus_call tool to call the running EVA ICS system. Before calling bus_call:
-- If unsure about params, check https://info.bma.ai/en/actual/eva4/core_svcs.html (core and common services).
-- Always check the EAPI methods for the target service or core, e.g. https://info.bma.ai/en/actual/eva4/core.html#eapi-methods, https://info.bma.ai/en/actual/eva4/svc/eva-controller-virtual.html#eapi-methods and similar pages for other services.
-- DeepWiki (alttch/bma-info) search is fine if you need it, but the official docs are preferred.
-- The node core and standard services also have "eapi.yml" files with methods listed. Ask DeepWiki (https://deepwiki.com/eva-ics/eva4) for the file content if you want to check those.
-- If you get "MCP method restricted", the requested target/method is not correct (double-check with the docs/other mcps OR not enabled on this MCP; the plant engineer must add it to the allow list).
+- If unsure about params, check
+  https://info.bma.ai/en/actual/eva4/core_svcs.html (core and common services).
+- Always check the EAPI methods for the target service or core, e.g.
+  https://info.bma.ai/en/actual/eva4/core.html#eapi-methods,
+  https://info.bma.ai/en/actual/eva4/svc/eva-controller-virtual.html#eapi-methods
+  and similar pages for other services.
+- DeepWiki (alttch/bma-info) search is fine if you need it, but the official
+  docs are preferred.
+- The node core and standard services also have "eapi.yml" files with methods
+  listed. Ask DeepWiki (https://deepwiki.com/eva-ics/eva4) for the file content
+  if you want to check those.
+- The services also have "info" (no params) method which may provide useful
+  information about service methods and params (may be incomplete or outdated,
+  so check the official docs if doesn't work).
+- If you get "MCP method restricted", the requested target/method is not
+  correct (double-check with the docs/other mcps OR not enabled on this MCP;
+  the plant engineer must add it to the allow list).
 
 Common gotchas (from past agent sessions):
-- Node status: use eva.core method "test" (no params), not "info". Method names are in the docs; guessing leads to "Method not found".
-- bus_params: omit the field or pass null for no params; both result in an empty payload. Passing the literal JSON null is handled correctly.
-- Param names: EAPI uses specific field names (e.g. item.create expects "i" for oid, not "id"). Check the method docs for the exact payload schema.
-- Methods that expect a payload: some (e.g. item.list) need an explicit payload; use "{}" for empty object rather than omitting params, or you may get "Invalid parameter".
+- Node status: use eva.core method "test" (no params), not "info". Method names
+  are in the docs; guessing leads to "Method not found".
+- bus_params: omit the field or pass null for no params; both result in an
+  empty payload. Passing the literal JSON null is handled correctly.
+- Param names: EAPI uses specific field names (e.g. item.create expects "i" for
+  oid, not "id"). Check the method docs for the exact payload schema.
+- Methods that expect a payload: some (e.g. item.list) need an explicit
+  payload; use "{}" for empty object rather than omitting params, or you may
+  get "Invalid parameter".
