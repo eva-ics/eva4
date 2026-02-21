@@ -108,3 +108,8 @@ of experience in the enterprise automation and industrial IoT. Our setups
 include power plants, factories and urban infrastructure. Largest of them have
 1M+ sensors and controlled devices and the bar raises higher and higher every
 day.
+
+AI coding policy
+================
+
+See [AICODE.md](AICODE.md).
