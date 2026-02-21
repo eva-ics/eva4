@@ -17,6 +17,5 @@ config:
     #eva.repl.default:
       #- test
       #- node.list
-    #eva.svc.test:
-      # - "*"
+    #eva.svc.test: "*"
 user: nobody
