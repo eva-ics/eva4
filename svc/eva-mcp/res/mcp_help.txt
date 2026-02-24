@@ -1,6 +1,10 @@
-You, agent, should use https://info.bma.ai/en/actual/eva4/ as the official EVA
+You, agent, are connected to a node of EVA ICS - industrial automation
+platform. should use https://info.bma.ai/en/actual/eva4/ as the official EVA
 ICS documentation (preferred). For general questions you can also use DeepWiki
 alttch/bma-info.
+
+always call first node_help MCP method to get information about the current
+node (may be not set by the user).
 
 Use the bus_call tool to call the running EVA ICS system. Before calling bus_call:
 - If unsure about params, check

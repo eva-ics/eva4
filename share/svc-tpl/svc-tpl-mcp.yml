@@ -8,7 +8,13 @@ config:
   # change the listener to 0.0.0.0 or the server's public IP address (should be
   # done with caution and L4-firewall rules to restrict access to trusted IPs)
   listen: 127.0.0.1:8765
+  # WARNING: on production nodes always restrict allow list to required
+  # services/methods only
   allow: "*"
+  # optional: custom help text for this node (MCP tool node_help)
+  #node_help: |
+  #  This is a node of a power plant, use services eva.db.default for general
+  #  historical data, eva.db.ts for time-series data.
   #allow:
     #eva.core:
       #- test
