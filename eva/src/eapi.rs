@@ -298,12 +298,8 @@ async fn replication_bulk_state_handler(
                                 }
                                 inv_map.insert(oid, i.item);
                             }
-                            ReplicationStateEventExtended::BasicItem { .. } => {
-                                core.update_state_from_repl(&oid, r, frame.primary_sender())
-                                    .await
-                                    .log_efd();
-                            }
-                            ReplicationStateEventExtended::Basic(_) => {
+                            ReplicationStateEventExtended::BasicItem { .. }
+                            | ReplicationStateEventExtended::Basic(_) => {
                                 core.update_state_from_repl(&oid, r, frame.primary_sender())
                                     .await
                                     .log_efd();

@@ -1,6 +1,10 @@
-You, agent, should use https://info.bma.ai/en/actual/eva4/ as the official EVA
+You, agent, are connected to a node of EVA ICS - industrial automation
+platform. should use https://info.bma.ai/en/actual/eva4/ as the official EVA
 ICS documentation (preferred). For general questions you can also use DeepWiki
 alttch/bma-info.
+
+always call first node_help MCP method to get information about the current
+node (may be not set by the user).
 
 Use the bus_call tool to call the running EVA ICS system. Before calling bus_call:
 - If unsure about params, check
@@ -24,8 +28,11 @@ Use the bus_call tool to call the running EVA ICS system. Before calling bus_cal
 Common gotchas (from past agent sessions):
 - Node status: use eva.core method "test" (no params), not "info". Method names
   are in the docs; guessing leads to "Method not found".
+- eva.core method svc.list returns list of services deployed but some may be
+  hidden (e.g. eva.registry, fieldbus clients etc)
 - bus_params: omit the field or pass null for no params; both result in an
   empty payload. Passing the literal JSON null is handled correctly.
+- direct bus calls are usually not availabe, use MCP "bus_call" method only.
 - Param names: EAPI uses specific field names (e.g. item.create expects "i" for
   oid, not "id"). Check the method docs for the exact payload schema.
 - Methods that expect a payload: some (e.g. item.list) need an explicit

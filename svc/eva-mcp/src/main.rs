@@ -36,6 +36,7 @@ static ALLOW: OnceLock<Allow> = OnceLock::new();
 #[derive(Clone)]
 struct McpServer {
     tool_router: ToolRouter<Self>,
+    node_help: String,
 }
 
 #[derive(Deserialize, serde::Serialize, JsonSchema)]
@@ -48,9 +49,10 @@ struct BusCallRequest {
 }
 
 impl McpServer {
-    fn new() -> Self {
+    fn new(node_help: String) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            node_help,
         }
     }
 }
@@ -63,6 +65,14 @@ impl McpServer {
     )]
     pub async fn help(&self) -> String {
         MCP_HELP_TEXT.to_string()
+    }
+
+    #[tool(
+        name = "node_help",
+        description = "Returns dedicated instructions for the current node (empty if not set by the user)"
+    )]
+    pub async fn node_help(&self) -> String {
+        self.node_help.clone()
     }
 
     #[tool(
@@ -178,6 +188,8 @@ impl RpcHandlers for Handlers {
 struct Config {
     listen: String,
     allow: Allow,
+    #[serde(default)]
+    node_help: String,
 }
 
 #[svc_main]
@@ -196,9 +208,10 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let listen_addr = config.listen.as_str();
     ALLOW.set(config.allow).expect("allow set once at startup");
     let ct = CancellationToken::new();
+    let node_help = config.node_help.clone();
     let http_service: StreamableHttpService<McpServer, LocalSessionManager> =
         StreamableHttpService::new(
-            || Ok(McpServer::new()),
+            move || Ok(McpServer::new(node_help.clone())),
             Arc::new(LocalSessionManager::default()),
             StreamableHttpServerConfig {
                 stateful_mode: true,
