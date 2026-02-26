@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-02-26 build 2026022601: MCP improvements
 * 2026-02-21 build 2026022101: MCP service (experimental)
 * 2026-02-18 build 2026021801: Security fixes, TimescaleDB stability fixes, Gateryx logout
 * 2026-02-03 build 2026020301: Security fixes, certain replication improvements
