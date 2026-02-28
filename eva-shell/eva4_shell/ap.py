@@ -767,9 +767,14 @@ def append_item_cli(root_sp):
     p.add_argument('-n', metavar='NODE').completer = ComplNode()
     p.add_argument('-x', '--regex', type=str, help='filter regular expression')
 
+    p = sp.add_parser('search', help='search items by OID regex (equal to list "#" with regex filter)')
+    p.add_argument('x', metavar='REGEX', type=str, help='OID regular expression')
+    p.add_argument('-n', metavar='NODE').completer = ComplNode()
+
     p = sp.add_parser('state', help='item states')
     p.add_argument('i', metavar='MASK').completer = ComplOID('state')
     p.add_argument('-y', '--full', action='store_true')
+    p.add_argument('-x', '--regex', type=str, help='filter regular expression')
 
     p = sp.add_parser('stream-info', help='item stream info')
     p.add_argument('i', metavar='MASK').completer = ComplOID('state')

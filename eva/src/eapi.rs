@@ -959,6 +959,7 @@ impl RpcHandlers for BusApi {
                 #[serde(deny_unknown_fields)]
                 struct ParamsState {
                     i: Option<Value>,
+                    regex: Option<String>,
                     #[serde(default)]
                     include: Option<OIDMaskList>,
                     #[serde(default)]
@@ -993,6 +994,11 @@ impl RpcHandlers for BusApi {
                 } else {
                     OIDMaskList::new_any()
                 };
+                let regex_pattern = p
+                    .regex
+                    .as_ref()
+                    .map(|pat| Regex::new(pat).map_err(Into::<Error>::into).log_err())
+                    .transpose()?;
                 let items = self
                     .core
                     .list_items(
@@ -1000,7 +1006,7 @@ impl RpcHandlers for BusApi {
                         p.include.as_ref(),
                         p.exclude.as_ref(),
                         None,
-                        None,
+                        regex_pattern,
                         false,
                     )
                     .await;

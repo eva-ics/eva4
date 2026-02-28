@@ -279,6 +279,10 @@ item.state:
       typ: Vec<String>/String
       des: Item OID(s) or OID mask(s)
       req: false
+    - nam: regex
+      typ: String
+      des: filter items by OID with regular expression
+      req: false
     - nam: include
       typ: Vec<String>
       des: List of additional masks to include

@@ -1071,6 +1071,17 @@ class CLI:
                          't|n=set time|f=time', 'node', 'connected', 'enabled'
                      ])
 
+    def item_search(self, x, n=None):
+        data = call_rpc(
+            'item.list',
+            dict(i="#", node=n, regex=x)
+        )
+        print_result(data,
+                     cols=[
+                         'oid', 'status', 'value|l=20|n=value',
+                         't|n=set time|f=time', 'node', 'connected', 'enabled'
+                     ])
+
     def item_announce(self, i, n=None):
         call_rpc(
             'item.announce',
@@ -1179,10 +1190,10 @@ class CLI:
         call_rpc('item.disable', dict(i=i))
         ok()
 
-    def item_state(self, i, full):
+    def item_state(self, i, full, regex):
         data = call_rpc(
             'item.state',
-            dict(i=i, full=full),
+            dict(i=i, full=full, regex=regex)
         )
         print_result(data,
                      cols=[
