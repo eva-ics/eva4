@@ -19,6 +19,7 @@ config:
   #allow:
     #eva.core:
       #- test
+      #- item.summary
       #- item.list
       #- item.state
     #eva.repl.default:

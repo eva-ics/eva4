@@ -765,6 +765,7 @@ def append_item_cli(root_sp):
     p = sp.add_parser('list', help='list items')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
     p.add_argument('-n', metavar='NODE').completer = ComplNode()
+    p.add_argument('-x', '--regex', type=str, help='filter regular expression')
 
     p = sp.add_parser('state', help='item states')
     p.add_argument('i', metavar='MASK').completer = ComplOID('state')

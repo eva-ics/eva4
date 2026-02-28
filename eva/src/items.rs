@@ -1061,6 +1061,7 @@ pub struct Filter<'a> {
     include: Option<&'a OIDMaskList>,
     exclude: Option<&'a OIDMaskList>,
     node: Option<NodeFilter<'a>>,
+    pattern: Option<regex::Regex>,
 }
 
 impl<'a> Filter<'a> {
@@ -1092,6 +1093,10 @@ impl<'a> Filter<'a> {
         self.node = Some(sid);
     }
     #[inline]
+    pub fn set_pattern(&mut self, pattern: regex::Regex) {
+        self.pattern = Some(pattern);
+    }
+    #[inline]
     pub fn matches(&self, item: &Item) -> bool {
         if let Some(ref node) = self.node {
             match node {
@@ -1115,6 +1120,11 @@ impl<'a> Filter<'a> {
                     }
                 }
             }
+        }
+        if let Some(ref pattern) = self.pattern
+            && !pattern.is_match(item.oid.as_str())
+        {
+            return false;
         }
         if let Some(f) = self.include
             && !f.matches(&item.oid)

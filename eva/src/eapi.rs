@@ -842,6 +842,7 @@ impl RpcHandlers for BusApi {
                             None,
                             None,
                             Some(NodeFilter::Local),
+                            None,
                             true,
                         )
                         .await;
@@ -859,6 +860,7 @@ impl RpcHandlers for BusApi {
                     i: Option<Value>, // OID or OID mask (parse later)
                     #[serde(default, alias = "src")]
                     node: Option<&'a str>, // source node (.local for local items only)
+                    regex: Option<String>, // regex pattern to filter OIDs (after mask filtering)
                     #[serde(default)]
                     include: Option<OIDMaskList>,
                     #[serde(default)]
@@ -885,6 +887,11 @@ impl RpcHandlers for BusApi {
                         NodeFilter::Remote(v)
                     }
                 });
+                let regex_pattern = p
+                    .regex
+                    .as_ref()
+                    .map(|pat| Regex::new(pat).map_err(Into::<Error>::into).log_err())
+                    .transpose()?;
                 let items = self
                     .core
                     .list_items(
@@ -892,6 +899,7 @@ impl RpcHandlers for BusApi {
                         p.include.as_ref(),
                         p.exclude.as_ref(),
                         node_filter,
+                        regex_pattern,
                         true,
                     )
                     .await;
@@ -991,6 +999,7 @@ impl RpcHandlers for BusApi {
                         &mask_list,
                         p.include.as_ref(),
                         p.exclude.as_ref(),
+                        None,
                         None,
                         false,
                     )

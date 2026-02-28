@@ -2159,6 +2159,7 @@ impl Core {
         include: Option<&OIDMaskList>,
         exclude: Option<&OIDMaskList>,
         source_id: Option<NodeFilter<'_>>,
+        regex: Option<regex::Regex>,
         include_stateless: bool,
     ) -> Vec<Item> {
         let mut filter = Filter::default();
@@ -2170,6 +2171,9 @@ impl Core {
         }
         if let Some(v) = source_id {
             filter.set_node(v);
+        }
+        if let Some(regex) = regex {
+            filter.set_pattern(regex);
         }
         #[allow(clippy::mutable_key_type)]
         let mut h: HashSet<Item> = HashSet::default();

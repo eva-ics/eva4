@@ -1060,10 +1060,10 @@ class CLI:
         data = call_rpc('spoint.list')
         print_result(data, cols=['name', 'source', 'port', 'version', 'build'])
 
-    def item_list(self, i, n=None):
+    def item_list(self, i, n=None, regex=None):
         data = call_rpc(
             'item.list',
-            dict(i=i, node=n),
+            dict(i=i, node=n, regex=regex)
         )
         print_result(data,
                      cols=[
@@ -1072,7 +1072,7 @@ class CLI:
                      ])
 
     def item_announce(self, i, n=None):
-        data = call_rpc(
+        call_rpc(
             'item.announce',
             dict(i=i, node=n),
         )

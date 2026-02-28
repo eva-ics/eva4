@@ -25,6 +25,17 @@ Use the bus_call tool to call the running EVA ICS system. Before calling bus_cal
   correct (double-check with the docs/other mcps OR not enabled on this MCP;
   the plant engineer must add it to the allow list).
 
+Important:
+ - a node may contain huge inventory (millions of items), always call
+   eva.core/item.summary method first to check the item count before calling
+   item.list or similar methods that return many items. If the count is large,
+   use filters to narrow down the results or ask for specific items by id (e.g.
+   item.list accepts "regex" parameter with a regular expression to filter
+   items by OID).
+ - unless noted that the field (e.g. "i", "id" etc.) accepts regex or
+   substring, use MQTT-style wildcards ("#" for multiple levels, "*" for single
+   level) to filter by OID or similar fields.
+
 Common gotchas (from past agent sessions):
 - Node status: use eva.core method "test" (no params), not "info". Method names
   are in the docs; guessing leads to "Method not found".

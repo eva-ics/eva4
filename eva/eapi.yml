@@ -205,6 +205,9 @@ item.list:
       typ: String
       des: filter items by node (use .local as an alias for the local one)
       req: false
+    - nam: regex
+      typ: String
+      des: filter items by OID with regular expression
     - nam: include
       typ: Vec<String>
       des: List of additional masks to include
