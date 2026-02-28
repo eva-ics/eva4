@@ -890,10 +890,12 @@ async fn method_item_state(params: Value, aci: &mut ACI) -> EResult<Value> {
         i: Value,
         #[serde(default)]
         full: bool,
+        regex: Option<String>,
     }
     #[derive(Serialize)]
     struct StatePayload {
         i: Value,
+        regex: Option<String>,
         include: Vec<String>,
         exclude: Vec<String>,
         full: bool,
@@ -903,6 +905,7 @@ async fn method_item_state(params: Value, aci: &mut ACI) -> EResult<Value> {
     let (allow, deny) = aci.acl().get_items_allow_deny_reading();
     let payload = StatePayload {
         i: p.i,
+        regex: p.regex,
         include: allow,
         exclude: deny,
         full: p.full,

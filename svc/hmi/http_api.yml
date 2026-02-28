@@ -256,6 +256,10 @@ item.state:
       typ: Vec<String>/String
       des: Item OID(s) or masks
       req: false
+    - nam: regex
+      typ: String
+      des: Filter by regex (applies after mask filtering)
+      req: false
     - nam: full
       typ: bool
       des: Full state (enabled + meta)
