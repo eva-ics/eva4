@@ -200,7 +200,7 @@ pub async fn file<'a>(
     allow_ui_default: bool,
 ) -> HResult {
     if path_contains_traversal(uri) || path_contains_traversal(path) {
-        warn!("invalid entries in uri path: {}", path);
+        warn!("invalid entries in uri/path: {}/{}", uri, path);
         return Err(Error::failed("Path traversal is not allowed"));
     }
     match parse_convert_to(uri, params) {
