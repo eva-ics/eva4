@@ -208,6 +208,7 @@ item.list:
     - nam: regex
       typ: String
       des: filter items by OID with regular expression
+      req: false
     - nam: include
       typ: Vec<String>
       des: List of additional masks to include
