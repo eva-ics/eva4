@@ -1,4 +1,5 @@
 use crate::convert::{self, Convert, parse_convert_to};
+use crate::path_contains_traversal;
 use eva_common::common_payloads::ParamsId;
 use eva_common::hyper_tools::{HContent, HResult};
 use eva_common::prelude::*;
@@ -198,9 +199,9 @@ pub async fn file<'a>(
     tpl_dir_kind: TplDirKind,
     allow_ui_default: bool,
 ) -> HResult {
-    if path.contains("/../") || path.contains("/.") {
+    if path_contains_traversal(uri) || path_contains_traversal(path) {
         warn!("invalid entries in uri path: {}", path);
-        return Err(Error::not_found(path));
+        return Err(Error::failed("Path traversal is not allowed"));
     }
     match parse_convert_to(uri, params) {
         Ok(convert_to) => {

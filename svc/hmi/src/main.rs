@@ -136,6 +136,17 @@ struct SessionConfig {
 }
 
 #[inline]
+pub fn path_contains_traversal(path: &str) -> bool {
+    let Ok(decoded) = urlencoding::decode(path) else {
+        return true;
+    };
+    decoded.contains("/../")
+        || decoded.ends_with("/..")
+        || decoded.starts_with("../")
+        || decoded == ".."
+}
+
+#[inline]
 fn default_history_db_svc() -> String {
     "default".to_owned()
 }

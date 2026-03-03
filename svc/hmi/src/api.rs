@@ -1,7 +1,7 @@
-use crate::ApiKeyId;
 use crate::aaa::{self, Auth, Token};
 use crate::aci::{self, ACI};
 use crate::db;
+use crate::{ApiKeyId, path_contains_traversal};
 use eva_common::acl::{self, Acl, OIDMask};
 use eva_common::common_payloads::{IdOrListOwned, ValueOrList};
 use eva_common::common_payloads::{ParamsIdOrListOwned, ParamsIdOwned};
@@ -132,10 +132,10 @@ fn format_and_check_path(s: &str, aci: &ACI, op: PvtOp) -> EResult<PathBuf> {
         Err(Error::access(
             "the path must be relative to the pvt directory",
         ))
-    } else if s.contains("../") {
-        Err(Error::access("the path can not contain ../"))
-    } else if s.contains("/./") || s.starts_with("./") {
-        Err(Error::access("the path can not contain or start with ./"))
+    } else if path_contains_traversal(s) {
+        Err(Error::access(
+            "the path can not contain or start with traversal chars",
+        ))
     } else {
         check_acl!(s);
         let mut path = Path::new(pvt_path).to_owned();
