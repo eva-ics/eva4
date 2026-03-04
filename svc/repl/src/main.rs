@@ -500,9 +500,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
             let mut client = None;
             let cfg = mqtt_config.finalize();
             for host in config.pubsub.host.iter() {
-                let c =
+                let Ok(c) =
                     paho_mqtt::async_client::AsyncClient::new(format!("{}://{}", protocol, host))
-                        .map_err(Error::failed)?;
+                        .map_err(Error::failed)
+                        .log_err()
+                else {
+                    continue;
+                };
                 match c.connect(cfg.clone()).await {
                     Ok(_) => {
                         client = Some(c);
