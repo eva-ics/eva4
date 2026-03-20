@@ -70,7 +70,7 @@ edition = "2024"
 repository = "https://github.com/eva-ics/eva4"
 
 [workspace.dependencies]
-aws-lc-rs = "1.14.1"
+aws-lc-rs = "1.16.2"
 bma-ts = "0.2.4"
 binrw = "0.13.3"
 oneshot = "0.1.13"
