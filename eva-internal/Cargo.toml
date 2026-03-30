@@ -7,5 +7,6 @@ repository.workspace = true
 [dependencies]
 aws-lc-rs = { workspace = true }
 eva-common = { workspace = true, features = ["time", "extended-value"] }
+rtc-interval = "0.1.0"
 tokio = { workspace = true, features = ["time", "rt"] }
 

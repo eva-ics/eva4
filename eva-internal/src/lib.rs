@@ -1,46 +1,20 @@
 use std::{path::Path, str::FromStr, time::Duration};
 
-use eva_common::{
-    Error,
-    time::{Time, now},
-};
-use tokio::time::Interval;
+use eva_common::{Error, time::Time};
 
 pub struct RtcSyncedInterval {
-    interval: Interval,
-    d: Duration,
-    tick_prev: u64,
+    inner: rtc_interval::AsyncRtcInterval,
 }
 
 impl RtcSyncedInterval {
     pub fn new(d: Duration) -> Self {
-        let mut interval = tokio::time::interval(if d >= Duration::from_secs(1) {
-            Duration::from_millis(200)
-        } else {
-            d
-        });
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         Self {
-            interval,
-            d,
-            tick_prev: 0,
+            inner: rtc_interval::AsyncRtcInterval::new(d),
         }
     }
     pub async fn tick(&mut self) -> Time {
-        if self.d >= Duration::from_secs(1) {
-            loop {
-                self.interval.tick().await;
-                let t_secs = now();
-                if t_secs.is_multiple_of(self.d.as_secs()) && t_secs != self.tick_prev {
-                    self.tick_prev = t_secs;
-                    #[allow(clippy::cast_precision_loss)]
-                    break Time::from_timestamp(t_secs as f64);
-                }
-            }
-        } else {
-            self.interval.tick().await;
-            Time::now()
-        }
+        let t = self.inner.tick().await;
+        Time::from_timestamp_ns(u64::try_from(t.as_nanos()).unwrap_or(u64::MAX))
     }
 }
 

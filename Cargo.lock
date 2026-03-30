@@ -311,7 +311,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0c02bb9e68df141bf20973226e9f689d22daf010f3230202d9a7692abf91a70"
 dependencies = [
- "bma-ts 0.2.4",
+ "bma-ts 0.2.5",
 ]
 
 [[package]]
@@ -538,7 +538,7 @@ dependencies = [
  "bitflags 2.10.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -725,9 +725,9 @@ dependencies = [
 
 [[package]]
 name = "bma-ts"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c4d51856f84780628a0e9379aa5101cd9835e0b7976a3a6d9f109ea6c71e153"
+checksum = "ea8e8ca954dfeedfa7f0e3234003b18eda140cff138713c3fcecf9155210f49c"
 dependencies = [
  "nix 0.27.1",
  "thiserror 1.0.69",
@@ -2671,6 +2671,7 @@ version = "4.2.0"
 dependencies = [
  "aws-lc-rs",
  "eva-common",
+ "rtc-interval",
  "tokio",
 ]
 
@@ -2951,7 +2952,7 @@ version = "4.2.0"
 dependencies = [
  "async-channel 1.9.0",
  "async-trait",
- "bma-ts 0.2.4",
+ "bma-ts 0.2.5",
  "eva-common",
  "eva-sdk",
  "gstreamer",
@@ -6399,12 +6400,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtc-interval"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab3f2f67acf48cb4100fce57ac1a54404cec3871c1d8386138ebd727ef4e7b12"
+dependencies = [
+ "bma-ts 0.2.5",
+ "rtsc",
+ "tokio",
+]
+
+[[package]]
 name = "rtsc"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d7696615e8d49a06c58a49d4b6f44eb06be20c4a246fdeef5b9c3c52f29a21d"
 dependencies = [
- "bma-ts 0.2.4",
+ "bma-ts 0.2.5",
  "libc",
  "linux-futex",
  "lock_api",
