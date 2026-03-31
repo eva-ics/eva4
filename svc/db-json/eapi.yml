@@ -17,6 +17,10 @@ state_history:
       typ: u32
       des: Limit records to
       req: false
+    - nam: prop
+      typ: String
+      des: "Property: status or value (default: both)"
+      req: false
     - nam: compact
       typ: bool
       des: Pack data in arrays according to type
@@ -92,3 +96,22 @@ state_log:
     ]
 state_push:
   des: "push item states into db, (payload: single item state or list). skips existing states"
+  par:
+    - nam: oid
+      typ: String
+      des: "Item OID (alias: i)"
+      req: true
+    - nam: status
+      typ: i16
+      des: "Item status (alias: s)"
+      req: true
+    - nam: value
+      typ: Any
+      des: "Item value (alias: v)"
+      req: false
+    - nam: t
+      typ: f64
+      des: "Timestamp, seconds since epoch (required, no default; key must be 't', not 'set_time')"
+      req: true
+  exm: |
+    {"oid": "sensor:tests/temp", "status": 1, "value": 15.0, "t": 1652060175.044}
