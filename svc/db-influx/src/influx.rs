@@ -34,6 +34,7 @@ macro_rules! influx_err {
 pub enum ApiVersion {
     V1,
     V2,
+    V3,
 }
 
 impl TryFrom<u16> for ApiVersion {
@@ -42,6 +43,7 @@ impl TryFrom<u16> for ApiVersion {
         match ver {
             1 => Ok(ApiVersion::V1),
             2 => Ok(ApiVersion::V2),
+            3 => Ok(ApiVersion::V3),
             v => Err(Error::unsupported(format!(
                 "api version {} is not supported",
                 v
@@ -98,7 +100,7 @@ impl InfluxClient {
             .build(https);
         let (submit_uri, mut query_headers, query_uri, v2_from_bucket_range) =
             match influx_api_version {
-                ApiVersion::V1 => {
+                ApiVersion::V1 | ApiVersion::V3 => {
                     let mut query_headers = HeaderMap::new();
                     query_headers.insert(
                         hyper::header::CONTENT_TYPE,
@@ -110,12 +112,24 @@ impl InfluxClient {
                         hyper::header::ACCEPT,
                         "application/json".parse().map_err(Error::invalid_data)?,
                     );
-                    (
-                        format!("{}/write?db={}", config.url, config.db),
-                        query_headers,
-                        format!("{}/query?db={}", config.url, config.db),
-                        None,
-                    )
+                    if influx_api_version == ApiVersion::V1 {
+                        (
+                            format!("{}/write?db={}", config.url, config.db),
+                            query_headers,
+                            format!("{}/query?db={}", config.url, config.db),
+                            None,
+                        )
+                    } else {
+                        (
+                            format!(
+                                "{}/api/v3/write_lp?db={}&precision=nanosecond",
+                                config.url, config.db
+                            ),
+                            query_headers,
+                            format!("{}/query?db={}", config.url, config.db),
+                            None,
+                        )
+                    }
                 }
                 ApiVersion::V2 => {
                     if let Some(ref org) = config.org {
@@ -156,11 +170,16 @@ impl InfluxClient {
         );
         let mut auth_headers = HeaderMap::new();
         if let Some(ref token) = config.token {
+            let token = token.trim();
             auth_headers.insert(
                 hyper::header::AUTHORIZATION,
-                format!("Token {}", token)
-                    .parse()
-                    .map_err(Error::invalid_data)?,
+                if influx_api_version == ApiVersion::V3 {
+                    format!("Bearer {}", token)
+                } else {
+                    format!("Token {}", token)
+                }
+                .parse()
+                .map_err(Error::invalid_data)?,
             );
         } else if let Some(ref username) = config.username {
             let b = format!(
@@ -220,7 +239,7 @@ impl InfluxClient {
         let mut data = Vec::new();
         trace!("querying data from {}: {}", self.query_uri, q);
         match self.api_version {
-            ApiVersion::V1 => {
+            ApiVersion::V1 | ApiVersion::V3 => {
                 #[derive(Deserialize)]
                 struct V1Series {
                     values: Option<Vec<Vec<Option<Value>>>>,
@@ -358,7 +377,7 @@ impl InfluxClient {
             "mean".to_owned()
         };
         let q = match self.api_version {
-            ApiVersion::V1 => {
+            ApiVersion::V1 | ApiVersion::V3 => {
                 let rp_opt = if let Some(rp) = xopts.remove("rp") {
                     format!("\"{}\".", rp.to_alphanumeric_string()?)
                 } else {
@@ -481,7 +500,7 @@ impl InfluxClient {
     ) -> EResult<Vec<ItemState>> {
         let mut data = Vec::new();
         let q = match self.api_version {
-            ApiVersion::V1 => {
+            ApiVersion::V1 | ApiVersion::V3 => {
                 let mut cond = format!("where time>={}", ts_to_ns(t_start));
                 if let Some(t_e) = t_end {
                     write!(cond, " and time<={}", ts_to_ns(t_e)).map_err(Error::failed)?;

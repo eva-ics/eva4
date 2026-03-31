@@ -4,12 +4,16 @@ workers: 1
 bus:
   path: var/bus.ipc
 config:
-  api_version: 1 # 1 or 2
+  api_version: 1 # 1, 2 or 3 (InfluxDB 3 native write)
   ## v1 basic auth
   # username: user
   # password: pass
   ## v2 token auth
   # token: sometoken
+  ## v3 token auth (Bearer)
+  # token: apiv3_...
+  # v1/v2 usually: http://localhost:8086
+  # v3 usually: http://localhost:8181
   url: http://localhost:8086
   db: eva
   ## alternative CA file (.der for DER, any other extension for PEM)
