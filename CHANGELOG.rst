@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-04-01 build 2026040101: InfluxDB v3 full API support
 * 2026-03-24 build 2026032401: Minor security updates in cryptographic libraries
 * 2026-03-17 build 2026031701: MQTT pool improvements, minor security fixes
 * 2026-03-03 build 2026030301: Item search improvements, HMI internal traversal path protection
