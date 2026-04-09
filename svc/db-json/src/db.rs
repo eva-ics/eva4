@@ -135,9 +135,7 @@ $$;",
 }
 
 pub async fn submit(state: ItemState) -> EResult<()> {
-    if let Some(val) = state.value
-        && let Ok(value) = serde_json::to_value(val)
-    {
+    if let Ok(value) = serde_json::to_value(state.value) {
         sqlx::query("SELECT insert_d_state_history_events($1, $2, $3, $4)")
             .bind([ts_to_naive(state.set_time)?])
             .bind([state.oid.as_str()])
@@ -158,16 +156,16 @@ pub async fn submit_bulk(state: Vec<ItemState>, replace: bool) -> EResult<()> {
     let mut statuses = Vec::with_capacity(state.len());
     let mut values: Vec<serde_json::Value> = Vec::with_capacity(state.len());
     for s in state {
-        let Some(val) = s.value else {
-            continue;
-        };
-        let Ok(val) = serde_json::to_value(val) else {
+        let Ok(val) = serde_json::to_value(s.value) else {
             continue;
         };
         ts.push(ts_to_naive(s.set_time)?);
         oids.push(s.oid.as_str().to_owned());
         statuses.push(s.status);
         values.push(val);
+    }
+    if ts.is_empty() {
+        return Ok(());
     }
     let q = if replace {
         sqlx::query("SELECT insert_d_state_history_events($1, $2, $3, $4)")
