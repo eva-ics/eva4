@@ -13,7 +13,7 @@ uri = 'pub.bma.ai/eva4'
 
 
 def gsutil(params):
-    cmd = f'gsutil -m {params}'
+    cmd = f'gcloud storage {params}'
     print(cmd)
     if os.system(cmd):
         raise RuntimeError
@@ -34,7 +34,7 @@ a = ap.parse_args()
 if not a.test:
     for arch in archs:
         f = f'eva-{a.version}-{a.build}-{arch}.tgz'
-        gsutil(f'cp -a public-read '
+        gsutil(f'cp --predefined-acl=publicRead '
                f'gs://{uri}/{a.version}/nightly/{f}'
                f' gs://{uri}/{a.version}/stable/{f}')
 
@@ -42,20 +42,20 @@ if not a.test:
     gsutil(f'cp '
            f'gs://{uri}/{a.version}/nightly/update-{a.build}.sh '
            f' {fname}')
-    gsutil(f'-h "Cache-Control:no-cache" cp -a public-read '
+    gsutil(f'cp --predefined-acl=publicRead --cache-control="no-cache" '
            f'{fname} '
            f' gs://{uri}/{a.version}/stable/update.sh')
     os.unlink(fname)
 
-    gsutil(f'cp -a public-read '
+    gsutil(f'cp --predefined-acl=publicRead '
            f'gs://{uri}/{a.version}/nightly/CHANGELOG.html'
            f' gs://{uri}/{a.version}/stable/CHANGELOG.html')
 
-    gsutil(f'-h "Content-Type:text/x-rst" cp -a public-read '
+    gsutil(f'cp --content-type="text/x-rst" --predefined-acl=publicRead '
            f'gs://{uri}/{a.version}/nightly/UPDATE.rst '
            f'gs://{uri}/{a.version}/stable/UPDATE.rst')
 
-    gsutil(f'cp -a public-read '
+    gsutil(f'cp --predefined-acl=publicRead '
            f'gs://{uri}/{a.version}/nightly/manifest-{a.build}.json'
            f' gs://{uri}/{a.version}/stable/manifest-{a.build}.json')
 
@@ -68,7 +68,7 @@ if a.update_info or a.test:
                 'version': a.version,
                 'build': int(a.build),
             }))
-        gsutil(f'-h "Cache-Control:no-cache" cp -a public-read '
+        gsutil('cp --predefined-acl=publicRead --cache-control="no-cache" '
                f'{fname} gs://{uri}/{ftarget}')
     finally:
         try:

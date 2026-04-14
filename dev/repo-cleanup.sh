@@ -13,10 +13,10 @@ remove_build() {
   kind=$2
   [ -z "${kind}" ] && exit 1
   echo "Removing build $1 ($2)"
-  gsutil -m rm -f "gs://pub.bma.ai/eva4/${VERSION}/${kind}/*${build}*"
+  gcloud storage rm --quiet "gs://pub.bma.ai/eva4/${VERSION}/${kind}/*${build}*"
 }
 
-for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/nightly/manifest*"|sort \
+for build in $(gcloud storage ls "gs://pub.bma.ai/eva4/${VERSION}/nightly/manifest*"|sort \
   |ghead -n -${KEEP_NIGHTLY}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
   if [[ " ${lts[@]} " =~ " $build " ]]; then
     echo "Keeping nightly LTS build $build"
@@ -25,7 +25,7 @@ for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/nightly/manifest*"|sor
   fi
 done
 
-for build in $(gsutil ls "gs://pub.bma.ai/eva4/${VERSION}/stable/manifest*"|sort\
+for build in $(gcloud storage ls "gs://pub.bma.ai/eva4/${VERSION}/stable/manifest*"|sort\
   |ghead -n -${KEEP_STABLE}|sed 's/.*manifest-\([0-9]*\).json/\1/g'); do
   if [[ " ${lts[@]} " =~ " $build " ]]; then
     echo "Keeping stable LTS build $build"
