@@ -144,14 +144,6 @@ impl RpcHandlers for Handlers {
                 } else {
                     let (res, val) = {
                         let mut otps = OTPS.lock().unwrap();
-                        macro_rules! setup_otp {
-                            () => {{
-                                let otp = Otp::create(p.login)?;
-                                let resp_str = format!("|OTP|{}|SETUP={}", self.svc_id, otp.secret);
-                                otps.insert(p.login.to_owned(), otp);
-                                (Err(Error::access_more_data_required(resp_str).into()), None)
-                            }};
-                        }
                         if let Some(otp) = otps.get_mut(p.login) {
                             if let Some(otp_password) = p.otp {
                                 otp.verify(&otp_password.into_string(), &self.svc_id)?;
@@ -163,7 +155,8 @@ impl RpcHandlers for Handlers {
                                 };
                                 (Ok(None), val)
                             } else if !otp.active {
-                                setup_otp!()
+                                let resp_str = format!("|OTP|{}|SETUP={}", self.svc_id, otp.secret);
+                                (Err(Error::access_more_data_required(resp_str).into()), None)
                             } else {
                                 (
                                     Err(Error::access_more_data_required(format!(
@@ -175,7 +168,10 @@ impl RpcHandlers for Handlers {
                                 )
                             }
                         } else {
-                            setup_otp!()
+                            let otp = Otp::create(p.login)?;
+                            let resp_str = format!("|OTP|{}|SETUP={}", self.svc_id, otp.secret);
+                            otps.insert(p.login.to_owned(), otp);
+                            (Err(Error::access_more_data_required(resp_str).into()), None)
                         }
                     };
                     if let Some(value) = val {
