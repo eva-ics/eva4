@@ -64,7 +64,7 @@ impl Otp {
             .hash_function(libreauth::hash::HashFunction::Sha1)
             .finalize()
             .map_err(|e| Error::failed(format!("{:?}", e)))?;
-        if auth.generate() == otp_password {
+        if auth.is_valid(otp_password) {
             Ok(())
         } else {
             Err(Error::access_more_data_required(format!(
