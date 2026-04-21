@@ -7,7 +7,6 @@ use crate::items::{self, Filter, Inventory, InventoryStats, Item, ItemConfigData
 use crate::spoint;
 use crate::svcmgr;
 use crate::{EResult, Error};
-use atty::Stream;
 use busrt::QoS;
 use busrt::client::AsyncClient;
 use busrt::rpc::{Rpc, RpcClient};
@@ -37,6 +36,7 @@ use eva_common::tools::format_path;
 use log::{debug, error, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::io::IsTerminal;
 use std::mem;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -2279,7 +2279,7 @@ impl Core {
             handle_term_signal!(
                 SignalKind::interrupt(),
                 running,
-                atty::is(Stream::Stdout) && atty::is(Stream::Stderr)
+                std::io::stdout().is_terminal() && std::io::stderr().is_terminal()
             );
         } else {
             ignore_term_signal!(SignalKind::interrupt());

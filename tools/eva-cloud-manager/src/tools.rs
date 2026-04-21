@@ -1,8 +1,8 @@
-use atty::Stream;
 use colored::Colorize;
 use eva_client::VersionInfo;
 use eva_common::prelude::*;
 use serde::Deserialize;
+use std::io::IsTerminal;
 use std::process::Stdio;
 use tokio::io::{self, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
 
@@ -18,7 +18,7 @@ struct Config {
 pub async fn read_stdin() -> Vec<u8> {
     let mut stdin = tokio::io::stdin();
     let mut buf: Vec<u8> = Vec::new();
-    if atty::is(Stream::Stdin) {
+    if std::io::stdin().is_terminal() {
         println!("Reading stdin, Ctrl-D to finish...");
     }
     stdin.read_to_end(&mut buf).await.unwrap();

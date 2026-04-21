@@ -48,7 +48,6 @@ async-trait = { workspace = true }
 async-recursion = { workspace = true }
 async-channel = { workspace = true }
 nix = { version = "0.25", features = ["user", "fs"] }
-atty = "0.2.14"
 uuid = { features = ["serde", "v4"] , workspace = true }
 triggered = "0.1.2"
 sqlx = { default-features = false, features = [
