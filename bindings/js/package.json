@@ -41,13 +41,13 @@
     "get-stdin": "^9.0.0",
     "msgpackr": "^1.9.9",
     "sleep-promise": "^9.1.0",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
     "@types/uuid": "^9.0.7",
     "esbuild": "^0.25.0",
     "typescript": "^5.2.2",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   }
 }
