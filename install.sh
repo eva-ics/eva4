@@ -525,6 +525,14 @@ if [ "$PYTHON" ]; then
     ./sbin/eva-registry-cli set eva/config/python-venv - -p json > /dev/null || exit 12
 fi
 
+if [ "$PYTHON_USE_SYSTEM_PIP" = "1" ]; then
+    ./sbin/eva-registry-cli set-field eva/config/python-venv use_system_pip true -p boolean > /dev/null || exit 12
+fi
+
+if [ "$PYTHON_SYSTEM_SITE_PACKAGES" = "1" ]; then
+    ./sbin/eva-registry-cli set-field eva/config/python-venv system_site_packages true -p boolean > /dev/null || exit 12
+fi
+
 if [ $MODE -ge 1 ]; then
   echo "Preparing Python venv and installing eva-shell..."
   EXTRA="[\"eva-shell\""
