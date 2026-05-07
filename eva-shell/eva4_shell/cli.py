@@ -1191,9 +1191,12 @@ class CLI:
         ok()
 
     def item_state(self, i, full, regex):
+        params = dict(i=i, full=full)
+        if regex is not None and regex != '':
+            params['regex'] = regex
         data = call_rpc(
             'item.state',
-            dict(i=i, full=full, regex=regex)
+            params
         )
         print_result(data,
                      cols=[
