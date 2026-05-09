@@ -1,6 +1,9 @@
 use busrt::QoS;
 use eva_common::acl::OIDMaskList;
-use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC};
+use eva_common::common_payloads::IdOrListOwned;
+use eva_common::events::{
+    LOCAL_STATE_TOPIC, LocalStateEvent, REMOTE_ARCHIVE_STATE_TOPIC, REMOTE_STATE_TOPIC,
+};
 use eva_common::prelude::*;
 use eva_common::time::ts_to_ns;
 use eva_internal::RtcSyncedInterval;
@@ -16,6 +19,14 @@ use std::sync::{Arc, OnceLock, atomic};
 use std::time::Duration;
 
 err_logger!();
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum AnnounceKind {
+    Loc,
+    #[default]
+    Rar,
+}
 
 mod common;
 mod influx;
@@ -160,6 +171,71 @@ impl RpcHandlers for Handlers {
                         .await
                         .log_err()?;
                     Ok(Some(pack(&data)?))
+                }
+            }
+            "state_announce" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct StateLogParams {
+                    i: OID,
+                    #[serde(alias = "s")]
+                    t_start: Option<f64>,
+                    #[serde(alias = "e")]
+                    t_end: Option<f64>,
+                    #[serde(alias = "n")]
+                    limit: Option<usize>,
+                    #[serde(alias = "o", default)]
+                    xopts: BTreeMap<String, Value>,
+                    #[serde(alias = "for")]
+                    publish_for: IdOrListOwned,
+                    #[serde(default)]
+                    kind: AnnounceKind,
+                }
+                if payload.is_empty() {
+                    Err(RpcError::params(None))
+                } else {
+                    let p: StateLogParams = unpack(payload)?;
+                    let influx_client = tokio::time::timeout(
+                        *TIMEOUT.get().unwrap(),
+                        CLIENT_POOL.get().unwrap().get(),
+                    )
+                    .await
+                    .map_err(Into::<Error>::into)?;
+                    let data = influx_client
+                        .state_log(
+                            p.i,
+                            p.t_start
+                                .unwrap_or_else(|| eva_common::time::now_ns_float() - 86400.0),
+                            p.t_end,
+                            p.limit,
+                            p.xopts,
+                        )
+                        .await
+                        .log_err()?;
+                    let topic_base = match p.kind {
+                        AnnounceKind::Loc => LOCAL_STATE_TOPIC,
+                        AnnounceKind::Rar => REMOTE_ARCHIVE_STATE_TOPIC,
+                    };
+                    for d in data {
+                        let topic = format!("{}{}", topic_base, d.oid.as_path());
+                        let state = LocalStateEvent {
+                            status: d.status,
+                            value: d.value.unwrap_or_default(),
+                            act: None,
+                            ieid: IEID::new(0, 0),
+                            t: d.set_time,
+                        };
+                        let rpc = RPC.get().unwrap();
+                        let payload = busrt::borrow::Cow::Referenced(pack(&state)?.into());
+                        for f in &p.publish_for {
+                            rpc.client()
+                                .lock()
+                                .await
+                                .publish_for(&topic, f, payload.clone(), QoS::No)
+                                .await?;
+                        }
+                    }
+                    Ok(None)
                 }
             }
             "state_push" => {
@@ -389,6 +465,16 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .optional("t_start")
             .optional("t_end")
             .optional("limit"),
+    );
+    info.add_method(
+        ServiceMethod::new("state_announce")
+            .required("i")
+            .optional("t_start")
+            .optional("t_end")
+            .optional("limit")
+            .optional("xopts")
+            .optional("kind")
+            .required("for"),
     );
     let rpc: Arc<RpcClient> = initial
         .init_rpc(Handlers {

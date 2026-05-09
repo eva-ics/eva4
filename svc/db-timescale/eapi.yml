@@ -157,6 +157,38 @@ state_log:
             "value": 15
         }
     ]
+state_announce:
+  des: "Replays state log rows as state bus publishes (same query as state_log). Note: kind chooses ST/LOC (loc) or ST/RAR (rar); default rar."
+  par:
+    - nam: i
+      typ: String
+      des: "Item OID, supports ending masks (e.g. sensor:group/#)"
+      req: true
+    - nam: t_start
+      typ: f64
+      des: "Beginning timestamp (default: last 24 hours) (alias: s)"
+      req: false
+    - nam: t_end
+      typ: f64
+      des: "Ending timestamp (default: now) (alias: e)"
+      req: false
+    - nam: limit
+      typ: u32
+      des: "Limit records to (alias: n)"
+      req: false
+    - nam: xopts
+      typ: Map<String, String>
+      des: "Extra: offset=N for query offset, rp=TABLE for custom rp_TABLE (alias: o)"
+      req: false
+    - nam: kind
+      typ: String
+      des: "loc | rar (default: rar): publish under local or remote-archive state topic prefix"
+      req: false
+    - nam: publish_for
+      typ: String/Vec<String>
+      des: "Required; bus client id(s); empty list sends nothing (alias: for)"
+      req: true
+  ret:
 state_push:
   des: "push item states into db, (payload: single item state or list). skips existing states"
   par:
