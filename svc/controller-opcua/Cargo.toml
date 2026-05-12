@@ -18,7 +18,7 @@ eva-common = { features = ["events", "time", "common-payloads"] , workspace = tr
 mimalloc = { workspace = true }
 bmart = { workspace = true }
 uuid = { features = ["v4"] , workspace = true }
-rplc_opcua = "0.12.3"
+rplc_opcua = "0.12.4"
 
 [features]
 std-alloc = []
