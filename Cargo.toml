@@ -75,7 +75,7 @@ bma-ts = "0.2.4"
 binrw = "0.13.3"
 oneshot = "0.1.13"
 bytes = "1.11.1"
-openssl = "^0.10.78"
+openssl = "^0.10.79"
 ipnetwork = "0.20.0"
 hyper = "^0.14.28"
 parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }

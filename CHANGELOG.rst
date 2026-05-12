@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-05-12 build 2026051201: LM parsers, svc data replication
 * 2026-04-21 build 2026042101: OTP improvements, security updates
 * 2026-04-14 build 2026041401: DB-JSON service improvements
 * 2026-04-01 build 2026040101: InfluxDB v3 full API support

@@ -1,10 +1,10 @@
-use axum::routing::get;
 use axum::Router;
+use axum::routing::get;
 use eva_sdk::prelude::*;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 err_logger!();
@@ -17,10 +17,10 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "RESTful web info";
 
-static RPC: OnceCell<Arc<RpcClient>> = OnceCell::new();
-static TIMEOUT: OnceCell<Duration> = OnceCell::new();
-static HMI_SVC: OnceCell<String> = OnceCell::new();
-static REAL_IP_HEADER: OnceCell<String> = OnceCell::new();
+static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
+static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+static HMI_SVC: OnceLock<String> = OnceLock::new();
+static REAL_IP_HEADER: OnceLock<String> = OnceLock::new();
 
 static HELP: &str = r#"RESTful web info
 All requests must contain a header X-Auth-Key with a valid API key or token
@@ -68,6 +68,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
     let addr: SocketAddr = config.listen.parse().map_err(Error::invalid_params)?;
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| Error::failed(format!("listen {}: {e}", config.listen)))?;
     let info = ServiceInfo::new(AUTHOR, VERSION, DESCRIPTION);
     let rpc = initial.init_rpc(Handlers { info }).await?;
     if let Some(h) = config.real_ip_header {
@@ -92,10 +95,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
         .route("/api/test", get(methods::test::handle))
         .route("/api/item.state/*path", get(methods::state::handle));
     tokio::spawn(async move {
-        axum::Server::bind(&addr)
-            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-            .await
-            .log_ef();
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .log_ef();
     });
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());

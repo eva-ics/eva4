@@ -1,5 +1,5 @@
 use crate::client_info::ClientInfo;
-use crate::http_errors::{internal_error, HttpError};
+use crate::http_errors::{HttpError, internal_error};
 use crate::{RPC, TIMEOUT};
 use axum::extract::{Json, Path};
 use axum::http::StatusCode;
@@ -17,9 +17,11 @@ pub async fn handle(ci: ClientInfo, Path(path): Path<String>) -> Result<Json<Val
         full: bool,
     }
     // firstly add to the query wildcard OID mask if the path is a group
-    let mut oids = vec![OIDMask::from_path(&format!("{path}/#"))
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("invalid OID mask: {e}")))?
-        .to_string()];
+    let mut oids = vec![
+        OIDMask::from_path(&format!("{path}/#"))
+            .map_err(|e| (StatusCode::BAD_REQUEST, format!("invalid OID mask: {e}")))?
+            .to_string(),
+    ];
     // if the path is also a valid OID, add it to the query
     if let Ok(oid) = OID::from_path(&path) {
         oids.push(oid.to_string());
