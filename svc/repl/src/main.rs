@@ -478,6 +478,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 pubsub_rpc_handlers.start(config.pubsub.queue_size)?;
                 psrpc::RpcClient::create(c, pubsub_rpc_handlers, pubsub_rpc_config).await?
             } else {
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 return Err(Error::failed("Unable to find working psrt host"));
             }
         }
@@ -520,6 +521,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 pubsub_rpc_handlers.start(config.pubsub.queue_size)?;
                 psrpc::RpcClient::create(c, pubsub_rpc_handlers, pubsub_rpc_config).await?
             } else {
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 return Err(Error::failed("Unable to find working mqtt host"));
             }
         }
