@@ -2187,6 +2187,7 @@ dependencies = [
  "log",
  "mimalloc",
  "serde",
+ "serde_json",
  "submap",
  "tokio",
  "uuid 1.19.0",

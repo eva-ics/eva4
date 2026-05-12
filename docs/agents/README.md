@@ -10,7 +10,9 @@ architecture.
 1. `repository-map.md` for top-level structure and ownership clues.
 2. `core-and-services.md` for the node core, service families, and risk areas.
 3. `workflows.md` for canonical build, validation, and editing workflow.
-4. `service-authoring.md` before adding or reshaping a service.
+4. `manage-and-test.md` for common item/service deployment and node-side
+   validation tasks.
+5. `service-authoring.md` before adding or reshaping a service.
 
 ## Repository invariants
 

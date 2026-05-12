@@ -52,6 +52,8 @@ When changing a service, check whether the change also requires:
 ## Documentation workflow
 
 - Agent-facing repository docs live under `docs/agents/`.
+- Common operational recipes for item/service management and node-side testing
+  live in `docs/agents/manage-and-test.md`.
 - Public-facing docs must stay neutral in tone and terminology.
 - If you add a new important subtree or workflow, extend the relevant document
   here rather than hiding the convention inside a commit message.

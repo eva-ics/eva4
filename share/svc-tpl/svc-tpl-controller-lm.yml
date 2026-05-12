@@ -88,4 +88,38 @@ config:
       #warmup_open: 1 # motor warmup delay on open
       #ts: 1 # fully close then go to N, if N <= the field value
       #te: 2 # fully open then go to N, if N >= the field value
+      #
+  parsers: []
+    #- config:  # optional; omit for ignore_events=false, no interval (same as config: {})
+        # ignore_events is optional (default false). Same semantics as DB collector services:
+        # when true, bus-driven updates are skipped for this group; interval pull still runs if set.
+        #ignore_events: false
+        # interval is optional (seconds, float); omit or null for no periodic pull.
+        #interval: 5
+      #items:
+        #- oid: sensor:equipment/sensor1
+        # Items without a `map` still participate in pull/interval and bus flow but emit
+        # no parsed raw-state outputs by design (user config only).
+        #- oid: sensor:lab/equipment/some-light
+          #map:
+            #- path: $.Vcc
+              #target: sensor:light/vcc
+               #value_map and transform can be used
+            # value mapping. map "OFF" to 0, "ON" to 1
+            #value_map:
+              #"OFF": 0
+              #"ON": 1
+            #transform:
+              #- func: multiply # multiply the value by N
+                #params: [ 1000 ]
+              #- func: divide # divide the value by N
+                #params: [ 1000 ]
+              #- func: round # round the value to N digits after comma
+                #params: [ 2 ]
+              #- func: calc_speed # use the value as calc-speed gauge (with N seconds delta)
+                #params: [ 1 ]
+              #- func: invert # invert the value between 0/1
+              # #params: []
+            #- path: $.Wifi.RSSI
+              #target: sensor:light/wifi/rssi
 user: nobody

@@ -1,5 +1,5 @@
 use busrt::tools::pubsub;
-use eva_common::acl::OIDMaskList;
+use eva_common::acl::{OIDMask, OIDMaskList};
 use eva_common::common_payloads::{ParamsId, ParamsOID, ParamsUuid};
 use eva_common::events::{LOCAL_STATE_TOPIC, REMOTE_STATE_TOPIC};
 use eva_common::prelude::*;
@@ -19,6 +19,7 @@ mod common;
 mod cycle;
 mod job;
 mod opener;
+mod parser;
 mod rule;
 
 use common::StateX;
@@ -42,6 +43,7 @@ static RPC: OnceLock<Arc<RpcClient>> = OnceLock::new();
 static PREV_STATES: LazyLock<Mutex<HashMap<OID, StateX>>> = LazyLock::new(<_>::default);
 static ACTION_QUEUES: OnceLock<HashMap<OID, async_channel::Sender<Action>>> = OnceLock::new();
 static ACTT: OnceLock<Actt> = OnceLock::new();
+static RAW_PUB_TX: OnceLock<async_channel::Sender<(String, Vec<u8>)>> = OnceLock::new();
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]
@@ -260,6 +262,9 @@ async fn process_state(topic: &str, path: &str, payload: &[u8]) -> EResult<()> {
                         Err(e) => error!("{}", e),
                     }
                 }
+                if let Some(pub_tx) = RAW_PUB_TX.get() {
+                    parser::on_state(&oid, &state, pub_tx).await;
+                }
                 prev_states.insert(oid, state);
             }
             Err(e) => {
@@ -282,6 +287,8 @@ struct Config {
     jobs: Vec<Job>,
     #[serde(default)]
     openers: Vec<Opener>,
+    #[serde(default)]
+    parsers: Vec<parser::ParserGroup>,
 }
 
 #[svc_main]
@@ -291,6 +298,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    let parsers = config.parsers;
+    let parser_engine = Arc::new(parser::ParserEngine::new(parsers));
+    parser::init(parser_engine.clone())?;
     let timeout = initial.timeout();
     let startup_timeout = initial.startup_timeout();
     TIMEOUT
@@ -309,7 +319,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
         rule_matrix.subscribe(&rule_c.oid().as_path(), &rule_c);
         rule_oids.insert(rule_c.oid().clone());
     }
-    let rule_mask_list = OIDMaskList::new(rule_oids);
+    let mut event_masks: HashSet<OIDMask> = rule_oids.iter().cloned().map(Into::into).collect();
+    for m in parser_engine.event_subscription_masks() {
+        event_masks.insert(m);
+    }
+    let event_mask_list = OIDMaskList::new(event_masks);
     RULES
         .set(rules)
         .map_err(|_| Error::core("Unable to set RULES"))?;
@@ -350,6 +364,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
         state_handler(rx).await;
     });
     let (tx, rx) = async_channel::bounded::<(String, Vec<u8>)>(QUEUE_SIZE);
+    RAW_PUB_TX
+        .set(tx.clone())
+        .map_err(|_| Error::core("Unable to set RAW_PUB_TX"))?;
     let handlers = Handlers {
         info,
         topic_broker,
@@ -358,7 +375,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     let (rpc, rpc_secondary) = initial.init_rpc_blocking_with_secondary(handlers).await?;
     eva_sdk::service::subscribe_oids(
         rpc.as_ref(),
-        &rule_mask_list,
+        &event_mask_list,
         eva_sdk::service::EventKind::Actual,
     )
     .await?;
@@ -391,6 +408,8 @@ async fn main(mut initial: Initial) -> EResult<()> {
     svc_mark_ready(&client).await?;
     info!("{} started ({})", DESCRIPTION, initial.id());
     let rpc_c = rpc.clone();
+    let parser_engine_c = parser_engine.clone();
+    let tx_interval = tx.clone();
     tokio::spawn(async move {
         let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
         for c in CYCLES.get().unwrap().values() {
@@ -404,6 +423,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
                 j.clear_next_launch();
             });
         }
+        parser::spawn_interval_workers(parser_engine_c, tx_interval);
     });
     svc_block2(&rpc, &rpc_secondary).await;
     svc_mark_terminating(&client).await?;
