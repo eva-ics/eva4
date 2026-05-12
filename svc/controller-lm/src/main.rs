@@ -319,7 +319,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         rule_matrix.subscribe(&rule_c.oid().as_path(), &rule_c);
         rule_oids.insert(rule_c.oid().clone());
     }
-    let mut event_masks: HashSet<OIDMask> = rule_oids.iter().cloned().map(Into::into).collect();
+    let mut event_masks: HashSet<OIDMask> = rule_oids.iter().cloned().collect();
     for m in parser_engine.event_subscription_masks() {
         event_masks.insert(m);
     }
