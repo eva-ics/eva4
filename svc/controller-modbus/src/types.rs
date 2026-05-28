@@ -39,6 +39,14 @@ pub enum ModbusType {
     Uint64,
     #[serde(alias = "sint64", alias = "LINT")]
     Int64,
+    #[serde(alias = "dwordw", alias = "UDINTW")]
+    Uint32w,
+    #[serde(alias = "sint32w", alias = "DINTW")]
+    Int32w,
+    #[serde(alias = "qwordw", alias = "ULINTW")]
+    Uint64w,
+    #[serde(alias = "sint64w", alias = "LINTW")]
+    Int64w,
     #[serde(alias = "real", alias = "REAL")]
     Real32,
     #[serde(alias = "LREAL")]
@@ -53,8 +61,18 @@ impl ModbusType {
     pub fn size(self) -> u16 {
         match self {
             ModbusType::Bit | ModbusType::Uint16 | ModbusType::Int16 => 1,
-            ModbusType::Uint32 | ModbusType::Int32 | ModbusType::Real32 | ModbusType::Real32b => 2,
-            ModbusType::Uint64 | ModbusType::Int64 | ModbusType::Real64 | ModbusType::Real64b => 4,
+            ModbusType::Uint32
+            | ModbusType::Int32
+            | ModbusType::Uint32w
+            | ModbusType::Int32w
+            | ModbusType::Real32
+            | ModbusType::Real32b => 2,
+            ModbusType::Uint64
+            | ModbusType::Int64
+            | ModbusType::Uint64w
+            | ModbusType::Int64w
+            | ModbusType::Real64
+            | ModbusType::Real64b => 4,
         }
     }
     #[inline]
@@ -63,10 +81,10 @@ impl ModbusType {
             ModbusType::Bit => Value::U8(value.try_into()?),
             ModbusType::Uint16 => Value::U16(value.try_into()?),
             ModbusType::Int16 => Value::I16(value.try_into()?),
-            ModbusType::Uint32 => Value::U32(value.try_into()?),
-            ModbusType::Int32 => Value::I32(value.try_into()?),
-            ModbusType::Uint64 => Value::U64(value.try_into()?),
-            ModbusType::Int64 => Value::I64(value.try_into()?),
+            ModbusType::Uint32 | ModbusType::Uint32w => Value::U32(value.try_into()?),
+            ModbusType::Int32 | ModbusType::Int32w => Value::I32(value.try_into()?),
+            ModbusType::Uint64 | ModbusType::Uint64w => Value::U64(value.try_into()?),
+            ModbusType::Int64 | ModbusType::Int64w => Value::I64(value.try_into()?),
             ModbusType::Real32 | ModbusType::Real32b => Value::F32(value.try_into()?),
             ModbusType::Real64 | ModbusType::Real64b => Value::F64(value.try_into()?),
         })

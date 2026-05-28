@@ -197,6 +197,42 @@ async fn set_reg(
                         (u16::from(b[6]) << 8) + u16::from(b[7]),
                     ]
                 }
+                ModbusType::Uint32w => {
+                    let val: u32 = value.try_into()?;
+                    let b = val.to_be_bytes();
+                    vec![
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                    ]
+                }
+                ModbusType::Int32w => {
+                    let val: i32 = value.try_into()?;
+                    let b = val.to_be_bytes();
+                    vec![
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                    ]
+                }
+                ModbusType::Uint64w => {
+                    let val: u64 = value.try_into()?;
+                    let b = val.to_be_bytes();
+                    vec![
+                        (u16::from(b[6]) << 8) + u16::from(b[7]),
+                        (u16::from(b[4]) << 8) + u16::from(b[5]),
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                    ]
+                }
+                ModbusType::Int64w => {
+                    let val: i64 = value.try_into()?;
+                    let b = val.to_be_bytes();
+                    vec![
+                        (u16::from(b[6]) << 8) + u16::from(b[7]),
+                        (u16::from(b[4]) << 8) + u16::from(b[5]),
+                        (u16::from(b[2]) << 8) + u16::from(b[3]),
+                        (u16::from(b[0]) << 8) + u16::from(b[1]),
+                    ]
+                }
                 ModbusType::Real32 => {
                     let val: f32 = value.try_into()?;
                     #[allow(clippy::cast_possible_truncation)]
@@ -408,6 +444,58 @@ pub fn parse_block_value(
                 v3 as u8,
                 (v4 >> 8) as u8,
                 v4 as u8,
+            ]))
+        }
+        ModbusType::Uint32w => {
+            let v1 = get!(offset);
+            let v2 = get!(offset + 1);
+            Value::U32(u32::from_be_bytes([
+                (v2 >> 8) as u8,
+                v2 as u8,
+                (v1 >> 8) as u8,
+                v1 as u8,
+            ]))
+        }
+        ModbusType::Int32w => {
+            let v1 = get!(offset);
+            let v2 = get!(offset + 1);
+            Value::I32(i32::from_be_bytes([
+                (v2 >> 8) as u8,
+                v2 as u8,
+                (v1 >> 8) as u8,
+                v1 as u8,
+            ]))
+        }
+        ModbusType::Uint64w => {
+            let v1 = get!(offset);
+            let v2 = get!(offset + 1);
+            let v3 = get!(offset + 2);
+            let v4 = get!(offset + 3);
+            Value::U64(u64::from_be_bytes([
+                (v4 >> 8) as u8,
+                v4 as u8,
+                (v3 >> 8) as u8,
+                v3 as u8,
+                (v2 >> 8) as u8,
+                v2 as u8,
+                (v1 >> 8) as u8,
+                v1 as u8,
+            ]))
+        }
+        ModbusType::Int64w => {
+            let v1 = get!(offset);
+            let v2 = get!(offset + 1);
+            let v3 = get!(offset + 2);
+            let v4 = get!(offset + 3);
+            Value::I64(i64::from_be_bytes([
+                (v4 >> 8) as u8,
+                v4 as u8,
+                (v3 >> 8) as u8,
+                v3 as u8,
+                (v2 >> 8) as u8,
+                v2 as u8,
+                (v1 >> 8) as u8,
+                v1 as u8,
             ]))
         }
         ModbusType::Real32 => {
