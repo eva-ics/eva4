@@ -17,7 +17,7 @@ eva-common = { version = "0.4.8", features = [
 ] }
 eva-sdk = { version = "0.4.3", features = ["http"] }
 log = "0.4"
-openssl = "0.10.79"
+openssl = "0.10.80"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.49", features = ["full"] }
 
