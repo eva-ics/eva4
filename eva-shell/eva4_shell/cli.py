@@ -1061,9 +1061,12 @@ class CLI:
         print_result(data, cols=['name', 'source', 'port', 'version', 'build'])
 
     def item_list(self, i, n=None, regex=None):
+        params = dict(i=i, node=n)
+        if regex:
+            params['regex'] = regex
         data = call_rpc(
             'item.list',
-            dict(i=i, node=n, regex=regex)
+            params
         )
         print_result(data,
                      cols=[
