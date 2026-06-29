@@ -9274,13 +9274,14 @@ dependencies = [
 
 [[package]]
 name = "yedb"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae5b554f938c72932e1087cfc4008ad9de51a0e13702370e4148f9381fb88214"
+checksum = "9e792f564684c6d0f978b4ff06c493f9039dd3932dcec095e17fbbe808a230a9"
 dependencies = [
  "async-trait",
  "aws-lc-rs",
  "busrt",
+ "bytes 1.11.1",
  "fs2",
  "fs_extra",
  "glob",

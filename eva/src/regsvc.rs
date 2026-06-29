@@ -1,5 +1,5 @@
 use eva_common::prelude::*;
-use eva_common::registry::format_config_key;
+use eva_common::registry::{format_config_key, format_data_key};
 use log::debug;
 use serde::Deserialize;
 
@@ -25,5 +25,6 @@ pub fn load(db: &mut yedb::Database) -> EResult<()> {
     db.skip_bak = registry_config.skip_bak;
     debug!("registry.strict_schema = {}", registry_config.strict_schema);
     db.strict_schema = registry_config.strict_schema;
+    db.set_force_auto_flush([format_data_key("boot-id")]);
     Ok(())
 }

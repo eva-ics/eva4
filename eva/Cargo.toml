@@ -23,7 +23,7 @@ path = "src/rt-launch.rs"
 
 [dependencies]
 tokio = { features = ["full"] , workspace = true }
-yedb = { version = "0.5.1", features = ["server-embed", "busrt-rpc"] }
+yedb = { version = "0.5.2", features = ["server-embed", "busrt-rpc"] }
 clap = { features = ["derive"] , workspace = true }
 busrt = { features = ["full"] , workspace = true }
 serde_yaml = { workspace = true }
