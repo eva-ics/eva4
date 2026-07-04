@@ -7,14 +7,18 @@ use eva_common::err_logger;
 use eva_common::payload::{pack, unpack};
 use eva_common::prelude::*;
 use eva_sdk::prelude::*;
-use rmcp::handler::server::tool::ToolRouter;
-use rmcp::handler::server::wrapper::Parameters;
-use rmcp::model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo};
-use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager,
-    tower::{StreamableHttpServerConfig, StreamableHttpService},
+use rmcp::{
+    ServerHandler,
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
+    model::{ServerCapabilities, ServerInfo},
+    tool, tool_handler, tool_router,
+    transport::{
+        StreamableHttpServerConfig,
+        streamable_http_server::{
+            session::local::LocalSessionManager, tower::StreamableHttpService,
+        },
+    },
 };
-use rmcp::{ServerHandler, tool, tool_handler, tool_router};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use tokio_util::sync::CancellationToken;
@@ -155,12 +159,7 @@ impl McpServer {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::default(),
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation::from_build_env(),
-            instructions: None,
-        }
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
     }
 }
 
@@ -209,16 +208,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
     ALLOW.set(config.allow).expect("allow set once at startup");
     let ct = CancellationToken::new();
     let node_help = config.node_help.clone();
+    let mut session_manager = LocalSessionManager::default();
+    session_manager.session_config.keep_alive = None;
     let http_service: StreamableHttpService<McpServer, LocalSessionManager> =
         StreamableHttpService::new(
             move || Ok(McpServer::new(node_help.clone())),
-            Arc::new(LocalSessionManager::default()),
-            StreamableHttpServerConfig {
-                stateful_mode: true,
-                sse_keep_alive: Some(std::time::Duration::from_secs(15)),
-                sse_retry: Some(std::time::Duration::from_secs(3)),
-                cancellation_token: ct.child_token(),
-            },
+            Arc::new(session_manager),
+            StreamableHttpServerConfig::default().with_cancellation_token(ct.child_token()),
         );
     let router = axum::Router::new().nest_service("/mcp", http_service);
     let Ok(listener) = tokio::net::TcpListener::bind(listen_addr).await else {

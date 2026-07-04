@@ -12,7 +12,7 @@ eva-common = { workspace = true, features = ["events", "common-payloads", "paylo
 eva-sdk = { workspace = true, features = ["controller"] }
 log = { workspace = true }
 mimalloc = { workspace = true }
-reqwest = "0.13.1"
+reqwest = "0.13.4"
 serde = { workspace = true, features = ["derive", "rc"] }
 surge-ping = "0.8.3"
 tokio = { workspace = true, features = ["full"] }
