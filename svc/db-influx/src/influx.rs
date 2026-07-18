@@ -221,9 +221,6 @@ impl InfluxClient {
         let res = self.client.request(req).await.map_err(Error::failed)?;
         if res.status() == StatusCode::OK || res.status() == StatusCode::NO_CONTENT {
             Ok(())
-        } else if res.status() == StatusCode::BAD_REQUEST {
-            warn!("submit query returned error {}", res.status());
-            Ok(())
         } else {
             influx_err!("submit", res, "")
         }
