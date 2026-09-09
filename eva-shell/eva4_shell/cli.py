@@ -989,7 +989,8 @@ class CLI:
                              'ping_interval|n=ping', 'reload_interval|n=rel',
                              'static', 'enabled', 'api_enabled|n=api',
                              'managed', 'trusted', 'online',
-                             'link_uptime|n=upt|f=round:0', 'ver', 'build'
+                             'link_uptime|n=upt|f=round:0', 'version|n=ver',
+                             'build'
                          ])
 
     def node_append(self, i, repl_svc, untrusted):
