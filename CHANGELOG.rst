@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-09-10 build 2026091001: ⚠️ security updates, removed obsolete deps
 * 2026-07-21 build 2026072101: EAPI & InfluxDB v3 stability improvements
 * 2026-07-04 build 2026070401: Security updates, certain stability improvements
 * 2026-06-02 build 2026060201: Certain Modbus improvements, security updates
