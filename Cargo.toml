@@ -81,8 +81,8 @@ hyper = "^0.14.28"
 parking_lot = { package = "parking_lot_rt", version = "^0.12.1" }
 async-channel = "^1.7"
 async-recursion = "^1.0.5"
-serde_yaml = "^0.8"
-eva-common = { version = "^0.4.8" }
+serde_yaml = "^0.9"
+eva-common = { version = "^0.4.9" }
 cargo_metadata = "^0.18.1"
 itertools = "^0.12.1"
 hex = "^0.4.3"
@@ -96,7 +96,7 @@ log = "^0.4.20"
 libc = "0.2.159"
 tokio = "1.49"
 colored = "^2.1.0"
-bmart = "^0.2.11"
+bmart = "^0.2.12"
 num_cpus = "1.17.0"
 uuid = "^1.7.0"
 futures = "^0.3.30"
@@ -106,15 +106,15 @@ serde = "^1.0.197"
 ttl_cache = "0.5"
 base64 = "^0.13"
 paho-mqtt = "^0.13.3"
-psrt = "^0.2.8"
+psrt = "^0.3.5"
 serde_json = "^1.0.113"
-sqlx = { version = "0.8", default-features = false, features = ["any", "json", "derive"] }
+sqlx = { version = "0.8", default-features = false, features = ["any", "json"] }
 submap = "0.3.6"
 syslog = "6.1.0"
 sysinfo = "0.37.2"
 mimalloc = "^0.1.46"
 triggered = "^0.1.2"
-eva-sdk = "^0.4.3"
+eva-sdk = "^0.4.6"
 busrt = { version = "^0.5.6", features = ["rt"] }
 chrono = "^0.4.33"
 simple-pool = "^0.0.18"
@@ -123,3 +123,6 @@ simple-pool = "^0.0.18"
 strip = true
 lto = true
 codegen-units = 1
+
+[patch.crates-io]
+sqlx = { path = "vendor/sqlx" }

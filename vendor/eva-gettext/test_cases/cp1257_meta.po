@@ -1,0 +1,8 @@
+# This file must be encoded in cp1257.
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=cp1257\n"
+
+msgid "Garlic"
+msgstr "Èesnakas"

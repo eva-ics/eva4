@@ -1,0 +1,5 @@
+msgctxt "this is context"
+msgid "Text"
+msgid_plural "Texts"
+msgstr[0] "Tekstas"
+msgstr[1] "Tekstai"

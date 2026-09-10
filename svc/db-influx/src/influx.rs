@@ -94,10 +94,7 @@ impl InfluxClient {
         let mut http = HttpConnector::new();
         http.enforce_http(false);
         let https = HttpsConnector::from((http, tls.into()));
-        let client: Client<_> = Client::builder()
-            .http2_only(false)
-            .pool_idle_timeout(timeout)
-            .build(https);
+        let client: Client<_> = Client::builder().pool_idle_timeout(timeout).build(https);
         let (submit_uri, mut query_headers, query_uri, v2_from_bucket_range) =
             match influx_api_version {
                 ApiVersion::V1 | ApiVersion::V3 => {

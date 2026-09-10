@@ -1,0 +1,34 @@
+[package]
+name = "sqlx"
+version = "0.8.6"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/launchbadge/sqlx"
+description = "SQLx facade restricted to PostgreSQL and SQLite for EVA ICS"
+publish = false
+
+[features]
+default = []
+_sqlite = []
+any = ["sqlx-core/any", "sqlx-postgres?/any", "sqlx-sqlite?/any"]
+chrono = ["sqlx-core/chrono", "sqlx-postgres?/chrono", "sqlx-sqlite?/chrono"]
+json = ["sqlx-core/json", "sqlx-postgres?/json", "sqlx-sqlite?/json"]
+migrate = ["sqlx-core/migrate", "sqlx-postgres?/migrate", "sqlx-sqlite?/migrate"]
+postgres = ["dep:sqlx-postgres"]
+runtime-tokio = ["sqlx-core/_rt-tokio"]
+runtime-tokio-native-tls = ["runtime-tokio", "sqlx-core/_tls-native-tls"]
+sqlite = ["_sqlite", "dep:sqlx-sqlite", "sqlx-sqlite/bundled"]
+sqlite-preupdate-hook = ["sqlx-sqlite?/preupdate-hook"]
+sqlite-unbundled = ["_sqlite", "dep:sqlx-sqlite", "sqlx-sqlite/unbundled"]
+
+[dependencies.sqlx-core]
+version = "=0.8.6"
+features = ["offline", "migrate"]
+
+[dependencies.sqlx-postgres]
+version = "=0.8.6"
+optional = true
+
+[dependencies.sqlx-sqlite]
+version = "=0.8.6"
+optional = true

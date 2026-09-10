@@ -27,7 +27,7 @@ syslog = { workspace = true, optional = true }
 bmart = { workspace = true }
 reqwest = { version = "0.12.28", optional = true, features = ["json"] }
 clap = { workspace = true, optional = true, features = ["derive"] }
-eventlog = { version = "0.2.2", optional = true }
+eventlog = { version = "0.4", optional = true }
 windows-service = { version = "0.6.0", optional = true }
 num_cpus = { workspace = true }
 

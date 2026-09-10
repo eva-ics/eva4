@@ -5,10 +5,9 @@ use eva_common::{SLEEP_STEP, events::DbState};
 use futures::TryStreamExt;
 use log::{error, warn};
 use parking_lot::Mutex;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{ConnectOptions, Sqlite};
-use sqlx::{FromRow, Pool, Postgres};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgRow};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions, SqliteRow, SqliteSynchronous};
+use sqlx::{ConnectOptions, FromRow, Pool, Postgres, Row, Sqlite};
 use std::borrow::Cow;
 use std::sync::OnceLock;
 use std::{collections::BTreeMap, mem, time::Duration};
@@ -68,12 +67,28 @@ macro_rules! load_inventory {
     };
 }
 
-#[derive(FromRow)]
 struct RawItem {
     oid: OID,
     cfg: String,
     state: Option<String>,
 }
+
+macro_rules! impl_raw_item_from_row {
+    ($row:ty) => {
+        impl<'r> FromRow<'r, $row> for RawItem {
+            fn from_row(row: &'r $row) -> Result<Self, sqlx::Error> {
+                Ok(Self {
+                    oid: row.try_get("oid")?,
+                    cfg: row.try_get("cfg")?,
+                    state: row.try_get("state")?,
+                })
+            }
+        }
+    };
+}
+
+impl_raw_item_from_row!(PgRow);
+impl_raw_item_from_row!(SqliteRow);
 
 #[async_trait]
 impl Storage for Pool<Postgres> {

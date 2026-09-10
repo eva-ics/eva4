@@ -1,0 +1,63 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-02-09 12:43+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n!=1;\n"
+
+#: ../tests/lib.rs:12
+msgid "non-existent"
+msgstr ""
+
+#: ../tests/lib.rs:13
+msgid "existent"
+msgstr "egzistuojantis"
+
+#: ../tests/lib.rs:15 ../tests/lib.rs:17
+msgid "a bad string"
+msgid_plural "bad strings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ../tests/lib.rs:19 ../tests/lib.rs:21
+msgid "a good string"
+msgid_plural "good strings"
+msgstr[0] "gera eilute"
+msgstr[1] "geros eilutes"
+
+#: ../tests/lib.rs:24
+msgctxt "ctxt"
+msgid "non-existent"
+msgstr ""
+
+#: ../tests/lib.rs:25
+msgctxt "ctxt"
+msgid "existent"
+msgstr "egzistuojantis kontekste"
+
+#: ../tests/lib.rs:27 ../tests/lib.rs:29
+msgctxt "ctxt"
+msgid "a bad string"
+msgid_plural "bad strings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ../tests/lib.rs:31 ../tests/lib.rs:33
+msgctxt "ctxt"
+msgid "a good string"
+msgid_plural "good strings"
+msgstr[0] "gera eilute kontekste"
+msgstr[1] "geros eilutes kontekste"

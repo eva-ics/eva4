@@ -1,0 +1,5 @@
+msgid "Garlic"
+msgid_plural "Garlics"
+msgstr[0] "Česnakas"
+msgstr[1] "Česnakai"
+msgstr[2] "Česnakų"

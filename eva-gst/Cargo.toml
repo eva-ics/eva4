@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [dependencies]
-atomic-timer = "0.2.2"
+atomic-timer = "0.3"
 binrw = "0.15.0"
 busrt = { workspace = true, features = ["ipc-sync", "rpc-sync", "cursors"] }
 dateparser = "0.2.1"

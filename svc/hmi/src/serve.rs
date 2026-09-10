@@ -282,12 +282,22 @@ pub async fn remote_pvt<'a>(
         return Err(Error::access(target));
     }
     let auth = crate::aaa::parse_auth(params, headers);
+    fn into_hyper_response(
+        response: eva_sdk::http::Response,
+    ) -> EResult<hyper::Response<hyper::Body>> {
+        let mut builder = hyper::Response::builder().status(response.status());
+        for (header, value) in response.headers() {
+            builder = builder.header(header, value);
+        }
+        builder
+            .body(hyper::Body::from(response.body().to_vec()))
+            .map_err(Error::failed)
+    }
     macro_rules! serve_local {
         ($client: expr, $uri: expr) => {
-            return Ok(HContent::HyperResult(Ok($client
-                .get_response($uri)
-                .await?
-                .try_into()?)));
+            return Ok(HContent::HyperResult(Ok(into_hyper_response(
+                $client.get_response($uri).await?,
+            )?)));
         };
     }
     if let Some(ref k) = auth
@@ -320,7 +330,7 @@ pub async fn remote_pvt<'a>(
                 .await?
                 .payload(),
             )?;
-            return Ok(HContent::HyperResult(Ok(res.try_into()?)));
+            return Ok(HContent::HyperResult(Ok(into_hyper_response(res)?)));
         }
         serve_local!(client, uri);
     }

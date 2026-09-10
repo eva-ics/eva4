@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural = n == 1 ? 0 : n == 2 ? 1 : 2;\n"
+
+msgid "Test"
+msgid_plural "Tests"
+msgstr[0] "Singular"
+msgstr[1] "Plural 1"
+msgstr[2] "Plural 2"

@@ -1,0 +1,10 @@
+msgctxt "this is context"
+msgid "Text"
+msgid_plural "Texts"
+msgstr[0] "Tekstas"
+msgstr[1] "Tekstai"
+
+msgid "Image"
+msgid_plural "Images"
+msgstr[0] "Nuotrauka"
+msgstr[1] "Nuotraukos"

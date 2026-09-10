@@ -14,7 +14,7 @@ serde = { features = ["derive", "rc"] , workspace = true }
 log = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
-hyper = { features = ["server", "tcp", "http1", "http2"] , workspace = true }
+hyper = { features = ["server", "tcp", "http1"] , workspace = true }
 serde_yaml = { workspace = true }
 hyper-static = "0.1"
 
