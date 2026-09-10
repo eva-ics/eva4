@@ -125,4 +125,5 @@ lto = true
 codegen-units = 1
 
 [patch.crates-io]
+nom = { path = "vendor/nom" }
 sqlx = { path = "vendor/sqlx" }

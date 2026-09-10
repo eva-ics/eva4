@@ -184,7 +184,7 @@ struct Config {
 async fn monitor_remote(host: Host) {
     info!("Started monitoring for host {}", host.oid);
     let mut int = tokio::time::interval(host.interval);
-    let last_error_msg = AtomicTimer::new(Duration::from_secs(60));
+    let last_error_msg = AtomicTimer::new(Duration::from_mins(1));
     last_error_msg.expire_now();
     loop {
         int.tick().await;

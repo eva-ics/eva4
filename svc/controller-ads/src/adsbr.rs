@@ -498,7 +498,7 @@ pub async fn create_vars(names: &[&str]) -> EResult<Vec<Var>> {
     let handles = create_handles(names).await?;
     Ok(names
         .iter()
-        .zip(infos.into_iter().zip(handles.into_iter()))
+        .zip(infos.into_iter().zip(handles))
         .map(|(name, (info, handle))| Var {
             name: (*name).to_owned(),
             kind: info.kind,
@@ -610,7 +610,7 @@ async fn query_type_infos(names: &[&str]) -> EResult<Vec<SymbolInfo>> {
                                 }
                             }
                             _ => {
-                                let arr_len = if kind_size > 0 { size / kind_size } else { 0 };
+                                let arr_len = size.checked_div(kind_size).unwrap_or(0);
                                 if arr_len > 1 || is_array_by_definition(definition) {
                                     (Some(arr_len), None)
                                 } else {
@@ -930,7 +930,7 @@ async fn write_var_jobs_multi(
     }
     let res = write_vals_multi(&vars, &values).await?;
     let mut to_verify: Option<Vec<&WriteVarJob>> = if verify { Some(Vec::new()) } else { None };
-    for (job, result) in jobs.iter().zip(res.into_iter()) {
+    for (job, result) in jobs.iter().zip(res) {
         if result.is_err() {
             failed.push(job.var.clone());
         } else if verify {
@@ -1005,7 +1005,7 @@ async fn prepare_write_var_jobs(jobs: &[WriteJob]) -> EResult<(Vec<WriteVarJob>,
     if !jobs_to_get.is_empty() {
         let new_vars = create_vars(&to_get).await?;
         let mut ads_vars = crate::ADS_VARS.lock().unwrap();
-        for (job, var) in jobs_to_get.iter().zip(new_vars.into_iter()) {
+        for (job, var) in jobs_to_get.iter().zip(new_vars) {
             if var.check().is_ok() {
                 let var = Arc::new(var);
                 ads_vars.insert(var.name.clone(), var.clone());
@@ -1135,7 +1135,7 @@ pub async fn write_by_names_multi(
     }
     let mut jobs: Vec<WriteJob> = names
         .into_iter()
-        .zip(values.into_iter())
+        .zip(values)
         .map(|(name, value)| WriteJob {
             name,
             value: Arc::new(value),

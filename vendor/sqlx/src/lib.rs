@@ -36,6 +36,10 @@ pub use sqlx_core::types::Type;
 pub use sqlx_core::value::{Value, ValueRef};
 pub use sqlx_core::Either;
 
+#[cfg(feature = "derive")]
+#[doc(hidden)]
+pub use sqlx_macros::{Decode, Encode, FromRow, Type};
+
 #[doc(inline)]
 pub use sqlx_core::error::{self, Error, Result};
 

@@ -536,7 +536,7 @@ pub async fn remove_websocket_by_key_id(key_id: &str) {
         .retain(|_, ws| ws.key_modified_keep(key_id));
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::collapsible_match, clippy::too_many_lines)]
 async fn serve_websocket(
     ws_tx: Arc<WsTx>,
     rx: async_channel::Receiver<WsFrame>,

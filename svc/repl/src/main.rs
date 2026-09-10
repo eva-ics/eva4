@@ -88,7 +88,7 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "v4 replication service";
 
-const DEFAULT_RELOAD_INTERVAL: Duration = Duration::from_secs(60);
+const DEFAULT_RELOAD_INTERVAL: Duration = Duration::from_mins(1);
 const DEFAULT_PING_INTERVAL: Duration = Duration::from_secs(10);
 
 #[cfg(not(feature = "std-alloc"))]

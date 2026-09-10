@@ -43,20 +43,16 @@
     trivial_numeric_casts,
     unused_import_braces
 )]
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
-
 mod metadata;
 mod parser;
 mod plurals;
 
 use std::collections::HashMap;
 use std::io::Read;
-use std::ops::Deref;
 
 use crate::parser::default_resolver;
 pub use crate::parser::{Error, ParseOptions};
-use crate::plurals::*;
+use crate::plurals::Resolver;
 
 fn key_with_context(context: &str, key: &str) -> String {
     let mut result = context.to_owned();
@@ -146,7 +142,7 @@ impl Catalog {
     /// or `msg_id` itself if a translation does not exist.
     // TODO: DRY gettext/pgettext
     pub fn pgettext<'a>(&'a self, msg_context: &'a str, msg_id: &'a str) -> &'a str {
-        let key = key_with_context(msg_context, &msg_id);
+        let key = key_with_context(msg_context, msg_id);
         self.strings
             .get(&key)
             .and_then(|msg| msg.get_translated(0))
@@ -166,7 +162,7 @@ impl Catalog {
         msg_id_plural: &'a str,
         n: u64,
     ) -> &'a str {
-        let key = key_with_context(msg_context, &msg_id);
+        let key = key_with_context(msg_context, msg_id);
         let form_no = self.resolver.resolve(n);
         let message = self.strings.get(&key);
         match message.and_then(|m| m.get_translated(form_no)) {
@@ -195,13 +191,13 @@ impl Message {
     }
 
     fn get_translated(&self, form_no: usize) -> Option<&str> {
-        self.translated.get(form_no).map(|s| s.deref())
+        self.translated.get(form_no).map(|s| &**s)
     }
 }
 
 #[test]
 fn catalog_impls_send_sync() {
-    fn check<T: Send + Sync>(_: T) {};
+    fn check<T: Send + Sync>(_: T) {}
     check(Catalog::new());
 }
 
@@ -212,7 +208,7 @@ fn catalog_insert() {
     cat.insert(Message::new("anotherid", Some("context"), vec![]));
     let mut keys = cat.strings.keys().collect::<Vec<_>>();
     keys.sort();
-    assert_eq!(keys, &["context\x04anotherid", "thisisid"])
+    assert_eq!(keys, &["context\x04anotherid", "thisisid"]);
 }
 
 #[test]
@@ -246,6 +242,7 @@ fn catalog_ngettext() {
 
 #[test]
 fn catalog_ngettext_not_enough_forms_in_message() {
+    #[allow(clippy::cast_possible_truncation)]
     fn resolver(count: u64) -> usize {
         count as usize
     }
@@ -260,6 +257,7 @@ fn catalog_ngettext_not_enough_forms_in_message() {
 
 #[test]
 fn catalog_npgettext_not_enough_forms_in_message() {
+    #[allow(clippy::cast_possible_truncation)]
     fn resolver(count: u64) -> usize {
         count as usize
     }

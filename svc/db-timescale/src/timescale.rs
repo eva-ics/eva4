@@ -124,10 +124,10 @@ impl ValueFunction {
     fn prepare(&self, s: &str) -> String {
         match self {
             ValueFunction::Mean => {
-                format!("locf(avg({}))", s,)
+                format!("locf(avg({}))", s)
             }
             ValueFunction::Sum => {
-                format!("sum({})", s,)
+                format!("sum({})", s)
             }
         }
     }

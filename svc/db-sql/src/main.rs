@@ -36,7 +36,7 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "SQL database service";
 
-const CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
+const CLEANUP_INTERVAL: Duration = Duration::from_mins(1);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]

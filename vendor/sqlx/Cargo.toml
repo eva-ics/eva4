@@ -12,6 +12,7 @@ default = []
 _sqlite = []
 any = ["sqlx-core/any", "sqlx-postgres?/any", "sqlx-sqlite?/any"]
 chrono = ["sqlx-core/chrono", "sqlx-postgres?/chrono", "sqlx-sqlite?/chrono"]
+derive = ["dep:sqlx-macros", "sqlx-macros/derive"]
 json = ["sqlx-core/json", "sqlx-postgres?/json", "sqlx-sqlite?/json"]
 migrate = ["sqlx-core/migrate", "sqlx-postgres?/migrate", "sqlx-sqlite?/migrate"]
 postgres = ["dep:sqlx-postgres"]
@@ -20,10 +21,17 @@ runtime-tokio-native-tls = ["runtime-tokio", "sqlx-core/_tls-native-tls"]
 sqlite = ["_sqlite", "dep:sqlx-sqlite", "sqlx-sqlite/bundled"]
 sqlite-preupdate-hook = ["sqlx-sqlite?/preupdate-hook"]
 sqlite-unbundled = ["_sqlite", "dep:sqlx-sqlite", "sqlx-sqlite/unbundled"]
+uuid = ["sqlx-core/uuid", "sqlx-postgres?/uuid", "sqlx-sqlite?/uuid"]
 
 [dependencies.sqlx-core]
 version = "=0.8.6"
 features = ["offline", "migrate"]
+
+[dependencies.sqlx-macros]
+version = "=0.8.6"
+path = "../sqlx-macros"
+optional = true
+default-features = false
 
 [dependencies.sqlx-postgres]
 version = "=0.8.6"

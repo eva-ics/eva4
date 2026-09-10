@@ -51,7 +51,7 @@ nix = { version = "0.25", features = ["user", "fs"] }
 uuid = { features = ["serde", "v4"] , workspace = true }
 triggered = "0.1.2"
 sqlx = { default-features = false, features = [
-  "runtime-tokio-native-tls", "any", "sqlite", "postgres" ] , workspace = true }
+  "runtime-tokio-native-tls", "any", "sqlite", "postgres", "derive" ] , workspace = true }
 futures = { workspace = true }
 ipnetwork = { workspace = true }
 async-io = "2.3.1"

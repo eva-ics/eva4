@@ -11,7 +11,7 @@ impl<'a> MetadataMap<'a> {
     /// Returns a string that indicates the character set.
     pub fn charset(&self) -> Option<&'a str> {
         self.get("Content-Type")
-            .and_then(|x| x.split("charset=").skip(1).next())
+            .and_then(|x| x.split("charset=").nth(1))
     }
 
     /// Returns the number of different plurals and the boolean
@@ -20,24 +20,22 @@ impl<'a> MetadataMap<'a> {
     ///
     /// Defaults to `n_plurals = 2` and `plural = n!=1` (as in English).
     pub fn plural_forms(&self) -> (Option<usize>, Option<&'a str>) {
-        self.get("Plural-Forms")
-            .map(|f| {
-                f.split(';').fold((None, None), |(n_pl, pl), prop| {
-                    match prop.chars().position(|c| c == '=') {
-                        Some(index) => {
-                            let (name, value) = prop.split_at(index);
-                            let value = value[1..value.len()].trim();
-                            match name.trim() {
-                                "n_plurals" => (usize::from_str_radix(value, 10).ok(), pl),
-                                "plural" => (n_pl, Some(value)),
-                                _ => (n_pl, pl),
-                            }
+        self.get("Plural-Forms").map_or((None, None), |f| {
+            f.split(';').fold((None, None), |(n_pl, pl), prop| {
+                match prop.chars().position(|c| c == '=') {
+                    Some(index) => {
+                        let (name, value) = prop.split_at(index);
+                        let value = value[1..value.len()].trim();
+                        match name.trim() {
+                            "n_plurals" => (value.parse::<usize>().ok(), pl),
+                            "plural" => (n_pl, Some(value)),
+                            _ => (n_pl, pl),
                         }
-                        None => (n_pl, pl),
                     }
-                })
+                    None => (n_pl, pl),
+                }
             })
-            .unwrap_or((None, None))
+        })
     }
 }
 
@@ -48,18 +46,17 @@ impl<'a> Deref for MetadataMap<'a> {
     }
 }
 
-impl<'a> DerefMut for MetadataMap<'a> {
+impl DerefMut for MetadataMap<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-pub fn parse_metadata(blob: &str) -> Result<MetadataMap, Error> {
+pub fn parse_metadata(blob: &str) -> Result<MetadataMap<'_>, Error> {
     let mut map = MetadataMap(HashMap::new());
     for line in blob.split('\n').filter(|s| s != &"") {
-        let pos = match line.bytes().position(|b| b == b':') {
-            Some(p) => p,
-            None => return Err(MalformedMetadata),
+        let Some(pos) = line.bytes().position(|b| b == b':') else {
+            return Err(MalformedMetadata);
         };
         map.insert(line[..pos].trim(), line[pos + 1..].trim());
     }

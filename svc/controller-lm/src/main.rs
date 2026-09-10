@@ -252,7 +252,7 @@ async fn process_state(topic: &str, path: &str, payload: &[u8]) -> EResult<()> {
                     .get_subscribers(path)
                     .into_iter()
                     .collect();
-                rules.sort_by(|a, b| a.priority.cmp(&b.priority));
+                rules.sort_by_key(|a| a.priority);
                 let mut prev_states = PREV_STATES.lock().await;
                 let prev = prev_states.get(&oid);
                 for rule in rules {

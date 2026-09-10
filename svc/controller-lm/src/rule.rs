@@ -168,7 +168,7 @@ impl Rule {
                 if let Some(a) = ch.active {
                     let elapsed = a.elapsed();
                     let remaining = if chillout_time > elapsed {
-                        chillout_time - elapsed
+                        chillout_time.checked_sub(elapsed).unwrap()
                     } else {
                         DURATION_ZERO
                     };

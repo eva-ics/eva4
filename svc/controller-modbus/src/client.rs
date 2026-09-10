@@ -156,7 +156,7 @@ impl ModbusClient for Serial {
         if let Some(last_frame) = client.last_frame {
             let el = last_frame.elapsed();
             if el < self.frame_delay {
-                tokio::time::sleep(self.frame_delay - el).await;
+                tokio::time::sleep(self.frame_delay.checked_sub(el).unwrap()).await;
             }
         }
         if self.proto == rmodbus::ModbusProto::Rtu {

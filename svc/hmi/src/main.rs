@@ -169,7 +169,7 @@ fn default_oidc_sub_field() -> String {
 }
 
 fn default_oidc_refresh_interval() -> Duration {
-    Duration::from_secs(300)
+    Duration::from_mins(5)
 }
 
 fn default_oidc_retry_interval() -> Duration {
@@ -177,7 +177,7 @@ fn default_oidc_retry_interval() -> Duration {
 }
 
 fn default_oidc_failed_after() -> Duration {
-    Duration::from_secs(600)
+    Duration::from_mins(10)
 }
 
 #[derive(Deserialize)]

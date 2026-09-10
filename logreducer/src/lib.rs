@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use ttl_cache::TtlCache;
 
 const CAPACITY: usize = 65536;
-const TTL: std::time::Duration = std::time::Duration::from_secs(300);
+const TTL: std::time::Duration = std::time::Duration::from_mins(5);
 
 pub static REDUCER: LazyLock<LogReducer> = LazyLock::new(<_>::default);
 

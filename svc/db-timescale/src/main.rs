@@ -34,8 +34,8 @@ const AUTHOR: &str = "Bohemia Automation";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Timescale database service";
 
-const CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
-const OID_CLEANUP_INTERVAL: Duration = Duration::from_secs(3600);
+const CLEANUP_INTERVAL: Duration = Duration::from_mins(1);
+const OID_CLEANUP_INTERVAL: Duration = Duration::from_hours(1);
 
 #[cfg(not(feature = "std-alloc"))]
 #[global_allocator]

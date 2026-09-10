@@ -277,11 +277,6 @@ pub async fn remote_pvt<'a>(
         i: &'a str,
         node: &'a str,
     }
-    let target = urlencoding::decode(rpvt_file).map_err(Error::invalid_data)?;
-    if target.is_empty() {
-        return Err(Error::access(target));
-    }
-    let auth = crate::aaa::parse_auth(params, headers);
     fn into_hyper_response(
         response: eva_sdk::http::Response,
     ) -> EResult<hyper::Response<hyper::Body>> {
@@ -300,6 +295,11 @@ pub async fn remote_pvt<'a>(
             )?)));
         };
     }
+    let target = urlencoding::decode(rpvt_file).map_err(Error::invalid_data)?;
+    if target.is_empty() {
+        return Err(Error::access(target));
+    }
+    let auth = crate::aaa::parse_auth(params, headers);
     if let Some(ref k) = auth
         && let Ok(a) = crate::aaa::authenticate(k, Some(ip)).await
         && a.acl().check_rpvt_read(target.as_ref())

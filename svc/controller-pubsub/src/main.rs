@@ -31,7 +31,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "PubSub controller gateway service";
 
 const CACHE_SIZE: usize = 100_000;
-const CACHE_TTL: Duration = Duration::from_secs(60);
+const CACHE_TTL: Duration = Duration::from_mins(1);
 
 struct PubSubTask {
     topic: Arc<String>,

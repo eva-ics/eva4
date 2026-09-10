@@ -221,7 +221,9 @@ async fn process_item_maps(
                 {
                     v = v_mapped;
                 }
-                let v = if !m.transform.is_empty() {
+                let v = if m.transform.is_empty() {
+                    v.clone()
+                } else {
                     let f = match f64::try_from(v.clone()) {
                         Ok(n) => n,
                         Err(e) => {
@@ -236,8 +238,6 @@ async fn process_item_maps(
                             continue;
                         }
                     }
-                } else {
-                    v.clone()
                 };
                 let raw = RawStateEventOwned::new(state.status, v);
                 let topic = format!("{}{}", RAW_STATE_TOPIC, m.target.as_path());
@@ -355,7 +355,7 @@ mod tests {
             let raw: RawStateEventOwned = unpack(&payload).expect("raw");
             let v = match &raw.value {
                 ValueOptionOwned::Value(val) => i64::try_from(val.clone()).expect("i64"),
-                _ => panic!("expected value"),
+                ValueOptionOwned::No => panic!("expected value"),
             };
             got.push((topic, v));
         }

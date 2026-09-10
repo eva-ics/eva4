@@ -20,9 +20,9 @@ use uuid::Uuid;
 
 err_logger!();
 
-const INTERVAL_CLEAN_ACTIONS: Duration = std::time::Duration::from_secs(60);
+const INTERVAL_CLEAN_ACTIONS: Duration = std::time::Duration::from_mins(1);
 
-pub const DEFAULT_KEEP: Duration = Duration::from_secs(600);
+pub const DEFAULT_KEEP: Duration = Duration::from_mins(10);
 
 pub const ERR_NO_UUID: &str = "invalid local action: no uuid";
 

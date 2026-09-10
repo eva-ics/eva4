@@ -23,7 +23,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DESCRIPTION: &str = "Local auth service";
 
 const ERR_INVALID_LOGIN_PASS: &str = "invalid login/password";
-const ONE_TIME_USER_CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
+const ONE_TIME_USER_CLEANUP_INTERVAL: Duration = Duration::from_mins(1);
 const ONE_TIME_USER_PREFIX: &str = "OT.";
 
 pub const ID_ALLOWED_SYMBOLS: &str = "_.()[]-\\";

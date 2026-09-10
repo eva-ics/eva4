@@ -38,27 +38,25 @@ pub enum Error {
     /// An unknown encoding was specified in the metadata
     UnknownEncoding,
 }
-use crate::Error::*;
+use crate::Error::{
+    BadMagic, DecodingError, Eof, Io, MalformedMetadata, MisplacedMetadata, PluralParsing,
+    UnknownEncoding,
+};
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            BadMagic => "bad magic number",
-            DecodingError => "invalid byte sequence in a string",
-            Eof => "unxpected end of file",
-            Io(ref err) => err.description(),
-            MalformedMetadata => "metadata syntax error",
-            MisplacedMetadata => "misplaced metadata",
-            UnknownEncoding => "unknown encoding specified",
-            PluralParsing => "invalid plural expression",
-        }
-    }
-}
+impl error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let self_err: &error::Error = self;
-        write!(fmt, "{}", self_err.description())
+        match self {
+            BadMagic => fmt.write_str("bad magic number"),
+            DecodingError => fmt.write_str("invalid byte sequence in a string"),
+            Eof => fmt.write_str("unxpected end of file"),
+            Io(err) => write!(fmt, "{err}"),
+            MalformedMetadata => fmt.write_str("metadata syntax error"),
+            MisplacedMetadata => fmt.write_str("misplaced metadata"),
+            UnknownEncoding => fmt.write_str("unknown encoding specified"),
+            PluralParsing => fmt.write_str("invalid plural expression"),
+        }
     }
 }
 
@@ -88,7 +86,7 @@ pub struct ParseOptions {
 impl ParseOptions {
     /// Returns a new instance of ParseOptions with default options.
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Tries to parse the catalog from the given reader using the specified options.
@@ -129,7 +127,7 @@ fn get_read_u32_fn(magic: &[u8]) -> Option<fn(&[u8]) -> u32> {
     }
 }
 
-pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result<Catalog, Error> {
+pub fn parse_catalog<R: io::Read>(mut file: R, opts: ParseOptions) -> Result<Catalog, Error> {
     let mut contents = vec![];
     let n = file.read_to_end(&mut contents)?;
     if n < 28 {
@@ -140,9 +138,9 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
 
     // ignore hashing tables (bytes at 20..28)
     let num_strings = read_u32(&contents[8..12]) as usize;
-    let mut off_otable = read_u32(&contents[12..16]) as usize;
-    let mut off_ttable = read_u32(&contents[16..20]) as usize;
-    if n < off_otable || n < off_ttable {
+    let mut original_table_offset = read_u32(&contents[12..16]) as usize;
+    let mut translation_table_offset = read_u32(&contents[16..20]) as usize;
+    if n < original_table_offset || n < translation_table_offset {
         return Err(Eof);
     }
 
@@ -154,16 +152,17 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
 
     for i in 0..num_strings {
         // Parse the original string
-        if n < off_otable + 8 {
+        if n < original_table_offset + 8 {
             return Err(Eof);
         }
-        let len = read_u32(&contents[off_otable..off_otable + 4]) as usize;
-        let off = read_u32(&contents[off_otable + 4..off_otable + 8]) as usize;
+        let len = read_u32(&contents[original_table_offset..original_table_offset + 4]) as usize;
+        let off =
+            read_u32(&contents[original_table_offset + 4..original_table_offset + 8]) as usize;
         // +1 compensates for the ending NUL byte which is not included in length
         if n < off + len + 1 {
             return Err(Eof);
         }
-        let mut original = &contents[off..off + len + 1];
+        let mut original = &contents[off..=(off + len)];
         // check for context
         let context = match original.iter().position(|x| *x == 4) {
             Some(idx) => {
@@ -182,16 +181,18 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
             Some(b) => decode(encoding, b)?,
             None => return Err(Eof),
         };
-        if id == "" && i != 0 {
+        if id.is_empty() && i != 0 {
             return Err(MisplacedMetadata);
         }
 
         // Parse the translation strings
-        if n < off_ttable + 8 {
+        if n < translation_table_offset + 8 {
             return Err(Eof);
         }
-        let len = read_u32(&contents[off_ttable..off_ttable + 4]) as usize;
-        let off = read_u32(&contents[off_ttable + 4..off_ttable + 8]) as usize;
+        let len =
+            read_u32(&contents[translation_table_offset..translation_table_offset + 4]) as usize;
+        let off = read_u32(&contents[translation_table_offset + 4..translation_table_offset + 8])
+            as usize;
         // +1 compensates for the ending NUL byte which is not included in length
         if n < off + len + 1 {
             return Err(Eof);
@@ -200,8 +201,8 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
             .split(|x| *x == 0)
             .map(|b| decode(encoding, b))
             .collect::<Result<Vec<_>, _>>()?;
-        if id == "" {
-            let map = parse_metadata(&*translated[0])?;
+        if id.is_empty() {
+            let map = parse_metadata(&translated[0])?;
             if let (Some(c), None) = (map.charset(), opts.force_encoding) {
                 encoding = Encoding::for_label(c.as_bytes()).ok_or(UnknownEncoding)?;
             }
@@ -214,8 +215,8 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
 
         catalog.insert(Message::new(id, context, translated));
 
-        off_otable += 8;
-        off_ttable += 8;
+        original_table_offset += 8;
+        translation_table_offset += 8;
     }
 
     Ok(catalog)
@@ -229,37 +230,23 @@ pub fn parse_catalog<'a, R: io::Read>(mut file: R, opts: ParseOptions) -> Result
 /// It is valid for English and similar languages: plural will be used for any quantity
 /// different of 1.
 pub fn default_resolver(n: u64) -> usize {
-    if n == 1 {
-        0
-    } else {
-        1
-    }
+    usize::from(n != 1)
 }
 
 #[test]
 fn test_get_read_u32_fn() {
-    use std::mem;
-
     assert!(get_read_u32_fn(&[]).is_none());
     assert!(get_read_u32_fn(&[0xde, 0x12, 0x04, 0x95, 0x00]).is_none());
 
     {
-        let le_ptr: *const ();
-        let ret_ptr;
-        unsafe {
-            le_ptr = mem::transmute(LittleEndian::read_u32 as usize);
-            ret_ptr = mem::transmute(get_read_u32_fn(&[0xde, 0x12, 0x04, 0x95]).unwrap());
-        }
+        let le_ptr = LittleEndian::read_u32 as *const ();
+        let ret_ptr = get_read_u32_fn(&[0xde, 0x12, 0x04, 0x95]).unwrap() as *const ();
         assert_eq!(le_ptr, ret_ptr);
     }
 
     {
-        let be_ptr: *const ();
-        let ret_ptr;
-        unsafe {
-            be_ptr = mem::transmute(BigEndian::read_u32 as usize);
-            ret_ptr = mem::transmute(get_read_u32_fn(&[0x95, 0x04, 0x12, 0xde]).unwrap());
-        }
+        let be_ptr = BigEndian::read_u32 as *const ();
+        let ret_ptr = get_read_u32_fn(&[0x95, 0x04, 0x12, 0xde]).unwrap() as *const ();
         assert_eq!(be_ptr, ret_ptr);
     }
 }
@@ -279,27 +266,27 @@ fn test_parse_catalog() {
 
     {
         let mut reader = vec![1u8, 2, 3];
-        reader.extend(fluff.iter().cloned());
+        reader.extend(fluff.iter().copied());
         let err = parse_catalog(&reader[..], ParseOptions::new()).unwrap_err();
         assert_variant!(err, Eof);
     }
 
     {
         let mut reader = vec![1u8, 2, 3, 4];
-        reader.extend(fluff.iter().cloned());
+        reader.extend(fluff.iter().copied());
         let err = parse_catalog(&reader[..], ParseOptions::new()).unwrap_err();
         assert_variant!(err, BadMagic);
     }
 
     {
         let mut reader = vec![0x95, 0x04, 0x12, 0xde];
-        reader.extend(fluff.iter().cloned());
+        reader.extend(fluff.iter().copied());
         assert!(parse_catalog(&reader[..], ParseOptions::new()).is_ok());
     }
 
     {
         let mut reader = vec![0xde, 0x12, 0x04, 0x95];
-        reader.extend(fluff.iter().cloned());
+        reader.extend(fluff.iter().copied());
         assert!(parse_catalog(&reader[..], ParseOptions::new()).is_ok());
     }
 

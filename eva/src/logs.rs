@@ -21,7 +21,7 @@ use std::sync::Mutex;
 use std::sync::{LazyLock, OnceLock, atomic};
 
 const DEFAULT_KEEP: i64 = 86_400_i64;
-const INTERVAL_CLEAN_MEMORY_LOGS: std::time::Duration = std::time::Duration::from_secs(60);
+const INTERVAL_CLEAN_MEMORY_LOGS: std::time::Duration = std::time::Duration::from_mins(1);
 const DEFAULT_GET_RECORD_LIMIT: u32 = 50;
 
 static CAN_LOG_CONSOLE: atomic::AtomicBool = atomic::AtomicBool::new(true);

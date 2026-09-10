@@ -90,7 +90,7 @@ fn bus_reader(
         };
         let data_bytes = bytes.split_off(FrameHeader::SIZE);
         let header = FrameHeader::from_slice(&bytes).expect("Failed to parse frame header");
-        assert!((header.is_version_valid()), "Unsupported frame version",);
+        assert!((header.is_version_valid()), "Unsupported frame version");
         let video_format: VideoFormat = header.format().expect("Unsupported video format");
         let frame = BusFrame {
             header,

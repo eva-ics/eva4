@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 err_logger!();
 
-const API_LOG_CLEANUP_INTERVAL: Duration = Duration::from_secs(60);
+const API_LOG_CLEANUP_INTERVAL: Duration = Duration::from_mins(1);
 static NEED_API_LOG: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 #[inline]
