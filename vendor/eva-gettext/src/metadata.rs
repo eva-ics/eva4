@@ -36,7 +36,8 @@ impl<'a> MetadataMap<'a> {
                         None => (n_pl, pl),
                     }
                 })
-            }).unwrap_or((None, None))
+            })
+            .unwrap_or((None, None))
     }
 }
 
