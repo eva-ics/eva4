@@ -18,6 +18,11 @@ fn default_action_queue_size() -> usize {
     32
 }
 
+#[inline]
+fn default_pull_batch_size() -> usize {
+    128
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OpcUaConfig {
@@ -189,6 +194,8 @@ pub struct Config {
         deserialize_with = "eva_common::tools::de_opt_float_as_duration"
     )]
     pub pull_interval: Option<Duration>,
+    #[serde(default = "default_pull_batch_size")]
+    pub pull_batch_size: usize,
     #[serde(default)]
     pub action_map: HashMap<OID, ActionMap>,
     #[serde(default)]

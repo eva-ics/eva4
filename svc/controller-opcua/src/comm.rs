@@ -114,7 +114,18 @@ pub async fn read_multi(
     ranges: Vec<Option<&str>>,
     timeout: Duration,
     retries: u8,
+    batch_size: usize,
 ) -> EResult<Vec<DataValue>> {
+    if nodes.len() != ranges.len() {
+        return Err(Error::invalid_params(
+            "node number does not correspond with range number",
+        ));
+    }
+    if batch_size == 0 {
+        return Err(Error::invalid_params(
+            "read batch size must be greater than zero",
+        ));
+    }
     let op = eva_common::op::Op::new(timeout);
     let session = SESSION
         .get()
@@ -134,13 +145,35 @@ pub async fn read_multi(
         })
         .collect();
     tokio::task::spawn_blocking(move || {
+        read_batches(&to_read, batch_size, retries, &op, |batch| {
+            session.read().read(batch, TimestampsToReturn::Neither, 0.0)
+        })
+    })
+    .await?
+}
+
+fn read_batches<F>(
+    to_read: &[ReadValueId],
+    batch_size: usize,
+    retries: u8,
+    op: &eva_common::op::Op,
+    mut read: F,
+) -> EResult<Vec<DataValue>>
+where
+    F: FnMut(&[ReadValueId]) -> std::result::Result<Vec<DataValue>, StatusCode>,
+{
+    let mut result = Vec::with_capacity(to_read.len());
+    for batch in to_read.chunks(batch_size) {
         let mut i = 0;
         loop {
-            match session
-                .read()
-                .read(&to_read, TimestampsToReturn::Neither, 0.0)
-            {
-                Ok(v) => return Ok(v),
+            match read(batch) {
+                Ok(v) => {
+                    if v.len() != batch.len() {
+                        return Err(Error::io("invalid OPC server response"));
+                    }
+                    result.extend(v);
+                    break;
+                }
                 Err(e) => {
                     op.timeout()?;
                     i += 1;
@@ -150,8 +183,57 @@ pub async fn read_multi(
                 }
             }
         }
-    })
-    .await?
+    }
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_two_thousand_nodes_in_ordered_batches() {
+        let requests: Vec<ReadValueId> = (0..2000)
+            .map(|i| ReadValueId {
+                node_id: format!("ns=2;i={i}").parse().unwrap(),
+                attribute_id: AttributeId::Value as u32,
+                index_range: UAString::null(),
+                data_encoding: QualifiedName::null(),
+            })
+            .collect();
+        let mut batch_sizes = Vec::new();
+        let mut seen = Vec::new();
+        let op = eva_common::op::Op::new(Duration::from_secs(5));
+        let result = read_batches(&requests, 128, 0, &op, |batch| {
+            batch_sizes.push(batch.len());
+            seen.extend(batch.iter().map(|r| r.node_id.to_string()));
+            Ok(batch.iter().map(|_| DataValue::default()).collect())
+        })
+        .unwrap();
+        assert_eq!(result.len(), 2000);
+        assert_eq!(batch_sizes.len(), 16);
+        assert!(batch_sizes.iter().all(|&size| size <= 128));
+        assert_eq!(
+            seen.first().unwrap(),
+            &requests.first().unwrap().node_id.to_string()
+        );
+        assert_eq!(
+            seen.last().unwrap(),
+            &requests.last().unwrap().node_id.to_string()
+        );
+    }
+
+    #[test]
+    fn rejects_short_batch_response() {
+        let request = ReadValueId {
+            node_id: NodeId::null(),
+            attribute_id: AttributeId::Value as u32,
+            index_range: UAString::null(),
+            data_encoding: QualifiedName::null(),
+        };
+        let op = eva_common::op::Op::new(Duration::from_secs(5));
+        assert!(read_batches(&[request], 128, 0, &op, |_| Ok(vec![])).is_err());
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -255,7 +337,7 @@ pub async fn init_session(
             let mut int = tokio::time::interval(timeout / 2);
             loop {
                 int.tick().await;
-                match read_multi(n.clone(), r.clone(), timeout, 0).await {
+                match read_multi(n.clone(), r.clone(), timeout, 0, 1).await {
                     Ok(v) => {
                         if v.first().and_then(|v| v.value.as_ref()).is_none() {
                             poc!("no value");

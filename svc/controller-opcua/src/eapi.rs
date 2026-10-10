@@ -60,6 +60,7 @@ impl RpcHandlers for Handlers {
                         p.retries.unwrap_or_else(|| {
                             crate::DEFAULT_RETRIES.load(atomic::Ordering::SeqCst)
                         }),
+                        1,
                     )
                     .await?;
                     let d = result

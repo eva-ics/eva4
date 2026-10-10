@@ -46,6 +46,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
             .take_config()
             .ok_or_else(|| Error::invalid_data("config not specified"))?,
     )?;
+    if config.pull_batch_size == 0 {
+        return Err(Error::invalid_params(
+            "pull_batch_size must be greater than zero",
+        ));
+    }
     let payload_failed = pack(&RawStateEvent::new0(eva_common::ITEM_STATUS_ERROR))?;
     if initial.is_mode_rtf() {
         println!("marking all mapped items as failed");
@@ -130,11 +135,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
         let tx_c = tx.clone();
         let startup_timeout = initial.startup_timeout();
         let pull_cache_sec = config.pull_cache_sec;
+        let pull_batch_size = config.pull_batch_size;
         tokio::spawn(async move {
             let _r = svc_wait_core(&rpc_c, startup_timeout, true).await;
             let tx_cc = tx_c.clone();
             tokio::spawn(async move {
-                pull::launch(nodes, interval, pull_cache_sec, tx_cc).await;
+                pull::launch(nodes, interval, pull_cache_sec, pull_batch_size, tx_cc).await;
             });
         });
     }

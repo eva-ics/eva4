@@ -22,6 +22,7 @@ err_logger!();
 #[allow(clippy::cast_possible_wrap)]
 async fn pull(
     nodes: &[common::PullNode],
+    batch_size: usize,
     tx: async_channel::Sender<(String, Vec<u8>)>,
     raw_state_cache: Arc<RawStateCache>,
 ) {
@@ -37,7 +38,7 @@ async fn pull(
         .iter()
         .map(common::PullNode::range)
         .collect::<Vec<Option<&str>>>();
-    match crate::comm::read_multi(vars, ranges, timeout, retries).await {
+    match crate::comm::read_multi(vars, ranges, timeout, retries, batch_size).await {
         Ok(result) => {
             logreducer::clear_error!("pull");
             for (res, node) in result.into_iter().zip(nodes.iter()) {
@@ -147,9 +148,15 @@ pub async fn launch(
     nodes: Vec<common::PullNode>,
     interval: Duration,
     cache_time: Option<Duration>,
+    batch_size: usize,
     tx: async_channel::Sender<(String, Vec<u8>)>,
 ) {
-    log::info!("starting puller, interval: {:?}", interval);
+    log::info!(
+        "starting puller, interval: {:?}, {} nodes, batch size: {}",
+        interval,
+        nodes.len(),
+        batch_size
+    );
     let mut ticker = tokio::time::interval(interval);
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut last_ticked: Option<Instant> = None;
@@ -161,7 +168,7 @@ pub async fn launch(
         {
             warn!("PLC puller timeout");
         }
-        pull(&nodes, tx.clone(), raw_state_cache.clone()).await;
+        pull(&nodes, batch_size, tx.clone(), raw_state_cache.clone()).await;
         last_ticked.replace(t);
     }
 }
