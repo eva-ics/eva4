@@ -404,6 +404,8 @@ def append_alarm_cli(root_sp):
                    default=DEFAULT_ALARM_SERVICE).completer = ComplSvc('alarm')
 
     p = sp.add_parser('export', help='export managed alarms')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('--group', metavar='GROUP', help='filter by group')
     p.add_argument('--level', metavar='LEVEL', help='filter by level')
     p.add_argument('--id', metavar='ID', help='filter by ID')
@@ -428,6 +430,8 @@ def append_dobj_cli(root_sp):
 
     p = sp.add_parser('export',
                       help='export data object(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK').completer = ComplDobj()
     p.add_argument('-o', '--output', metavar='FILE',
                    help='output file').completer = ComplDeployFile()
@@ -498,6 +502,8 @@ def append_svc_cli(root_sp):
                   ).completer = ComplDeployFile()
 
     p = sp.add_parser('export', help='export service(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK').completer = ComplSvc()
     p.add_argument('-o', '--output', metavar='FILE',
                    help='output file').completer = ComplDeployFile()
@@ -547,6 +553,8 @@ def append_acl_cli(root_sp):
                    default=DEFAULT_ACL_SERVICE).completer = ComplSvc('aaa')
 
     p = sp.add_parser('export', help='export ACLs(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK')
     p.add_argument('-a',
                    '--acl-svc',
@@ -614,6 +622,8 @@ def append_key_cli(root_sp):
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
 
     p = sp.add_parser('export', help='export API keys(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK')
     p.add_argument(
         '-a',
@@ -694,6 +704,8 @@ def append_user_cli(root_sp):
         default=DEFAULT_AUTH_SERVICE).completer = ComplSvc('aaa')
 
     p = sp.add_parser('export', help='export users(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK')
     p.add_argument(
         '-a',
@@ -878,6 +890,8 @@ def append_item_cli(root_sp):
     sp.add_parser('summary', help='item summary per source')
 
     p = sp.add_parser('export', help='export item(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK').completer = ComplOID()
     p.add_argument('-y',
                    '--full',
@@ -1267,6 +1281,8 @@ def append_video_cli(root_sp):
 
     p = sp.add_parser(
         'export', help='export video recording config(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK')
     p.add_argument(
         '-a',
@@ -1403,6 +1419,8 @@ def append_generator_cli(root_sp):
         default=DEFAULT_GENERATOR_SERVICE).completer = ComplSvc('generator')
 
     p = sp.add_parser('export', help='export source(s) to a deployment file')
+    p.add_argument('--iac', action='store_true',
+                   help='output version 4 IaC deployment format')
     p.add_argument('i', metavar='MASK')
     p.add_argument(
         '-a',

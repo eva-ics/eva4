@@ -17,6 +17,31 @@ from .tools import get_node_svc_info, get_term_size, exec_cmd, xc
 from .tools import get_my_ip, check_local_shell
 from .client import call_rpc, DEFAULT_REPL_SERVICE, connect
 from .sharedobj import common, current_command
+from .iac_export import write_iac_export
+
+
+def _export_iac(result, output):
+    payload = write_iac_export(result, output, current_command.json)
+    if current_command.json:
+        print_result(payload)
+    elif output is None:
+        import yaml
+        print(yaml.safe_dump(payload, default_flow_style=False, sort_keys=False))
+    else:
+        resource, values = next(iter(result.items()))
+        label = {
+            'acls': 'ACL(s)',
+            'keys': 'API key(s)',
+            'users': 'user(s)',
+            'data_objects': 'data object(s)',
+            'svcs': 'service(s)',
+            'items': 'item(s)',
+            'video_recordings': 'video recording configuration(s)',
+            'generator_sources': 'generator source configuration(s)',
+            'alarms': 'alarm(s)',
+        }[resource]
+        print(f'{len(values)} {label} exported')
+        print()
 
 
 def eva_control_c(c, pfx=''):
@@ -325,7 +350,7 @@ class CLI:
         config = call_rpc('acl.get_config', dict(i=i), target=acl_svc)
         edit_config(config, f'acl|{i}|config', deploy_fn=partial(deploy, i=i))
 
-    def acl_export(self, i, acl_svc, output=None):
+    def acl_export(self, i, acl_svc, output=None, iac=False):
         c = 0
         configs = []
         for acl in call_rpc('acl.list', target=acl_svc):
@@ -337,6 +362,9 @@ class CLI:
                 c += 1
                 configs.append(acl)
         result = dict(acls=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -388,7 +416,7 @@ class CLI:
         config = call_rpc('key.get_config', dict(i=i), target=auth_svc)
         edit_config(config, f'key|{i}|config', deploy_fn=partial(deploy, i=i))
 
-    def key_export(self, i, auth_svc, output=None):
+    def key_export(self, i, auth_svc, output=None, iac=False):
         c = 0
         configs = []
         for key in call_rpc('key.list', target=auth_svc):
@@ -400,6 +428,9 @@ class CLI:
                 c += 1
                 configs.append(key)
         result = dict(keys=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -466,7 +497,7 @@ class CLI:
         config = call_rpc('user.get_config', dict(i=i), target=auth_svc)
         edit_config(config, f'user|{i}|config', deploy_fn=partial(deploy, i=i))
 
-    def user_export(self, i, auth_svc, output=None):
+    def user_export(self, i, auth_svc, output=None, iac=False):
         c = 0
         configs = []
         for user in call_rpc('user.list',
@@ -480,6 +511,9 @@ class CLI:
                 c += 1
                 configs.append(user)
         result = dict(users=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -572,7 +606,7 @@ class CLI:
         config = call_rpc('dobj.get_config', dict(i=i))
         edit_config(config, f'dobj|{i}|config', deploy_fn=partial(deploy, i=i))
 
-    def dobj_export(self, i, output=None):
+    def dobj_export(self, i, output=None, iac=False):
         c = 0
         configs = []
         for dobj in call_rpc('dobj.list'):
@@ -584,6 +618,9 @@ class CLI:
                 c += 1
                 configs.append(call_rpc('dobj.get_config', dict(i=name)))
         result = dict(data_objects=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -621,7 +658,7 @@ class CLI:
         data = call_rpc('svc.list', params)
         print_result(data, cols=['id', 'status', 'pid', 'launcher'])
 
-    def svc_export(self, i, output=None):
+    def svc_export(self, i, output=None, iac=False):
         c = 0
         configs = []
         for svc in call_rpc('svc.list'):
@@ -635,6 +672,9 @@ class CLI:
                     dict(id=name,
                          params=call_rpc('svc.get_params', dict(i=name))))
         result = dict(svcs=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -1093,7 +1133,7 @@ class CLI:
         )
         ok()
 
-    def item_export(self, i, full=False, output=None):
+    def item_export(self, i, full=False, output=None, iac=False):
         c = 0
         configs = dict()
         for item in call_rpc('item.list', dict(i=i, node='.local')):
@@ -1107,6 +1147,9 @@ class CLI:
                 configs[oid]['value'] = state['value']
         result = dict(items=sorted([v for _, v in configs.items()],
                                    key=lambda k: k['oid']))
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -1821,7 +1864,7 @@ class CLI:
                     f'video.rec|{i}|config',
                     deploy_fn=partial(deploy, i=i))
 
-    def video_rec_export(self, i, video_svc, output=None):
+    def video_rec_export(self, i, video_svc, output=None, iac=False):
         c = 0
         configs = []
         for source in call_rpc('rec.list', target=video_svc):
@@ -1836,6 +1879,9 @@ class CLI:
                                   target=video_svc)
                 configs.append(config)
         result = dict(video_recordings=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -2015,7 +2061,7 @@ class CLI:
                 print('apply job started:', result['job_id'])
                 print()
 
-    def generator_source_export(self, i, generator_svc, output=None):
+    def generator_source_export(self, i, generator_svc, output=None, iac=False):
         c = 0
         configs = []
         for source in call_rpc('source.list', target=generator_svc):
@@ -2030,6 +2076,9 @@ class CLI:
                                   target=generator_svc)
                 configs.append(config)
         result = dict(generator_sources=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
@@ -2164,7 +2213,7 @@ class CLI:
                      level=None,
                      group=None,
                      id=None,
-                     output=None):
+                     output=None, iac=False):
         c = 0
         configs = []
         flt = {}
@@ -2181,6 +2230,9 @@ class CLI:
             configs.append(config)
             c += 1
         result = dict(alarms=configs)
+        if iac:
+            _export_iac(result, output)
+            return
         if current_command.json:
             print_result(result)
         else:
