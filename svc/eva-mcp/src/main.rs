@@ -214,7 +214,9 @@ async fn main(mut initial: Initial) -> EResult<()> {
         StreamableHttpService::new(
             move || Ok(McpServer::new(node_help.clone())),
             Arc::new(session_manager),
-            StreamableHttpServerConfig::default().with_cancellation_token(ct.child_token()),
+            StreamableHttpServerConfig::default()
+                .disable_allowed_hosts()
+                .with_cancellation_token(ct.child_token()),
         );
     let router = axum::Router::new().nest_service("/mcp", http_service);
     let Ok(listener) = tokio::net::TcpListener::bind(listen_addr).await else {
