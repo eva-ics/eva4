@@ -45,4 +45,53 @@ pub struct Config {
     pub panic_in: Option<Duration>,
     #[serde(default)]
     pub eva_pg: bool,
+    #[serde(
+        default,
+        deserialize_with = "eva_common::tools::de_opt_float_as_duration"
+    )]
+    pub slow_statement_threshold: Option<Duration>,
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::BTreeMap;
+    use std::time::Duration;
+
+    use eva_common::prelude::Value;
+    use serde::Deserialize;
+
+    use super::Config;
+
+    fn config_value(extra: &[(&str, Value)]) -> Value {
+        let mut m = BTreeMap::new();
+        m.insert(
+            Value::String("db".to_owned()),
+            Value::String("postgres://u:p@localhost/d".to_owned()),
+        );
+        for (k, v) in extra {
+            m.insert(Value::String((*k).to_owned()), v.clone());
+        }
+        Value::Map(m)
+    }
+
+    #[test]
+    fn slow_statement_threshold_absent_is_none() {
+        let config = Config::deserialize(config_value(&[])).unwrap();
+
+        assert_eq!(config.slow_statement_threshold, None);
+    }
+
+    #[test]
+    fn slow_statement_threshold_parses_float_seconds() {
+        let config = Config::deserialize(config_value(&[(
+            "slow_statement_threshold",
+            Value::F64(0.5),
+        )]))
+        .unwrap();
+
+        assert_eq!(
+            config.slow_statement_threshold,
+            Some(Duration::from_millis(500)),
+        );
+    }
 }
