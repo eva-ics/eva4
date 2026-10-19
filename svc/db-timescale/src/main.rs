@@ -28,6 +28,8 @@ enum AnnounceKind {
 
 mod common;
 mod db;
+#[cfg(test)]
+mod test_db;
 mod timescale;
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -517,10 +519,11 @@ async fn main(mut initial: Initial) -> EResult<()> {
     initial.drop_privileges()?;
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;
-    db::init(
+    let storage = db::init(
         &config.db,
         config.pool_size.unwrap_or_else(|| initial.workers() * 5),
         timeout,
+        config.slow_statement_threshold,
     )
     .await?;
     tokio::spawn(async move {
@@ -566,7 +569,13 @@ async fn main(mut initial: Initial) -> EResult<()> {
     };
     svc_start_signal_handlers();
     if let Some(keep) = keep {
-        eva_common::cleaner!("records", db::cleanup_events, CLEANUP_INTERVAL, keep);
+        eva_common::cleaner!(
+            "records",
+            db::cleanup_events,
+            CLEANUP_INTERVAL,
+            keep,
+            storage
+        );
     }
     if config.cleanup_oids {
         eva_common::cleaner!("oids", db::cleanup_oids, OID_CLEANUP_INTERVAL);

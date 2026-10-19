@@ -13,7 +13,8 @@ config:
   # ignore real-time events
   skip_disconnected: false
   ignore_events: false
-  # keep records (seconds)
+  # keep records (seconds). For a hypertable whole chunks are dropped, so
+  # records may stay up to one chunk interval (default 7 days) longer
   keep: 604800
   # automatically cleanup obsolete OIDs (can be slow)
   #cleanup_oids: true
@@ -21,6 +22,8 @@ config:
   queue_size: 8192
   # panic on critical errors in X seconds after happened (0 - panic immediately)
   panic_in: 0
+  # log SQL statements slower than X seconds as warnings (0 - disable)
+  #slow_statement_threshold: 2
   # database pool size
   #pool_size: 2 (default = workers)
   # item OIDs / OID masks
