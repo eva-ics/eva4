@@ -28,6 +28,8 @@ enum AnnounceKind {
 
 mod common;
 mod db;
+#[cfg(test)]
+mod test_db;
 mod timescale;
 
 const AUTHOR: &str = "Bohemia Automation";
@@ -521,6 +523,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
         &config.db,
         config.pool_size.unwrap_or_else(|| initial.workers() * 5),
         timeout,
+        config.slow_statement_threshold,
     )
     .await?;
     tokio::spawn(async move {
