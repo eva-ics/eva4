@@ -230,10 +230,15 @@ async fn create_schema(pool: &PgPool) -> EResult<()> {
 }
 
 async fn init_hypertable(pool: &PgPool, schema: &str) -> EResult<()> {
-    let qualified = qualified_events_name(schema);
-    sqlx::query(&format!("SELECT create_hypertable('{qualified}', 't')"))
+    // Relation args for Timescale helpers are bound and built with format('%I.%I', …)::regclass
+    // so schema names like tenant'o do not break a SQL string literal. ALTER TABLE still needs a
+    // SQL identifier, so that path uses quote_ident (identifier context, not a string embed).
+    sqlx::query("SELECT create_hypertable(format('%I.%I', $1::text, $2::text)::regclass, 't')")
+        .bind(schema)
+        .bind(EVENTS_TABLE_NAME)
         .execute(pool)
         .await?;
+    let qualified = qualified_events_name(schema);
     sqlx::query(&format!(
         r"ALTER TABLE {qualified}
                 SET (
@@ -243,10 +248,13 @@ async fn init_hypertable(pool: &PgPool, schema: &str) -> EResult<()> {
     ))
     .execute(pool)
     .await?;
-    sqlx::query(&format!(
-        "SELECT add_compression_policy('{qualified}', INTERVAL '{}')",
-        DEFAULT_COMPRESSION_POLICY
-    ))
+    sqlx::query(
+        "SELECT add_compression_policy(\
+            format('%I.%I', $1::text, $2::text)::regclass, $3::interval)",
+    )
+    .bind(schema)
+    .bind(EVENTS_TABLE_NAME)
+    .bind(DEFAULT_COMPRESSION_POLICY)
     .execute(pool)
     .await?;
     Ok(())
@@ -479,12 +487,15 @@ async fn cleanup_event_records(
     storage: &EventStorage,
     cutoff: NaiveDateTime,
 ) -> EResult<CleanupOutcome> {
-    let qualified = qualified_events_name(&storage.schema);
     match storage.mode {
         StorageMode::Hypertable => {
-            let dropped: Vec<String> = sqlx::query_scalar(&format!(
-                "SELECT drop_chunks('{qualified}', older_than => $1::timestamp)::text"
-            ))
+            let dropped: Vec<String> = sqlx::query_scalar(
+                "SELECT drop_chunks(\
+                    format('%I.%I', $1::text, $2::text)::regclass, \
+                    older_than => $3::timestamp)::text",
+            )
+            .bind(&*storage.schema)
+            .bind(EVENTS_TABLE_NAME)
             .bind(cutoff)
             .fetch_all(pool)
             .await?;
@@ -495,6 +506,8 @@ async fn cleanup_event_records(
             })
         }
         StorageMode::Plain => {
+            // FROM/DELETE need a SQL identifier; quote_ident is safe here (not inside a literal).
+            let qualified = qualified_events_name(&storage.schema);
             let has_old: bool = sqlx::query_scalar(&format!(
                 "SELECT EXISTS (SELECT 1 FROM {qualified} WHERE t < $1)"
             ))
@@ -543,9 +556,10 @@ mod test {
     use tokio::time;
 
     use super::{
-        CleanupOutcome, EventStorage, OIDS_LOCK_KEY, StorageMode, cleanup_cutoff,
-        cleanup_event_oids, cleanup_event_records, create_schema, init_hypertable, insert_fn_sql,
-        is_hypertable, resolve_events_schema, slow_statement_log,
+        CleanupOutcome, EVENTS_TABLE_NAME, EventStorage, OIDS_LOCK_KEY, StorageMode,
+        cleanup_cutoff, cleanup_event_oids, cleanup_event_records, create_schema, init_hypertable,
+        insert_fn_sql, is_hypertable, qualified_events_name, quote_ident, resolve_events_schema,
+        slow_statement_log,
     };
     use crate::test_db::TestDb;
 
@@ -787,6 +801,15 @@ mod test {
         let lock = format!("PERFORM pg_advisory_xact_lock({OIDS_LOCK_KEY});");
 
         assert!(sql.contains(&lock));
+    }
+
+    #[test]
+    fn quote_ident_keeps_apostrophe_inside_identifier() {
+        assert_eq!(quote_ident("tenant'o"), "\"tenant'o\"");
+        assert_eq!(
+            qualified_events_name("tenant'o"),
+            "\"tenant'o\".\"state_history_events\"",
+        );
     }
 
     #[tokio::test]
@@ -1082,6 +1105,58 @@ mod test {
 
         assert_eq!(res, CleanupOutcome::DeletedRows(1));
         tenant_pool.close().await;
+        db.drop_db().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "needs TimescaleDB: set EVA_DB_TIMESCALE_TEST_URL"]
+    async fn hypertable_ops_accept_schema_with_apostrophe() {
+        let db = TestDb::new().await;
+        sqlx::query(r#"CREATE SCHEMA "tenant'o""#)
+            .execute(&db.pool)
+            .await
+            .unwrap();
+        let pool = db.pool_with_search_path(r#""tenant'o", public"#).await;
+        create_schema(&pool).await.unwrap();
+        init_hypertable(&pool, "tenant'o").await.unwrap();
+        sqlx::query(
+            "SELECT remove_compression_policy(\
+                format('%I.%I', $1::text, $2::text)::regclass)",
+        )
+        .bind("tenant'o")
+        .bind(EVENTS_TABLE_NAME)
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "SELECT set_chunk_time_interval(\
+                format('%I.%I', $1::text, $2::text)::regclass, INTERVAL '1 day')",
+        )
+        .bind("tenant'o")
+        .bind(EVENTS_TABLE_NAME)
+        .execute(&pool)
+        .await
+        .unwrap();
+        call_insert(
+            &pool,
+            INSERT_FNS[0],
+            &[
+                (ts(1, 5, 12, 0), "sensor:t/a", 1, 1.0),
+                (ts(2, 2, 12, 0), "sensor:t/a", 1, 1.0),
+            ],
+        )
+        .await
+        .unwrap();
+        let res = cleanup_event_records(
+            &pool,
+            &storage(StorageMode::Hypertable, "tenant'o"),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(res, CleanupOutcome::DroppedChunks(1));
+        pool.close().await;
         db.drop_db().await;
     }
 }
