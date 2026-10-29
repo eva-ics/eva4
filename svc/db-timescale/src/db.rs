@@ -24,15 +24,25 @@ pub static POOL: OnceLock<PgPool> = OnceLock::new();
 
 const DEFAULT_COMPRESSION_POLICY: &str = "1d";
 const DEFAULT_SLOW_STATEMENT_THRESHOLD: Duration = Duration::from_secs(2);
-// Inserts hold it shared and OID cleanup holds it exclusive, so cleanup never deletes an OID
-// between the OID insert and the events insert of an in-flight batch.
+const EVENTS_TABLE_NAME: &str = "state_history_events";
+// Inserts and OID cleanup both take it exclusive, so a batch insert and a cleanup pass never
+// interleave: either the OIDs a batch needs already exist before cleanup runs, or cleanup waits
+// for the batch to finish inserting its events first.
 const OIDS_LOCK_KEY: i64 = 0x4556_4154_534f_4944;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum EventStorage {
+pub enum StorageMode {
     Hypertable,
     Plain,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EventStorage {
+    pub mode: StorageMode,
+    pub schema: Box<str>,
+}
+
+static EVENT_STORAGE: OnceLock<EventStorage> = OnceLock::new();
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum CleanupOutcome {
@@ -73,7 +83,7 @@ pub async fn init(
     size: u32,
     timeout: Duration,
     slow_statement_threshold: Option<Duration>,
-) -> EResult<EventStorage> {
+) -> EResult<()> {
     let (slow_level, slow_threshold) = slow_statement_log(slow_statement_threshold);
     let opts = PgConnectOptions::from_str(conn)?
         .log_statements(log::LevelFilter::Trace)
@@ -84,35 +94,77 @@ pub async fn init(
         .connect_with(opts)
         .await?;
     create_schema(&pool).await?;
-    let c: i64 = sqlx::query(
-        r"SELECT COUNT(*) FROM timescaledb_information.hypertables
-        WHERE hypertable_name='state_history_events'",
-    )
-    .fetch_one(&pool)
-    .await.map_err(|e| Error::failed(format!("unable to get timescale hypertable information. is the timescale extension enabled? ({})", e)))?
-    .try_get(0)?;
-    let storage = if c == 0 {
-        match init_hypertable(&pool).await {
+    let schema = resolve_events_schema(&pool).await?;
+    let mode = if is_hypertable(&pool, &schema).await? {
+        info!("events hypertable active");
+        StorageMode::Hypertable
+    } else {
+        match init_hypertable(&pool, &schema).await {
             Ok(()) => {
                 warn!(
                     "events hypertable initialization completed, default compression policy: {}",
                     DEFAULT_COMPRESSION_POLICY
                 );
-                EventStorage::Hypertable
+                StorageMode::Hypertable
             }
             Err(e) => {
                 warn!("Can not initialize events hypertable: {}", e);
                 warn!("Read more at: https://info.bma.ai/en/actual/eva4/svc/eva-db-timescale.html");
-                EventStorage::Plain
+                StorageMode::Plain
             }
         }
-    } else {
-        info!("events hypertable active");
-        EventStorage::Hypertable
     };
     POOL.set(pool)
         .map_err(|_| Error::core("unable to set db pool"))?;
-    Ok(storage)
+    EVENT_STORAGE
+        .set(EventStorage { mode, schema })
+        .map_err(|_| Error::core("unable to set event storage"))?;
+    Ok(())
+}
+
+fn quote_ident(ident: &str) -> String {
+    format!("\"{}\"", ident.replace('"', "\"\""))
+}
+
+fn qualified_events_name(schema: &str) -> String {
+    format!("{}.{}", quote_ident(schema), quote_ident(EVENTS_TABLE_NAME))
+}
+
+// `state_history_events` is created unqualified in `create_schema`, so it lands in whichever
+// schema is first on the connection's `search_path`. Resolve that schema via the catalog instead
+// of assuming `public`, so hypertable detection below matches the table the connection actually
+// uses.
+async fn resolve_events_schema(pool: &PgPool) -> EResult<Box<str>> {
+    let schema: Option<String> = sqlx::query_scalar(
+        r"SELECT n.nspname FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.oid = to_regclass($1)",
+    )
+    .bind(EVENTS_TABLE_NAME)
+    .fetch_optional(pool)
+    .await?;
+    schema
+        .map(Into::into)
+        .ok_or_else(|| Error::core("state_history_events relation not found after creation"))
+}
+
+async fn is_hypertable(pool: &PgPool, schema: &str) -> EResult<bool> {
+    sqlx::query_scalar(
+        r"SELECT EXISTS (
+            SELECT 1 FROM timescaledb_information.hypertables
+            WHERE hypertable_schema = $1 AND hypertable_name = $2
+        )",
+    )
+    .bind(schema)
+    .bind(EVENTS_TABLE_NAME)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| {
+        Error::failed(format!(
+            "unable to get timescale hypertable information. is the timescale extension enabled? ({})",
+            e
+        ))
+    })
 }
 
 fn insert_fn_sql(name: &str) -> String {
@@ -122,7 +174,7 @@ ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RE
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM pg_advisory_xact_lock_shared({OIDS_LOCK_KEY});
+  PERFORM pg_advisory_xact_lock({OIDS_LOCK_KEY});
   INSERT INTO state_history_oids(oid)
     SELECT DISTINCT u.oid FROM UNNEST(oids) AS u(oid)
     WHERE NOT EXISTS (SELECT 1 FROM state_history_oids o WHERE o.oid = u.oid)
@@ -177,21 +229,22 @@ async fn create_schema(pool: &PgPool) -> EResult<()> {
     Ok(())
 }
 
-async fn init_hypertable(pool: &PgPool) -> EResult<()> {
-    sqlx::query("SELECT create_hypertable('state_history_events', 't')")
+async fn init_hypertable(pool: &PgPool, schema: &str) -> EResult<()> {
+    let qualified = qualified_events_name(schema);
+    sqlx::query(&format!("SELECT create_hypertable('{qualified}', 't')"))
         .execute(pool)
         .await?;
-    sqlx::query(
-        r"ALTER TABLE state_history_events
+    sqlx::query(&format!(
+        r"ALTER TABLE {qualified}
                 SET (
                     timescaledb.compress,
                     timescaledb.compress_orderby = 't DESC',
-                    timescaledb.compress_segmentby = 'oid_id')",
-    )
+                    timescaledb.compress_segmentby = 'oid_id')"
+    ))
     .execute(pool)
     .await?;
     sqlx::query(&format!(
-        "SELECT add_compression_policy('state_history_events', INTERVAL '{}')",
+        "SELECT add_compression_policy('{qualified}', INTERVAL '{}')",
         DEFAULT_COMPRESSION_POLICY
     ))
     .execute(pool)
@@ -401,13 +454,14 @@ pub async fn state_log(
     Ok(result)
 }
 
-pub async fn cleanup_events(keep: f64, storage: EventStorage) {
+pub async fn cleanup_events(keep: f64) {
     log::trace!("cleaning db records");
-    cleanup_events_now(keep, storage).await.log_ef();
+    cleanup_events_now(keep).await.log_ef();
 }
 
-async fn cleanup_events_now(keep: f64, storage: EventStorage) -> EResult<()> {
+async fn cleanup_events_now(keep: f64) -> EResult<()> {
     let cutoff = cleanup_cutoff(eva_common::time::now_ns_float(), keep)?;
+    let storage = EVENT_STORAGE.get().unwrap();
     match cleanup_event_records(POOL.get().unwrap(), storage, cutoff).await? {
         CleanupOutcome::Nothing => {}
         CleanupOutcome::DroppedChunks(n) => {
@@ -422,14 +476,15 @@ async fn cleanup_events_now(keep: f64, storage: EventStorage) -> EResult<()> {
 
 async fn cleanup_event_records(
     pool: &PgPool,
-    storage: EventStorage,
+    storage: &EventStorage,
     cutoff: NaiveDateTime,
 ) -> EResult<CleanupOutcome> {
-    match storage {
-        EventStorage::Hypertable => {
-            let dropped: Vec<String> = sqlx::query_scalar(
-                "SELECT drop_chunks('state_history_events', older_than => $1::timestamp)::text",
-            )
+    let qualified = qualified_events_name(&storage.schema);
+    match storage.mode {
+        StorageMode::Hypertable => {
+            let dropped: Vec<String> = sqlx::query_scalar(&format!(
+                "SELECT drop_chunks('{qualified}', older_than => $1::timestamp)::text"
+            ))
             .bind(cutoff)
             .fetch_all(pool)
             .await?;
@@ -439,17 +494,17 @@ async fn cleanup_event_records(
                 CleanupOutcome::DroppedChunks(dropped.len())
             })
         }
-        EventStorage::Plain => {
-            let has_old: bool = sqlx::query_scalar(
-                "SELECT EXISTS (SELECT 1 FROM state_history_events WHERE t < $1)",
-            )
+        StorageMode::Plain => {
+            let has_old: bool = sqlx::query_scalar(&format!(
+                "SELECT EXISTS (SELECT 1 FROM {qualified} WHERE t < $1)"
+            ))
             .bind(cutoff)
             .fetch_one(pool)
             .await?;
             if !has_old {
                 return Ok(CleanupOutcome::Nothing);
             }
-            let res = sqlx::query("DELETE FROM state_history_events WHERE t < $1")
+            let res = sqlx::query(&format!("DELETE FROM {qualified} WHERE t < $1"))
                 .bind(cutoff)
                 .execute(pool)
                 .await?;
@@ -488,8 +543,9 @@ mod test {
     use tokio::time;
 
     use super::{
-        CleanupOutcome, EventStorage, OIDS_LOCK_KEY, cleanup_cutoff, cleanup_event_oids,
-        cleanup_event_records, create_schema, init_hypertable, insert_fn_sql, slow_statement_log,
+        CleanupOutcome, EventStorage, OIDS_LOCK_KEY, StorageMode, cleanup_cutoff,
+        cleanup_event_oids, cleanup_event_records, create_schema, init_hypertable, insert_fn_sql,
+        is_hypertable, resolve_events_schema, slow_statement_log,
     };
     use crate::test_db::TestDb;
 
@@ -505,10 +561,17 @@ mod test {
             .unwrap()
     }
 
+    fn storage(mode: StorageMode, schema: &str) -> EventStorage {
+        EventStorage {
+            mode,
+            schema: schema.into(),
+        }
+    }
+
     async fn setup(pool: &PgPool, hypertable: bool) {
         create_schema(pool).await.unwrap();
         if hypertable {
-            init_hypertable(pool).await.unwrap();
+            init_hypertable(pool, "public").await.unwrap();
             sqlx::query("SELECT remove_compression_policy('state_history_events')")
                 .execute(pool)
                 .await
@@ -719,9 +782,9 @@ mod test {
     }
 
     #[test]
-    fn insert_fn_sql_holds_shared_oids_lock() {
+    fn insert_fn_sql_holds_exclusive_oids_lock() {
         let sql = insert_fn_sql("insert_state_history_events");
-        let lock = format!("PERFORM pg_advisory_xact_lock_shared({OIDS_LOCK_KEY});");
+        let lock = format!("PERFORM pg_advisory_xact_lock({OIDS_LOCK_KEY});");
 
         assert!(sql.contains(&lock));
     }
@@ -756,9 +819,10 @@ mod test {
     async fn cleanup_oids_waits_for_in_flight_insert() {
         let db = TestDb::new().await;
         setup(&db.pool, true).await;
-        // Reproduces insert function state after OID insert and before events insert.
+        // Reproduces insert function state after OID insert and before events insert, holding
+        // the same exclusive lock the insert function itself takes.
         let mut tx = db.pool.begin().await.unwrap();
-        sqlx::query("SELECT pg_advisory_xact_lock_shared($1)")
+        sqlx::query("SELECT pg_advisory_xact_lock($1)")
             .bind(OIDS_LOCK_KEY)
             .execute(&mut *tx)
             .await
@@ -833,9 +897,13 @@ mod test {
         )
         .await
         .unwrap();
-        let res = cleanup_event_records(&db.pool, EventStorage::Hypertable, ts(2, 1, 0, 0))
-            .await
-            .unwrap();
+        let res = cleanup_event_records(
+            &db.pool,
+            &storage(StorageMode::Hypertable, "public"),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(res, CleanupOutcome::Nothing);
         assert_eq!(
@@ -862,9 +930,13 @@ mod test {
         )
         .await
         .unwrap();
-        let res = cleanup_event_records(&db.pool, EventStorage::Hypertable, ts(2, 1, 0, 0))
-            .await
-            .unwrap();
+        let res = cleanup_event_records(
+            &db.pool,
+            &storage(StorageMode::Hypertable, "public"),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(res, CleanupOutcome::DroppedChunks(2));
         assert_eq!(
@@ -897,9 +969,13 @@ mod test {
         )
         .await
         .unwrap();
-        let res = cleanup_event_records(&db.pool, EventStorage::Hypertable, ts(2, 1, 12, 0))
-            .await
-            .unwrap();
+        let res = cleanup_event_records(
+            &db.pool,
+            &storage(StorageMode::Hypertable, "public"),
+            ts(2, 1, 12, 0),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(res, CleanupOutcome::Nothing);
         assert_eq!(
@@ -921,9 +997,13 @@ mod test {
         )
         .await
         .unwrap();
-        let res = cleanup_event_records(&db.pool, EventStorage::Plain, ts(2, 1, 0, 0))
-            .await
-            .unwrap();
+        let res = cleanup_event_records(
+            &db.pool,
+            &storage(StorageMode::Plain, "public"),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(res, CleanupOutcome::Nothing);
         db.drop_db().await;
@@ -944,9 +1024,13 @@ mod test {
         )
         .await
         .unwrap();
-        let res = cleanup_event_records(&db.pool, EventStorage::Plain, ts(2, 1, 0, 0))
-            .await
-            .unwrap();
+        let res = cleanup_event_records(
+            &db.pool,
+            &storage(StorageMode::Plain, "public"),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(res, CleanupOutcome::DeletedRows(1));
         assert_eq!(
@@ -957,6 +1041,47 @@ mod test {
             .await,
             1,
         );
+        db.drop_db().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "needs TimescaleDB: set EVA_DB_TIMESCALE_TEST_URL"]
+    async fn storage_mode_is_schema_aware_when_search_path_shadows_public_hypertable() {
+        let db = TestDb::new().await;
+        setup(&db.pool, true).await;
+        sqlx::query("CREATE SCHEMA tenant")
+            .execute(&db.pool)
+            .await
+            .unwrap();
+        let tenant_pool = db.pool_with_search_path("tenant, public").await;
+        create_schema(&tenant_pool).await.unwrap();
+
+        let schema = resolve_events_schema(&tenant_pool).await.unwrap();
+
+        assert_eq!(&*schema, "tenant");
+        assert!(!is_hypertable(&tenant_pool, &schema).await.unwrap());
+        assert!(is_hypertable(&db.pool, "public").await.unwrap());
+
+        call_insert(
+            &tenant_pool,
+            INSERT_FNS[0],
+            &[
+                (ts(1, 31, 23, 59), "sensor:t/a", 1, 1.0),
+                (ts(2, 1, 0, 0), "sensor:t/a", 1, 1.0),
+            ],
+        )
+        .await
+        .unwrap();
+        let res = cleanup_event_records(
+            &tenant_pool,
+            &storage(StorageMode::Plain, &schema),
+            ts(2, 1, 0, 0),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(res, CleanupOutcome::DeletedRows(1));
+        tenant_pool.close().await;
         db.drop_db().await;
     }
 }

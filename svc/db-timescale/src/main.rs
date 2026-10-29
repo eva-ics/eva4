@@ -519,7 +519,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     initial.drop_privileges()?;
     let client = rpc.client().clone();
     svc_init_logs(&initial, client.clone())?;
-    let storage = db::init(
+    db::init(
         &config.db,
         config.pool_size.unwrap_or_else(|| initial.workers() * 5),
         timeout,
@@ -569,13 +569,7 @@ async fn main(mut initial: Initial) -> EResult<()> {
     };
     svc_start_signal_handlers();
     if let Some(keep) = keep {
-        eva_common::cleaner!(
-            "records",
-            db::cleanup_events,
-            CLEANUP_INTERVAL,
-            keep,
-            storage
-        );
+        eva_common::cleaner!("records", db::cleanup_events, CLEANUP_INTERVAL, keep);
     }
     if config.cleanup_oids {
         eva_common::cleaner!("oids", db::cleanup_oids, OID_CLEANUP_INTERVAL);
