@@ -24,6 +24,9 @@ pub static POOL: OnceLock<PgPool> = OnceLock::new();
 
 const DEFAULT_COMPRESSION_POLICY: &str = "1d";
 const DEFAULT_SLOW_STATEMENT_THRESHOLD: Duration = Duration::from_secs(2);
+// Inserts hold it shared and OID cleanup holds it exclusive, so cleanup never deletes an OID
+// between the OID insert and the events insert of an in-flight batch.
+const OIDS_LOCK_KEY: i64 = 0x4556_4154_534f_4944;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EventStorage {
@@ -119,6 +122,7 @@ ts TIMESTAMP[], oids VARCHAR[], statuses SMALLINT[], vals DOUBLE PRECISION[]) RE
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  PERFORM pg_advisory_xact_lock_shared({OIDS_LOCK_KEY});
   INSERT INTO state_history_oids(oid)
     SELECT DISTINCT u.oid FROM UNNEST(oids) AS u(oid)
     WHERE NOT EXISTS (SELECT 1 FROM state_history_oids o WHERE o.oid = u.oid)
@@ -456,17 +460,22 @@ async fn cleanup_event_records(
 
 pub async fn cleanup_oids() {
     log::trace!("cleaning oids");
-    cleanup_event_oids().await.log_ef();
+    cleanup_event_oids(POOL.get().unwrap()).await.log_ef();
 }
 
-async fn cleanup_event_oids() -> EResult<()> {
-    let pool = POOL.get().unwrap();
+async fn cleanup_event_oids(pool: &PgPool) -> EResult<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(OIDS_LOCK_KEY)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query(
         r"DELETE FROM state_history_oids
         WHERE id NOT IN (SELECT DISTINCT oid_id FROM state_history_events)",
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
     Ok(())
 }
 
@@ -476,10 +485,11 @@ mod test {
 
     use chrono::{NaiveDate, NaiveDateTime};
     use sqlx::PgPool;
+    use tokio::time;
 
     use super::{
-        CleanupOutcome, EventStorage, cleanup_cutoff, cleanup_event_records, create_schema,
-        init_hypertable, insert_fn_sql, slow_statement_log,
+        CleanupOutcome, EventStorage, OIDS_LOCK_KEY, cleanup_cutoff, cleanup_event_oids,
+        cleanup_event_records, create_schema, init_hypertable, insert_fn_sql, slow_statement_log,
     };
     use crate::test_db::TestDb;
 
@@ -706,6 +716,86 @@ mod test {
         assert!(!sql.contains("LOCK TABLE"));
         assert!(!sql.contains("LOOP"));
         assert!(!sql.contains("array_append"));
+    }
+
+    #[test]
+    fn insert_fn_sql_holds_shared_oids_lock() {
+        let sql = insert_fn_sql("insert_state_history_events");
+        let lock = format!("PERFORM pg_advisory_xact_lock_shared({OIDS_LOCK_KEY});");
+
+        assert!(sql.contains(&lock));
+    }
+
+    #[tokio::test]
+    #[ignore = "needs TimescaleDB: set EVA_DB_TIMESCALE_TEST_URL"]
+    async fn cleanup_oids_deletes_only_unused() {
+        let db = TestDb::new().await;
+        setup(&db.pool, true).await;
+        call_insert(
+            &db.pool,
+            INSERT_FNS[0],
+            &[(ts(2, 1, 0, 0), "sensor:t/a", 1, 1.0)],
+        )
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO state_history_oids(oid) VALUES ('sensor:t/orphan')")
+            .execute(&db.pool)
+            .await
+            .unwrap();
+        cleanup_event_oids(&db.pool).await.unwrap();
+
+        assert_eq!(
+            count(&db.pool, "SELECT COUNT(*) FROM state_history_oids").await,
+            1,
+        );
+        db.drop_db().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "needs TimescaleDB: set EVA_DB_TIMESCALE_TEST_URL"]
+    async fn cleanup_oids_waits_for_in_flight_insert() {
+        let db = TestDb::new().await;
+        setup(&db.pool, true).await;
+        // Reproduces insert function state after OID insert and before events insert.
+        let mut tx = db.pool.begin().await.unwrap();
+        sqlx::query("SELECT pg_advisory_xact_lock_shared($1)")
+            .bind(OIDS_LOCK_KEY)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        let oid_id: i32 = sqlx::query_scalar(
+            "INSERT INTO state_history_oids(oid) VALUES ('sensor:t/a') RETURNING id",
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+        let pool = db.pool.clone();
+        let cleanup = tokio::spawn(async move { cleanup_event_oids(&pool).await });
+        time::sleep(Duration::from_millis(300)).await;
+
+        assert!(!cleanup.is_finished());
+
+        sqlx::query(
+            "INSERT INTO state_history_events(t, oid_id, status, value) \
+             VALUES ($1, $2, 1, 1.0)",
+        )
+        .bind(ts(2, 1, 0, 0))
+        .bind(oid_id)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        cleanup.await.unwrap().unwrap();
+
+        assert_eq!(
+            count(&db.pool, "SELECT COUNT(*) FROM state_history_oids").await,
+            1,
+        );
+        assert_eq!(
+            count(&db.pool, "SELECT COUNT(*) FROM state_history_events").await,
+            1,
+        );
+        db.drop_db().await;
     }
 
     #[tokio::test]
