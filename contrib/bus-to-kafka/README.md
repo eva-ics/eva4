@@ -3,10 +3,10 @@
 EVA ICS v4 local bus to Apache Kafka bridge.
 
 Written in Python, requires EVA ICS v4 and EVA ICS venv set. Requires an
-additional "kafka-python3" module:
+additional "kafka-python" (>=2.2.2) module:
 
 ```
-eva venv add kafka-python3
+eva venv add 'kafka-python>=2.2.2'
 ```
 
 ## What does it do

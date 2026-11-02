@@ -830,7 +830,7 @@ def ls(mask, recursive=False):
     more directories and subdirectories.
 
     Args:
-        mask: path and mask (e.g. /opt/data/\*.jpg)
+        mask: path and mask (e.g. /opt/data/\\*.jpg)
         recursive: if True, perform a recursive search
 
     Returns:

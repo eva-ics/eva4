@@ -6,7 +6,7 @@ import json
 from evaics.sdk import unpack, OID, LOCAL_STATE_TOPIC, LOG_EVENT_TOPIC
 
 from types import SimpleNamespace
-from kafka3 import KafkaProducer
+from kafka import KafkaProducer
 
 d = SimpleNamespace(producer=None,
                     topic_state=None,
