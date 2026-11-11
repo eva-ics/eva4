@@ -447,7 +447,18 @@ async fn main(mut initial: Initial) -> EResult<()> {
             error!("unable to read {}", mime_types_path);
             Into::<Error>::into(e)
         })?;
-        serde_yaml::from_str(&types).map_err(|e| {
+        serde_saphyr::from_str_with_options(
+            &types,
+            serde_saphyr::options! {
+                            duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                            merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+            strict_booleans: true,
+            leading_zero_numbers_as_strings: true,
+            underscored_numbers_as_strings: true,
+            non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                        },
+        )
+        .map_err(|e| {
             error!("unable to parse {}", mime_types_path);
             Error::invalid_data(e)
         })?

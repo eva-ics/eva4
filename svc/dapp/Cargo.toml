@@ -15,7 +15,7 @@ log = { workspace = true }
 async-channel = { workspace = true }
 mimalloc = { workspace = true }
 bmart = { workspace = true }
-serde_yaml = { workspace = true }
+serde-saphyr = { workspace = true }
 
 [features]
 std-alloc = []

@@ -43,10 +43,18 @@ struct Args {}
 #[tokio::main(worker_threads = 1)]
 async fn main() -> EResult<()> {
     let _ = Args::parse();
-    let config: Config = serde_yaml::from_str(
+    let config: Config = serde_saphyr::from_str_with_options(
         &fs::read_to_string(CONFIG_PATH)
             .await
             .map_err(|e| Error::io(format!("unable to load {}: {}", CONFIG_PATH, e)))?,
+        serde_saphyr::options! {
+                    duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                    merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+        strict_booleans: true,
+        leading_zero_numbers_as_strings: true,
+        underscored_numbers_as_strings: true,
+        non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                },
     )
     .map_err(Error::invalid_params)?;
     let log_level_filter = log::LevelFilter::Info;

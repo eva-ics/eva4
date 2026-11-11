@@ -39,3 +39,7 @@ architecture.
 For this documentation set, cover everything in the repository except
 `contrib/`. `contrib/` is present but intentionally out of scope unless a task
 explicitly pulls it in.
+
+## Migration review notes
+
+- [YAML parser migration](yaml-parser.md): compatibility policy and corpus verification.

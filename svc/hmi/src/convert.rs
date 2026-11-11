@@ -47,7 +47,7 @@ pub async fn payload(
             Ok((buf, mime))
         }
         Format::Yaml => {
-            let buf = serde_yaml::to_string(&data)
+            let buf = serde_saphyr::to_string(&data)
                 .map_err(Error::invalid_data)?
                 .into_bytes();
             let mime = mime_types.get("yaml");

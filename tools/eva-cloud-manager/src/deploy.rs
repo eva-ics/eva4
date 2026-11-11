@@ -148,8 +148,18 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
     let mut tpl_context = tera::Context::new();
     if let Some(ref config_file) = opts.config {
         info!("reading variable configuration file {}", config_file);
-        let mut val: Value =
-            serde_yaml::from_slice(&fs::read(config_file).await?).map_err(Error::invalid_data)?;
+        let mut val: Value = serde_saphyr::from_slice_with_options(
+            &fs::read(config_file).await?,
+            serde_saphyr::options! {
+                            duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                            merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+            strict_booleans: true,
+            leading_zero_numbers_as_strings: true,
+            underscored_numbers_as_strings: true,
+            non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                        },
+        )
+        .map_err(Error::invalid_data)?;
         info!("extending variable configuration file");
         let config_fpath = Path::new(config_file);
         let config_base_path = config_fpath.parent().unwrap().to_path_buf();
@@ -198,7 +208,18 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
     info!("parsing template tags");
     let t = tera::Tera::one_off(tpl, &tpl_context, true).map_err(Error::invalid_data)?;
     info!("parsing YAML structure");
-    let mut data: Value = serde_yaml::from_str(&t).map_err(Error::invalid_data)?;
+    let mut data: Value = serde_saphyr::from_str_with_options(
+        &t,
+        serde_saphyr::options! {
+                    duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                    merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+        strict_booleans: true,
+        leading_zero_numbers_as_strings: true,
+        underscored_numbers_as_strings: true,
+        non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                },
+    )
+    .map_err(Error::invalid_data)?;
     info!("extending");
     data = data.extend(timeout, &base_path).await?;
     info!("parsing the payload");
@@ -258,7 +279,7 @@ pub async fn deploy_undeploy(opts: Options, deploy: bool) -> EResult<()> {
         println!("{}", "-----".dimmed());
         println!(
             "{}",
-            serde_yaml::to_string(&payload).map_err(Error::invalid_data)?
+            serde_saphyr::to_string(&payload).map_err(Error::invalid_data)?
         );
         println!("{}", "-----".dimmed());
     }

@@ -115,7 +115,18 @@ fn main() -> EResult<()> {
         .to_path_buf();
     relpath.pop();
     let data = fs::read(&opts.fname)?;
-    let content: Value = serde_yaml::from_slice(&data).map_err(Error::invalid_data)?;
+    let content: Value = serde_saphyr::from_slice_with_options(
+        &data,
+        serde_saphyr::options! {
+                    duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                    merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+        strict_booleans: true,
+        leading_zero_numbers_as_strings: true,
+        underscored_numbers_as_strings: true,
+        non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                },
+    )
+    .map_err(Error::invalid_data)?;
     let mut msg_ids: Vec<String> = Vec::new();
     parse_content(content, &mut msg_ids);
     for lang in opts.lang {

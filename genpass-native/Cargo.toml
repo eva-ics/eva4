@@ -9,7 +9,7 @@ version = "0.1.1"
 openssl = { workspace = true }
 base64 = { workspace = true }
 eva-common = { workspace = true }
-nix = { version = "0.25", features = ["time"] }
+nix = { version = "0.31.3", default-features = false, features = ["time"] }
 hex = { workspace = true }
 serde = { features = ["derive"] , workspace = true }
 tokio = { features = ["time", "test-util", "rt", "macros"] , workspace = true }

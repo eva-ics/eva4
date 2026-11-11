@@ -20,7 +20,7 @@ hyper = { version = "1.1.0", features = ["server", "http1"], optional = true }
 hyper-util = { version = "0.1.3", features = ["http1", "server", "tokio"], optional = true }
 serde_json = { workspace = true }
 tokio-task-pool = { version = "0.1.5", features = ["log"] }
-serde_yaml = { workspace = true, optional = true }
+serde-saphyr = { workspace = true, optional = true }
 is-terminal = { version = "0.4.11", optional = true }
 env_logger = { version = "0.11.1", optional = true }
 syslog = { workspace = true, optional = true }
@@ -64,7 +64,7 @@ std-alloc = []
 fips = ["rustls?/fips", "rustls-cng?/fips", "eva-common/fips"]
 
 service = ["busrt", "async-trait", "http-body-util", "hyper", "hyper-util", "mimalloc", "eva-sdk"]
-agent = ["serde_yaml", "env_logger", "reqwest", "clap"]
+agent = ["serde-saphyr", "env_logger", "reqwest", "clap"]
 agent-linux = ["agent", "syslog", "is-terminal", "mimalloc", "eva-common/services", "reqwest/native-tls", "eva-common/fips"]
 agent-windows = ["agent", "eventlog", "windows-service", "reqwest/rustls-tls", "rustls", "rustls-cng", "rustls-native-certs", "dep:hex"]
 

@@ -152,15 +152,24 @@ fn main() -> EResult<()> {
 
 fn load_config() -> EResult<Config> {
     let config_path: PathBuf = CONFIG_PATH.clone();
-    let config: Config =
-        serde_yaml::from_str(&std::fs::read_to_string(config_path).map_err(|e| {
+    let config: Config = serde_saphyr::from_str_with_options(
+        &std::fs::read_to_string(config_path).map_err(|e| {
             Error::io(format!(
                 "unable to load {}: {}",
                 CONFIG_PATH.to_string_lossy(),
                 e
             ))
-        })?)
-        .map_err(Error::invalid_params)?;
+        })?,
+        serde_saphyr::options! {
+                    duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                    merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+        strict_booleans: true,
+        leading_zero_numbers_as_strings: true,
+        underscored_numbers_as_strings: true,
+        non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                },
+    )
+    .map_err(Error::invalid_params)?;
     if config.client.fips {
         #[cfg(feature = "fips")]
         info!("FIPS-140 binary is active. Also make sure FIPS-140 mode is enabled in the system");

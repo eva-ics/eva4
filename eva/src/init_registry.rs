@@ -34,8 +34,16 @@ fn main() {
     db.set_db_path(&db_path).unwrap();
     db.open().expect("Unable to init/open the registry");
     println!("Importing registry schema...");
-    let schema: BTreeMap<String, Value> = serde_yaml::from_str(
+    let schema: BTreeMap<String, Value> = serde_saphyr::from_str_with_options(
         &fs::read_to_string(format!("{dir_eva}/share/registry/schema.yml")).unwrap(),
+        serde_saphyr::options! {
+                    duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                    merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+        strict_booleans: true,
+        leading_zero_numbers_as_strings: true,
+        underscored_numbers_as_strings: true,
+        non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                },
     )
     .unwrap();
     for (k, v) in schema {
@@ -51,7 +59,18 @@ fn main() {
     {
         let fname = &entry.as_os_str().to_string_lossy();
         let key_name = format!("{PFX}{}", &fname[dir_defaults.len()..fname.len() - 4]);
-        let key_content: Value = serde_yaml::from_str(&fs::read_to_string(entry).unwrap()).unwrap();
+        let key_content: Value = serde_saphyr::from_str_with_options(
+            &fs::read_to_string(entry).unwrap(),
+            serde_saphyr::options! {
+                            duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                            merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+            strict_booleans: true,
+            leading_zero_numbers_as_strings: true,
+            underscored_numbers_as_strings: true,
+            non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                        },
+        )
+        .unwrap();
         if let Err(e) = db.key_get(&key_name) {
             if e.kind() == yedb::ErrorKind::KeyNotFound {
                 db.key_set(&key_name, key_content).unwrap();

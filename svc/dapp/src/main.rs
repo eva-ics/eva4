@@ -49,7 +49,18 @@ impl RpcHandlers for Handlers {
                     let mut path = PATH.get().unwrap().clone();
                     path.push("docker-compose.yml");
                     let s = tokio::fs::read_to_string(path).await?;
-                    let config: Value = serde_yaml::from_str(&s).map_err(Error::invalid_data)?;
+                    let config: Value = serde_saphyr::from_str_with_options(
+                        &s,
+                        serde_saphyr::options! {
+                            duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                            merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+strict_booleans: true,
+leading_zero_numbers_as_strings: true,
+underscored_numbers_as_strings: true,
+non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                        },
+                    )
+                    .map_err(Error::invalid_data)?;
                     Ok(Some(pack(&config)?))
                 } else {
                     Err(RpcError::params(None))

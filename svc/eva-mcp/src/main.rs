@@ -10,7 +10,7 @@ use eva_sdk::prelude::*;
 use rmcp::{
     ServerHandler,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
-    model::{ServerCapabilities, ServerInfo},
+    model::{ServerCapabilities, ServerConfig},
     tool, tool_handler, tool_router,
     transport::{
         StreamableHttpServerConfig,
@@ -158,8 +158,8 @@ impl McpServer {
 
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for McpServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
     }
 }
 
@@ -214,8 +214,12 @@ async fn main(mut initial: Initial) -> EResult<()> {
         StreamableHttpService::new(
             move || Ok(McpServer::new(node_help.clone())),
             Arc::new(session_manager),
+            // Preserve the trusted-network transport policy: accept any Host/Origin
+            // and do not introduce rmcp's new 4 MiB POST body limit.
             StreamableHttpServerConfig::default()
                 .disable_allowed_hosts()
+                .disable_allowed_origins()
+                .with_max_request_body_bytes(usize::MAX)
                 .with_cancellation_token(ct.child_token()),
         );
     let router = axum::Router::new().nest_service("/mcp", http_service);

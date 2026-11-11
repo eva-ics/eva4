@@ -169,9 +169,18 @@ async fn read_file<'a>(
                     let val: serde_json::Value = serde_json::from_slice(&buf)?;
                     Value::deserialize(val)?
                 }
-                "application/x-yaml" => {
-                    serde_yaml::from_slice(&buf).map_err(Error::invalid_data)?
-                }
+                "application/x-yaml" => serde_saphyr::from_slice_with_options(
+                    &buf,
+                    serde_saphyr::options! {
+                        duplicate_keys: serde_saphyr::DuplicateKeyPolicy::PassThrough,
+                        merge_keys: serde_saphyr::MergeKeyPolicy::AsOrdinary,
+strict_booleans: true,
+leading_zero_numbers_as_strings: true,
+underscored_numbers_as_strings: true,
+non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::PassThrough,
+                    },
+                )
+                .map_err(Error::invalid_data)?,
                 _ => {
                     return Err(Error::invalid_params("unable to convert: unsupported type"));
                 }
