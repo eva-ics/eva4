@@ -20,6 +20,7 @@ before applying to production despite of the absence of warning marks.
 4.2.0-stable
 ============
 
+* 2026-11-11 build 2026111101: security updates
 * 2026-10-29 build 2026102901: TimescaleDB improvements, security updates
 * 2026-10-13 build 2026101301: OPC UA batch sizes, MCP fixes, security updates
 * 2026-09-10 build 2026091001: ⚠️ security updates, removed obsolete deps
