@@ -25,7 +25,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[allow(clippy::unreadable_literal)]
 pub const BUILD: u64 = 2026111101;
 
-pub const AUTHOR: &str = "(c) 2022 Bohemia Automation / Altertech";
+pub const AUTHOR: &str = "(c) 2022 Bohemia Automation";
 
 pub const SYSINFO_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 pub const MEMORY_WARN_DEFAULT: u64 = 201_326_592; // 192 MiB

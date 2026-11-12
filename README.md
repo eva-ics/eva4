@@ -102,9 +102,8 @@ mission-critical projects under an additional agreement):
 
 ## About the authors
 
-[Bohemia Automation](https://www.bohemia-automation.com) /
-[Altertech](https://www.altertech.com) is a group of companies with 20+ years
-of experience in the enterprise automation and industrial IoT. Our setups
+[Bohemia Automation](https://www.bohemia-automation.com) is a company with 20+
+years of experience in the enterprise automation and industrial IoT. Our setups
 include power plants, factories and urban infrastructure. Largest of them have
 1M+ sensors and controlled devices and the bar raises higher and higher every
 day.

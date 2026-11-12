@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setuptools.setup(
     name='eva4-controller-py',
     version=__version__,
-    author='Bohemia Automation / Altertech',
+    author='Bohemia Automation',
     author_email='div@altertech.com',
     description='EVA ICS v4 Python macros controller service',
     long_description=long_description,

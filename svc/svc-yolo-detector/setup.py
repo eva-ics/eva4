@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setuptools.setup(
     name='eva4-svc-yolo-detector',
     version=__version__,
-    author='Bohemia Automation / Altertech',
+    author='Bohemia Automation',
     author_email='div@altertech.com',
     description='EVA ICS v4 YOLO detector service',
     long_description=long_description,

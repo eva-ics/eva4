@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setuptools.setup(
     name='evaics',
     version=__version__,
-    author='Bohemia Automation / Altertech',
+    author='Bohemia Automation',
     author_email='div@altertech.com',
     description='EVA ICS v4 Python SDK',
     long_description=long_description,
